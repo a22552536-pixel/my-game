@@ -25,7 +25,7 @@
           hp: Math.max(1, Math.round(P.hp)), mp: Math.round(P.mp),
           gold: P.gold, skills: P.skills, hotbar: P.hotbar,
           equip: P.equip, bag: P.bag, potions: P.potions, buffs: P.buffs,
-          questItems: P.questItems, playTime: P.playTime, pages: P.pages || null,
+          questItems: P.questItems, playTime: P.playTime, pages: P.pages || null, apexLine: P.apexLine || null,
         },
         pos: P.dead ? null : { map: G.world.mapId, x: Math.round(P.x), y: Math.round(P.y) },
         lastCamp: G.data.camps[G.world.map.region] || '1-1',
@@ -49,6 +49,7 @@
         questItems: d.questItems || {}, playTime: d.playTime || 0,
       });
       P.pages = d.pages || null;
+      P.apexLine = d.apexLine || null;
       // 技能改版：已經不存在的技能退回技能點，技能欄清掉
       const clean = (pg) => {
         for (const id in pg.skills) {

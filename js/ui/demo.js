@@ -41,14 +41,7 @@
 
   // 某個形態可以用的技能（基本技能＋同路線、不超過該轉的技能）
   function skillsOf(formId) {
-    const F = G.data.forms;
-    const me = F[formId];
-    return Object.keys(G.data.skills).filter((id) => {
-      const S = G.data.skills[id];
-      if (S.form === 'base') return true;
-      const f = F[S.form];
-      return f && me.line && f.line === me.line && f.tier <= me.tier;
-    });
+    return Object.keys(G.data.skills).filter((id) => G.formSwitch.skillOK(id, formId));
   }
 
   const D = (G.demo = {
@@ -158,7 +151,7 @@
 
   // ───────── 圖鑑：一張圖畫出所有形態與怪物 ─────────
   const GW = 1800;
-  const GH = 1720;
+  const GH = 1990;
 
   function fakeMonster(art, stage, t) {
     return {
@@ -216,7 +209,7 @@
       };
 
       // 進化形態
-      title('小獅子的進化（一轉 Lv10 → 四轉 Lv40）', 50);
+      title('小獅子的進化（一轉 Lv10 → 五轉 Lv50）', 50);
       card(40, 100, 250, 330, '#d8b070');
       sil(hid('forms', 'base'), 40, 100, 250, 290, (c) => {
         c.save();
@@ -247,6 +240,22 @@
         }
       });
 
+      // 五轉：三條路線匯集成同一個最終形態
+      const AX = 40;
+      const AY = 640;
+      card(AX, AY, GW - 80, 230, '#e8b830');
+      sil(hid('forms', 'apex'), AX + 60, AY + 4, 420, 222, (c) => {
+        c.save();
+        c.translate(AX + 270, AY + 208);
+        c.scale(1.65, 1.65);
+        A.drawLion(c, 0, 0, 1, { state: 'idle', t, p: 0, onGround: true, form: 'apex', leaves: ['#7ad05a', '#5fc8e8', '#ff8a3a', '#e8f4ff', '#ffd84a'] });
+        c.restore();
+      });
+      G.hud.text(ctx, hid('forms', 'apex') ? '？？？' : F.apex.name, AX + 560, AY + 90, 34, '#6a3a0a', 'left', false);
+      G.hud.text(ctx, '五轉 · Lv50 · 三條路線最後都會匯集成這個樣子', AX + 560, AY + 130, 18, '#8a735c', 'left', false);
+      if (!hid('forms', 'apex')) G.hud.text(ctx, '冥道殘月破（群體）　地爆天星（單體）', AX + 560, AY + 166, 18, '#a4581a', 'left', false);
+
+      ctx.translate(0, 270);
       // 怪物
       title('怪物', 670);
       const chapters = [

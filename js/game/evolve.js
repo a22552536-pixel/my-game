@@ -22,7 +22,7 @@
     missing() {
       const P = G.player;
       const n = this.nextTier();
-      if (n > 4) return '已經是最終形態';
+      if (n > 5) return '已經是最終形態';
       if (P.level < n * 10) return '需要 Lv' + n * 10;
       return null;
     },
@@ -35,6 +35,8 @@
       const P = G.player;
       const f = G.data.forms[P.form];
       if (f.tier === 0) return ['might1', 'magic1', 'agile1'];
+      // 四轉之後三條路線都匯集到同一個最終形態
+      if (f.tier === 4) return ['apex'];
       return [f.line + (f.tier + 1)];
     },
 
@@ -51,6 +53,8 @@
       const P = G.player;
       if (!a.switched && a.t >= 2.3) {
         a.switched = true;
+        // 進五轉：記住是從哪一條路線來的，沿用那一頁技能
+        if (G.data.forms[a.to].apex) P.apexLine = G.data.forms[a.from].line || P.apexLine || 'might';
         P.form = a.to;
         G.formSwitch.ensurePages(P);
         G.formSwitch.addSP(P, 3);

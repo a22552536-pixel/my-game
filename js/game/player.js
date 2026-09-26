@@ -37,6 +37,7 @@
       for (const id in G.data.skills) if (G.data.skills[id].form === 'base') this.skills[id] = 0;
       this.skills.pounce = 1;
       this.pages = null;
+      this.apexLine = null;
       this.formCd = 0;
       this.hotbar = ['pounce', 'roar', null, null, null, null];
       this.equip = { claw: G.loot.makeEquip('claw1', 'common', { atk: 4 }), mane: null, charm: null };

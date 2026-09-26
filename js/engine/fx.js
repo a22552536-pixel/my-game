@@ -135,25 +135,27 @@
     },
 
     // 黑閃：形狀跟裝備「雷擊」一樣是鋸齒閃電，但顏色是黑芯紅邊（咒術迴戰的黑閃），只在命中點附近迸出幾道短的
-    blackFlash(x, y, dir) {
-      const n = 4;
+    // s：放大倍率（五轉的地爆天星用大黑閃）
+    blackFlash(x, y, dir, s) {
+      s = s || 1;
+      const n = s > 1 ? 7 : 4;
       for (let i = 0; i < n; i++) {
-        const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.75 + U.rand(-0.25, 0.25) + (dir > 0 ? 0.25 : -0.25);
-        const len = U.rand(45, 85);
+        const a = s > 1 ? (i / n) * Math.PI * 2 + U.rand(-0.3, 0.3) : -Math.PI / 2 + (i - (n - 1) / 2) * 0.75 + U.rand(-0.25, 0.25) + (dir > 0 ? 0.25 : -0.25);
+        const len = U.rand(45, 85) * s;
         const pts = [[x, y]];
-        const seg = 4;
+        const seg = s > 1 ? 7 : 4;
         for (let k = 1; k <= seg; k++) {
           const d = (len * k) / seg;
-          const jitter = k < seg ? U.rand(-10, 10) : 0;
+          const jitter = k < seg ? U.rand(-10, 10) * Math.sqrt(s) : 0;
           pts.push([x + Math.cos(a) * d - Math.sin(a) * jitter, y + Math.sin(a) * d + Math.cos(a) * jitter]);
         }
-        this.bolts.push({ pts, t: 0, life: U.rand(0.2, 0.3), w: U.rand(5, 7.5), black: true });
+        this.bolts.push({ pts, t: 0, life: U.rand(0.2, 0.3) * (s > 1 ? 1.3 : 1), w: U.rand(5, 7.5) * Math.sqrt(s), black: true });
       }
-      this.rings.push({ x, y, color: 'rgba(255,40,60,0.85)', r: 6, maxR: 46, t: 0, life: 0.18, w: 3 });
-      for (let i = 0; i < 10; i++) {
+      this.rings.push({ x, y, color: 'rgba(255,40,60,0.85)', r: 6, maxR: 46 * s, t: 0, life: 0.18 * (s > 1 ? 1.4 : 1), w: 3 * Math.sqrt(s) });
+      for (let i = 0; i < 10 * Math.min(3, s); i++) {
         this.particles.push({
-          x, y, vx: U.rand(-320, 320), vy: U.rand(-360, 120), life: U.rand(0.2, 0.4), t: 0,
-          size: U.rand(2, 4), color: U.pick(['#ff2a3a', '#14000a', '#ff6a6a']), grav: 400, shape: 'square', drag: 2,
+          x, y, vx: U.rand(-320, 320) * Math.sqrt(s), vy: U.rand(-360, 120) * Math.sqrt(s), life: U.rand(0.2, 0.4), t: 0,
+          size: U.rand(2, 4) * Math.sqrt(s), color: U.pick(['#ff2a3a', '#14000a', '#ff6a6a']), grav: 400, shape: 'square', drag: 2,
         });
       }
     },
@@ -519,6 +521,7 @@
         ctx.fillStyle = 'rgba(8,6,18,' + Math.min(0.55, this.iaiDim * 2.2).toFixed(3) + ')';
         ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
       }
+      if (G.skillExec && G.skillExec.drawUlt) G.skillExec.drawUlt(ctx);
       if (!this.cuts.length) return;
       ctx.save();
       for (const c of this.cuts) {

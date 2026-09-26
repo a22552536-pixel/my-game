@@ -607,7 +607,86 @@
       });
       A.shape(ctx, (c) => star(c, cx, cy, 23, 16, 10, 0.25), L.pal.mane, L.pal.maneShade, { cel: [3, 3], lw: 2.4, hl: false });
     },
+
+    // ── 五轉 ──
+    // 星楓獅王：一圈燃燒的星楓葉，後面透出三條路線的火舌（赤＝力量、青＝法術、紫＝敏捷）
+    starmaple(ctx, cx, cy, L, t) {
+      bigLeafMane(ctx, cx - 2, cy, L, t, -0.3);
+      [[-40, -26, 3.2], [-10, -50, 2.6], [-50, 4, 2.4]].forEach(([dx, dy, r], i) => sparkle(ctx, cx + dx, cy + dy, r, '#ffffff', 0.35 + (Math.sin(t * 4 + i * 2.1) * 0.5 + 0.5) * 0.65));
+    },
   };
+
+  // 柔光圓盤（用 A.c 上色，各種顏色模式都跟著變）
+  function glowDisc(ctx, x, y, r, col, alpha) {
+    const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
+    g.addColorStop(0, A.c(col));
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // 燃燒的星楓葉：拉長一點的楓葉，裡面一片白金色的芯
+  function flameLeaf(ctx, x, y, rot, s, L, col, shade, core) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.scale(0.88, 1.18);
+    A.shape(ctx, (c) => A.mapleLeafPath(c, 0, -s * 0.35, s), col || L.pal.mane, shade || L.pal.maneShade, { cel: [1.8, 1.8], lw: 2.1, hl: false });
+    A.shape(ctx, (c) => A.mapleLeafPath(c, 0, -s * 0.28, s * 0.5), core || L.pal.maneCore || '#fff2b8', null, { noStroke: true, hl: false });
+    ctx.restore();
+  }
+  // 三色火舌：力量赤、法術青、敏捷紫
+  function triCols(L) {
+    const P = L.pal;
+    return [[P.might || '#ff4a3a', P.mightShade || '#b8202a'], [P.magic || '#3ad0ff', P.magicShade || '#1a8ad0'], [P.agile || '#a868ff', P.agileShade || '#6a36c0']];
+  }
+  // 沒有葉柄的楓葉（鬃毛用，底部收成圓弧藏在頭後面）
+  const MANE_LEAF = [
+    [0, -1], [0.18, -0.55], [0.5, -0.72], [0.4, -0.3], [0.95, -0.35], [0.7, 0.05],
+    [0.85, 0.25], [0.35, 0.28], [0.3, 0.55], [0, 0.45], [-0.3, 0.55], [-0.35, 0.28],
+    [-0.85, 0.25], [-0.7, 0.05], [-0.95, -0.35], [-0.4, -0.3], [-0.5, -0.72], [-0.18, -0.55],
+  ];
+  function maneLeafPath(c, s) {
+    MANE_LEAF.forEach((p, i) => (i ? c.lineTo(p[0] * s, p[1] * s) : c.moveTo(p[0] * s, p[1] * s)));
+    c.closePath();
+  }
+  // 星楓獅王的鬃毛：一整片燃燒的大星楓葉，中間是白金色的火芯
+  function bigLeafMane(ctx, cx, cy, L, t, tilt) {
+    const P = L.pal;
+    const R = 36;
+    glowDisc(ctx, cx, cy - 6, R * 1.35, P.aura || '#fff0a0', 0.5 + Math.sin(t * 2.5) * 0.08);
+    ctx.save();
+    ctx.translate(cx, cy - 4);
+    ctx.rotate(tilt);
+    // 外圈一層跳動的火光
+    ctx.save();
+    ctx.globalAlpha *= 0.6;
+    A.shape(ctx, (c) => maneLeafPath(c, R * (1.16 + Math.sin(t * 6) * 0.03)), P.flare || '#ff9a2a', null, { noStroke: true, hl: false });
+    ctx.restore();
+    ctx.rotate(Math.sin(t * 3) * 0.02);
+    A.shape(ctx, (c) => maneLeafPath(c, R), P.mane, P.maneShade, { cel: [3, 3], lw: 2.6, hl: false });
+    // 白金色的火芯與葉脈
+    ctx.save();
+    ctx.translate(0, -3);
+    A.shape(ctx, (c) => maneLeafPath(c, R * 0.6), P.maneCore || '#fff2b8', null, { noStroke: true, hl: false });
+    ctx.restore();
+    ctx.strokeStyle = A.c(P.maneShade);
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    [[0, -1], [0.95, -0.35], [-0.95, -0.35], [0.85, 0.25], [-0.85, 0.25]].forEach(([vx, vy]) => {
+      ctx.moveTo(vx * R * 0.35, vy * R * 0.35);
+      ctx.lineTo(vx * R * 0.75, vy * R * 0.75);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+
 
   // 攀爬（背面）時，鬃毛在圓環後面多畫的部分；對稱版
   const BACKMANE = {
@@ -641,6 +720,9 @@
     },
     abyss(ctx, cx, cy, L) {
       A.shape(ctx, (c) => star(c, cx, cy, 36, 20, 9, -Math.PI / 2), L.pal.mane, L.pal.maneShade, { cel: [3, 3], lw: 2.4, hl: false });
+    },
+    starmaple(ctx, cx, cy, L, t) {
+      bigLeafMane(ctx, cx, cy + 4, L, t, 0);
     },
   };
 
@@ -876,6 +958,16 @@
       ctx.restore();
       ctx.restore();
     },
+    // 星楓獅王：尾巴末端一片發光的星楓葉
+    starleaf(ctx, L, t) {
+      glowDisc(ctx, 0, -6, 20, L.pal.aura || '#fff0a0', 0.75 + Math.sin(t * 3) * 0.15);
+      ctx.save();
+      ctx.rotate(Math.sin(t * 2.2) * 0.18);
+      A.shape(ctx, (c) => A.mapleLeafPath(c, 0, -7, 12), L.pal.mane, L.pal.maneShade, { cel: [1.5, 1.5], lw: 2.2, hl: false });
+      A.shape(ctx, (c) => A.mapleLeafPath(c, 0, -6.2, 6), L.pal.maneCore || '#fff2b8', null, { noStroke: true, hl: false });
+      ctx.restore();
+      sparkle(ctx, 6, -15, 3.2, '#ffffff', 0.4 + (Math.sin(t * 5) * 0.5 + 0.5) * 0.6);
+    },
     cloud(ctx, L, t) {
       [[-5, -2, 6], [3, -4, 7], [0, -9, 6]].forEach(([x, y, r]) => A.ellipse(ctx, x, y, r, r * 0.85, L.pal.mane, L.pal.maneShade, { cel: [1.5, 1.5], lw: 2.2, hl: false }));
       if ((t * 2) % 1.6 < 0.15) {
@@ -1086,6 +1178,103 @@
   function moonClasp(ctx, L, x, y) {
     A.shape(ctx, (c) => crescentPath(c, x, y, 6, 3, -2.5, 5), L.pal.clasp || '#ffd84a', L.pal.claspShade || '#c89a10', { lw: 2, hl: false, cel: [1, 1] });
   }
+  // 星楓獅王的光翼：一扇扇葉形羽毛，最長的三根羽尖染上三條路線的顏色
+  const FEATHERS = [[-3.4, 30], [-3.12, 42], [-2.84, 48], [-2.56, 46]];
+  function lightWings(ctx, L, x, y, t) {
+    const flap = Math.sin(t * 3.2) * 0.1;
+    const P = L.pal;
+    const cols = triCols(L);
+    [[6, 0.8, 0.16], [-2, 1, 0]].forEach(([dx, sc, dk]) => {
+      const fill = U.mix(P.wing || '#fffaf0', '#000000', dk);
+      const shade = U.mix(P.wingShade || '#f2d890', '#000000', dk);
+      ctx.save();
+      ctx.translate(x + dx, y);
+      ctx.rotate(flap * (dk ? 0.6 : 1));
+      ctx.scale(sc, sc);
+      FEATHERS.forEach(([a, len], i) => {
+        const bx = Math.cos(a) * 4;
+        const by = Math.sin(a) * 4;
+        const tx = Math.cos(a) * len;
+        const ty = Math.sin(a) * len - len * 0.12;
+        A.shape(ctx, (c) => flamePath(c, bx, by, tx, ty, 6.5), fill, shade, { cel: [1.6, 1.6], lw: 2.2, hl: false });
+        if (i) {
+          const f = 0.58;
+          A.shape(ctx, (c) => flamePath(c, bx + (tx - bx) * f, by + (ty - by) * f, tx, ty, 3.6), U.mix(cols[i - 1][0], '#000000', dk), null, { noStroke: true, hl: false });
+        }
+      });
+      // 翼根：一片金色的大楓葉蓋住羽根
+      A.shape(ctx, (c) => A.mapleLeafPath(c, -4, -5, 10), U.mix(P.mane, '#000000', dk), U.mix(P.maneShade, '#000000', dk), { cel: [1.5, 1.5], lw: 2.1, hl: false });
+      ctx.restore();
+    });
+  }
+  const CANON_LEAVES = ['#7ad86a', '#5ab8ff', '#ff7a3a', '#dff4ff', '#ffd35a'];
+  // 星楓之冠（完整點亮）：金色冠環上立著五片星楓葉，顏色跟著拿到的星楓葉
+  const STAR_CROWN = [[-7.5, -8, -0.38, 7.2], [7.5, -8, 0.38, 7.2], [-14, -2, -0.9, 6], [14, -2, 0.9, 6], [0, -12, 0, 9.5]];
+  function starCrown(ctx, L, hx, hy, t, leaves) {
+    const P = L.pal;
+    ctx.save();
+    ctx.translate(hx - 1, hy - 17);
+    ctx.rotate(-0.1);
+    glowDisc(ctx, 0, -8, 24, P.aura || '#fff0a0', 0.75 + Math.sin(t * 3) * 0.15);
+    [2, 3, 0, 1, 4].forEach((i) => {
+      const [dx, dy, rot, sz] = STAR_CROWN[i];
+      const col = (leaves && leaves[i]) || CANON_LEAVES[i];
+      ctx.save();
+      ctx.translate(dx, dy + Math.sin(t * 2 + i) * 0.6);
+      ctx.rotate(rot);
+      A.shape(ctx, (c) => A.mapleLeafPath(c, 0, 0, sz), col, U.mix(col, '#000000', 0.25), { cel: [1, 1], lw: 1.9, hl: false });
+      A.shape(ctx, (c) => A.mapleLeafPath(c, 0, -sz * 0.05, sz * 0.42), U.mix(col, '#ffffff', 0.65), null, { noStroke: true, hl: false });
+      ctx.restore();
+    });
+    // 冠環
+    A.shape(ctx, (c) => {
+      c.moveTo(-15, 1);
+      c.quadraticCurveTo(0, -5, 15, 1);
+      c.lineTo(14, 5.5);
+      c.quadraticCurveTo(0, 0, -14, 5.5);
+      c.closePath();
+    }, P.trim || '#ffd84a', P.trimShade || '#d89a10', { cel: [1, 1], lw: 2.1, hl: false });
+    A.ellipse(ctx, 0, 1.2, 2.8, 2.8, P.gem || '#ff5a8a', null, { lw: 1.6, hl: [-0.9, 0.3, 0.9, 0.6] });
+    ctx.restore();
+    const tw = Math.sin(t * 4) * 0.5 + 0.5;
+    sparkle(ctx, hx - 1, hy - 40, 3 + tw * 2.2, '#ffffff', 0.5 + tw * 0.5);
+  }
+  // 胸前的星楓寶石胸針
+  function leafBrooch(ctx, L, x, y) {
+    A.ellipse(ctx, x, y, 5.5, 5.5, L.pal.trim || '#ffd84a', L.pal.trimShade || '#d89a10', { lw: 2, hl: false, cel: [1, 1] });
+    A.shape(ctx, (c) => A.mapleLeafPath(c, x, y, 4.2), L.pal.gem || '#ff5a8a', null, { lw: 1.3, hl: false });
+  }
+  // 三顆環繞身體的光球（力量赤、法術青、敏捷紫），拖著短短的光尾
+  function trinityMotes(ctx, L, t, cx, cy, rx, ry, back) {
+    const cols = triCols(L);
+    for (let i = 0; i < 3; i++) {
+      const a0 = t * 1.6 + (i / 3) * Math.PI * 2;
+      if ((Math.sin(a0) < 0) !== back) continue;
+      ctx.save();
+      const base = ctx.globalAlpha;
+      for (let k = 3; k >= 0; k--) {
+        const a = a0 - k * 0.16;
+        const s = Math.sin(a);
+        const x = cx + Math.cos(a) * rx;
+        const y = cy + s * ry - Math.cos(a) * 6;
+        const r = (3.4 + s * 0.8) * (1 - k * 0.2);
+        ctx.globalAlpha = base * (k ? 0.4 - k * 0.09 : 1);
+        if (!k) {
+          ctx.fillStyle = A.c(cols[i][0]);
+          ctx.globalAlpha = base * 0.22;
+          ctx.beginPath();
+          ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = base;
+        }
+        ctx.fillStyle = A.c(k ? cols[i][0] : U.mix(cols[i][0], '#ffffff', 0.55));
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
   // 暗影王冠：鋸齒狀的黑冠，紫色描邊、紅寶石
   function shadowCrown(ctx, L, hx, hy, t) {
     ctx.save();
@@ -1239,6 +1428,16 @@
         sparkle(ctx, x, y, 3, '#ffffff', Math.sin(k * Math.PI) * 0.9);
       }
     }
+    if (L.fx === 'trinity') {
+      trinityMotes(ctx, L, t, bx + 4, by - 16, L.bodyRx + 22, 8, layer === 'back');
+      if (layer === 'front') {
+        for (let i = 0; i < 4; i++) {
+          const k = (t * 0.4 + i / 4) % 1;
+          const x = bx - 26 + i * 16 + Math.sin(t * 2 + i * 2) * 4;
+          sparkle(ctx, x, by + 6 - k * 70, 2.6, i % 2 ? '#fff6c0' : '#ffffff', Math.sin(k * Math.PI) * 0.85);
+        }
+      }
+    }
     if (L.fx === 'wisps' && layer === 'back') {
       ctx.save();
       const n = 6;
@@ -1328,6 +1527,7 @@
     if (L.fx && !(L.fx === 'wind' && (st.state === 'idle' || st.state === 'hurt'))) particles(ctx, L, t, hx0, hy0, bx0, by0, 'back');
     if (L.dwings) dragonWings(ctx, L, -6 + lean * 0.3, -32 - up + bob, t);
     if (L.cape) capeBack(ctx, L, hx0, hy0, bx0, by0, t);
+    if (L.lwings) lightWings(ctx, L, -9 + lean * 0.3, -30 - up + bob, t);
 
     // 光翼（在身體後面）
     if (L.wings) {
@@ -1475,10 +1675,13 @@
     }
     A.ellipse(ctx, hx, hy, 19, 17.5, P.body, P.bodyShade, { cel: [3, 3.5] });
     if (L.hoodTop) hoodTop(ctx, L, hx, hy);
-    if (L.crown) shadowCrown(ctx, L, hx, hy, t);
-    // 楓葉鬃毛
-    mapleTuft(ctx, hx - 1, hy - 20, 9, -0.15, L);
-    if (L.leaves) leafCrown(ctx, hx - 1, hy - 20, L.leaves, st.t || 0);
+    if (L.crown === 'starmaple') starCrown(ctx, L, hx, hy, t, L.leaves);
+    else {
+      if (L.crown) shadowCrown(ctx, L, hx, hy, t);
+      // 楓葉鬃毛
+      mapleTuft(ctx, hx - 1, hy - 20, 9, -0.15, L);
+      if (L.leaves) leafCrown(ctx, hx - 1, hy - 20, L.leaves, st.t || 0);
+    }
     // 光環
     if (L.halo) {
       ctx.save();
@@ -1494,6 +1697,7 @@
       ctx.restore();
     }
     if (L.cape) moonClasp(ctx, L, hx - 15, hy + 13);
+    if (L.brooch) leafBrooch(ctx, L, hx - 13, hy + 15);
     // 嘴邊
     A.ellipse(ctx, hx + 11, hy + 7, 9, 6.5, P.cream, null, { lw: 2, hl: false });
     if (L.faceMask) faceMask(ctx, L, hx, hy);
@@ -1606,6 +1810,15 @@
         ctx.restore();
       });
     }
+    if (L.lwings) {
+      [-1, 1].forEach((sx) => {
+        ctx.save();
+        ctx.scale(sx, 1);
+        lightWings(ctx, L, -4, -30, t);
+        ctx.restore();
+      });
+    }
+    if (L.fx === 'trinity') trinityMotes(ctx, L, t, 0, -30, 34, 9, true);
     // 尾巴往旁邊捲起
     ctx.strokeStyle = A.outline();
     ctx.lineWidth = 7;
@@ -1657,11 +1870,15 @@
     if (L.hoodTop) {
       A.shape(ctx, (c) => A.roundRect(c, -21, -58, 42, 6, 3), P.band || '#d8343a', P.bandShade || '#a02024', { shadeY: -54, lw: 2.2, hl: false });
     }
-    if (L.crown) shadowCrown(ctx, L, 1, -53, t);
-    mapleTuft(ctx, 0, -67, 8, 0, L);
+    if (L.crown === 'starmaple') starCrown(ctx, L, 1, -48, t, L.leaves);
+    else {
+      if (L.crown) shadowCrown(ctx, L, 1, -53, t);
+      mapleTuft(ctx, 0, -67, 8, 0, L);
+    }
     // 前爪輪流往頭頂上方抓
     A.ellipse(ctx, -8, -77 + a * 5, 6, 6, P.body, P.bodyShade, { lw: 2.5, hl: false });
     A.ellipse(ctx, 8, -77 - a * 5, 6, 6, P.body, P.bodyShade, { lw: 2.5, hl: false });
+    if (L.fx === 'trinity') trinityMotes(ctx, L, t, 0, -30, 34, 9, false);
     ctx.restore();
   }
 

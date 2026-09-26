@@ -301,7 +301,7 @@
       h += '<div class="skill basic"><img src="' + G.art.iconURL('pounce') + '" class="hide"><div class="info"><div class="nm">爪擊 <span class="dim">普通攻擊 · ' + I.label('attack') + '</span></div><div class="ds">用前爪攻擊前方 1 隻敵人。</div></div></div>';
       for (const id in G.data.skills) {
         const S = G.data.skills[id];
-        if (!this.skillVisible(S)) continue;
+        if (!this.skillVisible(S, id)) continue;
         const lv = P.skills[id] || 0;
         const slot = P.hotbar.indexOf(id);
         h += '<div class="skill"><img src="' + G.art.iconURL(S.icon) + '"><div class="info">';
@@ -383,12 +383,8 @@
         this.render('skills');
       };
     },
-    skillVisible(S) {
-      if (S.form === 'base') return true;
-      const F = G.data.forms;
-      const mine = F[G.player.form];
-      const f = F[S.form];
-      return !!(f && mine && f.line === mine.line && f.tier <= mine.tier);
+    skillVisible(S, id) {
+      return G.formSwitch.skillOK(id, G.player.form);
     },
 
     a_unbind(i) {
@@ -765,7 +761,7 @@
       let h = '<div class="evo-intro">' + (first ? '身體裡的力量滿溢出來了。選擇你要成為的樣子。<b>選了之後就不能更改。</b>' : '力量又一次滿溢出來，身體開始改變了。') + '</div><div class="evo-cards">';
       opts.forEach((id) => {
         const f = G.data.forms[id];
-        const line = G.data.lines[f.line];
+        const line = G.data.lines[f.line] || { name: '三條', role: '最終形態', desc: '力量、法術、敏捷匯集成一股。原本那條路線的技能頁會保留，另外學會兩招五轉大招。' };
         const skills = Object.keys(G.data.skills).filter((k) => G.data.skills[k].form === id).map((k) => {
           const S = G.data.skills[k];
           return '<li><img src="' + G.art.iconURL(S.icon) + '"><div><b>' + S.name + '</b>' + (S.type === 'passive' ? '（被動）' : '') + '<br><span>' + S.desc(1) + '</span></div></li>';
@@ -800,8 +796,26 @@
       const P = G.player;
       const FS = G.formSwitch;
       const opts = FS.options(P);
-      const voice = G.evolve.canEvolve() ? '<div class="evo-voice"><button class="primary evolve-btn" data-act="hearVoice">✦ 聆聽內心的聲音（' + ['一', '二', '三', '四'][G.evolve.nextTier() - 1] + '轉進化）</button></div>' : '';
+      const voice = G.evolve.canEvolve() ? '<div class="evo-voice"><button class="primary evolve-btn" data-act="hearVoice">✦ 聆聽內心的聲音（' + ['一', '二', '三', '四', '五'][G.evolve.nextTier() - 1] + '轉進化）</button></div>' : '';
       let h;
+      if (G.data.forms[P.form].apex) {
+        // 五轉：形態固定成星楓獅王，只換沿用哪一條路線的技能頁
+        const why = FS.canSwitch(P);
+        h = '<div class="evo-intro">三條路線已經匯集成「星楓獅王」。冥道殘月破、地爆天星每一頁都能用；另外可以選要沿用哪一條路線的技能頁（冷卻 ' + FS.COOLDOWN + ' 秒）。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
+        FS.LINES.forEach((line) => {
+          const L = G.data.lines[line];
+          const cur = line === P.apexLine;
+          const page = P.pages && P.pages[line];
+          const learned = page ? Object.keys(page.skills).filter((k) => page.skills[k] > 0 && G.data.skills[k] && G.data.skills[k].form !== 'base').length : 0;
+          h += '<div class="evo-card' + (cur ? ' picked' : '') + '"><canvas class="evo-preview" data-form="' + line + '4" width="220" height="170"></canvas>' +
+            '<div class="evo-name">' + L.name + '的技能頁</div><div class="evo-line">' + L.role + '</div>' +
+            '<div class="evo-style">' + L.desc + '</div>' +
+            '<div class="evo-desc">已學技能 ' + learned + ' 個 · 剩餘技能點 ' + (page ? page.sp : P.sp) + '</div>' +
+            (cur ? '<button disabled>目前使用中</button>' : '<button class="primary" data-act="switchLine" data-arg="' + line + '">改用這一頁</button>') + '</div>';
+        });
+        h += '</div>';
+        return this.frame('技能頁', h, 'evolve');
+      }
       if (!opts.length) {
         h = voice + '<div class="evo-intro">Lv10 第一次進化之後，就可以在三種形態之間自由切換。<br>每種形態有自己的技能頁：技能等級、技能點、技能欄都分開保存，升級拿到的技能點三頁都會加。</div>';
         return this.frame('切換形態', h, 'evolve');
@@ -822,6 +836,10 @@
       });
       h += '</div>';
       return this.frame('切換形態', h, 'evolve');
+    },
+    a_switchLine(line) {
+      G.formSwitch.switchLine(G.player, line);
+      return undefined;
     },
     a_hearVoice() {
       this.closeAll();

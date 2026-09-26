@@ -10,7 +10,12 @@
 
   const LINES = ['might', 'magic', 'agile'];
   const baseIds = () => Object.keys(G.data.skills).filter((id) => G.data.skills[id].form === 'base');
-  const lineOf = (form) => (G.data.forms[form] || {}).line || null;
+  // 五轉（apex）沒有自己的路線：沿用進化前那條路線的技能頁（P.apexLine）
+  const lineOf = (form) => {
+    const f = G.data.forms[form] || {};
+    if (f.apex) return (G.player && G.player.apexLine) || 'might';
+    return f.line || null;
+  };
 
   const F = (G.formSwitch = {
     LINES,
@@ -68,9 +73,50 @@
       }
     },
 
+    // 某個技能在某個形態下能不能用：基本技能、五轉技能（五轉才有）、同路線且不超過該轉
+    skillOK(skillId, formId, apexLine) {
+      const S = G.data.skills[skillId];
+      if (!S) return false;
+      if (S.form === 'base') return true;
+      const F = G.data.forms;
+      const me = F[formId];
+      const f = F[S.form];
+      if (!f || !me) return false;
+      if (f.apex) return !!me.apex;
+      const line = me.apex ? apexLine || (G.player && G.player.apexLine) || 'might' : me.line;
+      return !!line && f.line === line && f.tier <= me.tier;
+    },
+
+    // 五轉之後：形態固定，只換沿用哪一條路線的技能頁
+    switchLine(P, line) {
+      const why = this.canSwitch(P);
+      if (why) {
+        G.hud.toast(why, '#ddd');
+        return false;
+      }
+      if (LINES.indexOf(line) < 0 || line === P.apexLine) return false;
+      this.ensurePages(P);
+      this.sync(P);
+      const page = P.pages[line];
+      P.apexLine = line;
+      P.skills = page.skills;
+      P.hotbar = page.hotbar;
+      P.sp = page.sp;
+      P.action = null;
+      P.cds = {};
+      P.formCd = this.COOLDOWN;
+      P.recalc();
+      G.fx.screenFlash('#ffffff', 0.3);
+      G.fx.ring(P.x, P.y - 34, 'rgba(255,240,180,0.95)', 90, 0.35, 6);
+      G.audio.play('portal');
+      G.hud.toast('改用「' + G.data.lines[line].name + '」的技能頁', '#ffe14a');
+      G.save.write();
+      return true;
+    },
+
     options(P) {
       const t = this.tier(P);
-      if (t < 1) return [];
+      if (t < 1 || t >= 5) return [];
       return LINES.map((l) => l + t).filter((id) => G.data.forms[id]);
     },
 
