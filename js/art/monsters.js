@@ -499,10 +499,10 @@
     ctx.restore();
   }
 
-  const DRAW = { snail, mushroom, sprite, queen };
+  const DRAW = (A.MONSTER_DRAW = { snail, mushroom, sprite, queen });
 
   A.drawMonster = function (ctx, m) {
-    const fn = DRAW[m.def.art];
+    const fn = A.MONSTER_DRAW[m.def.art];
     if (!fn) return;
     ctx.save();
     ctx.translate(m.x, m.y);
