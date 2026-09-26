@@ -120,5 +120,31 @@
     label(action) {
       return G.data.keys.label(this.bind[action]);
     },
+
+    // ── 虛擬按鍵（手機觸控按鈕用，見 js/ui/touch.js）──
+    // 跟實體按鍵一樣：按下那一刻有「剛按下」，按住期間 down 為 true。
+    virt: {},
+    setVirtual(a, on) {
+      if (on) {
+        if (!this.virt[a] && !this.down[a]) this.pressed[a] = true;
+        this.down[a] = true;
+        this.virt[a] = true;
+      } else if (this.virt[a]) {
+        this.virt[a] = false;
+        this.down[a] = false;
+      }
+    },
+    // 按住期間每幀呼叫：視窗開關清掉 down 之後補回按住狀態（不會多一次「剛按下」）
+    holdVirtual() {
+      for (const a in this.virt) if (this.virt[a]) this.down[a] = true;
+    },
+    // 只送一次「剛按下」（例如按住攻擊鈕時連續攻擊）
+    pulse(a) {
+      this.pressed[a] = true;
+    },
+    releaseVirtual() {
+      for (const a in this.virt) if (this.virt[a]) this.down[a] = false;
+      this.virt = {};
+    },
   };
 })();

@@ -139,10 +139,18 @@
       this.text(ctx, String(P.gold), 326, barY + 18, 14, '#ffe07a');
       if (P.sp > 0) this.text(ctx, 'SP ' + P.sp, 304, barY + 40, 13, '#9fffb0');
 
+      // 觸控模式（js/ui/touch.js）改用右下角的觸控按鈕，不畫鍵盤技能欄
+      if (!(G.touch && G.touch.on)) {
       // ── 技能欄 ──
       const slots = G.data.keys.skillSlots;
-      const sx0 = W - 8 - (slots.length + 2) * 52 - 8;
-      this.panel(ctx, sx0 - 8, barY, (slots.length + 2) * 52 + 16, 54, 12);
+      // 五轉大招學會之後，技能欄右邊多兩格專屬按鍵
+      const ults = G.data.keys.ults.filter(([, u]) => (P.skills[u] || 0) > 0);
+      const sx0 = W - 8 - (slots.length + ults.length + 2) * 52 - 8;
+      this.panel(ctx, sx0 - 8, barY, (slots.length + ults.length + 2) * 52 + 16, 54, 12);
+      ults.forEach(([a, u], i) => {
+        const S = G.data.skills[u];
+        this.slot(ctx, sx0 + (slots.length + i) * 52, barY + 5, I.label(a), S.icon, () => (P.mp < S.mp(P.skills[u]) ? 'nomp' : null));
+      });
       slots.forEach((a, i) => {
         const x = sx0 + i * 52;
         const id = P.hotbar[i];
@@ -155,11 +163,12 @@
           return null;
         });
       });
-      const px = sx0 + slots.length * 52;
+      const px = sx0 + (slots.length + ults.length) * 52;
       const hpN = (P.potions.hp || 0) + (P.potions.hpL || 0) + (P.potions.hpXL || 0);
       const mpN = (P.potions.mp || 0) + (P.potions.mpL || 0) + (P.potions.mpXL || 0);
       this.slot(ctx, px, barY + 5, I.label('hpPot'), P.potions.hp > 0 || !P.potions.hpL ? 'hpPot' : 'hpPotL', () => (hpN > 0 ? null : 'nomp'), hpN);
       this.slot(ctx, px + 52, barY + 5, I.label('mpPot'), P.potions.mp > 0 || !P.potions.mpL ? 'mpPot' : 'mpPotL', () => (mpN > 0 ? null : 'nomp'), mpN);
+      } // 觸控模式
 
       // ── 經驗條 ──
       const need = P.expNeed();

@@ -136,10 +136,11 @@
       const D = G.data.items;
       const R = D.rarity[it.rarity];
       const st = G.loot.totalStats(it);
-      let h = '<div class="item-name" style="color:' + R.text + '">' + esc(it.name) + '</div>';
+      let h = '<div class="item-name" style="color:' + R.text + '">' + esc(it.name) + (it.plus ? ' <span class="plus">+' + it.plus + '</span>' : '') + '</div>';
       h += '<div class="item-meta">' + (it.unique ? '獨特 · ' : '') + R.name + ' · ' + D.slots[it.slot] + ' · 需要 Lv.' + it.req + '</div>';
       h += '<ul class="stats">';
-      for (const k in it.stats) h += '<li>' + G.loot.fmtStat(k, it.stats[k]) + '</li>';
+      const en = G.loot.enhanced(it);
+      for (const k in en) h += '<li>' + G.loot.fmtStat(k, en[k]) + '</li>';
       if (it.sub) h += '<li class="sub">' + G.loot.fmtStat(it.sub.stat, it.sub.value) + '</li>';
       if (it.special) h += '<li class="special">★ ' + D.specials[it.special].name + '：' + D.specials[it.special].desc + '</li>';
       h += '</ul>';
@@ -215,6 +216,12 @@
       } else if (sel) {
         const equipped = sel.where === 'equip';
         detail = '<div class="detail">' + this.itemHTML(sel.item, equipped ? undefined : P.equip[sel.item.slot] || null) + '<div class="btns">';
+        // 強化：一定成功，費用很輕
+        const B = G.data.balance;
+        if ((sel.item.plus || 0) < B.enhanceMax) {
+          const cost = B.enhanceCost(sel.item);
+          detail += '<button class="primary" data-act="enhance" data-arg="' + sel.item.uid + '"' + (P.gold < cost ? ' disabled' : '') + '>強化 +' + ((sel.item.plus || 0) + 1) + '（' + cost + ' 金葉）</button>';
+        } else detail += '<span class="dim">已強化到 +' + B.enhanceMax + '</span>';
         if (equipped) detail += '<button data-act="unequip" data-arg="' + sel.item.uid + '">卸下</button>';
         else {
           detail += P.level >= sel.item.req ? '<button class="primary" data-act="equip" data-arg="' + sel.item.uid + '">裝備</button>' : '<span class="warn">等級不足</span>';
@@ -242,6 +249,25 @@
     },
     a_selectEq(uid) {
       this.selected = uid;
+    },
+    a_enhance(uid) {
+      const P = G.player;
+      const f = this.findItem(uid);
+      const B = G.data.balance;
+      if (!f || (f.item.plus || 0) >= B.enhanceMax) return;
+      const cost = B.enhanceCost(f.item);
+      if (P.gold < cost) {
+        G.hud.toast('金葉不夠', '#ff9a9a');
+        G.audio.play('error');
+        return;
+      }
+      P.gold -= cost;
+      f.item.plus = (f.item.plus || 0) + 1;
+      P.recalc();
+      G.audio.play('rare');
+      G.fx.sparkle(P.x, P.y - 40, '#ffe680', 16, 30);
+      G.hud.toast('「' + f.item.name + '」強化到 +' + f.item.plus + '！', '#ffe14a');
+      G.save.write();
     },
     a_equip(uid) {
       const P = G.player;
@@ -303,8 +329,10 @@
         h += '<div class="nm">' + S.name + ' <span class="lv">Lv.' + lv + ' / ' + S.maxLv + '</span>' + (slot >= 0 ? ' <span class="key">[' + I.label(G.data.keys.skillSlots[slot]) + ']</span>' : '') + '</div>';
         const mpTxt = (l) => (typeof S.mp === 'function' ? '（MP ' + S.mp(l) + '）' : '');
         h += '<div class="ds">' + (lv > 0 ? S.desc(lv) + mpTxt(lv) : '尚未學會') + '</div>';
-        // 直接點按鍵把技能放上技能欄
-        if (S.type !== 'passive') {
+        // 直接點按鍵把技能放上技能欄（五轉大招有專屬按鍵，不佔格子）
+        const ult = G.data.keys.ults.find(([, u]) => u === id);
+        if (ult) h += '<div class="slotpick">專屬按鍵：<span class="key">[' + I.label(ult[0]) + ']</span></div>';
+        else if (S.type !== 'passive') {
           h += '<div class="slotpick">放在：' + G.data.keys.skillSlots.map((a, i) => {
             const on = P.hotbar[i] === id;
             const other = P.hotbar[i] && !on ? G.data.skills[P.hotbar[i]] : null;
@@ -341,7 +369,7 @@
       P.skills[id] = (P.skills[id] || 0) + 1;
       P.sp--;
       G.formSwitch.sync(P);
-      if (S.type !== 'passive' && P.hotbar.indexOf(id) < 0) {
+      if (S.type !== 'passive' && S.form !== 'apex' && P.hotbar.indexOf(id) < 0) {
         const free = P.hotbar.indexOf(null);
         if (free >= 0) P.hotbar[free] = id;
       }

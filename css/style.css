@@ -320,3 +320,67 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .codex-sum span { color: #8a735c; font-size: 13px; margin-left: 8px; }
 .win-codex .gallery-wrap { max-height: 470px; }
 #demo-panel .dp-row button.on { background: #ffd35a; }
+
+/* ══════════ 手機觸控操作（js/ui/touch.js）══════════ */
+body.touch-mode { touch-action: manipulation; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+body.touch-mode #game { touch-action: none; }
+#ui > #touch-ctl { position: absolute; inset: 0; pointer-events: none; }
+#touch-ctl, #touch-ctl * { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#touch-ctl.blocked > * { display: none; }
+#touch-ctl .tc-joyzone { position: absolute; pointer-events: auto; }
+#touch-ctl .tc-joy { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255, 248, 230, 0.10) 0 55%, rgba(255, 248, 230, 0.22) 56% 100%); border: 3px solid rgba(255, 240, 210, 0.55); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18), inset 0 0 18px rgba(0, 0, 0, 0.25); opacity: 0.55; transition: opacity 0.15s; }
+#touch-ctl .tc-joyzone.on .tc-joy { opacity: 1; }
+#touch-ctl .tc-joy .ar { position: absolute; width: 0; height: 0; border: 11px solid transparent; opacity: 0.75; }
+#touch-ctl .tc-joy .ar.u { left: 50%; top: 8px; margin-left: -11px; border-bottom: 14px solid #fff3d8; border-top: 0; }
+#touch-ctl .tc-joy .ar.d { left: 50%; bottom: 8px; margin-left: -11px; border-top: 14px solid #fff3d8; border-bottom: 0; }
+#touch-ctl .tc-joy .ar.l { top: 50%; left: 8px; margin-top: -11px; border-right: 14px solid #fff3d8; border-left: 0; }
+#touch-ctl .tc-joy .ar.r { top: 50%; right: 8px; margin-top: -11px; border-left: 14px solid #fff3d8; border-right: 0; }
+#touch-ctl .tc-joy[data-dir='u'] .ar.u { opacity: 1; border-bottom-color: #ffd35a; }
+#touch-ctl .tc-joy[data-dir='d'] .ar.d { opacity: 1; border-top-color: #ffd35a; }
+#touch-ctl .tc-joy[data-dir='l'] .ar.l { opacity: 1; border-right-color: #ffd35a; }
+#touch-ctl .tc-joy[data-dir='r'] .ar.r { opacity: 1; border-left-color: #ffd35a; }
+#touch-ctl .tc-knob { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 38% 32%, rgba(255, 255, 255, 0.95), rgba(255, 226, 170, 0.85) 45%, rgba(214, 150, 70, 0.85)); border: 3px solid rgba(120, 70, 20, 0.7); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35); opacity: 0.55; }
+#touch-ctl .tc-joyzone.on .tc-knob { opacity: 1; }
+#touch-ctl .tc-actions { position: absolute; inset: 0; pointer-events: none; }
+#touch-ctl .tc-btn { position: absolute; pointer-events: auto; border-radius: 50%; background: radial-gradient(circle at 50% 35%, rgba(90, 60, 36, 0.55), rgba(30, 18, 10, 0.62)); border: 3px solid rgba(255, 232, 190, 0.7); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 220, 160, 0.18); display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff6e0; font-weight: bold; text-shadow: 0 1px 2px #000; overflow: visible; }
+#touch-ctl .tc-btn.on { transform: scale(0.92); filter: brightness(1.35); border-color: #ffe27a; }
+#touch-ctl .tc-btn img { pointer-events: none; }
+#touch-ctl .tc-btn span { pointer-events: none; }
+#touch-ctl .tc-attack { background: radial-gradient(circle at 50% 30%, rgba(255, 196, 110, 0.78), rgba(210, 100, 30, 0.72) 70%, rgba(150, 60, 15, 0.75)); border: 4px solid rgba(255, 244, 214, 0.9); box-shadow: 0 5px 0 rgba(90, 40, 5, 0.45), 0 0 16px rgba(255, 170, 60, 0.35), inset 0 -8px 16px rgba(120, 40, 0, 0.35); }
+#touch-ctl .tc-attack img { width: 74px; height: 74px; margin-top: -4px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4)); }
+#touch-ctl .tc-attack span { font-size: 17px; margin-top: -4px; }
+#touch-ctl .tc-jump { background: radial-gradient(circle at 50% 30%, rgba(150, 220, 255, 0.7), rgba(40, 120, 200, 0.68) 70%, rgba(20, 70, 140, 0.72)); border-color: rgba(230, 248, 255, 0.85); }
+#touch-ctl .tc-jump b { font-size: 34px; line-height: 30px; }
+#touch-ctl .tc-jump span { font-size: 14px; }
+#touch-ctl .tc-skill img { width: 64px; height: 64px; border-radius: 50%; }
+#touch-ctl .tc-skill img.hide { display: none; }
+#touch-ctl .tc-skill i { position: absolute; right: -4px; top: -6px; font-style: normal; font-size: 13px; min-width: 20px; height: 20px; line-height: 17px; text-align: center; border-radius: 10px; background: rgba(60, 36, 18, 0.9); border: 2px solid rgba(255, 232, 190, 0.8); color: #ffe9b0; }
+#touch-ctl .tc-skill.empty { background: rgba(30, 18, 10, 0.28); border-style: dashed; border-color: rgba(255, 232, 190, 0.45); }
+#touch-ctl .tc-skill .cd { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+#touch-ctl .tc-skill .cdt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000; }
+#touch-ctl .tc-skill.lock img { filter: grayscale(1) brightness(0.5); }
+#touch-ctl .tc-skill.nomp img { filter: saturate(0.4) brightness(0.6) sepia(0.3) hue-rotate(180deg); }
+#touch-ctl .tc-ult { background: radial-gradient(circle at 50% 35%, rgba(170, 90, 255, 0.6), rgba(50, 10, 90, 0.7)); border: 4px solid rgba(255, 220, 120, 0.95); animation: tcUlt 1.4s ease-in-out infinite alternate; }
+#touch-ctl .tc-ult img { width: 72px; height: 72px; }
+@keyframes tcUlt { from { box-shadow: 0 0 6px 2px rgba(255, 210, 90, 0.5), 0 3px 0 rgba(0, 0, 0, 0.3); } to { box-shadow: 0 0 20px 7px rgba(255, 190, 60, 0.8), 0 3px 0 rgba(0, 0, 0, 0.3); } }
+#touch-ctl .tc-pot img { width: 46px; height: 46px; margin-top: 2px; }
+#touch-ctl .tc-pot em { position: absolute; right: -6px; bottom: -4px; font-style: normal; font-size: 14px; min-width: 22px; height: 20px; padding: 0 4px; line-height: 17px; text-align: center; border-radius: 10px; background: rgba(40, 24, 12, 0.9); border: 2px solid rgba(255, 232, 190, 0.8); }
+#touch-ctl .tc-pot.none img { filter: grayscale(1) brightness(0.6); }
+#touch-ctl .glow, #touch-ctl .tc-joy.glow { animation: tcGlow 0.7s ease-in-out infinite alternate; }
+@keyframes tcGlow { from { box-shadow: 0 0 0 3px #ffd83a, 0 0 10px #ffd83a; } to { box-shadow: 0 0 0 7px #ffd83a, 0 0 30px #ffb020; } }
+#touch-ctl .tc-menu { position: absolute; left: 914px; top: 8px; width: 58px; height: 44px; pointer-events: auto; border-radius: 12px; background: rgba(40, 24, 12, 0.72); border: 2px solid #c8a060; color: #ffe9b0; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+#touch-ctl .tc-menu:active { filter: brightness(1.4); }
+/* 觸控模式：標題畫面的鍵盤提示改成觸控說明、試玩面板不要蓋住技能鈕 */
+.touch-mode .title-screen .hint { font-size: 0; }
+.touch-mode .title-screen .hint::after { content: '左下搖桿移動（往上推：爬繩／對話／傳送門）· 右下按鈕攻擊、跳躍、技能 · 搖桿往下＋跳躍：跳下平台'; font-size: 15px; }
+.touch-mode #demo-panel { max-height: 190px; }
+.touch-mode .panel .title .x { font-size: 18px; padding: 4px 14px; }
+#tc-rotate { position: fixed; inset: 0; z-index: 1000; background: rgba(13, 9, 6, 0.9); display: flex; align-items: center; justify-content: center; }
+#tc-rotate .box { text-align: center; color: #fff6d8; background: #3a2412; border: 3px solid #c8a060; border-radius: 16px; padding: 22px 26px; max-width: 86vw; }
+#tc-rotate .phone { font-size: 46px; display: inline-block; animation: tcRot 1.6s ease-in-out infinite; }
+@keyframes tcRot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+#tc-rotate .msg { font-size: 22px; font-weight: bold; margin: 10px 0 4px; }
+#tc-rotate .sub { font-size: 14px; color: #d8c8a0; margin-bottom: 14px; }
+/* ══════════ 觸控操作 end ══════════ */
+.item-name .plus { color: #ff9a2a; }
+.old-save { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); background: rgba(40,20,10,0.85); color: #ffe9a0; padding: 8px 16px; border-radius: 10px; font-size: 14px; }

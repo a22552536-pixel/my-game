@@ -19,7 +19,7 @@
     hp: 1, mp: 1, maxHp: 1, maxMp: 1, atk: 1, def: 0, crit: 0.05,
     gold: 0,
     skills: {},
-    hotbar: [null, null, null, null, null, null],
+    hotbar: [null, null, null, null],
     equip: { claw: null, mane: null, charm: null },
     bag: [],
     potions: { hp: 0, mp: 0 },
@@ -39,7 +39,7 @@
       this.pages = null;
       this.apexLine = null;
       this.formCd = 0;
-      this.hotbar = ['pounce', 'roar', null, null, null, null];
+      this.hotbar = ['pounce', 'roar', null, null];
       this.equip = { claw: G.loot.makeEquip('claw1', 'common', { atk: 4 }), mane: null, charm: null };
       this.bag = [];
       this.potions = { hp: 5, mp: 3 };
@@ -167,8 +167,11 @@
       const b = B();
       this.regenT += dt;
       this.mpRegenT = (this.mpRegenT || 0) + dt;
+      // Boss 戰中不會自然回血：要靠藥水
+      const bossFight = G.world.boss && !G.world.boss.dead;
       if (this.regenT >= b.hpRegen.every) {
         this.regenT = 0;
+        if (!bossFight)
         this.hp = Math.min(this.maxHp, this.hp + Math.max(1, Math.round(this.maxHp * b.hpRegen.pct * G.story.hpRegenMult())));
       }
       if (this.mpRegenT >= b.mpRegen.every) {
@@ -219,6 +222,14 @@
       if (I.wasPressed('attack')) {
         this.startAttack();
         return;
+      }
+      // 五轉大招：專屬按鍵
+      for (const [a, id] of G.data.keys.ults) {
+        if (I.wasPressed(a)) {
+          if ((this.skills[id] || 0) > 0) this.useSkill(id);
+          else G.hud.toast('五轉「星楓獅王」之後才會學到這一招', '#ddd');
+          return;
+        }
       }
       const slots = G.data.keys.skillSlots;
       for (let i = 0; i < slots.length; i++) {

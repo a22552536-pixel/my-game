@@ -11,8 +11,8 @@ G.data.keys = {
     ['skill2', '技能欄 2'],
     ['skill3', '技能欄 3'],
     ['skill4', '技能欄 4'],
-    ['skill5', '技能欄 5'],
-    ['skill6', '技能欄 6'],
+    ['ult1', '五轉大招：冥道殘月破'],
+    ['ult2', '五轉大招：地爆天星'],
     ['hpPot', 'HP 藥水'],
     ['mpPot', 'MP 藥水'],
     // 背包、技能、形態、地圖、任務、圖鑑：改成只用畫面左上角的圖示打開，不佔按鍵
@@ -28,12 +28,14 @@ G.data.keys = {
     skill2: 'KeyS',
     skill3: 'KeyD',
     skill4: 'KeyF',
-    skill5: 'KeyQ',
-    skill6: 'KeyW',
+    ult1: 'KeyQ',
+    ult2: 'KeyW',
     hpPot: 'Digit1',
     mpPot: 'Digit2',
   },
-  skillSlots: ['skill1', 'skill2', 'skill3', 'skill4', 'skill5', 'skill6'],
+  // 技能欄只有 4 格（手機版同樣是 4 顆技能鈕）；五轉兩招用專屬按鍵，不佔格子
+  skillSlots: ['skill1', 'skill2', 'skill3', 'skill4'],
+  ults: [['ult1', 'meidou'], ['ult2', 'chibaku']],
   // Esc 保留給選單；其餘會和瀏覽器功能衝突
   forbidden: ['Escape', 'F5', 'F12', 'Tab', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'ContextMenu'],
 

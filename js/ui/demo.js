@@ -80,10 +80,10 @@
       P.sp = 0;
       P.pages = null;
       // 技能欄：優先放高階的主動技能
-      const act = skillsOf(formId).filter((id) => G.data.skills[id].type !== 'passive');
+      const act = skillsOf(formId).filter((id) => G.data.skills[id].type !== 'passive' && G.data.skills[id].form !== 'apex');
       const tierOf = (id) => (G.data.forms[G.data.skills[id].form] || { tier: 0 }).tier;
       act.sort((a, b) => tierOf(b) - tierOf(a));
-      P.hotbar = [0, 1, 2, 3, 4, 5].map((i) => act[i] || null);
+      P.hotbar = G.data.keys.skillSlots.map((a, i) => act[i] || null);
       P.action = null;
       P.cds = {};
       P.buffs = {};

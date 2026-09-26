@@ -213,7 +213,7 @@
         G.player.hp = Math.min(G.player.maxHp, G.player.hp + Math.max(1, Math.round(G.player.maxHp * hb.heal)));
         G.fx.particles.push({ x: m.x, y: m.y - 30, vx: (G.player.x - m.x) * 2, vy: -120, life: 0.45, t: 0, size: 5, color: '#ff6a5a', grav: 0, shape: 'circle', drag: 0 });
       }
-      G.player.gainExp(m.exp);
+      G.player.gainExp(Math.max(1, Math.round(m.exp * G.data.balance.expPenalty(G.player.level, m.level))));
       G.quests.onKill(m.id);
       G.loot.dropFromMonster(m);
       if (m.spawn && !m.isAdd) {

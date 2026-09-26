@@ -2,15 +2,26 @@
 (function () {
   'use strict';
   const KEY = 'xiaozong_save_v1';
-  const VERSION = 1;
+  // v2：第二章起的怪物、委託、等級帶全部改版，舊存檔（v1）不能繼續，要開新遊戲
+  const VERSION = 2;
+  const current = () => {
+    const d = G.store.get(KEY);
+    return d && (d.v || 1) >= VERSION ? d : null;
+  };
 
   G.save = {
     exists() {
-      return !!G.store.get(KEY);
+      return !!current();
+    },
+
+    // 有舊版本的存檔（標題畫面提示要開新遊戲）
+    outdated() {
+      const d = G.store.get(KEY);
+      return !!(d && (d.v || 1) < VERSION);
     },
 
     peek() {
-      return G.store.get(KEY);
+      return current();
     },
 
     write() {
@@ -62,7 +73,8 @@
             pg.skills[id] = G.data.skills[id].maxLv;
           }
         }
-        pg.hotbar = (pg.hotbar || []).map((id) => (id && G.data.skills[id] ? id : null));
+        pg.hotbar = (pg.hotbar || []).slice(0, G.data.keys.skillSlots.length).map((id) => (id && G.data.skills[id] && G.data.skills[id].form !== 'apex' ? id : null));
+        while (pg.hotbar.length < G.data.keys.skillSlots.length) pg.hotbar.push(null);
       };
       const cur = { skills: P.skills, sp: P.sp, hotbar: P.hotbar };
       clean(cur);

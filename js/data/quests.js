@@ -308,12 +308,3 @@ G.data.quests = {
     },
   },
 };
-
-// 經驗值倍率（見 balance.expScale）
-(function () {
-  const k = G.data.balance.expScale;
-  for (const id in G.data.quests) {
-    const r = G.data.quests[id].reward;
-    if (r && r.exp) r.exp = Math.round(r.exp * k);
-  }
-})();

@@ -30,7 +30,8 @@
         const m = save.pos && G.data.maps[save.pos.map] ? G.data.maps[save.pos.map].name : '營地';
         cont = '<button class="primary big" data-t="continue">繼續遊戲<small>Lv.' + save.player.level + ' · ' + m + ' · ' + U.fmtTime(save.player.playTime || 0) + '</small></button>';
       }
-      el.innerHTML =
+      const old = !save && G.save.outdated() ? '<div class="old-save">遊戲已經大改版（等級、怪物、委託都重新設計），舊存檔無法繼續，請開新遊戲。</div>' : '';
+      el.innerHTML = old +
         '<div class="logo"><div class="name">小獅子的冒險</div><div class="sub">一隻小獅子，往天空的家爬回去</div></div>' +
         '<div class="tbtns">' + cont +
         '<button class="' + (cont ? '' : 'primary ') + 'big" data-t="new">' + (cont ? '新遊戲' : '開始冒險') + '</button>' +

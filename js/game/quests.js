@@ -102,7 +102,7 @@
       }
       G.fx.pillar(P.x, P.y, 'rgba(140,255,160,0.8)', 1.0, 70);
       G.audio.play('quest');
-      if (r.exp) P.gainExp(r.exp);
+      if (r.exp) P.gainExp(Math.max(1, Math.round(r.exp * G.data.balance.questExpMult(P.level, q.region))));
       G.save.write();
       return true;
     },

@@ -69,8 +69,16 @@
       return U.weighted(D().potionDrops);
     },
 
-    totalStats(item) {
+    // 強化後的基礎能力：每級 +8%
+    enhanced(item) {
       const out = Object.assign({}, item.stats);
+      const k = 1 + (item.plus || 0) * (G.data.balance.enhancePct || 0);
+      if (k !== 1) for (const s in out) out[s] = s === 'crit' ? Math.round(out[s] * k * 1000) / 1000 : Math.round(out[s] * k);
+      return out;
+    },
+
+    totalStats(item) {
+      const out = this.enhanced(item);
       if (item.sub) out[item.sub.stat] = (out[item.sub.stat] || 0) + item.sub.value;
       return out;
     },
@@ -105,11 +113,11 @@
       if (d.gold) this.spawn('gold', x, y, { amount: U.randi(d.gold[0], d.gold[1]) * (m.elite ? 4 : 1) * (m.shiny ? 5 : 1) });
       if (m.shiny) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'shiny') });
-      } else if (m.V && m.V.loot === 'elite' && Math.random() < 0.6) {
+      } else if (m.V && m.V.loot === 'elite' && Math.random() < 0.2) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'elite') });
       } else if (m.V && m.V.loot === 'gold') {
         this.spawn('gold', x, y, { amount: U.randi(d.gold[0], d.gold[1]) * 4 });
-      } else if (m.elite) {
+      } else if (m.elite && Math.random() < 0.3) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'elite') });
       } else if (d.equip && Math.random() < d.equip) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'normal') });
@@ -246,12 +254,13 @@
         if (dr.onGround && (r && r !== 'common' || dr.kind === 'starleaf')) {
           // 稀有度光柱
           const col = dr.kind === 'starleaf' ? '255,230,120' : r === 'rare' ? '77,163,255' : r === 'epic' ? '180,107,255' : '255,182,46';
-          const h = r === 'rare' ? 90 : 170;
+          const h = r === 'rare' ? 90 : r === 'legendary' ? 260 : 210;
           const g = ctx.createLinearGradient(0, dr.y - h, 0, dr.y);
           g.addColorStop(0, 'rgba(' + col + ',0)');
           g.addColorStop(1, 'rgba(' + col + ',' + (0.45 + Math.sin(t * 4) * 0.12).toFixed(3) + ')');
           ctx.fillStyle = g;
-          ctx.fillRect(dr.x - 12, dr.y - h, 24, h);
+          const bw = r === 'rare' ? 24 : 34;
+          ctx.fillRect(dr.x - bw / 2, dr.y - h, bw, h);
           if (Math.random() < 0.08) G.fx.sparkle(dr.x, dr.y - 20, 'rgba(' + col + ',1)', 1, 10);
         }
         let icon = dr.kind;
