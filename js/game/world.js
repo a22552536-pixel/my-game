@@ -91,6 +91,7 @@
         if (firstInRegion) G.hud.regionCard(map.region);
       }
       G.hud.mapTitle(map.name);
+      G.quests.onVisit(mapId);
     },
 
     spawnFromGroup(gi) {

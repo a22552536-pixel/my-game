@@ -85,6 +85,30 @@
       return true;
     },
 
+    onVisit(mapId) {
+      for (const id in this.state) {
+        const q = this.def(id);
+        if (this.state[id] === 'active' && q.type === 'visit' && q.target === mapId) {
+          this.progress[id] = 1;
+          this.check(id);
+        }
+      }
+    },
+
+    // NPC 依進度說不同的話
+    npcLine(npcId) {
+      const talk = G.data.npcs[npcId].talk || [];
+      let pick = null;
+      talk.forEach((g) => {
+        const c = g.if;
+        if (!c) pick = g;
+        else if (c.done && this.state[c.done] === 'done') pick = g;
+        else if (c.level && G.player.level >= c.level) pick = g;
+        else if (c.flag && G.world.flags[c.flag]) pick = g;
+      });
+      return pick ? G.util.pick(pick.text) : '……';
+    },
+
     onKill(monsterId) {
       for (const id in this.state) {
         const q = this.def(id);
@@ -122,9 +146,11 @@
         const st = this.state[id];
         if (st !== 'active' && st !== 'ready') continue;
         const q = this.def(id);
-        out.push({ id, name: q.name, ready: st === 'ready', text: st === 'ready' ? '回報 ' + G.data.npcs[q.npc].name : this.goalText(id) });
+        out.push({ id, name: q.name, ready: st === 'ready', main: !!q.main, text: st === 'ready' ? '回報 ' + G.data.npcs[q.npc].name : this.goalText(id) });
       }
-      return out;
+      // 可回報的排前面、主線其次，最多顯示 5 個
+      out.sort((a, b) => (b.ready - a.ready) || (b.main - a.main));
+      return out.slice(0, 5);
     },
 
     goalText(id) {
@@ -133,6 +159,7 @@
       if (q.type === 'kill') return '打倒 ' + G.data.monsters[q.target].name + ' ' + n + '/' + q.count;
       if (q.type === 'collect') return '收集 ' + G.data.items.questItems[q.item].name + ' ' + n + '/' + q.count;
       if (q.type === 'boss') return '討伐 ' + G.data.monsters[q.target].name;
+      if (q.type === 'visit') return '前往 ' + G.data.maps[q.target].name;
       return '';
     },
   });

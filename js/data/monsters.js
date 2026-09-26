@@ -19,12 +19,12 @@ G.data.monsters = {
   seedling: {
     name: '種子精', lv: 3, art: 'sprite', stage: 1, behavior: 'passive', abilities: ['hop'],
     speed: 50, w: 36, h: 42, hpMul: 0.95, atkMul: 1,
-    drops: { gold: [3, 8], equip: 0.035, potion: 0.04 },
+    drops: { gold: [3, 8], equip: 0.035, potion: 0.04, quest: { item: 'seedshell', chance: 0.6 } },
   },
   mosssnail: {
     name: '苔殼蝸', lv: 5, art: 'snail', stage: 2, behavior: 'passive',
     speed: 32, w: 50, h: 38, hpMul: 1.25, atkMul: 1,
-    drops: { gold: [5, 11], equip: 0.04, potion: 0.05 },
+    drops: { gold: [5, 11], equip: 0.04, potion: 0.05, quest: { item: 'moss', chance: 0.6 } },
   },
   spotshroom: {
     name: '斑點菇', lv: 6, art: 'mushroom', stage: 2, behavior: 'passive', abilities: ['charge'],
@@ -45,13 +45,13 @@ G.data.monsters = {
     name: '提燈菇', lv: 10, art: 'mushroom', stage: 3, behavior: 'aggressive', abilities: ['ranged'],
     speed: 45, w: 54, h: 66, hpMul: 1.1, atkMul: 1.05, sight: 420,
     projectile: { kind: 'spore', speed: 300, cd: 2.6, range: 420 },
-    drops: { gold: [10, 20], equip: 0.045, potion: 0.06 },
+    drops: { gold: [10, 20], equip: 0.045, potion: 0.06, quest: { item: 'wick', chance: 0.5 } },
   },
   flowerling: {
     name: '花冠精', lv: 11, art: 'sprite', stage: 3, behavior: 'aggressive', abilities: ['ranged'],
     speed: 55, w: 48, h: 66, hpMul: 1.15, atkMul: 1.05, sight: 440,
     projectile: { kind: 'petal', speed: 380, cd: 2.2, range: 440, count: 3 },
-    drops: { gold: [11, 22], equip: 0.045, potion: 0.06 },
+    drops: { gold: [11, 22], equip: 0.045, potion: 0.06, quest: { item: 'petal', chance: 0.5 } },
   },
 
   // ── Boss ──

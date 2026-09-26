@@ -73,6 +73,10 @@ G.data.items = {
 
   questItems: {
     spore: { name: '孢子粉' },
+    moss: { name: '柔軟青苔' },
+    seedshell: { name: '種子殼' },
+    wick: { name: '發光燈芯' },
+    petal: { name: '花冠花瓣' },
   },
 
   // 營地商店

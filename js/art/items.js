@@ -58,6 +58,37 @@
       ctx.arc(4, 7, 1.6, 0, Math.PI * 2);
       ctx.fill();
     },
+    moss(ctx) {
+      A.shape(ctx, (c) => {
+        c.moveTo(-12, 6);
+        for (let i = 0; i <= 5; i++) c.quadraticCurveTo(-12 + i * 5 - 2, -10 + (i % 2) * 4, -12 + i * 5 + 2.5, -4 - (i % 2) * 2);
+        c.lineTo(12, 6);
+        c.closePath();
+      }, '#79b04a', '#5c8a36', { cel: [2, 2], lw: 2 });
+    },
+    seedshell(ctx) {
+      A.shape(ctx, (c) => c.ellipse(0, 2, 11, 9, 0, 0, Math.PI), '#b8804a', '#8e5e30', { cel: [2, 2], lw: 2 });
+      A.shape(ctx, (c) => c.ellipse(0, 2, 11, 3, 0, 0, Math.PI * 2), '#e3c08a', null, { lw: 2, hl: false });
+    },
+    wick(ctx) {
+      const g = ctx.createRadialGradient(0, -2, 1, 0, -2, 16);
+      g.addColorStop(0, 'rgba(240,255,160,0.9)');
+      g.addColorStop(1, 'rgba(200,255,120,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, -2, 16, 0, Math.PI * 2);
+      ctx.fill();
+      A.shape(ctx, (c) => A.roundRect(c, -3, -8, 6, 18, 3), '#f4f0d0', '#d8d0a0', { cel: [1.5, 1.5], lw: 2 });
+      A.ellipse(ctx, 0, -11, 3.5, 4.5, '#e8ff8a', null, { lw: 1.6, hl: false });
+    },
+    petal(ctx) {
+      A.shape(ctx, (c) => {
+        c.moveTo(0, 12);
+        c.bezierCurveTo(-14, 2, -8, -14, 0, -8);
+        c.bezierCurveTo(8, -14, 14, 2, 0, 12);
+        c.closePath();
+      }, '#ff9fc4', '#e27aa2', { cel: [2, 2], lw: 2 });
+    },
     starleaf(ctx) {
       const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 22);
       g.addColorStop(0, 'rgba(255,250,200,0.9)');

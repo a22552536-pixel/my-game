@@ -184,7 +184,7 @@
       grid += '</div>';
       const misc =
         '<div class="misc"><span><img src="' + G.art.iconURL('gold') + '">' + P.gold + ' 金葉</span><span><img src="' + G.art.iconURL('hpPot') + '">' + P.potions.hp + '</span><span><img src="' + G.art.iconURL('mpPot') + '">' + P.potions.mp + '</span>' +
-        (P.questItems.spore ? '<span><img src="' + G.art.iconURL('spore') + '">' + P.questItems.spore + '</span>' : '') +
+        Object.keys(G.data.items.questItems).filter((k) => P.questItems[k] > 0).map((k) => '<span title="' + G.data.items.questItems[k].name + '"><img src="' + G.art.iconURL(k) + '">' + P.questItems[k] + '</span>').join('') +
         (G.world.flags.starleaf1 ? '<span><img src="' + G.art.iconURL('starleaf') + '">星楓葉</span>' : '') +
         '</div>';
       let detail = '<div class="detail dim">點一下物品查看詳細資料。<br>▲ 表示比身上的更好。</div>';
@@ -372,8 +372,8 @@
         text = d.text;
         btns = '<button data-act="dlgBack">好</button>';
       } else {
-        text = d.greet || (d.greet = U.pick(def.lines));
-        if (def.role === 'quest') {
+        text = d.greet || (d.greet = G.quests.npcLine(npc.id));
+        if (Q.forNpc(npc.id).length) {
           Q.forNpc(npc.id).forEach((id) => {
             const q = G.data.quests[id];
             const st = Q.state[id];
@@ -567,7 +567,7 @@
 
     // ───────── 死亡 ─────────
     r_death() {
-      return '<div class="panel death"><div class="body"><div class="big">小鬃倒下了……</div><div class="dim">沒有任何損失。會在營地醒來，HP 與 MP 全滿。</div><button class="primary" data-act="revive">在營地復活</button></div></div>';
+      return '<div class="panel death"><div class="body"><div class="big">小獅子倒下了……</div><div class="dim">沒有任何損失。會在營地醒來，HP 與 MP 全滿。</div><button class="primary" data-act="revive">在營地復活</button></div></div>';
     },
     a_revive() {
       this.close('death');

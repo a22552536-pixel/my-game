@@ -1,4 +1,4 @@
-// 主角小鬃：移動、爬繩、攻擊、技能、受擊、成長。
+// 主角小獅子：移動、爬繩、攻擊、技能、受擊、成長。
 (function () {
   'use strict';
   const U = G.util;
@@ -498,7 +498,7 @@
         onGround: this.onGround,
       });
       ctx.globalAlpha = 1;
-      if (!this.dead) G.art.nameTag(ctx, this.x, this.y + 14, '小鬃', '#fff');
+      if (!this.dead) G.art.nameTag(ctx, this.x, this.y + 14, '小獅子', '#fff');
     },
   });
 

@@ -1,4 +1,4 @@
-// 主角小鬃。原點在腳底中央，面向右邊；左右翻轉由呼叫端處理。
+// 主角小獅子。原點在腳底中央，面向右邊；左右翻轉由呼叫端處理。
 (function () {
   'use strict';
   const A = G.art;
@@ -47,6 +47,22 @@
     ctx.translate(x, y);
     ctx.rotate(rot || 0);
     A.shape(ctx, (c) => A.mapleLeafPath(c, 0, 0, s), COL.tuft, COL.tuftShade, { shadeY: s * 0.3, lw: 2.2 });
+    ctx.restore();
+  }
+
+  function tailTuft(ctx, x, y, rot) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    A.shape(ctx, (c) => {
+      c.moveTo(-5, 5);
+      c.quadraticCurveTo(-10, -2, -5, -5);
+      c.quadraticCurveTo(-4, -11, 0, -10);
+      c.quadraticCurveTo(4, -12, 5, -5);
+      c.quadraticCurveTo(10, -1, 5, 5);
+      c.quadraticCurveTo(0, 8, -5, 5);
+      c.closePath();
+    }, COL.mane, COL.maneShade, { cel: [2, 2], lw: 2.5, hl: false });
     ctx.restore();
   }
 
@@ -124,7 +140,7 @@
     ctx.strokeStyle = A.c(COL.body);
     ctx.lineWidth = 3.5;
     ctx.stroke();
-    A.ellipse(ctx, -35 + sw * 0.3, -41 + bob - tailUp, 6, 7, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
+    tailTuft(ctx, -35 + sw * 0.3, -41 + bob - tailUp, 0.2 + sw * 0.04);
 
     // 身體
     A.ellipse(ctx, -1 + lean * 0.3, -20 + bob, 21, 14, COL.body, COL.bodyShade, { cel: [3, 3] });
@@ -165,7 +181,14 @@
     A.ellipse(ctx, hx + 11, hy + 7, 9, 6.5, COL.cream, null, { lw: 2, hl: false });
     ctx.fillStyle = A.c(COL.nose);
     ctx.beginPath();
-    ctx.ellipse(hx + 16, hy + 3, 3.2, 2.4, 0, 0, Math.PI * 2);
+    ctx.moveTo(hx + 12.8, hy + 1.6);
+    ctx.quadraticCurveTo(hx + 16, hy + 0.2, hx + 19.2, hy + 1.6);
+    ctx.quadraticCurveTo(hx + 17.6, hy + 5, hx + 16, hy + 5);
+    ctx.quadraticCurveTo(hx + 14.4, hy + 5, hx + 12.8, hy + 1.6);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath();
+    ctx.ellipse(hx + 15, hy + 2, 1.3, 0.7, 0, 0, Math.PI * 2);
     ctx.fill();
     // 嘴
     ctx.strokeStyle = A.outline();
@@ -173,8 +196,11 @@
     ctx.lineCap = 'round';
     if (mouth === 'smile') {
       ctx.beginPath();
-      ctx.moveTo(hx + 16, hy + 5.5);
-      ctx.quadraticCurveTo(hx + 14, hy + 10, hx + 11, hy + 8);
+      ctx.moveTo(hx + 16, hy + 5);
+      ctx.lineTo(hx + 16, hy + 7);
+      ctx.moveTo(hx + 12.6, hy + 7.4);
+      ctx.quadraticCurveTo(hx + 14.3, hy + 9.8, hx + 16, hy + 7);
+      ctx.quadraticCurveTo(hx + 17.7, hy + 9.8, hx + 19.4, hy + 7.4);
       ctx.stroke();
     } else {
       const big = mouth === 'roar' ? 6 : mouth === 'open' ? 4 : 2.5;
@@ -217,7 +243,7 @@
     ctx.strokeStyle = A.c(COL.body);
     ctx.lineWidth = 3.5;
     ctx.stroke();
-    A.ellipse(ctx, 18, -28, 6, 7, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
+    tailTuft(ctx, 18, -28, 0.3);
     // 後腳踩著繩子，左右交替
     leg(ctx, -8, 0 - a * 3, 0, COL.body, COL.bodyShade);
     leg(ctx, 8, 0 + a * 3, 0, COL.body, COL.bodyShade);

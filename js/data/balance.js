@@ -25,7 +25,7 @@ G.data.balance = {
   levelCap: 60,
   expToNext: (lv) => Math.floor(10 * Math.pow(lv, 1.6)) + 5,
   forms: {
-    base: { name: '小鬃', hp: 1, mp: 1, atk: 1, crit: 0.05 },
+    base: { name: '小獅子', hp: 1, mp: 1, atk: 1, crit: 0.05 },
   },
   playerStats(lv, form) {
     const c = this.forms[form] || this.forms.base;
