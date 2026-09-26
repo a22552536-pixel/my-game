@@ -126,7 +126,7 @@ G.data.forms = {
     desc: '岩與劍、火與星、影與夜，三股力量終於在身體裡匯成一股。鬃毛化成燃燒的星楓，頭頂的星楓之冠完整亮起。',
     look: {
       scale: 1.3,
-      pal: { body: '#fff4dc', bodyShade: '#f6ddaa', cream: '#ffffff', mane: '#fff0c0', maneShade: '#f8d88a', ear: '#ffd8c0', tuft: '#ffe7a0', tuftShade: '#f5cc70', nose: '#b0703a', farLeg: '#f8e6c0', farLegShade: '#eed09a', aura: '#fff2b0', haloRing: '#fffbe6', leaf: '#ffd35a', leafShade: '#f2a83a', leafCore: '#fff6d0', wing: '#ffffff', wingShade: '#f8e8c0' },
+      pal: { body: '#fff4dc', bodyShade: '#f6ddaa', cream: '#ffffff', mane: '#fff0c0', maneShade: '#f8d88a', ear: '#ffd8c0', tuft: '#ffe7a0', tuftShade: '#f5cc70', nose: '#b0703a', farLeg: '#f8e6c0', farLegShade: '#eed09a', aura: '#fff2b0', haloRing: '#fffbe6', leaf: '#ffd35a', leafShade: '#f2a83a', leafCore: '#fff6d0', halo: '#f5c040', lead: '#f0c860' },
       bodyRx: 23, bodyRy: 15, legW: 11,
       softLine: '#dcae62', faceLine: '#6a4028',
       mane: 'radiant', tail: 'glow', crown: 'sprig', lwings: true, fx: 'aura', float: true, eyeTint: '#ffb02e', eyeGlow: true,

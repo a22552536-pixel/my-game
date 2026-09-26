@@ -838,15 +838,23 @@
       return this.frame('切換形態', h, 'evolve');
     },
     a_switchLine(line) {
-      G.formSwitch.switchLine(G.player, line);
-      return undefined;
+      // 換完技能頁，直接跳出技能視窗讓玩家分配這一頁的技能點
+      if (G.formSwitch.switchLine(G.player, line)) {
+        this.close('forms');
+        this.open('skills');
+      }
+      return 'keep';
     },
     a_hearVoice() {
       this.closeAll();
       G.cut.startVoice(G.evolve.nextTier());
     },
     a_switchForm(id) {
-      if (G.formSwitch.switchTo(G.player, id)) this.close('forms');
+      // 切換後直接跳出技能視窗：每種形態的技能頁是分開的，要在這裡點技能、排技能欄
+      if (G.formSwitch.switchTo(G.player, id)) {
+        this.close('forms');
+        this.open('skills');
+      }
       return 'keep';
     },
 

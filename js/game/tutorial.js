@@ -13,6 +13,7 @@
     { id: 'jump', keys: () => ['jump'], text: '跳躍' },
     { id: 'attack', keys: () => ['attack'], text: '攻擊露珠蝸' },
     { id: 'climb', keys: () => ['up'], text: '跳上平台，站到發光的藤蔓前往上爬' },
+    { id: 'drop', keys: () => ['down', 'jump'], text: '按住 ↓ 再按跳躍，從平台往下跳', sub: '要站在平台上才能往下跳（在地面上的話，先爬藤蔓上去）' },
     { id: 'infoHp', info: true, keys: () => ['jump'], text: '紅色的是 HP（生命）', sub: '被怪物打到會減少，歸零就會倒下（倒下沒有懲罰，會在營地醒來）' },
     { id: 'infoMp', info: true, keys: () => ['jump'], text: '藍色的是 MP（魔力）', sub: '放技能會用掉 MP，不夠的時候技能放不出來' },
     { id: 'infoExp', info: true, keys: () => ['jump'], text: '最下面黃色的是 EXP（經驗）', sub: '打怪、完成任務會增加；集滿就升級，HP、MP 全滿，還會拿到技能點' },
@@ -133,6 +134,10 @@
         case 'climb':
           if (P.climbing >= 0) this.on('climb');
           break;
+        case 'drop':
+          // 往下跳穿平台的那一刻，player 會記下要穿過的平台
+          if (P.ignorePlat >= 0 && P.ignoreT > 0) this.on('drop');
+          break;
         case 'openSkills':
           if (G.ui.isOpen('skills')) this.on('openSkills');
           break;
@@ -232,6 +237,14 @@
         case 'climb': {
           const r = map.ropes && map.ropes[0];
           return r ? [[sx(r[0]), sy(r[2]) - 44, 'down']] : [];
+        }
+        case 'drop': {
+          // 在地面上：指藤蔓；在平台上：指著自己往下
+          if (P.plat === 0 && P.climbing < 0) {
+            const r = map.ropes && map.ropes[0];
+            return r ? [[sx(r[0]), sy(r[2]) - 44, 'down']] : [];
+          }
+          return [[sx(P.x), sy(P.y) + 40, 'down']];
         }
         case 'openSkills':
           return [[8 + 50 + 22, 98, 'up']];

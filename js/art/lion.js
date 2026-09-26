@@ -633,13 +633,45 @@
     const P = L.pal;
     glowDisc(ctx, cx, cy, 46, P.aura || '#fff4c0', 0.7 + Math.sin(t * 2) * 0.1);
     if (!ring) return;
+    // 會慢慢轉動的光環：金環、一圈長短交錯的光芒，環上四片小星楓葉
+    const rot = t * 0.5;
+    const gold = A.c(P.halo || '#f5c040');
     ctx.save();
-    ctx.globalAlpha *= 0.6 + Math.sin(t * 2) * 0.1;
-    ctx.strokeStyle = A.c(P.haloRing || '#fff8dc');
-    ctx.lineWidth = 2.5;
+    ctx.globalAlpha *= 0.9;
+    ctx.fillStyle = gold;
+    ctx.beginPath();
+    for (let k = 0; k < 16; k++) {
+      const a = rot + (k / 16) * Math.PI * 2;
+      const r1 = ring + (k % 2 ? 4.5 : 8);
+      const cs = Math.cos(a);
+      const sn = Math.sin(a);
+      ctx.moveTo(cx + cs * (ring + 1) - sn * 1.6, cy + sn * (ring + 1) + cs * 1.6);
+      ctx.lineTo(cx + cs * r1, cy + sn * r1);
+      ctx.lineTo(cx + cs * (ring + 1) + sn * 1.6, cy + sn * (ring + 1) - cs * 1.6);
+    }
+    ctx.fill();
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
     ctx.arc(cx, cy, ring, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.strokeStyle = A.c(P.haloRing || '#fffbe6');
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = A.c(P.leaf || '#ffd35a');
+    for (let k = 0; k < 4; k++) {
+      const a = rot + (k / 4) * Math.PI * 2 + Math.PI / 16;
+      ctx.save();
+      ctx.translate(cx + Math.cos(a) * ring, cy + Math.sin(a) * ring);
+      ctx.rotate(a + Math.PI / 2);
+      ctx.beginPath();
+      A.mapleLeafPath(ctx, 0, 0, 5.5);
+      ctx.fill();
+      ctx.strokeStyle = A.c(P.halo || '#f5c040');
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+    }
     ctx.restore();
   }
   // 頭頂的星楓葉：一大兩小
@@ -656,20 +688,49 @@
     });
   }
   // 背上的光翼：三根圓潤的長羽，遠側那扇不描邊、淡一點
-  const SPIRIT_FEATHERS = [[-3.0, 30], [-2.62, 40], [-2.25, 44]];
+  // 背上的光翼：像教堂的彩繪玻璃，三根圓潤的長羽，每根分成兩塊玻璃，中間用金色的鉛條隔開
+  const SPIRIT_FEATHERS = [[-3.05, 34], [-2.62, 46], [-2.2, 52]];
+  const GLASS = [['#4ad6a0', '#5a9aff'], ['#ffcc4a', '#b07cff'], ['#ff6a7a', '#ffcc4a']];
   function spiritWings(ctx, L, x, y, t) {
     const P = L.pal;
+    const glass = L.glass || GLASS;
+    const lead = A.c(P.lead || '#f0c860');
     const flap = Math.sin(t * 2.4) * 0.09;
     [[6, 0.82, true], [-2, 1, false]].forEach(([dx, sc, far]) => {
       ctx.save();
       ctx.translate(x + dx, y);
       ctx.rotate(flap * (far ? 0.6 : 1));
       ctx.scale(sc, sc);
-      if (far) ctx.globalAlpha *= 0.7;
-      SPIRIT_FEATHERS.forEach(([a, len]) => {
-        const cx = Math.cos(a) * len * 0.5;
-        const cy = Math.sin(a) * len * 0.5;
-        A.ellipse(ctx, cx, cy, len * 0.5, 7, P.wing || '#ffffff', P.wingShade || '#f6e4b0', { rot: a, cel: [1.5, 1.5], hl: false, lw: 2, noStroke: far });
+      if (far) ctx.globalAlpha *= 0.65;
+      glowDisc(ctx, -24, -24, 44, P.aura || '#fff4c0', 0.7);
+      SPIRIT_FEATHERS.forEach(([a, len], i) => {
+        const rx = len * 0.5;
+        const ry = 9;
+        ctx.save();
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.ellipse(rx, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fillStyle = A.c(glass[i][0]);
+        ctx.fill();
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = A.c(glass[i][1]);
+        ctx.fillRect(rx, -ry, rx + 1, ry * 2);
+        // 光透過玻璃的亮面
+        ctx.globalAlpha *= 0.45;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(rx * 0.95, -ry * 0.35, rx * 0.7, ry * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle = lead;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(rx, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.moveTo(rx, -ry);
+        ctx.lineTo(rx, ry);
+        ctx.stroke();
+        ctx.restore();
       });
       ctx.restore();
     });
@@ -1315,7 +1376,7 @@
     }
     if (L.fx === 'aura' && layer === 'back') {
       glowDisc(ctx, bx + 4, by - 12, 64, L.pal.aura || '#fff4c0', 0.5 + Math.sin(t * 1.6) * 0.08);
-      spiritHalo(ctx, hx - 4, hy - 4, L, t, 31);
+      spiritHalo(ctx, hx - 3, hy - 8, L, t, 33);
     }
     if (L.fx === 'wisps' && layer === 'back') {
       ctx.save();
@@ -1406,7 +1467,7 @@
     if (L.fx && !(L.fx === 'wind' && (st.state === 'idle' || st.state === 'hurt'))) particles(ctx, L, t, hx0, hy0, bx0, by0, 'back');
     if (L.dwings) dragonWings(ctx, L, -6 + lean * 0.3, -32 - up + bob, t);
     if (L.cape) capeBack(ctx, L, hx0, hy0, bx0, by0, t);
-    if (L.lwings) spiritWings(ctx, L, -6 + lean * 0.3, -30 - up + bob, t);
+    if (L.lwings) spiritWings(ctx, L, -8 + lean * 0.3, -33 - up + bob, t);
 
     // 光翼（在身體後面）
     if (L.wings) {

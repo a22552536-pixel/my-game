@@ -696,6 +696,11 @@
       ctx.arc(0, -m.h * 0.5 * sc, m.h * sc, 0, Math.PI * 2);
       ctx.fill();
     }
+    // 被引力拉扯（地爆天星拉不動 Boss 時）：身體往核心那一側傾斜、微微發抖
+    if (m.pull) {
+      const k = m.pull;
+      ctx.transform(1, 0, -k * 0.32, 1 + Math.abs(k) * 0.04, Math.sin((m.t || 0) * 60) * Math.abs(k) * 1.5, 0);
+    }
     ctx.scale(m.dir * sc, sc);
     if (m.squash > 0) {
       // 被打中時的壓扁回彈

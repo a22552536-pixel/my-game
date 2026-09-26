@@ -32,6 +32,8 @@ G.data.balance = {
       f['magic' + k] = { hp: 0.8, mp: 1.8 + 0.1 * (k - 1), atk: 1.2 + 0.08 * (k - 1), crit: 0.23 };
       f['agile' + k] = { hp: 1.0, mp: 0.9, atk: 1.1 + 0.08 * (k - 1), crit: 0.33 + 0.02 * (k - 1) };
     }
+    // 五轉：三條路線匯集，各項都取高
+    f.apex = { hp: 1.5, mp: 1.6, atk: 1.5, crit: 0.32 };
     return f;
   })(),
   playerStats(lv, form) {
@@ -49,8 +51,10 @@ G.data.balance = {
   defFactor: 0.5,
 
   // ── 怪物 ──
-  monsterHp: (lv) => Math.round(12 * Math.pow(lv, 1.15)),
-  monsterAtk: (lv) => Math.round(4 + lv * 2.2),
+  // 第二章（Lv11）開始，怪物的血量、攻擊跟著等級加速成長：
+  // 一轉之後有範圍技、裝備與任務經驗也讓玩家變強得快，原本的曲線到第二章會顯得太軟。
+  monsterHp: (lv) => Math.round(12 * Math.pow(lv, 1.15) * (1 + 0.045 * Math.min(10, Math.max(0, lv - 10)) + 0.012 * Math.max(0, lv - 20))),
+  monsterAtk: (lv) => Math.round(4 + lv * 2.2 + 1.1 * Math.min(10, Math.max(0, lv - 10)) + 0.5 * Math.max(0, lv - 20)),
   monsterDef: (lv) => Math.round(lv * 0.8),
   monsterExp: (lv) => 3 * lv,
   respawnTime: 7,
