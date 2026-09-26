@@ -265,7 +265,7 @@
       // 星楓樹：存檔裡拿到幾片葉子，樹上就亮幾盞
       const save = this.titleSave || (this.titleSave = G.save.peek() || {});
       const got = (save.world && save.world.flags && save.world.flags.leaves) || {};
-      if (save.world && save.world.flags && save.world.flags.starleaf1) got[1] = true;
+      if (save.world && save.world.flags && save.world.flags.starleaf1 && !save.world.flags.leaves) got[1] = true;
       this.drawStarTree(ctx, G.W - 190, G.H - 140, got, this.titleT);
       const leaves = [1, 2, 3, 4, 5].map((ch) => (got[ch] ? G.data.story.chapters[ch].leaf.color : null));
       ctx.save();

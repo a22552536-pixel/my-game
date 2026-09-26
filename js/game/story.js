@@ -8,8 +8,10 @@
 
     leaves() {
       const f = G.world.flags;
-      if (!f.leaves) f.leaves = {};
-      if (f.starleaf1) f.leaves[1] = true; // 舊存檔
+      if (!f.leaves) {
+        f.leaves = {};
+        if (f.starleaf1) f.leaves[1] = true; // 舊存檔：只有第一片葉子的旗標
+      }
       return f.leaves;
     },
 
@@ -28,7 +30,6 @@
     gainLeaf(ch) {
       const P = G.player;
       this.leaves()[ch] = true;
-      G.world.flags.starleaf1 = true; // 進化條件沿用
       const d = this.leafDef(ch);
       G.hud.toast('獲得「' + d.name + '」！星楓葉 ' + this.count() + '/5', '#ffe066');
       setTimeout(() => G.hud.toast('葉子的力量：' + d.gift + '；HP、攻擊永久 +' + Math.round(this.BONUS * 100) + '%', '#d8ffb0'), 900);
