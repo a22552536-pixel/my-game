@@ -36,7 +36,7 @@
     ],
   };
 
-  const FORM_ORDER = ['base', 'might1', 'might2', 'might3', 'might4', 'magic1', 'magic2', 'magic3', 'magic4', 'agile1', 'agile2', 'agile3', 'agile4'];
+  const FORM_ORDER = ['base', 'might1', 'might2', 'might3', 'might4', 'magic1', 'magic2', 'magic3', 'magic4', 'agile1', 'agile2', 'agile3', 'agile4', 'apex'];
   const LINE_COLOR = { might: '#d8803a', magic: '#3aa8c8', agile: '#6aa83a' };
 
   // 某個形態可以用的技能（基本技能＋同路線、不超過該轉的技能）
@@ -113,6 +113,10 @@
         G.audio.unlock();
         const [act, arg] = b.getAttribute('data-d').split(':');
         if (act === 'form') this.setForm(arg);
+        else if (act === 'apexLine') {
+          G.player.apexLine = arg;
+          this.setForm('apex');
+        }
         else if (act === 'cast') {
           G.ui.closeAll();
           G.player.action = null;
@@ -133,9 +137,17 @@
       let h = '<div class="dp-title">試玩模式</div><div class="dp-lbl">形態（點一下切換）</div><div class="dp-forms">';
       FORM_ORDER.forEach((id) => {
         const f = F[id];
-        const col = f.line ? LINE_COLOR[f.line] : '#b8904a';
+        const col = f.line ? LINE_COLOR[f.line] : f.apex ? '#e8b830' : '#b8904a';
         h += '<button data-d="form:' + id + '" class="' + (P.form === id ? 'on' : '') + '" style="border-color:' + col + '">' + f.name + (f.tier ? '<small>' + f.tier + '轉</small>' : '') + '</button>';
       });
+      if (F[P.form].apex) {
+        // 五轉：選要沿用哪一條路線的技能頁
+        h += '</div><div class="dp-lbl">五轉沿用的技能頁</div><div class="dp-forms">';
+        ['might', 'magic', 'agile'].forEach((l) => {
+          const cur = (P.apexLine || 'might') === l;
+          h += '<button data-d="apexLine:' + l + '" class="' + (cur ? 'on' : '') + '" style="border-color:' + LINE_COLOR[l] + '">' + G.data.lines[l].name + '</button>';
+        });
+      }
       h += '</div><div class="dp-lbl">技能（點一下施放）</div><div class="dp-skills">';
       skillsOf(P.form).forEach((id) => {
         const S = G.data.skills[id];
