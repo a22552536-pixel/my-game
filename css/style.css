@@ -319,3 +319,4 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .codex-sum { margin: 0 0 10px; color: #6a3a0a; font-size: 16px; }
 .codex-sum span { color: #8a735c; font-size: 13px; margin-left: 8px; }
 .win-codex .gallery-wrap { max-height: 470px; }
+#demo-panel .dp-row button.on { background: #ffd35a; }

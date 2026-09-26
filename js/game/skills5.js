@@ -285,10 +285,27 @@
         if (u.pt >= 1.45) {
           u.rocks.forEach((r) => u.shell.push({ a0: Math.atan2(r.y - u.oy, r.x - u.ox), a: u.shell.length * 2.39996, d: U.rand(0.85, 1.02), rot: r.rot, s: r.s, kind: r.kind, tone: r.tone, t: 0 }));
           u.rocks.length = 0;
+          u.phase = 'squeeze';
+          u.pt = 0;
+        }
+        return false;
+      }
+      if (u.phase === 'squeeze') {
+        // 石球被壓緊：越縮越小、越抖越厲害，石縫開始透出紅光
+        hold();
+        const k = Math.min(1, u.pt / 0.55);
+        G.fx.shake(2 + 6 * k, 0.05);
+        if (Math.random() < 0.25 + 0.5 * k) {
+          const a = Math.random() * TAU;
+          G.fx.particles.push({ x: u.ox + Math.cos(a) * u.size * 0.85, y: u.oy + Math.sin(a) * u.size * 0.85, vx: Math.cos(a) * U.rand(40, 120), vy: Math.sin(a) * U.rand(40, 120) + 60, life: 0.4, t: 0, size: U.rand(2, 3.5), color: U.pick(['#8a7a68', '#6e6254', '#a89a88']), grav: 500, shape: 'square', drag: 1 });
+        }
+        if (Math.random() < 0.05) G.audio.play('rock');
+        if (u.pt >= 0.55) {
           u.phase = 'flash';
           u.pt = 0;
-          u.flashT = 0.12;
-          G.fx.shake(10, 0.2);
+          u.flashT = 0.1;
+          G.fx.shake(12, 0.2);
+          G.fx.addHitstop(0.06);
         }
         return false;
       }
@@ -638,7 +655,7 @@
       ctx.save();
       ctx.translate(x, y);
       // 引力場：往內收縮的細圈
-      if (u.phase === 'pull' || u.phase === 'flash') {
+      if (u.phase === 'pull' || u.phase === 'squeeze' || u.phase === 'flash') {
         for (let i = 0; i < 3; i++) {
           const k = (u.t * 1.6 + i / 3) % 1;
           ctx.beginPath();
@@ -689,7 +706,12 @@
         ctx.restore();
       }
       // 石球外殼：石頭一顆顆黏上去（剛黏上時從外面滑進定位）
-      const sz = u.size * (u.phase === 'flash' ? 1 + Math.sin(u.t * 40) * 0.02 : 1);
+      // 壓緊：縮小到八成，並且抖動（壓得越緊抖得越兇）
+      const sq = u.phase === 'squeeze' ? Math.min(1, u.pt / 0.55) : u.phase === 'flash' || u.phase === 'end' ? 1 : 0;
+      const ease = sq * sq * (3 - 2 * sq);
+      const sz = u.size * (1 - 0.2 * ease) * (u.phase === 'flash' ? 1 + Math.sin(u.t * 40) * 0.02 : 1);
+      const shakeAmt = u.phase === 'squeeze' ? 1 + 4 * sq : u.phase === 'flash' ? 1.5 : 0;
+      if (shakeAmt) ctx.translate(U.rand(-shakeAmt, shakeAmt), U.rand(-shakeAmt, shakeAmt));
       // 石頭夠多時，中間補一層深色的土，看起來是一整顆球
       if (u.shell.length > 4) {
         ctx.beginPath();
@@ -710,8 +732,8 @@
         this.stone(ctx, Math.cos(a) * d, Math.sin(a) * d, (12 + sz * 0.17) * sh.s, sh.rot, sh.kind, sh.tone, 1);
       });
       // 石縫裡透出的紅光（黑閃越打越亮）
-      if (u.phase === 'flash' && u.shell.length) {
-        const k = u.n / u.S.hits;
+      if ((u.phase === 'flash' || u.phase === 'squeeze') && u.shell.length) {
+        const k = u.phase === 'squeeze' ? 0.45 * ease : 0.45 + 0.55 * (u.n / u.S.hits);
         ctx.globalCompositeOperation = 'lighter';
         const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 1.1);
         g2.addColorStop(0, 'rgba(255,60,80,' + (0.55 * k).toFixed(3) + ')');

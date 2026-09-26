@@ -46,6 +46,7 @@
 
   const D = (G.demo = {
     active: false,
+    tough: true,
     panel: null,
 
     start() {
@@ -101,6 +102,19 @@
       P.mp = P.maxMp;
       P.hp = P.maxHp;
       if (P.cds) for (const k in P.cds) P.cds[k] = 0;
+      // 怪物耐打：連段技能的每一下都看得到（至少 3 萬血）
+      for (const m of G.world.monsters) {
+        if (m.dead || m.demoHp === this.tough) continue;
+        if (this.tough) {
+          m.demoBase = m.demoBase || m.maxHp;
+          m.maxHp = Math.max(m.demoBase * 40, 30000);
+          m.hp = m.maxHp;
+        } else if (m.demoBase) {
+          m.maxHp = m.demoBase;
+          m.hp = Math.min(m.hp, m.maxHp);
+        }
+        m.demoHp = this.tough;
+      }
     },
 
     buildPanel() {
@@ -122,7 +136,10 @@
           G.player.action = null;
           G.player.useSkill(arg);
         } else if (act === 'gallery') G.ui.open('gallery');
-        else if (act === 'respawn') G.world.load('DEMO', { x: G.player.x, y: G.player.y });
+        else if (act === 'tough') {
+          this.tough = !this.tough;
+          this.renderPanel();
+        } else if (act === 'respawn') G.world.load('DEMO', { x: G.player.x, y: G.player.y });
         else if (act === 'exit') location.href = location.pathname;
       });
       document.getElementById('ui').appendChild(el);
@@ -156,7 +173,7 @@
         const passive = S.type === 'passive';
         h += '<button data-d="cast:' + id + '"' + (passive ? ' disabled' : '') + ' title="' + S.desc(S.maxLv).replace(/"/g, '') + '"><img src="' + A.iconURL(S.icon) + '"><span>' + S.name + '</span>' + (passive ? '<em>被動</em>' : key ? '<em>' + key + '</em>' : '') + '</button>';
       });
-      h += '</div><div class="dp-row"><button data-d="gallery">全部形態與怪物圖鑑</button><button data-d="respawn">怪物重生</button><button data-d="exit">離開試玩</button></div>';
+      h += '</div><div class="dp-row"><button data-d="gallery">全部形態與怪物圖鑑</button><button data-d="tough" class="' + (this.tough ? 'on' : '') + '">怪物耐打：' + (this.tough ? '開' : '關') + '</button><button data-d="respawn">怪物重生</button><button data-d="exit">離開試玩</button></div>';
       this.panel.innerHTML = h;
     },
   });
