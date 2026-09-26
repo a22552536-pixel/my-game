@@ -180,8 +180,8 @@
         // 巨錘從天上掉下來
         G.world.projectiles.push({ kind: 'hammer', owner: 'fx', x: tx, y: ty - 520, vx: 0, vy: 1500, t: 0, life: 0.34, dir: P.dir, seed: 0, r: 0 });
         X.later(0.34, () => {
-          G.fx.shake(16, 0.45);
-          G.fx.addHitstop(0.12);
+          G.fx.shake(16, 0.45, true);
+          G.fx.addHitstop(0.12, true);
           G.fx.ring(tx, ty - 10, 'rgba(255,230,160,0.95)', 150, 0.35, 8);
           G.fx.burst(tx, ty - 8, ['#b8a07a', '#8a7050', '#fff0d0'], 30, 380, { angle: -Math.PI / 2, spread: 1.4, shape: 'square', size: 6 });
           G.audio.play('slam');
@@ -278,8 +278,8 @@
           a.n++;
           // 納刀：最後一下整片爆開
           if (last) {
-            G.fx.shake(10, 0.25);
-            G.fx.addHitstop(0.06);
+            G.fx.shake(10, 0.25, true);
+            G.fx.addHitstop(0.06, true);
             const cx = (lo + lo + span) / 2;
             G.fx.cut(cx, yc, -0.3, span + 140, { w: 6, life: 0.42, grow: 0.025 });
             G.fx.cut(cx, yc, 0.3, span + 140, { w: 6, life: 0.42, grow: 0.025, delay: 0.035 });
@@ -358,8 +358,8 @@
         const fall = 0.75;
         G.world.projectiles.push({ kind: 'meteor', owner: 'fx', x: tx - 260, y: ty - 560, vx: 260 / fall, vy: 560 / fall, t: 0, life: fall, dir: 1, seed: 0, r: 0 });
         X.later(fall, () => {
-          G.fx.shake(18, 0.5);
-          G.fx.addHitstop(0.1);
+          G.fx.shake(16, 0.5, true);
+          G.fx.addHitstop(0.1, true);
           G.fx.screenFlash('#ffcf8a', 0.4);
           G.fx.ring(tx, ty - 20, 'rgba(255,160,60,0.95)', S.blast, 0.45, 10);
           G.fx.impact(tx, ty - 30, 180, '#ffb03a');

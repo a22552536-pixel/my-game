@@ -152,7 +152,7 @@
         // 黑洞張開：把敵人往中心吸，連續傷害
         u.r = R * (1 - Math.pow(1 - Math.min(1, u.pt / 0.28), 3));
         G.fx.iaiDim = Math.max(G.fx.iaiDim, 0.3);
-        G.fx.shake(2.5, 0.05);
+        G.fx.shake(1.5, 0.05);
         inside().forEach((m) => {
           if (!m.isBoss) {
             m.x += (u.x - m.x) * Math.min(1, dt * 3.5);
@@ -184,8 +184,8 @@
         if (u.pt >= 0.2 && !u.boom) {
           u.boom = true;
           G.audio.play('thunder');
-          G.fx.shake(18, 0.45);
-          G.fx.addHitstop(0.12);
+          G.fx.shake(16, 0.45, true);
+          G.fx.addHitstop(0.12, true);
           G.fx.screenFlash('#ffffff', 0.55);
           G.fx.cut(u.x, u.y, 0, R * 2.6, { w: 9, life: 0.45, grow: 0.03, col: '200,170,255' });
           G.fx.ring(u.x, u.y, 'rgba(255,255,255,0.95)', R * 1.6, 0.45, 8);
@@ -202,6 +202,7 @@
       const S = u.S;
       const m = u.m;
       u.spin += dt * 3;
+      if (u.pulse > 0) u.pulse = Math.max(0, u.pulse - dt * 6);
       // 飛散的碎石（炸開後）
       for (let i = u.flying.length - 1; i >= 0; i--) {
         const f = u.flying[i];
@@ -294,7 +295,7 @@
         // 石球被壓緊：越縮越小、越抖越厲害，石縫開始透出紅光
         hold();
         const k = Math.min(1, u.pt / 0.55);
-        G.fx.shake(2 + 6 * k, 0.05);
+        G.fx.shake(1.5 + 3.5 * k, 0.05);
         if (Math.random() < 0.25 + 0.5 * k) {
           const a = Math.random() * TAU;
           G.fx.particles.push({ x: u.ox + Math.cos(a) * u.size * 0.85, y: u.oy + Math.sin(a) * u.size * 0.85, vx: Math.cos(a) * U.rand(40, 120), vy: Math.sin(a) * U.rand(40, 120) + 60, life: 0.4, t: 0, size: U.rand(2, 3.5), color: U.pick(['#8a7a68', '#6e6254', '#a89a88']), grav: 500, shape: 'square', drag: 1 });
@@ -327,7 +328,8 @@
           const by = hy + U.rand(-18, 18);
           const big = last ? 5.5 : 2.8 + u.n * 0.15;
           G.fx.blackFlash(bx, by, u.n % 2 ? -1 : 1, big);
-          G.fx.darkFlash = 0.16;
+          // 不讓整個畫面變紅：只在石球周圍打出一圈紅黑色的脈衝
+          u.pulse = last ? 1.6 : 1;
           G.fx.impact(bx, by, last ? 150 : 80, '#ff3a4a');
           G.fx.ring(bx, by, 'rgba(20,0,10,0.9)', last ? 260 : 120, last ? 0.4 : 0.22, last ? 10 : 6);
           G.fx.kick((u.n % 2 ? -1 : 1) * 10, -3);
@@ -339,8 +341,8 @@
           if (alive(m)) G.combat.hitMonster(m, last ? S.finalMult(u.lv) : S.mult(u.lv), { knock: last ? 560 : 0, heavy: true, sound: 'crit' });
           G.audio.play('crit');
           if (last) G.audio.play('thunder');
-          G.fx.addHitstop(last ? 0.16 : 0.08);
-          G.fx.shake(last ? 20 : 12, last ? 0.45 : 0.14);
+          G.fx.addHitstop(last ? 0.18 : 0.05, last);
+          G.fx.shake(last ? 16 : 7, last ? 0.45 : 0.12, last);
           u.n++;
           if (last) {
             u.phase = 'end';
@@ -704,6 +706,18 @@
         ctx.stroke();
         ring(true);
         ctx.restore();
+      }
+      // 黑閃的局部脈衝：石球周圍一圈暗紅，很快散掉
+      if (u.pulse > 0) {
+        const pr = u.size * (2.2 + (1 - Math.min(1, u.pulse)) * 1.5) * (u.pulse > 1 ? 1.5 : 1);
+        const pg = ctx.createRadialGradient(0, 0, u.size * 0.6, 0, 0, pr);
+        pg.addColorStop(0, 'rgba(30,0,10,' + (0.5 * Math.min(1, u.pulse)).toFixed(3) + ')');
+        pg.addColorStop(0.6, 'rgba(200,20,40,' + (0.28 * Math.min(1, u.pulse)).toFixed(3) + ')');
+        pg.addColorStop(1, 'rgba(200,20,40,0)');
+        ctx.fillStyle = pg;
+        ctx.beginPath();
+        ctx.arc(0, 0, pr, 0, TAU);
+        ctx.fill();
       }
       // 石球外殼：石頭一顆顆黏上去（剛黏上時從外面滑進定位）
       // 壓緊：縮小到八成，並且抖動（壓得越緊抖得越兇）

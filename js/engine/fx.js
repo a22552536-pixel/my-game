@@ -47,18 +47,28 @@
       this.iaiDim = 0;
       this.kickX = this.kickY = 0;
       this.hitstop = 0;
+      this.hsCool = 0;
       this.shakeT = 0;
       this.flash = 0;
     },
 
-    addHitstop(t) {
-      this.hitstop = Math.max(this.hitstop, t);
+    // 命中停頓會凍結整個世界（包括技能的計時），連擊時如果每一下都停滿，節奏會被拖慢、變得一頓一頓。
+    // 所以停頓結束後的一小段時間內，新的停頓只給兩成；force（大招最後一擊）不受限制。
+    addHitstop(t, force) {
+      if (!force && this.hsCool > 0) t *= 0.2;
+      t = Math.min(t, force ? 0.2 : 0.13);
+      if (t > this.hitstop) this.hitstop = t;
+      this.hsCool = Math.max(this.hsCool || 0, this.hitstop + 0.3);
     },
 
-    shake(mag, dur) {
+    // 震動：連擊時新的震動只補一點（不會一直疊到很大），最大 10；force（大招收尾）最大 16
+    shake(mag, dur, force) {
+      const cap = force ? 16 : 10;
+      if (this.shakeT > 0 && !force) mag = Math.max(this.shakeMag, Math.min(cap, this.shakeMag + mag * 0.25));
+      mag = Math.min(cap, mag);
       if (mag >= this.shakeMag || this.shakeT <= 0) {
         this.shakeMag = mag;
-        this.shakeT = dur;
+        this.shakeT = Math.max(dur, this.shakeT > 0 ? Math.min(this.shakeT, 0.25) : 0);
       }
     },
 
@@ -218,14 +228,24 @@
 
     update(dt) {
       if (this.hitstop > 0) this.hitstop -= dt;
+      if (this.hsCool > 0) this.hsCool -= dt;
       if (this.shakeT > 0) {
         this.shakeT -= dt;
         const m = this.shakeMag * Math.max(0, Math.min(1, this.shakeT * 6));
-        this.shakeX = U.rand(-m, m);
-        this.shakeY = U.rand(-m, m);
+        // 平滑的震動：每 1/30 秒換一個目標點，畫面往那裡靠（不是每幀亂跳）
+        this.shakeTick = (this.shakeTick || 0) - dt;
+        if (this.shakeTick <= 0) {
+          this.shakeTick = 1 / 30;
+          this.shakeTx = U.rand(-m, m);
+          this.shakeTy = U.rand(-m, m);
+        }
+        this.shakeX += (this.shakeTx - this.shakeX) * 0.6;
+        this.shakeY += (this.shakeTy - this.shakeY) * 0.6;
         if (this.shakeT <= 0) this.shakeMag = 0;
       } else {
-        this.shakeX = this.shakeY = 0;
+        this.shakeX *= 0.5;
+        this.shakeY *= 0.5;
+        if (Math.abs(this.shakeX) < 0.1) this.shakeX = this.shakeY = 0;
       }
       if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3);
 
