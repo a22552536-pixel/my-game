@@ -1192,19 +1192,42 @@
     const st = m.state;
     const shell = st === 'shell';
     const pal = ['#ee6e4e', '#c24a34'];
+    const p2 = m.p2k != null ? m.p2k : m.enraged ? 1 : 0;
+    const K = (m.h || 250) / 170;
     let sy = 1 + Math.sin(t * 2.2) * 0.012;
-    if (st === 'tidePrep' || st === 'clawPrep') sy = 0.95;
+    if (st === 'tidePrep' || st === 'clawPrep' || st === 'perchPrep' || st === 'flopPrep') sy = 0.95;
+    if (st === 'beam' || st === 'tsunami') sy = 1 + Math.abs(Math.sin(t * 14)) * 0.04;
     if (st === 'recover') sy = 0.93;
     if (!m.onGround) sy = m.vy < 0 ? 1.06 : 0.98;
-    const trem = st === 'tidePrep' ? Math.sin(t * 45) * 2 : 0;
+    const trem = st === 'tidePrep' || st === 'transform' || st === 'tsunamiPrep' ? Math.sin(t * 45) * 2 : 0;
     ctx.save();
+    ctx.scale(K, K);
+    if (m.x === 0 && m.y === 0 && m.state === 'recover') ctx.translate(-35, 0);
+    ctx.fillStyle = 'rgba(20,30,40,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 105, 15, 0, 0, TAU);
+    ctx.fill();
     ctx.translate(trem, 0);
     ctx.scale(1 / Math.sqrt(sy), sy);
 
-    if (m.enraged && !m.dead) glow(ctx, 0, -90, 180, '255,90,60', 0.22 + Math.sin(t * 5) * 0.05);
+    if (p2 > 0 && !m.dead) {
+      glow(ctx, 0, -90, 190, '255,120,50', (0.22 + Math.sin(t * 5) * 0.05) * p2);
+      // 燈塔全開：塔頂冒蒸氣
+      for (let i = 0; i < 4; i++) {
+        const q = (t * 0.8 + i / 4) % 1;
+        ctx.globalAlpha = (1 - q) * 0.6 * p2;
+        ctx.fillStyle = '#f4f4f4';
+        ctx.beginPath();
+        ctx.arc(-32 - 4 + Math.sin(t * 2 + i) * 8 - q * 30, -200 - q * 70, 8 + q * 16, 0, TAU);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
 
-    const walk = st === 'walk' || st === 'intro';
-    const fierce = m.enraged || st === 'clawPrep' || st === 'tidePrep';
+    const walk = st === 'move' || st === 'walk' || st === 'intro' || st === 'clawPrep';
+    const fast = Math.abs(m.vx || 0) > 60;
+    const laugh = !m.dead && (st === 'beam' || st === 'tsunami' || st === 'barrage' || st === 'summon' || (st === 'transform' && Math.sin(t * 12) > 0));
+    const fierce = p2 > 0.5 || st === 'clawPrep' || st === 'tidePrep' || st === 'beamPrep' || st === 'tsunamiPrep' || st === 'flopPrep';
     const kind = bossEyeKind(m, fierce);
 
     // ─ 燈塔 ─
@@ -1294,14 +1317,33 @@
       ctx.stroke();
       A.shape(ctx, (c) => A.roundRect(c, -40, -108, 80, 10, 3), '#5a4a58', '#44384a', { lw: 3, shadeY: -103 });
       // 燈室
-      const lampOn = m.dead ? 0 : m.enraged ? 1 : 0.6 + Math.sin(t * 3) * 0.2;
+      const hot = p2 > 0.5 || st === 'beamPrep' || st === 'beam';
+      const lampOn = m.dead ? 0 : hot ? 1 : 0.6 + Math.sin(t * 3) * 0.2;
       if (lampOn > 0) {
-        glow(ctx, 0, -130, m.enraged ? 115 : 75, m.enraged ? '255,190,80' : '255,235,150', (m.enraged ? 0.7 : 0.5) * lampOn);
+        glow(ctx, 0, -130, hot ? 150 : 75, p2 > 0.5 ? '255,150,60' : '255,235,150', (hot ? 0.8 : 0.5) * lampOn);
+        if (p2 > 0.3 && !shell) {
+          // 旋轉的燈塔光：兩道反方向的光束
+          ctx.save();
+          ctx.globalAlpha = 0.28 * p2;
+          ctx.fillStyle = '#ffd08a';
+          ctx.translate(0, -130);
+          ctx.rotate(t * 2.4);
+          for (let k2 = 0; k2 < 2; k2++) {
+            ctx.rotate(PI);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(240, -40);
+            ctx.lineTo(240, 40);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+        }
         // 光束
         ctx.save();
-        ctx.globalAlpha = (m.enraged ? 0.35 : 0.22) * lampOn;
-        ctx.fillStyle = m.enraged ? '#ffc070' : '#fff0b0';
-        const sw = Math.sin(t * (m.enraged ? 3 : 1.2)) * 0.35;
+        ctx.globalAlpha = (hot ? 0.35 : 0.22) * lampOn;
+        ctx.fillStyle = p2 > 0.5 ? '#ffc070' : '#fff0b0';
+        const sw = Math.sin(t * (hot ? 3 : 1.2)) * 0.35;
         ctx.translate(0, -130);
         ctx.rotate(sw);
         ctx.beginPath();
@@ -1312,7 +1354,7 @@
         ctx.fill();
         ctx.restore();
       }
-      A.shape(ctx, (c) => A.roundRect(c, -22, -144, 44, 28, 4), U.mix('#9ab8d0', '#fff2a8', lampOn), U.mix('#7a98b0', '#ffd860', lampOn), { lw: 3, shadeY: -126 });
+      A.shape(ctx, (c) => A.roundRect(c, -22, -144, 44, 28, 4), U.mix(U.mix('#9ab8d0', '#fff2a8', lampOn), '#ffb070', p2 * 0.6), U.mix('#7a98b0', '#ffd860', lampOn), { lw: 3, shadeY: -126 });
       if (lampOn > 0) {
         ctx.globalAlpha = lampOn;
         A.ellipse(ctx, 0, -130, 8, 9, '#fffbe6', null, { noStroke: true, hl: false });
@@ -1341,8 +1383,8 @@
 
     // ─ 腳（身體後面）─
     for (let i = 0; i < 3; i++) {
-      const ph = t * 8 + i * 2;
-      const lift = walk ? Math.max(0, Math.sin(ph)) * 8 : 0;
+      const ph = t * (fast ? 22 : 8) + i * 2;
+      const lift = walk ? Math.max(0, Math.sin(ph)) * (fast ? 12 : 8) : 0;
       const x0 = 16 + i * 16;
       limb(ctx, (c) => { c.moveTo(x0, -40); c.lineTo(x0 + 16, -46 - lift * 0.5); c.lineTo(x0 + 24 + (walk ? Math.cos(ph) * 4 : 0), -2 - lift); }, 9, pal[1]);
     }
@@ -1366,6 +1408,16 @@
       big = { x: 118, y: -150, r: 30, rot: -1.45, open: 1 };
     } else if (st === 'clawSlam') {
       big = { x: 146, y: -24, r: 30, rot: 0.45, open: 0 };
+    } else if (st === 'tsunamiPrep' || st === 'tsunami' || st === 'barrage' || st === 'beamPrep' || st === 'transform' || st === 'summon') {
+      const w2 = Math.sin(t * (st === 'tsunami' || st === 'barrage' ? 10 : 4)) * 8;
+      big = { x: 110, y: -126 + w2, r: 28, rot: -1.25, open: 0.8 + Math.sin(t * 8) * 0.2 };
+      small = { x: 30, y: -116 - w2, r: 16, rot: -1.8, open: 0.8 };
+    } else if (st === 'beam') {
+      big = { x: 118, y: -40 + Math.sin(t * 14) * 4, r: 27, rot: 0.3, open: 0.6 + Math.sin(t * 14) * 0.3 };
+      small = { x: 92, y: -16, r: 15, rot: 0.3, open: 0.5 };
+    } else if (st === 'flopAir' || st === 'perchAir' || st === 'fall') {
+      big = { x: 120, y: -100, r: 27, rot: -0.8, open: 0.9 };
+      small = { x: 96, y: -60, r: 15, rot: -0.6, open: 0.8 };
     } else if (st === 'recover' || m.dead) {
       big = { x: 112, y: -30, r: 26, rot: 0.4, open: 0.5 };
       small = { x: 88, y: -14, r: 14, rot: 0.4, open: 0.5 };
@@ -1419,6 +1471,28 @@
         }
       }
     });
+    if (p2 > 0.3 && !m.dead && kind !== 'x') {
+      [e1, e2].forEach(([x, y]) => glow(ctx, x + 3, y + 2, 16, '255,150,60', 0.5 * p2));
+    }
+    if (laugh && !m.dead && Math.sin(t * 6) > -0.3) {
+      // 「哈！」
+      ctx.save();
+      ctx.font = 'bold 22px ' + A.FONT;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = A.OUT;
+      ctx.fillStyle = '#fff3a0';
+      const hy = by - 110 - ((t * 2) % 1) * 20;
+      [[bx + 70, hy], [bx + 96, hy - 18]].forEach(([x, y]) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(m.dir < 0 ? -1 : 1, 1);
+        ctx.strokeText('哈', 0, 0);
+        ctx.fillText('哈', 0, 0);
+        ctx.restore();
+      });
+      ctx.restore();
+    }
     // 濃密白眉
     if (!m.dead) {
       [[e1[0] - 1, e1[1] - 15, fierce ? 0.35 : -0.3], [e2[0] + 1, e2[1] - 14, fierce ? -0.35 : 0.25]].forEach(([x, y, rot]) => {
@@ -1440,7 +1514,13 @@
     // 得意的笑
     const mx = bx + 22;
     const my = by - 2;
-    if (m.dead || st === 'recover' || m.hurtFlash > 0.05) {
+    if (laugh && m.hurtFlash <= 0.05) {
+      // 哈哈大笑：嘴張好大
+      A.shape(ctx, (c) => { c.moveTo(mx - 14, my - 4); c.quadraticCurveTo(mx + 2, my - 8, mx + 18, my - 6); c.quadraticCurveTo(mx + 14, my + 20, mx - 14, my - 4); c.closePath(); }, '#7a2323', null, { lw: 2.6 });
+      A.ellipse(ctx, mx + 3, my + 8, 6, 3.5, '#ff8a8a', null, { lw: 0, noStroke: true, hl: false });
+      ctx.fillStyle = A.c('#ffffff');
+      ctx.fillRect(mx - 8, my - 6, 20, 3.5);
+    } else if (m.dead || st === 'recover' || m.hurtFlash > 0.05) {
       A.ellipse(ctx, mx, my + 2, 7, 6, '#7a2323', null, { lw: 2.6, hl: false });
     } else if (fierce || st === 'tide' || st === 'clawSlam') {
       A.shape(ctx, (c) => { c.moveTo(mx - 14, my - 2); c.quadraticCurveTo(mx, my - 6, mx + 16, my - 4); c.quadraticCurveTo(mx + 12, my + 14, mx - 14, my - 2); c.closePath(); }, '#7a2323', null, { lw: 2.6 });
@@ -1500,15 +1580,25 @@
     const st = m.state;
     const skin = ['#e4b070', '#c08a4c'];
     const shellC = ['#7a5a4e', '#5a3e36'];
-    const prep = st === 'eruptPrep';
-    const erupt = st === 'erupt';
-    const heat = m.dead ? 0 : Math.min(1.4, 0.55 + Math.sin(t * 3) * 0.15 + (prep ? 0.45 + Math.sin(t * 20) * 0.15 : 0) + (erupt ? 0.6 : 0) + (m.enraged ? 0.35 : 0));
-    const crackCol = m.dead ? '#5a3a30' : m.enraged ? U.mix('#ff5a1e', '#ffd84a', Math.max(0, Math.min(1, heat - 0.4))) : U.mix('#e8741e', '#ffe46a', Math.max(0, Math.min(1, heat - 0.2)));
+    const p2 = m.p2k != null ? m.p2k : m.enraged ? 1 : 0;
+    const hot = p2 > 0.5;
+    const K = (m.h || 230) / 160;
+    const prep = st === 'eruptPrep' || st === 'meteorPrep';
+    const erupt = st === 'erupt' || st === 'meteor' || (st === 'transform' && p2 > 0.4) || (hot && Math.sin(t * 1.7) > 0.6);
+    const heat = m.dead ? 0 : Math.min(1.4, 0.55 + Math.sin(t * 3) * 0.15 + (prep ? 0.45 + Math.sin(t * 20) * 0.15 : 0) + (erupt ? 0.6 : 0) + (hot ? 0.35 : 0));
+    const crackCol = m.dead ? '#5a3a30' : hot ? U.mix('#ff5a1e', '#ffd84a', Math.max(0, Math.min(1, heat - 0.4))) : U.mix('#e8741e', '#ffe46a', Math.max(0, Math.min(1, heat - 0.2)));
     const shake = prep ? Math.sin(t * 50) * 2 : 0;
 
     ctx.save();
+    ctx.scale(K, K);
+    // 對話框頭像（Boss 的複本放在原點）：往後挪一點，讓臉在框裡
+    if (m.x === 0 && m.y === 0 && m.state === 'recover') ctx.translate(-75, 0);
+    ctx.fillStyle = 'rgba(30,10,0,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 120, 16, 0, 0, TAU);
+    ctx.fill();
     ctx.translate(shake, 0);
-    if (m.enraged && !m.dead) glow(ctx, 0, -80, 190, '255,90,30', 0.3 + Math.sin(t * 6) * 0.06);
+    if (p2 > 0 && !m.dead) glow(ctx, 0, -80, 200, '255,90,30', (0.3 + Math.sin(t * 6) * 0.06) * p2);
 
     const cracks = (c) => {
       c.moveTo(-62, -8);
@@ -1540,10 +1630,10 @@
         ctx.stroke();
       }
       ctx.strokeStyle = A.outline();
-      ctx.lineWidth = 6.5 + (m.enraged ? 1 : 0);
+      ctx.lineWidth = 6.5 + (hot ? 1.5 : 0);
       ctx.stroke();
       ctx.strokeStyle = A.c(crackCol);
-      ctx.lineWidth = 3.5 + (m.enraged ? 1 : 0);
+      ctx.lineWidth = 3.5 + (hot ? 1.5 : 0);
       ctx.stroke();
     };
     const volcano = (vx, vy) => {
@@ -1552,7 +1642,7 @@
         const x = vx + Math.sin(t * 1.5 + i * 1.7) * 6 + p * 14;
         const y = vy - 36 - p * 50;
         ctx.globalAlpha = (1 - p) * 0.75;
-        ctx.fillStyle = m.enraged ? '#6a5a5a' : '#c8bcb6';
+        ctx.fillStyle = hot ? '#5a4a4a' : '#c8bcb6';
         ctx.beginPath();
         ctx.arc(x, y, 6 + p * 12, 0, TAU);
         ctx.fill();
@@ -1600,7 +1690,7 @@
       }
     };
 
-    if (st === 'roll') {
+    if (st === 'roll' || st === 'cannonAir') {
       // 只剩龜殼在滾
       const r = 76;
       ctx.translate(0, -r - 2);
@@ -1643,8 +1733,16 @@
     ctx.scale(1 / Math.sqrt(sy), sy);
 
     // 縮頭縮腳程度（stateT 倒數）
-    const tuck = st === 'rollPrep' ? 0.3 + 0.7 * Math.min(1, Math.max(0, 1 - (m.stateT || 0) / 0.7)) : 0;
-    const walk = st === 'walk' || st === 'intro';
+    const tuck = st === 'rollPrep' || st === 'cannonPrep' ? 0.3 + 0.7 * Math.min(1, Math.max(0, 1 - (m.stateT || 0) / (m.stateT0 || 0.7))) : st === 'rollEnd' || st === 'cannonEnd' ? 0.6 : 0;
+    const walk = st === 'walk' || st === 'intro' || (st === 'move' && Math.abs(m.vx || 0) > 5);
+    // 踩地裂：用後腳站起來再踩下去
+    const rear = st === 'quakePrep' ? Math.min(1, (1 - (m.stateT || 0) / (m.stateT0 || 0.7)) * 1.4) : st === 'quake' ? Math.max(0, (m.stateT || 0) / 0.5 - 0.6) : 0;
+    if (rear > 0) {
+      ctx.translate(-90, 0);
+      ctx.rotate(-0.32 * rear);
+      ctx.translate(90, 0);
+    }
+    if (!m.onGround && st === 'move') ctx.translate(0, -4);
     const step = walk ? Math.sin(t * 5) : 0;
     const legH = 26 * (1 - tuck * 0.8);
 
@@ -1656,7 +1754,8 @@
 
     // 頭與脖子
     const nx = 78 - tuck * 40;
-    const hx = 130 - tuck * 66;
+    const brk = st === 'breath' ? 1 : st === 'breathPrep' ? Math.min(1, 1 - (m.stateT || 0) / (m.stateT0 || 0.7)) : 0;
+    const hx = 130 - tuck * 66 + brk * 16;
     let hy = -68 + (prep ? 6 : 0) + (erupt ? -10 : 0) + tuck * 12;
     if (st === 'recover') hy += 10;
     limb(ctx, (c) => { c.moveTo(nx, -40); c.quadraticCurveTo(hx - 20, -44, hx - 10, hy + 8); }, 32, skin[0]);
@@ -1673,7 +1772,7 @@
     ctx.fillStyle = A.c('#cf9858');
     [[-16, -16, 4], [-6, -21, 3], [-22, -6, 3]].forEach(([x, y, r]) => { ctx.beginPath(); ctx.arc(hx + x, hy + y, r, 0, TAU); ctx.fill(); });
     // 臉
-    const kind = bossEyeKind(m, m.enraged || prep);
+    const kind = bossEyeKind(m, hot || prep || st === 'breathPrep' || st === 'quakePrep' || st === 'cannonPrep');
     if (prep && kind !== 'x' && kind !== 'hurt') {
       // 用力擠眼 > <
       ctx.strokeStyle = A.outline();
@@ -1708,7 +1807,12 @@
     ctx.beginPath();
     ctx.arc(hx + 32, hy - 5, 1.6, 0, TAU);
     ctx.fill();
-    if (erupt || m.dead || m.hurtFlash > 0.05) {
+    if (brk > 0 && !m.dead) {
+      // 噴火：嘴張大、嘴裡在發光
+      glow(ctx, hx + 34, hy + 6, 40 + brk * 30, '255,160,50', 0.5 + 0.4 * brk);
+      A.shape(ctx, (c) => { c.moveTo(hx + 10, hy + 2); c.quadraticCurveTo(hx + 26, hy - 6, hx + 38, hy - 2); c.lineTo(hx + 38, hy + 14); c.quadraticCurveTo(hx + 24, hy + 22, hx + 10, hy + 2); c.closePath(); }, '#7a2323', null, { lw: 2.6 });
+      A.ellipse(ctx, hx + 30, hy + 6, 6 * brk + 1, 5 * brk + 1, '#ffd35a', null, { noStroke: true, hl: false });
+    } else if (erupt || m.dead || m.hurtFlash > 0.05) {
       A.shape(ctx, (c) => { c.moveTo(hx + 12, hy + 6); c.quadraticCurveTo(hx + 22, hy + 3, hx + 32, hy + 3); c.quadraticCurveTo(hx + 28, hy + 18, hx + 12, hy + 6); c.closePath(); }, '#7a2323', null, { lw: 2.6 });
     } else {
       ctx.strokeStyle = A.outline();
@@ -1759,7 +1863,36 @@
     ctx.strokeStyle = A.outline();
     ctx.lineWidth = 3.5;
     ctx.stroke();
+    // 第二階段：殼上長出黑曜石尖刺、熔岩往下流
+    if (p2 > 0) {
+      [[-80, -30, -0.9], [-54, -62, -0.5], [-20, -80, -0.15], [30, -80, 0.15], [64, -58, 0.5], [88, -26, 0.9]].forEach(([x, y, r]) => {
+        ctx.save();
+        ctx.translate(sx + x, sb + y);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-9, 4); c.lineTo(0, -24 * p2 - 4); c.lineTo(9, 4); c.closePath(); }, '#3a2a30', null, { lw: 2.4 });
+        ctx.strokeStyle = A.c(crackCol);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 2);
+        ctx.lineTo(0, -14 * p2);
+        ctx.stroke();
+        ctx.restore();
+      });
+      if (!m.dead) {
+        for (let i = 0; i < 3; i++) {
+          const x = sx - 60 + i * 55;
+          const d = ((t * 0.6 + i * 0.37) % 1) * 30;
+          A.shape(ctx, (c) => { c.moveTo(x - 4, sb - 20); c.quadraticCurveTo(x - 5, sb - 8 + d * 0.5, x, sb - 4 + d); c.quadraticCurveTo(x + 5, sb - 8 + d * 0.5, x + 4, sb - 20); c.closePath(); }, crackCol, null, { lw: 1.8 });
+        }
+      }
+    }
+    ctx.save();
+    const vs = 1 + 0.35 * p2;
+    ctx.translate(sx - 6, sb - 78);
+    ctx.scale(vs, vs);
+    ctx.translate(-(sx - 6), -(sb - 78));
     volcano(sx - 6, sb - 78);
+    ctx.restore();
 
     // 近側的腳
     const nearLeg = (x, lift) => {

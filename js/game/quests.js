@@ -125,11 +125,25 @@
       talk.forEach((g) => {
         const c = g.if;
         if (!c) pick = g;
+        // all:true（js/data/npcstory.js 用）：所有條件都要成立；多了 active（進行中或可回報）、notDone、noFlag、leaves（星楓葉 ≥ n）
+        else if (c.all) pick = Object.keys(c).every((k) => this.cond(k, c[k])) ? g : pick;
         else if (c.done && this.state[c.done] === 'done') pick = g;
         else if (c.level && G.player.level >= c.level) pick = g;
         else if (c.flag && G.world.flags[c.flag]) pick = g;
       });
       return pick ? G.util.pick(pick.text) : '……';
+    },
+    cond(k, v) {
+      const st = this.state[v];
+      if (k === 'all') return true;
+      if (k === 'done') return st === 'done';
+      if (k === 'active') return st === 'active' || st === 'ready';
+      if (k === 'notDone') return st !== 'done';
+      if (k === 'level') return G.player.level >= v;
+      if (k === 'flag') return !!G.world.flags[v];
+      if (k === 'noFlag') return !G.world.flags[v];
+      if (k === 'leaves') return G.story.count() >= v;
+      return false;
     },
 
     onKill(monsterId) {

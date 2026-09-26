@@ -527,49 +527,125 @@
   }
 
   // ── Boss：菇菇女王 ──
+  // 原始設計高 190，依 m.h 等比例放大。披風、蘑菇權杖、浮起來的皇冠；
+  // 第二階段（p2k 0→1）：傘蓋變深紅、斑點發光、傘緣長出尖刺、皇冠浮起帶光環、眼睛發紫光。
   function queen(ctx, m) {
-    const t = m.t;
+    const U = G.util;
+    const t = m.t || 0;
+    const st = m.state;
+    const K = (m.h || 280) / 190;
+    const p2 = m.p2k != null ? m.p2k : m.enraged ? 1 : 0;
+    const TAU = Math.PI * 2;
     let sy = 1;
-    if (m.state === 'slamPrep') sy = 0.86 + Math.sin(t * 40) * 0.01;
-    else if (m.state === 'slamAir') sy = m.vy < 0 ? 1.12 : 1.04;
-    else if (m.state === 'recover') sy = 0.9 + Math.min(1, m.stateT / 0.3) * 0.1;
+    if (st === 'slamPrep' || st === 'divePrep' || st === 'spinPrep' || st === 'perchPrep' || st === 'stormPrep') sy = 0.84 + Math.sin(t * 40) * 0.01;
+    else if (st === 'slamAir' || st === 'perchAir' || st === 'stormAir' || st === 'fall' || (st === 'move' && !m.onGround)) sy = m.vy < 0 ? 1.12 : 1.04;
+    else if (st === 'recover') sy = 0.9 + Math.min(1, (m.stateT || 0) / 0.3) * 0.1;
+    else if (st === 'transform') sy = 1 + Math.sin(t * 30) * 0.02 + (m.p2k || 0) * 0.05;
     else sy = 1 + Math.sin(t * 2) * 0.015;
     ctx.save();
+    ctx.scale(K, K);
+    // 地上的大影子（Boss 的共用影子太小）
+    ctx.fillStyle = 'rgba(30,20,10,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 92, 16, 0, 0, TAU);
+    ctx.fill();
+
+    const spin = st === 'spin';
+    if (spin) {
+      // 旋轉：左右翻面＋壓扁，看起來在轉
+      const c = Math.cos(t * 30);
+      ctx.scale((c >= 0 ? 1 : -1) * (0.55 + 0.45 * Math.abs(c)), 0.94);
+    }
     ctx.scale(1 / Math.sqrt(sy), sy);
 
-    if (m.enraged) {
-      const g = ctx.createRadialGradient(0, -110, 20, 0, -110, 170);
-      g.addColorStop(0, 'rgba(255,60,60,0.25)');
-      g.addColorStop(1, 'rgba(255,60,60,0)');
+    // 光暈：第二階段／變身／大招
+    const auraA = Math.max(p2 * 0.3, st === 'storm' || st === 'stormAir' ? 0.35 : 0);
+    if (auraA > 0 && !m.dead) {
+      const g = ctx.createRadialGradient(0, -130, 20, 0, -130, 200);
+      g.addColorStop(0, 'rgba(230,80,200,' + auraA.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(230,80,200,0)');
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(0, -110, 170, 0, Math.PI * 2);
+      ctx.arc(0, -130, 200, 0, TAU);
       ctx.fill();
+      for (let i = 0; i < 8; i++) {
+        const a = t * 1.2 + (i * TAU) / 8;
+        const r = 120 + Math.sin(t * 3 + i) * 10;
+        ctx.fillStyle = i % 2 ? 'rgba(255,190,240,0.8)' : 'rgba(200,120,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * r, -130 + Math.sin(a) * r * 0.5, 3 + (i % 3), 0, TAU);
+        ctx.fill();
+      }
     }
 
-    // 腳
-    A.ellipse(ctx, -26, -6, 18, 10, '#fff0dc', '#e5caa2', { hl: false });
-    A.ellipse(ctx, 26, -6, 18, 10, '#fff0dc', '#e5caa2', { hl: false });
-    // 手
-    const wave = Math.sin(t * 3) * 6;
-    A.ellipse(ctx, -58, -60 + wave, 13, 11, '#fff0dc', '#e5caa2', { hl: false, cel: [3, 3] });
-    // 蘑菇權杖
-    ctx.strokeStyle = A.outline();
-    ctx.lineWidth = 7;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(64, -98 - wave);
-    ctx.lineTo(66, -16 - wave);
-    ctx.stroke();
+    // ─ 披風（身體後面）─
+    const flap = Math.sin(t * 3) * 6 + (spin ? 20 : 0) + (m.vx ? -Math.min(20, Math.abs(m.vx) * 0.03) : 0);
+    const capeC = U.mix('#9a4a8a', '#5a1848', p2);
+    const capeS = U.mix('#7a3068', '#3a0e30', p2);
+    A.shape(ctx, (c) => {
+      c.moveTo(-34, -118);
+      c.bezierCurveTo(-80, -100, -104 - flap, -50, -118 - flap, -4);
+      c.quadraticCurveTo(-90 - flap * 0.5, 4, -60, -2);
+      c.quadraticCurveTo(-40, 2, -20, -6);
+      c.lineTo(10, -118);
+      c.closePath();
+    }, capeC, capeS, { cel: [6, 4] });
+    // 金邊
     ctx.strokeStyle = A.c('#ffd35a');
     ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(-118 - flap, -4);
+    ctx.quadraticCurveTo(-90 - flap * 0.5, 4, -60, -2);
+    ctx.quadraticCurveTo(-40, 2, -20, -6);
     ctx.stroke();
-    A.shape(ctx, (c) => { c.moveTo(50, -96 - wave); c.bezierCurveTo(50, -122 - wave, 78, -122 - wave, 78, -96 - wave); c.quadraticCurveTo(64, -90 - wave, 50, -96 - wave); c.closePath(); }, '#ff7ac0', '#d0508f', { cel: [3, 3], hl: [58, -110 - wave, 4, 2] });
-    A.ellipse(ctx, 60, -104 - wave, 2.6, 2.2, '#fff6fb', null, { lw: 1.4, hl: false });
-    A.ellipse(ctx, 69, -108 - wave, 2.2, 1.8, '#fff6fb', null, { lw: 1.4, hl: false });
-    A.ellipse(ctx, 58, -60 - wave, 13, 11, '#fff0dc', '#e5caa2', { hl: false, cel: [3, 3] });
+
+    // 腳
+    const hop = st === 'move' && !m.onGround;
+    A.ellipse(ctx, -26, -6 - (hop ? 6 : 0), 18, 10, '#fff0dc', '#e5caa2', { hl: false });
+    A.ellipse(ctx, 26, -6 - (hop ? 6 : 0), 18, 10, '#fff0dc', '#e5caa2', { hl: false });
+
+    // ─ 權杖（舉起／平常）─
+    const up = st === 'rain' || st === 'storm' || st === 'stormAir' || st === 'spore' || st === 'summon' || st === 'transform' || st === 'stormPrep';
+    const wave = Math.sin(t * 3) * 6;
+    const hx = up ? 60 : 64;
+    const hy = up ? -150 : -60 - wave;
+    const topY = up ? -250 : -100 - wave;
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hx + 2, topY + 6);
+    ctx.lineTo(hx + 4, up ? -120 : -16 - wave);
+    ctx.stroke();
+    ctx.strokeStyle = A.c('#ffd35a');
+    ctx.lineWidth = 4.5;
+    ctx.stroke();
+    // 權杖頭：發光的小蘑菇
+    const orb = (up ? 0.8 : 0.35) + p2 * 0.3 + Math.sin(t * 6) * 0.1;
+    const og = ctx.createRadialGradient(hx + 2, topY - 6, 2, hx + 2, topY - 6, 44);
+    og.addColorStop(0, 'rgba(255,200,240,' + Math.min(1, orb).toFixed(3) + ')');
+    og.addColorStop(1, 'rgba(255,120,220,0)');
+    ctx.fillStyle = og;
+    ctx.beginPath();
+    ctx.arc(hx + 2, topY - 6, 44, 0, TAU);
+    ctx.fill();
+    A.shape(ctx, (c) => { c.moveTo(hx - 16, topY + 4); c.bezierCurveTo(hx - 16, topY - 26, hx + 20, topY - 26, hx + 20, topY + 4); c.quadraticCurveTo(hx + 2, topY + 10, hx - 16, topY + 4); c.closePath(); }, U.mix('#ff7ac0', '#ff3a8a', p2), '#d0508f', { cel: [3, 3], hl: [hx - 6, topY - 12, 4, 2] });
+    A.ellipse(ctx, hx - 4, topY - 6, 3, 2.4, '#fff6fb', null, { lw: 1.4, hl: false });
+    A.ellipse(ctx, hx + 8, topY - 10, 2.4, 2, '#fff6fb', null, { lw: 1.4, hl: false });
+    A.ellipse(ctx, hx - 6, topY + 16, 5, 3, '#ffd35a', null, { lw: 1.6, hl: false });
+    // 左手
+    const lhy = up ? -84 : -60 + wave;
+    A.ellipse(ctx, -58, lhy, 13, 11, '#fff0dc', '#e5caa2', { hl: false, cel: [3, 3] });
     // 身體（莖）
     A.shape(ctx, (c) => A.roundRect(c, -52, -118, 104, 114, 34), '#fff0dc', '#e5caa2', { cel: [9, 7], hl: [-26, -90, 12, 20] });
+    // 胸前的寶石項鍊
+    ctx.strokeStyle = A.c('#ffd35a');
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-34, -108);
+    ctx.quadraticCurveTo(0, -84, 34, -108);
+    ctx.stroke();
+    A.ellipse(ctx, 0, -92, 6, 7, U.mix('#6fe0ff', '#ff4ad0', p2), null, { lw: 2, hl: [-2, -95, 2, 1.5] });
     // 裙擺般的傘褶
     ctx.strokeStyle = A.c('#e0b98a');
     ctx.lineWidth = 2;
@@ -579,12 +655,26 @@
       ctx.quadraticCurveTo(i * 13, -104, i * 11, -96);
       ctx.stroke();
     }
+    // 裙擺下緣的花邊
+    ctx.fillStyle = A.c(U.mix('#ffb0d8', '#e060b0', p2));
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
+      const x = -45 + i * 15;
+      ctx.beginPath();
+      ctx.arc(x, -8, 7, Math.PI, 0);
+      ctx.fill();
+      ctx.stroke();
+    }
+    // 右手（握權杖）
+    A.ellipse(ctx, hx - 6, hy, 13, 11, '#fff0dc', '#e5caa2', { hl: false, cel: [3, 3] });
+
     // 臉
-    const kind = m.dead ? 'x' : m.hurtFlash > 0.05 ? 'hurt' : m.enraged || m.state === 'slamPrep' ? 'angry' : m.blink ? 'closed' : 'normal';
+    const fierce = p2 > 0.5 || st === 'slamPrep' || st === 'spinPrep' || st === 'divePrep' || st === 'stormPrep';
+    const kind = m.dead ? 'x' : m.hurtFlash > 0.05 ? 'hurt' : fierce ? 'angry' : m.blink ? 'closed' : 'normal';
     A.eye(ctx, -18, -70, 8, 11, kind, 2);
     A.eye(ctx, 20, -70, 8, 11, kind, 2);
     if (kind === 'normal' || kind === 'angry') {
-      // 睫毛
       ctx.strokeStyle = A.outline();
       ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
@@ -599,23 +689,30 @@
       ctx.lineTo(27, -87);
       ctx.stroke();
     }
-    if (m.enraged && !m.dead) {
-      ctx.fillStyle = 'rgba(255,50,50,0.6)';
+    if (p2 > 0.3 && !m.dead && kind !== 'hurt') {
+      // 發紫光的瞳孔
+      ctx.fillStyle = 'rgba(255,80,220,' + (0.5 + 0.3 * Math.sin(t * 8)).toFixed(3) + ')';
       ctx.beginPath();
-      ctx.arc(-16, -70, 3, 0, Math.PI * 2);
-      ctx.arc(22, -70, 3, 0, Math.PI * 2);
+      ctx.arc(-16, -69, 4, 0, TAU);
+      ctx.arc(22, -69, 4, 0, TAU);
       ctx.fill();
     }
     A.blush(ctx, -30, -52, 8);
     A.blush(ctx, 32, -52, 8);
-    const open = m.state === 'spore' || m.state === 'summon' || m.state === 'slamPrep';
+    const open = st === 'spore' || st === 'summon' || st === 'slamPrep' || st === 'storm' || st === 'rain' || st === 'transform' || st === 'divePrep';
     ctx.strokeStyle = A.outline();
     ctx.lineWidth = 3;
     if (open) {
       ctx.fillStyle = A.c('#7a2323');
       ctx.beginPath();
-      ctx.ellipse(2, -44, 10, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(2, -44, 10, 8, 0, 0, TAU);
       ctx.fill();
+      ctx.stroke();
+    } else if (p2 > 0.5 && !m.dead) {
+      // 冷笑
+      ctx.beginPath();
+      ctx.moveTo(-8, -48);
+      ctx.quadraticCurveTo(4, -42, 14, -52);
       ctx.stroke();
     } else {
       ctx.beginPath();
@@ -623,56 +720,123 @@
       ctx.stroke();
     }
 
-    // 傘蓋
+    // ─ 傘蓋 ─
     const cy = -118;
+    const capC = U.mix('#c2408f', '#a0124a', p2);
+    const capS = U.mix('#982f70', '#6a0a30', p2);
+    // 第二階段：傘緣的尖刺（畫在傘蓋後面）
+    if (p2 > 0) {
+      for (let i = 0; i < 9; i++) {
+        const a = Math.PI + 0.2 + (i / 8) * (Math.PI - 0.4);
+        const bx = Math.cos(a) * 100;
+        const by = cy + Math.sin(a) * 100 * 0.62;
+        const L = 26 * p2;
+        A.shape(ctx, (c) => {
+          c.moveTo(bx + Math.cos(a + 1.57) * 8, by + Math.sin(a + 1.57) * 8);
+          c.lineTo(bx + Math.cos(a) * L, by + Math.sin(a) * L * 0.9);
+          c.lineTo(bx - Math.cos(a + 1.57) * 8, by - Math.sin(a + 1.57) * 8);
+          c.closePath();
+        }, '#5a0a30', null, { lw: 2 });
+      }
+    }
     A.shape(
       ctx,
       (c) => {
-        c.moveTo(-104, cy);
-        c.bezierCurveTo(-108, cy - 118, 108, cy - 118, 104, cy);
-        c.quadraticCurveTo(0, cy + 14, -104, cy);
+        c.moveTo(-108, cy);
+        c.bezierCurveTo(-112, cy - 124, 112, cy - 124, 108, cy);
+        c.quadraticCurveTo(0, cy + 14, -108, cy);
         c.closePath();
       },
-      '#c2408f',
-      '#982f70',
-      { cel: [10, 9], hl: [-45, cy - 64, 26, 12] }
+      capC,
+      capS,
+      { cel: [10, 9], hl: [-45, cy - 66, 26, 12] }
     );
-    [[-58, -30, 12], [-10, -62, 15], [44, -44, 13], [78, -14, 8], [-86, -8, 7], [12, -22, 8]].forEach(([dx, dy, r]) => {
-      A.ellipse(ctx, dx, cy + dy, r, r * 0.8, '#fff6fb', null, { lw: 2, hl: false });
+    const spots = [[-58, -30, 12], [-10, -64, 15], [44, -46, 13], [80, -14, 8], [-88, -8, 7], [12, -22, 8], [-40, -60, 6], [66, -64, 6]];
+    if (p2 > 0.2 && !m.dead) {
+      spots.forEach(([dx, dy, r]) => {
+        const g = ctx.createRadialGradient(dx, cy + dy, 1, dx, cy + dy, r * 2.4);
+        g.addColorStop(0, 'rgba(255,170,240,' + (0.7 * p2).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,120,220,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(dx, cy + dy, r * 2.4, 0, TAU);
+        ctx.fill();
+      });
+    }
+    const spotC = U.mix('#fff6fb', '#ffc8f4', p2);
+    spots.forEach(([dx, dy, r]) => {
+      A.ellipse(ctx, dx, cy + dy, r, r * 0.8, spotC, null, { lw: 2, hl: false });
     });
     // 金色扇貝邊
     ctx.fillStyle = A.c('#ffd35a');
     ctx.strokeStyle = A.outline();
     ctx.lineWidth = 2;
-    for (let i = 0; i < 11; i++) {
-      const x = -95 + i * 19;
+    for (let i = 0; i < 12; i++) {
+      const x = -99 + i * 18;
       const y = cy + 3 - Math.abs(x) * 0.03;
       ctx.beginPath();
       ctx.arc(x, y, 7.5, 0, Math.PI);
       ctx.fill();
       ctx.stroke();
     }
-    // 皇冠
-    const crY = cy - 86;
+    // 皇冠：第二階段浮起來，下面有光環
+    const lift = p2 * (16 + Math.sin(t * 3) * 4);
+    const crY = cy - 90 - lift;
+    if (p2 > 0.05 && !m.dead) {
+      ctx.save();
+      ctx.globalAlpha = p2;
+      ctx.strokeStyle = 'rgba(255,230,120,0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(0, crY + 22, 38, 8, 0, 0, TAU);
+      ctx.stroke();
+      const g = ctx.createRadialGradient(0, crY, 4, 0, crY, 60);
+      g.addColorStop(0, 'rgba(255,240,160,0.6)');
+      g.addColorStop(1, 'rgba(255,240,160,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, crY, 60, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
     A.shape(
       ctx,
       (c) => {
-        c.moveTo(-26, crY + 18);
-        c.lineTo(-30, crY - 6);
-        c.lineTo(-14, crY + 6);
-        c.lineTo(0, crY - 14);
-        c.lineTo(14, crY + 6);
-        c.lineTo(30, crY - 6);
-        c.lineTo(26, crY + 18);
+        c.moveTo(-30, crY + 20);
+        c.lineTo(-36, crY - 8);
+        c.lineTo(-18, crY + 5);
+        c.lineTo(0, crY - 20);
+        c.lineTo(18, crY + 5);
+        c.lineTo(36, crY - 8);
+        c.lineTo(30, crY + 20);
         c.closePath();
       },
       '#ffd35a',
       '#e0a82a',
-      { shadeY: crY + 10 }
+      { shadeY: crY + 11 }
     );
-    [[-30, -6], [0, -14], [30, -6]].forEach(([x, y]) => A.ellipse(ctx, x, crY + y, 4, 4, '#ff6fa8', null, { lw: 1.8, hl: false }));
-    A.ellipse(ctx, 0, crY + 8, 5, 5, '#6fe0ff', null, { lw: 1.8, hl: false });
+    [[-36, -8], [0, -20], [36, -8]].forEach(([x, y]) => A.ellipse(ctx, x, crY + y, 4.5, 4.5, '#ff6fa8', null, { lw: 1.8, hl: false }));
+    A.ellipse(ctx, 0, crY + 9, 6, 6, U.mix('#6fe0ff', '#ff4ad0', p2), null, { lw: 1.8, hl: false });
 
+    // 旋轉時的風切線
+    if (spin && !m.dead) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        const a = t * 20 + i * 1.6;
+        ctx.beginPath();
+        ctx.ellipse(0, -60, 110, 26, 0, a, a + 1.1);
+        ctx.stroke();
+      }
+    }
+    if (st === 'recover' && !m.dead && (m.stateT || 0) > 0.3) {
+      // 喘口氣：頭上冒汗（破綻）
+      ctx.fillStyle = A.c('#9fdcff');
+      ctx.beginPath();
+      ctx.ellipse(70, -150, 6, 9, 0.3, 0, TAU);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
