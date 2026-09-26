@@ -17,6 +17,8 @@
     streaks: [],
     ghosts: [],
     waves: [],
+    cuts: [],
+    iaiDim: 0,
     kickX: 0,
     kickY: 0,
     hitstop: 0,
@@ -41,6 +43,8 @@
       this.streaks.length = 0;
       this.ghosts.length = 0;
       this.waves.length = 0;
+      this.cuts.length = 0;
+      this.iaiDim = 0;
       this.kickX = this.kickY = 0;
       this.hitstop = 0;
       this.shakeT = 0;
@@ -169,6 +173,12 @@
       this.ghosts.push({ x, y, dir, st: Object.assign({}, st), color: color || '#ffd98a', t: 0, life: 0.28 });
     },
 
+    // 居合的刀痕：兩端尖、中間亮的細線，一瞬間劃開後停留、淡出
+    cut(x, y, angle, len, opts) {
+      const o = opts || {};
+      this.cuts.push({ x, y, a: angle, len, w: o.w || 5, t: -(o.delay || 0), life: o.life || 0.32, grow: o.grow || 0.045, col: o.col || '255,214,120' });
+    },
+
     // 扇形聲波
     wave(x, y, dir, reach, color, delay) {
       this.waves.push({ x, y, dir, reach: reach || 180, color: color || '255,236,170', t: -(delay || 0), life: 0.32 });
@@ -247,6 +257,8 @@
       if (this.darkFlash > 0) this.darkFlash -= dt;
       step(this.streaks);
       step(this.ghosts);
+      step(this.cuts);
+      if (this.iaiDim > 0) this.iaiDim = Math.max(0, this.iaiDim - dt);
       for (let i = this.waves.length - 1; i >= 0; i--) {
         const w = this.waves[i];
         w.t += dt;
@@ -492,12 +504,56 @@
       }
       ctx.globalAlpha = 1;
 
+      this.drawCuts(ctx);
       this.drawNumbers(ctx);
 
       for (const t of this.texts) {
         if (t.screen) continue;
         this.drawFloatText(ctx, t);
       }
+    },
+
+    drawCuts(ctx) {
+      if (this.iaiDim > 0) {
+        // 居合前的一瞬間：四周暗下來
+        ctx.fillStyle = 'rgba(8,6,18,' + Math.min(0.55, this.iaiDim * 2.2).toFixed(3) + ')';
+        ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
+      }
+      if (!this.cuts.length) return;
+      ctx.save();
+      for (const c of this.cuts) {
+        if (c.t < 0) continue;
+        const grow = Math.min(1, c.t / c.grow);
+        const fadeT = Math.min(0.14, c.life * 0.4);
+        const fade = c.t < c.life - fadeT ? 1 : (c.life - c.t) / fadeT;
+        if (fade <= 0) continue;
+        const ca = Math.cos(c.a);
+        const sa = Math.sin(c.a);
+        const h = c.len / 2;
+        // 從一端劃到另一端
+        const x0 = c.x - ca * h;
+        const y0 = c.y - sa * h;
+        const L = c.len * grow;
+        const x1 = x0 + ca * L;
+        const y1 = y0 + sa * L;
+        const mx = (x0 + x1) / 2;
+        const my = (y0 + y1) / 2;
+        const blade = (w, style) => {
+          ctx.fillStyle = style;
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(mx - sa * w, my + ca * w);
+          ctx.lineTo(x1, y1);
+          ctx.lineTo(mx + sa * w, my - ca * w);
+          ctx.closePath();
+          ctx.fill();
+        };
+        ctx.globalCompositeOperation = 'lighter';
+        blade(c.w * 2.2, 'rgba(' + c.col + ',' + (0.22 * fade).toFixed(3) + ')');
+        ctx.globalCompositeOperation = 'source-over';
+        blade(c.w * (0.35 + 0.65 * fade), 'rgba(255,255,255,' + Math.min(0.95, fade * 1.1).toFixed(3) + ')');
+      }
+      ctx.restore();
     },
 
     drawScreen(ctx) {

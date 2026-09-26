@@ -197,23 +197,97 @@
     },
     hammerCast: { update() {} },
 
+    // 居合：蓄勢（畫面變暗、刀光一閃）→ 拔刀瞬間衝過去 → 空中浮現大量刀痕 → 納刀一起爆開
     brandish: {
       start(P, S, id, lv) {
-        P.action = { type: 'brandish', id, lv, t: 0, dur: S.castTime, n: 0 };
-        P.glowT = 0.6;
-        G.audio.play('sweep');
+        P.action = { type: 'brandish', id, lv, t: 0, dur: S.castTime, n: 0, phase: 0, list: [] };
+        P.vx = 0;
+        P.glowT = 0.35;
+        G.fx.iaiDim = 0.42;
+        G.audio.play('charge');
+        // 刀光一閃
+        G.fx.impact(P.x + P.dir * 14, P.y - 30, 40, '#fff6d0');
+        for (let i = 0; i < 12; i++) {
+          const ang = (i / 12) * Math.PI * 2;
+          G.fx.particles.push({ x: P.x + Math.cos(ang) * 70, y: P.y - 30 + Math.sin(ang) * 50, vx: -Math.cos(ang) * 260, vy: -Math.sin(ang) * 190, life: 0.2, t: 0, size: 2.5, color: '#ffe9a8', grav: 0, shape: 'circle', drag: 0 });
+        }
       },
       update(P, a, dt) {
         const S = G.data.skills[a.id];
-        while (a.n < S.hits && a.t >= 0.05 + a.n * 0.075) {
+        const DRAW = 0.2;
+        // 蓄勢：定住不動
+        if (a.t < DRAW) {
+          P.vx = 0;
+          return;
+        }
+        // 拔刀：鎖定目標、瞬間衝出
+        if (a.phase === 0) {
+          a.phase = 1;
           const box = P.frontBox(S.range.w, S.range.h);
-          const up = a.n % 2 === 0;
-          G.fx.slash(P.x + P.dir * (60 + (a.n % 3) * 20), P.y - 34 + (up ? -14 : 14), up ? P.dir : -P.dir, 58, a.n % 2 ? '#ffd35a' : '#fff6d0', 'wide');
-          const list = G.combat.targets().filter((m) => U.overlap(box, m.hitbox()))
+          a.list = G.combat.targets().filter((m) => U.overlap(box, m.hitbox()))
             .sort((p, q) => Math.abs(p.x - P.x) - Math.abs(q.x - P.x)).slice(0, S.targets);
-          list.forEach((m) => G.combat.hitMonster(m, S.mult(a.lv), { knock: a.n === S.hits - 1 ? 380 : 20, heavy: a.n === S.hits - 1, sound: 'double' }));
-          if (a.n === S.hits - 1) G.fx.shake(8, 0.2);
+          a.x0 = P.x;
+          // 衝到最遠那隻目標的後面（沒有目標就往前衝一小段）
+          const far = a.list.reduce((v, m) => Math.max(v, (m.x - P.x) * P.dir), 0);
+          a.dashV = U.clamp(far + 70, 120, S.range.w + 40) / 0.09;
+          P.invT = Math.max(P.invT || 0, 0.4);
+          G.audio.play('sweep');
+          G.fx.screenFlash('#ffffff', 0.25);
+          G.fx.shake(5, 0.12);
+        }
+        if (a.t < DRAW + 0.09) {
+          P.vx = P.dir * a.dashV;
+          P.vy = 0;
+          G.fx.ghost(P.x, P.y, P.dir, { state: 'dash', t: P.t, p: 0, form: P.form }, '#fff0c0');
+          return;
+        }
+        if (a.phase === 1) {
+          a.phase = 2;
+          P.vx = P.dir * 60;
+          // 劃過的那一刀：從起點拉到終點的長線
+          const len = Math.abs(P.x - a.x0) + 160;
+          G.fx.cut((a.x0 + P.x) / 2, P.y - 32, 0, len, { w: 5, life: 0.5, grow: 0.03 });
+          G.fx.dust(P.x, P.y, -P.dir, 8);
+        }
+        // 刀痕一道道在整片區域浮現（散開，不疊成一團），每一段算一下傷害
+        const t0 = DRAW + 0.12;
+        while (a.n < S.hits && a.t >= t0 + a.n * 0.05) {
+          const last = a.n === S.hits - 1;
+          const live = a.list.filter(alive);
+          // 刀痕範圍：涵蓋所有目標；沒打到目標就在前方空揮
+          let x0 = P.x + P.dir * 40;
+          let x1 = P.x + P.dir * 200;
+          let yc = P.y - 36;
+          if (live.length) {
+            x0 = Math.min.apply(null, live.map((m) => m.x)) - 50;
+            x1 = Math.max.apply(null, live.map((m) => m.x)) + 50;
+            yc = live.reduce((v, m) => v + midY(m), 0) / live.length;
+          }
+          const lo = Math.min(x0, x1);
+          const span = Math.abs(x1 - x0);
+          // 刀痕停在空中，到納刀那一下才一起消失
+          const hold = (S.hits - 1 - a.n) * 0.05 + 0.2;
+          for (let k = 0; k < 4; k++) {
+            const ang = U.rand(-1.2, 1.2) + (k % 2 ? Math.PI / 2 : 0);
+            G.fx.cut(lo + U.rand(0, span), yc + U.rand(-30, 30), ang, U.rand(150, 230), { w: U.rand(2.2, 3.4), life: hold, grow: 0.03 });
+          }
+          live.forEach((m) => {
+            G.combat.hitMonster(m, S.mult(a.lv), { knock: last ? 420 : 0, heavy: last, sound: a.n % 2 ? 'double' : 'hit' });
+          });
+          if (!last) G.audio.play('sweep');
           a.n++;
+          // 納刀：最後一下整片爆開
+          if (last) {
+            G.fx.shake(10, 0.25);
+            G.fx.addHitstop(0.06);
+            const cx = (lo + lo + span) / 2;
+            G.fx.cut(cx, yc, -0.3, span + 140, { w: 6, life: 0.42, grow: 0.025 });
+            G.fx.cut(cx, yc, 0.3, span + 140, { w: 6, life: 0.42, grow: 0.025, delay: 0.035 });
+            live.forEach((m) => {
+              G.fx.impact(m.x, midY(m), 46, '#fff6d0');
+              G.fx.burst(m.x, midY(m), ['#ffffff', '#ffe08a', '#ffb347'], 12, 340);
+            });
+          }
         }
       },
     },

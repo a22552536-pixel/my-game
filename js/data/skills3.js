@@ -31,8 +31,8 @@
     },
     lionBrandish: {
       name: '獅王連斬', form: 'might4', maxLv: 10, icon: 'lionBrandish', type: 'brandish',
-      mp: mpf(18), mult: lin(1.5, 0.08), targets: 3, hits: 6, range: { w: 190, h: 110 }, castTime: 0.6,
-      desc: (lv) => '爪光亂舞，對前方最多 3 隻敵人連斬 6 下，各 ' + pct(1.5 + 0.08 * (lv - 1)),
+      mp: mpf(18), mult: lin(1.5, 0.08), targets: 3, hits: 6, range: { w: 260, h: 120 }, castTime: 0.72,
+      desc: (lv) => '居合：一瞬間拔刀衝過前方，最多 3 隻敵人身上浮現 6 段刀痕，各 ' + pct(1.5 + 0.08 * (lv - 1)) + '（衝刺時無敵）',
     },
     boulderRoll: {
       name: '巨岩滾擊', form: 'might4', maxLv: 10, icon: 'boulderRoll', type: 'shot', proj: 'boulder',
