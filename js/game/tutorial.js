@@ -138,6 +138,8 @@
           break;
         case 'learn':
           if (P.skills.roar > 0) this.on('learn');
+          // 保險：技能點不見了（例如舊存檔）就補回 1 點，不會卡住
+          else if (P.sp <= 0) P.sp = 1;
           break;
         case 'useSkill':
           if (!G.ui.blocking() && I.wasPressed(slotKey('roar'))) this.on('useSkill');

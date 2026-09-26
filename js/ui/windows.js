@@ -335,6 +335,13 @@
     a_learn(id) {
       const P = G.player;
       const S = G.data.skills[id];
+      // 教學「學會小吼」這一步只能點小吼，點別的會把送的技能點用掉而卡住
+      const ts = G.tutorial.active && G.tutorial.current();
+      if (ts && ts.id === 'learn' && id !== 'roar') {
+        G.hud.toast('教學中：先按「小吼」旁邊的「＋」', '#ffd84a');
+        G.audio.play('error');
+        return;
+      }
       if (P.sp <= 0 || (P.skills[id] || 0) >= S.maxLv) return;
       P.skills[id] = (P.skills[id] || 0) + 1;
       P.sp--;
