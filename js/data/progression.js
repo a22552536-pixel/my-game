@@ -61,8 +61,8 @@
     const d = D.monsters[id];
     if (d.boss) continue;
     if (!d.band && d.lv >= 11 && d.lv <= 30) d.lv = remap(d.lv);
-    // 一般怪不掉藥水（精英、變種怪才有機會）→ 藥水要去商店買
-    if (d.drops && d.drops.potion) d.drops.potion = 0;
+    // 一般怪只掉小瓶紅藍，機率低（補戰鬥中的缺口）；要囤貨還是去商店買
+    if (d.drops) d.drops.potion = 0.035;
     if (d.drops && d.drops.equip) d.drops.equip = 0.004;
   }
   // Boss：等級對齊章節尾，血量、攻擊跟著等級放大

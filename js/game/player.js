@@ -42,7 +42,7 @@
       this.hotbar = ['pounce', 'roar', null, null];
       this.equip = { claw: G.loot.makeEquip('claw1', 'common', { atk: 4 }), mane: null, charm: null };
       this.bag = [];
-      this.potions = { hp: 5, mp: 3 };
+      this.potions = { hp: 8, mp: 5 };
       this.buffs = {};
       this.questItems = {};
       this.playTime = 0;

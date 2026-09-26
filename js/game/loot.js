@@ -122,8 +122,12 @@
       } else if (d.equip && Math.random() < d.equip) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'normal') });
       }
-      // 藥水：只有精英、變種怪會掉（一般怪不掉）
-      if ((m.elite || m.V) && Math.random() < 0.05) this.spawn('potion', x, y, { potion: this.rollPotion() });
+      // 藥水：一般怪偶爾掉小瓶紅藍（補缺口，不夠囤），精英、變種怪機率高、種類多
+      if (m.elite || m.V) {
+        if (Math.random() < 0.25) this.spawn('potion', x, y, { potion: this.rollPotion() });
+      } else if (d.potion && Math.random() < d.potion) {
+        this.spawn('potion', x, y, { potion: Math.random() < 0.62 ? 'hp' : 'mp' });
+      }
       // 材料：身上有對應的收集任務時更容易掉
       (d.mats || []).forEach(([id, chance]) => {
         const c = G.quests.collectActive(id) ? Math.max(chance, 0.6) : chance;

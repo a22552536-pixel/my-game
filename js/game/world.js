@@ -268,6 +268,11 @@
       P.hp = P.maxHp;
       P.mp = P.maxMp;
       P.invT = 2;
+      // 營地補給：倒下回營時，紅藍至少補到 3／2 瓶，避免「沒藥 → 再倒下」的死循環
+      const kit = { hp: 3, mp: 2 };
+      let gave = false;
+      for (const k in kit) if ((P.potions[k] || 0) < kit[k]) { P.potions[k] = kit[k]; gave = true; }
+      if (gave) setTimeout(() => G.hud && G.hud.toast('營地的夥伴塞了幾瓶紅漿果和藍花蜜給你', '#ffb0a0'), 600);
       const camp = G.data.camps[this.map.region] || '1-1';
       this.load(camp, 'camp');
       G.save.write();
