@@ -315,7 +315,7 @@
     A.shape(ctx, (c) => A.roundRect(c, ix - 44, y - 140, 88, 22, 3), '#3a2a20', null, { lw: 2.2, hl: false });
     ctx.font = 'bold 14px ' + A.FONT;
     ctx.fillStyle = A.c('#ffe0a0');
-    ctx.fillText('溫泉の宿', ix, y - 129);
+    ctx.fillText('溫泉旅館', ix, y - 129);
 
     // 露天溫泉（左）
     const px = x1 + 110;
