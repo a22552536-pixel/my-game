@@ -648,7 +648,12 @@
           ctx.stroke();
         }
       }
-      if (R > 0.3) {
+      // 石頭越積越多，核心就越被蓋住：光暈、吸積環、黑球一起淡出，最後只看得到石球
+      const cover = Math.min(1, u.shell.length / 22);
+      const coreA = 1 - cover;
+      if (R > 0.3 && coreA > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = coreA;
         ctx.globalCompositeOperation = 'lighter';
         const g = ctx.createRadialGradient(0, 0, R * 0.9, 0, 0, R * 3);
         g.addColorStop(0, 'rgba(255,40,70,0.5)');
@@ -658,24 +663,21 @@
         ctx.arc(0, 0, R * 3, 0, TAU);
         ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
-      }
-      const ring = (front) => {
-        if (R <= 0.3) return;
-        ctx.save();
-        ctx.rotate(-0.35);
-        ctx.scale(1, 0.28);
-        ctx.beginPath();
-        ctx.arc(0, 0, R * 2, front ? 0 : Math.PI, front ? Math.PI : TAU);
-        ctx.lineWidth = R * 0.9;
-        ctx.strokeStyle = 'rgba(255,70,90,0.55)';
-        ctx.stroke();
-        ctx.lineWidth = R * 0.3;
-        ctx.strokeStyle = 'rgba(255,220,225,0.9)';
-        ctx.stroke();
-        ctx.restore();
-      };
-      ring(false);
-      if (R > 0.3) {
+        const ring = (front) => {
+          ctx.save();
+          ctx.rotate(-0.35);
+          ctx.scale(1, 0.28);
+          ctx.beginPath();
+          ctx.arc(0, 0, R * 2, front ? 0 : Math.PI, front ? Math.PI : TAU);
+          ctx.lineWidth = R * 0.9;
+          ctx.strokeStyle = 'rgba(255,70,90,0.55)';
+          ctx.stroke();
+          ctx.lineWidth = R * 0.3;
+          ctx.strokeStyle = 'rgba(255,220,225,0.9)';
+          ctx.stroke();
+          ctx.restore();
+        };
+        ring(false);
         ctx.beginPath();
         ctx.arc(0, 0, R, 0, TAU);
         ctx.fillStyle = '#000000';
@@ -683,14 +685,15 @@
         ctx.lineWidth = 1.6;
         ctx.strokeStyle = 'rgba(255,235,240,0.95)';
         ctx.stroke();
+        ring(true);
+        ctx.restore();
       }
-      ring(true);
       // 石球外殼：石頭一顆顆黏上去（剛黏上時從外面滑進定位）
       const sz = u.size * (u.phase === 'flash' ? 1 + Math.sin(u.t * 40) * 0.02 : 1);
       // 石頭夠多時，中間補一層深色的土，看起來是一整顆球
-      if (u.shell.length > 10) {
+      if (u.shell.length > 4) {
         ctx.beginPath();
-        ctx.arc(0, 0, sz * 0.92 * Math.min(1, (u.shell.length - 10) / 14), 0, TAU);
+        ctx.arc(0, 0, sz * 0.92 * Math.min(1, (u.shell.length - 4) / 16), 0, TAU);
         ctx.fillStyle = G.art.c('#5e5246');
         ctx.fill();
         ctx.lineWidth = 2;
