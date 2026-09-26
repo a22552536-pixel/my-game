@@ -52,7 +52,7 @@
       this.signs = (map.signs || []).map((s) => ({ x: s.x, y: map.platforms[s.p][2], text: s.text }));
       this.critters = [];
       const th = map.theme;
-      const nC = th === 'rootCave' ? 14 : th === 'queenHall' ? 0 : 6;
+      const nC = th === 'rootCave' ? 14 : ['queenHall', 'crabNest', 'lavaBed', 'volcanoNest', 'reef'].indexOf(th) >= 0 ? 0 : 6;
       for (let i = 0; i < nC; i++) {
         this.critters.push({
           kind: th === 'rootCave' ? 'firefly' : 'butterfly',
@@ -146,6 +146,11 @@
       if (!P.onGround) return false;
       for (const p of this.map.portals || []) {
         if (Math.abs(P.x - p.x) < 36 && P.plat === p.p) {
+          if (p.req && !this.flags[p.req]) {
+            G.hud.toast(p.reqText || '這條路還沒開', '#ffd84a');
+            G.audio.play('error');
+            return true;
+          }
           if (G.tutorial.blocking()) {
             G.hud.toast('先完成畫面上方的操作教學，傳送門才會開', '#ffd84a');
             G.audio.play('error');
@@ -395,6 +400,15 @@
           if (remove) this.projectiles.splice(i, 1);
           continue;
         }
+        if (p.kind === 'lavaRock' && p.y >= ground) {
+          // 熔岩落石：砸在地上留下一灘熔岩
+          this.zones.push({ kind: 'lava', x: p.x, y: ground, r: 60, t: 0, life: 4, tick: 0, pct: 0.05, noSlow: true });
+          G.fx.burst(p.x, ground - 10, ['#ff7a2a', '#ffd35a', '#3a2a24'], 14, 260, { angle: -Math.PI / 2, spread: 1.2 });
+          G.fx.shake(5, 0.15);
+          G.audio.play('rockHit');
+          if (P.alive() && Math.abs(P.x - p.x) < 50 && Math.abs(P.y - ground) < 60) P.hurt(p.dmg, p.x);
+          remove = true;
+        }
         if (p.kind === 'sporeBomb' && p.y >= ground) {
           this.zones.push({ x: p.x, y: ground, r: 70, t: 0, life: 4.5, tick: 0, dmg: p.dmg });
           G.fx.burst(p.x, ground - 10, ['#c9a0e8', '#e8d0ff'], 12, 200, { angle: -Math.PI / 2, spread: 1.2 });
@@ -404,7 +418,7 @@
         if (!remove && P.alive()) {
           const hb = P.hitbox();
           let hit = false;
-          if (p.kind === 'wave') {
+          if (p.kind === 'wave' || p.kind === 'tide') {
             hit = !p.hitDone && U.overlap({ x: p.x - 22, y: p.y - p.h, w: 44, h: p.h }, hb);
           } else {
             const cx = U.clamp(p.x, hb.x, hb.x + hb.w);
@@ -415,7 +429,7 @@
             if (P.hurt(p.dmg, p.x - p.vx * 0.01)) {
               G.fx.burst(p.x, p.y, ['#fff', '#ffe0a0'], 8, 180);
             }
-            if (p.kind === 'wave') p.hitDone = true;
+            if (p.kind === 'wave' || p.kind === 'tide') p.hitDone = true;
             else remove = true;
           }
         }
@@ -433,11 +447,11 @@
           continue;
         }
         if (P.alive() && Math.abs(P.x - z.x) < z.r && Math.abs(P.y - z.y) < 70) {
-          P.slowT = 0.2;
+          if (!z.noSlow) P.slowT = 0.2;
           z.tick -= dt;
           if (z.tick <= 0) {
             z.tick = 0.7;
-            P.hurt(Math.max(1, Math.round(P.maxHp * 0.03)), null, { noKnock: true, ignoreInv: true });
+            P.hurt(Math.max(1, Math.round(P.maxHp * (z.pct || 0.03))), null, { noKnock: true, ignoreInv: true });
           }
         }
       }

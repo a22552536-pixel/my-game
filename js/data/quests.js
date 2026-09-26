@@ -209,4 +209,161 @@ G.data.quests = {
       done: '好香……謝謝你。這個護符是女王大人以前送我的，你帶著吧。如果你見到她……請把花香帶給她。',
     },
   },
+
+  // ═════════ 第二章 潮風海岬（Lv 11–20）═════════
+  q30: {
+    name: '今天的晚餐', npc: 'otter', req: { lv: 11 }, type: 'kill', target: 'sandcrab', count: 12,
+    reward: { exp: 450, gold: 220 },
+    lines: {
+      offer: '哎呀，今天一條魚都沒釣到！沙粒蟹把魚都嚇跑了！幫我趕走 12 隻，晚餐分你一半——雖然現在是零條的一半。',
+      progress: '沙粒蟹橫著走，你也橫著追！哈哈！',
+      done: '魚回來了！魚回來了！這些金葉是……上次釣到的金魚換的。真的！',
+    },
+  },
+  q31: {
+    name: '亮晶晶的貨', npc: 'gullmerchant', req: { lv: 12 }, type: 'collect', item: 'jellydrop', count: 8,
+    reward: { exp: 500, potions: { mpL: 3 } },
+    lines: {
+      offer: '嘎！泡泡水母的凝膠做成的果凍，是燈塔岬的名產！幫我收 8 份，嘎！',
+      progress: '泡泡水母慢吞吞的，很好抓，嘎！',
+      done: '嘎嘎！品質一流！這幾瓶大藍花蜜拿去，做生意要講義氣！',
+    },
+  },
+  q32: {
+    name: '曬太陽的好位置', npc: 'starfish', req: { lv: 13 }, type: 'kill', target: 'gullchick', count: 12,
+    reward: { exp: 560, gold: 260 },
+    lines: {
+      offer: '呼啊……海鷗雛一直在我身上跳……可以請牠們換個地方玩嗎……12 隻就好……',
+      progress: '呼啊……還有好幾隻在跳……',
+      done: '呼啊……終於可以躺平了……這些金葉是退潮時撿的……拿去吧……',
+    },
+  },
+  q35: {
+    name: '燈塔的光', npc: 'seal', req: { lv: 15 }, type: 'boss', target: 'hermitCrab', count: 1, main: true,
+    reward: { exp: 3000, gold: 800 },
+    lines: {
+      offer: '那個臭老蟹在浪花礁岩後面的巢灣。你去……你去跟他打一場。他會很高興的，他一直想再痛快打一架。',
+      progress: '他縮進燈塔裡的時候，正面打不動。繞到背後，打那扇窗，我以前就是那樣贏他的。',
+      done: '……他笑著走的？哈……像他。這份獎勵收下。燈塔，我會替他亮著。',
+    },
+  },
+  q33: {
+    name: '我也想發光', npc: 'pufferkid', req: { lv: 15 }, type: 'collect', item: 'glowgel', count: 5,
+    reward: { exp: 700, potions: { acorn: 2 } },
+    lines: {
+      offer: '燈籠水母的螢光液塗在身上，是不是就會發光？你幫我拿 5 瓶！我、我不是怕去，我是在忙！',
+      progress: '燈籠水母碰到會電人喔！你小心！……我才沒有擔心你！',
+      done: '噗——！我發光了！我發光了！這個給你，是我最寶貝的力量橡實！',
+    },
+  },
+  q34: {
+    name: '畫不完的海', npc: 'octopus', req: { lv: 16 }, type: 'collect', item: 'shellpiece', count: 6,
+    reward: { exp: 800, equip: { base: 'charm3', rarity: 'rare' } },
+    lines: {
+      offer: '我需要貝殼片當調色盤！貝甲蟹背上的扇貝最漂亮，幫我拿 6 片！',
+      progress: '貝甲蟹縮起來的時候打不動，等牠探出頭再打！',
+      done: '噢！這個光澤！我要畫一百幅畫！這個護符送你，是我畫第一幅畫時戴的。',
+    },
+  },
+  q36: {
+    name: '補給線', npc: 'pelican', req: { lv: 18 }, type: 'kill', target: 'coralcrab', count: 12,
+    reward: { exp: 1100, potions: { hpL: 5 } },
+    lines: {
+      offer: '珊瑚蟹一直衝撞我的補給箱！幫我教訓 12 隻，大紅漿果算我請你！',
+      progress: '珊瑚蟹被打之後會衝過來，閃開再打！',
+      done: '補給線保住了！來，張開嘴——不對，是我張開嘴，給你拿漿果。',
+    },
+  },
+  q37: {
+    name: '信天翁的長羽', npc: 'otter', req: { lv: 19, quest: 'q30' }, type: 'collect', item: 'plume', count: 5,
+    reward: { exp: 1300, equip: { base: 'mane4b', rarity: 'rare' } },
+    lines: {
+      offer: '我想做一支新的釣竿浮標，信天翁的長羽最輕！浪花礁岩上面有，拿 5 根給我！',
+      progress: '信天翁飛過去會丟羽毛下來，小心別被砸到頭！',
+      done: '完美！這下子一定釣得到大魚！這個鬃飾給你，是我爺爺留下來的——他說是那隻金色獅子送的。',
+    },
+  },
+
+  // ═════════ 第三章 赤岩峽谷（Lv 21–30）═════════
+  q50: {
+    name: '溫泉毛巾', npc: 'capybara', req: { lv: 21 }, type: 'collect', item: 'towel', count: 8,
+    reward: { exp: 1100, potions: { hpXL: 2 } },
+    lines: {
+      offer: '……溫泉猴……把我的毛巾都拿去頂在頭上了……拿 8 條回來……不急……',
+      progress: '……慢慢來……溫泉不會跑……',
+      done: '……謝謝……這兩顆特大漿果……泡完溫泉再吃……最好吃……',
+    },
+  },
+  q51: {
+    name: '放哨', npc: 'meerkat', req: { lv: 22 }, type: 'kill', target: 'pebble', count: 15,
+    reward: { exp: 1200, gold: 500 },
+    lines: {
+      offer: '報告！碎石丸一直滾進溫泉谷！請求支援！目標：15 隻！',
+      progress: '報告！碎石丸滾起來很快！請注意閃避！',
+      done: '報告！任務完成！……我可以跟你敬禮嗎？敬禮！',
+    },
+  },
+  q52: {
+    name: '帶路費', npc: 'parrot', req: { lv: 23 }, type: 'kill', target: 'springmonkey', count: 12,
+    reward: { exp: 1400, gold: 600 },
+    lines: {
+      offer: '嘎！溫泉猴一直丟石頭！丟石頭！幫我趕走 12 隻，帶路免費！免費！',
+      progress: '靠近再打！靠近再打！牠們只會遠遠丟！',
+      done: '嘎！安靜了！安靜了！這些金葉拿去！拿去！',
+    },
+  },
+  q53: {
+    name: '燒烤料理', npc: 'redpanda', req: { lv: 24 }, type: 'collect', item: 'emberscale', count: 8,
+    reward: { exp: 1600, potions: { acorn: 3 } },
+    lines: {
+      offer: '火苗蜥的鱗片是最好的炭！不用火也能烤！幫我拿 8 片，我要做新菜！',
+      progress: '火苗蜥很溫馴，不會主動攻擊你的！',
+      done: '好燙好燙！完美的炭！這三顆力量橡實是我的秘密調味料，送你！',
+    },
+  },
+  q54: {
+    name: '誰比較快', npc: 'greymane', req: { lv: 25 }, type: 'kill', target: 'moltenlizard', count: 15,
+    reward: { exp: 1900, gold: 700 },
+    lines: {
+      offer: '……來比一場。誰先打倒 15 隻熔尾蜥，誰就是比較強的那個。輸的人，別再跟著我。',
+      progress: '……慢死了。',
+      done: '……算你厲害。拿去，我不需要金葉。',
+    },
+  },
+  q55: {
+    name: '蒸氣裡的藥草', npc: 'goat', req: { lv: 26 }, type: 'collect', item: 'rockheart', count: 6,
+    reward: { exp: 2100, equip: { base: 'charm5', rarity: 'rare' } },
+    lines: {
+      offer: '咩……岩塊怪身體裡的岩心，磨成粉可以治燙傷。那隻灰色的小獅子需要它。幫我拿 6 顆。',
+      progress: '岩塊怪很硬，縮起來的時候要等牠。',
+      done: '咩……謝謝你。那孩子嘴巴很壞，可是他收下藥的時候，說了謝謝。這護符你拿著。',
+    },
+  },
+  q56: {
+    name: '醒來的火山', npc: 'oldmonkey', req: { lv: 27 }, type: 'boss', target: 'lavaTortoise', count: 1, main: true,
+    reward: { exp: 6000, gold: 1500 },
+    lines: {
+      offer: '甲龜是這座峽谷的老住民，平常溫溫吞吞的。葉子掉進牠背上的火山口，火山就醒了。……孩子，峽谷交給你了。',
+      progress: '看到地上的影子就跑，落石之後會留下熔岩。牠翻滾的時候，跳上平台。',
+      done: '火山睡著了。……辛苦你了，孩子。泡個溫泉再走吧。',
+    },
+  },
+  q57: {
+    name: '坑道裡的熱氣', npc: 'armadillo', req: { lv: 28 }, type: 'kill', target: 'fireiguana', count: 12,
+    reward: { exp: 2600, potions: { hpXL: 3 } },
+    lines: {
+      offer: '喀啦，炎鬣蜥對著坑道噴火，我都快變成烤犰狳了！打 12 隻！',
+      progress: '牠張開頸圈的時候就是要噴火了，快閃！',
+      done: '喀啦喀啦！涼快多了！特大漿果收好，火山巢裡用得到！',
+    },
+  },
+  q58: {
+    name: '山魈的面具', npc: 'capybara', req: { lv: 29, quest: 'q50' }, type: 'collect', item: 'maskshard', count: 5,
+    reward: { exp: 2900, equip: { base: 'claw6', rarity: 'rare' } },
+    lines: {
+      offer: '……山魈頭目的面具……以前是溫泉谷的守護面具……被搶走了……拿 5 片碎片回來……我想把它拼好……',
+      progress: '……山魈會叫同伴……小心……',
+      done: '……拼好了……謝謝……這副爪套……以前是守護谷的勇士用的……給你……',
+    },
+  },
 };

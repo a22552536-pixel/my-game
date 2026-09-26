@@ -156,8 +156,8 @@
         });
       });
       const px = sx0 + slots.length * 52;
-      const hpN = (P.potions.hp || 0) + (P.potions.hpL || 0);
-      const mpN = (P.potions.mp || 0) + (P.potions.mpL || 0);
+      const hpN = (P.potions.hp || 0) + (P.potions.hpL || 0) + (P.potions.hpXL || 0);
+      const mpN = (P.potions.mp || 0) + (P.potions.mpL || 0) + (P.potions.mpXL || 0);
       this.slot(ctx, px, barY + 5, I.label('hpPot'), P.potions.hp > 0 || !P.potions.hpL ? 'hpPot' : 'hpPotL', () => (hpN > 0 ? null : 'nomp'), hpN);
       this.slot(ctx, px + 52, barY + 5, I.label('mpPot'), P.potions.mp > 0 || !P.potions.mpL ? 'mpPot' : 'mpPotL', () => (mpN > 0 ? null : 'nomp'), mpN);
 

@@ -51,6 +51,12 @@
       return item;
     },
 
+    // 某隻 Boss 的獨特裝備（沒標 boss 的是菇菇女王的）
+    uniquesOf(bossId) {
+      const U2 = D().uniques;
+      const list = Object.keys(U2).filter((k) => (U2[k].boss || 'queenShroom') === bossId);
+      return list.length ? list : Object.keys(U2);
+    },
     makeUnique(id) {
       const u = D().uniques[id];
       return {
@@ -119,18 +125,19 @@
     dropFromBoss(b) {
       const d = b.def.drops || {};
       for (let i = 0; i < 4; i++) this.spawn('gold', b.x + U.rand(-60, 60), b.y - 120, { amount: Math.round(U.randi(d.gold[0], d.gold[1]) / 4) });
-      this.spawn('equip', b.x - 30, b.y - 120, { item: this.randomEquip(10, 'boss') });
-      this.spawn('equip', b.x + 30, b.y - 120, { item: this.randomEquip(10, 'boss') });
+      this.spawn('equip', b.x - 30, b.y - 120, { item: this.randomEquip(b.level - 2, 'boss') });
+      this.spawn('equip', b.x + 30, b.y - 120, { item: this.randomEquip(b.level - 2, 'boss') });
       this.spawn('potion', b.x, b.y - 120, { potion: 'hpL', count: 3 });
-      if (Math.random() < 0.35) this.spawn('equip', b.x, b.y - 130, { item: this.makeUnique(U.pick(Object.keys(D().uniques))) });
+      if (Math.random() < 0.35) this.spawn('equip', b.x, b.y - 130, { item: this.makeUnique(U.pick(this.uniquesOf(b.id))) });
       const ch = G.world.map.region;
       if (!G.story.hasLeaf(ch)) this.spawn('starleaf', b.x, b.y - 140, { chapter: ch });
-      this.spawn('quest', b.x + 50, b.y - 120, { qitem: 'queencap' });
+      this.spawn('quest', b.x + 50, b.y - 120, { qitem: { hermitCrab: 'lampshard', lavaTortoise: 'volcanocore' }[b.id] || 'queencap' });
     },
 
     dropFromChest(ch) {
-      this.spawn('equip', ch.x, ch.y - 30, { item: this.randomEquip(8, 'chest') });
-      this.spawn('gold', ch.x, ch.y - 30, { amount: U.randi(60, 120) });
+      const r = (G.world.map && G.world.map.region) || 1;
+      this.spawn('equip', ch.x, ch.y - 30, { item: this.randomEquip(r * 10 - 2, 'chest') });
+      this.spawn('gold', ch.x, ch.y - 30, { amount: U.randi(60, 120) * r * r });
       this.spawn('potion', ch.x, ch.y - 30, { potion: 'hp', count: 3 });
     },
 

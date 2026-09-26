@@ -176,6 +176,24 @@
       return false;
     }
     if (this.slowT > 0) this.slowT -= dt;
+    // 溫泉石像：每隔幾秒替附近受傷的同伴回血
+    if (this.abil.heal) {
+      if (this.healT > 0) this.healT -= dt;
+      this.healCd = (this.healCd == null ? U.rand(2, 4) : this.healCd) - dt;
+      if (this.healCd <= 0) {
+        this.healCd = 4.5;
+        const hurt = G.world.monsters.filter((o) => !o.dead && o !== this && o.hp < o.maxHp && Math.abs(o.x - this.x) < 280 && Math.abs(o.y - this.y) < 160);
+        if (hurt.length) {
+          this.healT = 0.8;
+          hurt.forEach((o) => {
+            const n = Math.round(o.maxHp * 0.12);
+            o.hp = Math.min(o.maxHp, o.hp + n);
+            G.fx.text(o.x, o.y - o.h * (o.scale || 1) - 20, '+' + n, '#8fff9a', 14, 0.8);
+            G.fx.sparkle(o.x, o.y - o.h * 0.5, '#b8ffb0', 5, 20);
+          });
+        }
+      }
+    }
     if (this.aggroT > 0) this.aggroT -= dt;
     if ((d.behavior === 'aggressive' || (this.V && this.V.aggressive)) && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < (d.sight || 300)) {
       this.aggroT = Math.max(this.aggroT, 2);

@@ -548,7 +548,9 @@
     // 快捷鍵 1／2：先用小的，用完再用大的
     usePotion(kind) {
       const big = kind + 'L';
+      const xl = kind + 'XL';
       if ((this.potions[kind] || 0) <= 0 && (this.potions[big] || 0) > 0) return this.useItem(big);
+      if ((this.potions[kind] || 0) <= 0 && (this.potions[xl] || 0) > 0) return this.useItem(xl);
       if ((this.potions[kind] || 0) <= 0) {
         G.hud.toast((kind === 'hp' ? '紅漿果' : '藍花蜜') + '用完了', '#ddd');
         G.audio.play('error');

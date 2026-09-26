@@ -493,8 +493,14 @@
       this.open('evolve');
     },
 
+    shopGoods() {
+      const D = G.data.items;
+      const id = this.shopId || 'owl';
+      return (id === 'mole' ? D.moleShop : D.shops[id] || D.moreShops[id]) || [];
+    },
     a_openShop() {
       const shop = this.dialogue.npc.def.shop;
+      this.shopTitle = this.dialogue.npc.def.shopName || this.dialogue.npc.def.name + '的商店';
       this.close('dialogue');
       this.shopId = shop;
       this.open('shop');
@@ -504,7 +510,7 @@
     r_shop() {
       const P = G.player;
       const D = G.data.items;
-      const goods = (this.shopId === 'mole' ? D.moleShop : D.shops[this.shopId || 'owl']) || [];
+      const goods = this.shopGoods();
       let buy = '<h3>購買</h3>';
       goods.forEach((g, i) => {
         if (g.type === 'potion') {
@@ -536,9 +542,10 @@
       });
       sell += '</div>';
       let trade = '';
-      if (this.shopId !== 'mole') {
+      const myTrades = D.trades.map((t, i) => [t, i]).filter(([t]) => (t.shop || 'owl') === (this.shopId || 'owl'));
+      if (myTrades.length) {
         trade = '<h3>以物易物</h3>';
-        D.trades.forEach((t, i) => {
+        myTrades.forEach(([t, i]) => {
           const ok = this.canTrade(t);
           const need = Object.keys(t.need).map((k) => {
             const have = P.questItems[k] || 0;
@@ -548,13 +555,13 @@
             '<button data-act="trade" data-arg="' + i + '"' + (ok ? '' : ' disabled') + '>交換</button></div>';
         });
       }
-      return this.frame((this.shopId === 'mole' ? '鼴鼠的補給站' : '貓頭鷹的小舖') + '　<span class="gold"><img src="' + G.art.iconURL('gold') + '">' + P.gold + '</span>', '<div class="shop"><div class="col">' + buy + trade + '</div><div class="col">' + sell + '</div></div>', 'shop');
+      return this.frame((this.shopTitle || '商店') + '　<span class="gold"><img src="' + G.art.iconURL('gold') + '">' + P.gold + '</span>', '<div class="shop"><div class="col">' + buy + trade + '</div><div class="col">' + sell + '</div></div>', 'shop');
     },
     a_buy(arg) {
       const P = G.player;
       const D = G.data.items;
       const [i, n] = arg.split(':').map(Number);
-      const g = (this.shopId === 'mole' ? D.moleShop : D.shops[this.shopId || 'owl'])[i];
+      const g = this.shopGoods()[i];
       if (g.type === 'potion') {
         const cost = D.potions[g.id].price * n;
         if (P.gold < cost) return;
@@ -635,7 +642,7 @@
     tradeGiveIcon(t) {
       const g = t.give;
       if (g.potion) return G.data.items.potions[g.potion].icon;
-      return g.unique ? 'queencap' : 'charm';
+      return g.unique ? { queenShroom: 'queencap', hermitCrab: 'lampshard', lavaTortoise: 'volcanocore' }[g.unique] || 'queencap' : 'charm';
     },
     a_trade(i) {
       const P = G.player;
@@ -654,7 +661,7 @@
         G.hud.toast('換到 ' + this.tradeGiveName(t), '#ffb0a0');
         G.audio.play('potion');
       } else {
-        const it = g.unique ? G.loot.makeUnique(G.util.pick(Object.keys(D.uniques))) : G.loot.randomEquip(P.level, g.equip);
+        const it = g.unique ? G.loot.makeUnique(G.util.pick(G.loot.uniquesOf(g.unique))) : G.loot.randomEquip(P.level, g.equip);
         P.bag.push(it);
         G.hud.toast('換到「' + it.name + '」', D.rarity[it.rarity].color);
         G.audio.play(it.rarity === 'legendary' ? 'legendary' : it.rarity === 'epic' ? 'epic' : 'rare');
