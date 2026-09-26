@@ -157,6 +157,7 @@
       for (const n of this.npcs) {
         if (Math.abs(P.x - n.x) < 64 && Math.abs(P.y - n.y) < 40) {
           G.ui.openDialogue(n);
+          G.tutorial.on('talk');
           return true;
         }
       }
@@ -444,7 +445,11 @@
       ctx.save();
       ctx.translate(-Math.round(cam.x + G.fx.shakeX + G.fx.kickX), -Math.round(cam.y + G.fx.shakeY + G.fx.kickY));
 
-      map.ropes.forEach((r) => G.art.drawRope(ctx, r, t));
+      const P = G.player;
+      map.ropes.forEach((r) => {
+        const near = P.climbing < 0 && Math.abs(P.x - r[0]) < 70 && P.y >= r[1] - 10 && P.y <= r[2] + 10;
+        G.art.drawRope(ctx, r, t, near);
+      });
       G.art.drawPlatforms(ctx, map, cam);
       G.art.drawProps(ctx, map, cam, t);
       (map.portals || []).forEach((p) => G.art.drawPortal(ctx, p.x, map.platforms[p.p][2], t, G.data.maps[p.to] && G.data.maps[p.to].name));

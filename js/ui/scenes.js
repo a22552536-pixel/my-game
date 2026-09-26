@@ -66,6 +66,7 @@
     },
 
     newGame() {
+      G.tutorial.active = false;
       this.hideTitle();
       G.ui.closeAll();
       G.player.newGame();
@@ -78,6 +79,7 @@
     },
 
     continueGame() {
+      G.tutorial.active = false;
       const data = G.save.peek();
       if (!data) return this.newGame();
       this.hideTitle();
@@ -121,7 +123,7 @@
 
     endIntro() {
       this.startPlay('1-1', 'start');
-      G.hud.toast('按 ↑ 和營地裡的動物說話', '#fff3a0');
+      G.tutorial.start();
     },
 
     drawIntro(ctx) {

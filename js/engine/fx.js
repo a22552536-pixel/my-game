@@ -130,7 +130,7 @@
       this.rings.push({ x, y, color, r: 4, maxR: maxR || 80, t: 0, life: life || 0.4, w: width || 4 });
     },
 
-    // 黑閃：跟裝備「雷擊」同一種黃白色閃電，但只在命中點附近迸出幾道短的
+    // 黑閃：形狀跟裝備「雷擊」一樣是鋸齒閃電，但顏色是黑芯紅邊（咒術迴戰的黑閃），只在命中點附近迸出幾道短的
     blackFlash(x, y, dir) {
       const n = 4;
       for (let i = 0; i < n; i++) {
@@ -143,13 +143,13 @@
           const jitter = k < seg ? U.rand(-10, 10) : 0;
           pts.push([x + Math.cos(a) * d - Math.sin(a) * jitter, y + Math.sin(a) * d + Math.cos(a) * jitter]);
         }
-        this.bolts.push({ pts, t: 0, life: U.rand(0.16, 0.24), w: 4 });
+        this.bolts.push({ pts, t: 0, life: U.rand(0.2, 0.3), w: U.rand(5, 7.5), black: true });
       }
-      this.rings.push({ x, y, color: 'rgba(255,246,168,0.9)', r: 6, maxR: 46, t: 0, life: 0.18, w: 3 });
+      this.rings.push({ x, y, color: 'rgba(255,40,60,0.85)', r: 6, maxR: 46, t: 0, life: 0.18, w: 3 });
       for (let i = 0; i < 10; i++) {
         this.particles.push({
           x, y, vx: U.rand(-320, 320), vy: U.rand(-360, 120), life: U.rand(0.2, 0.4), t: 0,
-          size: U.rand(2, 4), color: U.pick(['#fff6a8', '#ffffff', '#ffe066']), grav: 400, shape: 'square', drag: 2,
+          size: U.rand(2, 4), color: U.pick(['#ff2a3a', '#14000a', '#ff6a6a']), grav: 400, shape: 'square', drag: 2,
         });
       }
     },
@@ -437,6 +437,23 @@
 
       for (const b of this.bolts) {
         ctx.globalAlpha = 1 - b.t / b.life;
+        if (b.black) {
+          // 黑閃：紅色外暈 → 黑色主體 → 細細的暗紅芯
+          ctx.lineJoin = 'round';
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          b.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+          ctx.strokeStyle = 'rgba(255,30,50,0.9)';
+          ctx.lineWidth = b.w + 6;
+          ctx.stroke();
+          ctx.strokeStyle = '#0a0006';
+          ctx.lineWidth = b.w;
+          ctx.stroke();
+          ctx.strokeStyle = '#5a0010';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          continue;
+        }
         ctx.strokeStyle = '#fff6a8';
         ctx.lineWidth = b.w || 6;
         ctx.lineJoin = 'round';
@@ -554,13 +571,13 @@
         ctx.fillStyle = g;
         ctx.fillText(n.value, n.x, y);
         if (n.kind === 'crit' && k < 0.8) {
-          // 黑閃：跟閃電同色的黃字，蓋在傷害數字上方
+          // 黑閃：黑字紅邊（字小一點），蓋在傷害數字上方
           const pop2 = k < 0.1 ? 1.5 - k * 5 : 1;
           ctx.font = '900 ' + Math.round(17 * pop2) + 'px ' + G.art.FONT;
           ctx.lineWidth = 4.5;
-          ctx.strokeStyle = '#5a2e00';
+          ctx.strokeStyle = '#ff1a30';
           ctx.strokeText('黑閃！', n.x, y - size - 4);
-          ctx.fillStyle = '#fff27a';
+          ctx.fillStyle = '#0a0004';
           ctx.fillText('黑閃！', n.x, y - size - 4);
         }
       }

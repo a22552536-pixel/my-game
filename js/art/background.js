@@ -666,43 +666,121 @@
     }
   }
 
-  A.drawRope = function (ctx, r, t) {
+  // 可以爬的藤蔓／梯子：粗一點、亮一點、有呼吸光，玩家靠近時底下跳出「↑」
+  A.drawRope = function (ctx, r, t, near) {
     const x = r[0];
     const top = r[1] - 8;
     const bottom = r[2] - 34;
-    if (r[3] === 'ladder') {
-      ctx.strokeStyle = '#6b4428';
-      ctx.lineWidth = 4;
+    const pulse = 0.5 + Math.sin(t * 2.4) * 0.5;
+    // 呼吸光
+    const g = ctx.createLinearGradient(x - 30, 0, x + 30, 0);
+    const ga = (near ? 0.55 : 0.3 + pulse * 0.2).toFixed(3);
+    g.addColorStop(0, 'rgba(255,248,170,0)');
+    g.addColorStop(0.5, 'rgba(255,248,170,' + ga + ')');
+    g.addColorStop(1, 'rgba(255,248,170,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - 30, top - 6, 60, bottom - top + 26);
+    // 往上飄的小光點，一眼就知道「這條可以爬」
+    for (let k = 0; k < 4; k++) {
+      const ph = (t * 0.5 + k / 4) % 1;
+      const py = bottom - ph * (bottom - top);
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.9;
+      ctx.fillStyle = '#fffbd0';
       ctx.beginPath();
-      ctx.moveTo(x - 10, top);
-      ctx.lineTo(x - 10, bottom);
-      ctx.moveTo(x + 10, top);
-      ctx.lineTo(x + 10, bottom);
-      for (let y = top + 10; y < bottom; y += 16) {
-        ctx.moveTo(x - 10, y);
-        ctx.lineTo(x + 10, y);
-      }
-      ctx.stroke();
-      return;
-    }
-    ctx.strokeStyle = '#3f6b2a';
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    for (let y = top; y <= bottom; y += 6) {
-      const xx = x + Math.sin(y * 0.08) * 2.5;
-      y === top ? ctx.moveTo(xx, y) : ctx.lineTo(xx, y);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = '#6fae45';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = '#6fbf4a';
-    for (let y = top + 10; y < bottom; y += 22) {
-      const s = (y / 22) % 2 < 1 ? 1 : -1;
-      ctx.beginPath();
-      ctx.ellipse(x + s * 6, y, 6, 3, s * 0.6, 0, Math.PI * 2);
+      ctx.arc(x + Math.sin(ph * 12 + k) * 10, py, 2.4, 0, Math.PI * 2);
       ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (r[3] === 'ladder') {
+      ctx.lineCap = 'round';
+      [[A.outline(), 8], ['#b5824a', 4]].forEach(([col, w]) => {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(x - 11, top);
+        ctx.lineTo(x - 11, bottom);
+        ctx.moveTo(x + 11, top);
+        ctx.lineTo(x + 11, bottom);
+        for (let y = top + 10; y < bottom; y += 16) {
+          ctx.moveTo(x - 11, y);
+          ctx.lineTo(x + 11, y);
+        }
+        ctx.stroke();
+      });
+    } else {
+      const path = () => {
+        ctx.beginPath();
+        for (let y = top; y <= bottom; y += 5) {
+          const xx = x + Math.sin(y * 0.07 + t * 0.8) * 2.5;
+          y === top ? ctx.moveTo(xx, y) : ctx.lineTo(xx, y);
+        }
+      };
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 10;
+      path();
+      ctx.stroke();
+      ctx.strokeStyle = '#5f9e38';
+      ctx.lineWidth = 6;
+      path();
+      ctx.stroke();
+      ctx.strokeStyle = '#a8e070';
+      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.translate(-1.5, 0);
+      path();
+      ctx.stroke();
+      ctx.restore();
+      // 葉子
+      for (let y = top + 12, i = 0; y < bottom - 4; y += 20, i++) {
+        const sd = i % 2 ? 1 : -1;
+        const sway = Math.sin(t * 2 + i) * 0.15;
+        A.ellipse(ctx, x + sd * 9, y, 8, 4, '#7cc84a', '#5a9e34', { rot: sd * 0.6 + sway, lw: 1.8, hl: false });
+      }
+      // 頂端的結與小花
+      A.ellipse(ctx, x, top + 2, 9, 7, '#5f9e38', '#4a8030', { lw: 2.2, hl: false });
+      for (let k = 0; k < 5; k++) A.ellipse(ctx, x + 8 + Math.cos(k * 1.256) * 3.5, top - 2 + Math.sin(k * 1.256) * 3.5, 2.6, 2.6, '#fff3a0', null, { lw: 1.2, hl: false });
+      A.ellipse(ctx, x + 8, top - 2, 1.8, 1.8, '#ff9a3a', null, { noStroke: true, hl: false });
+    }
+
+    // 底部提示：一直有淡淡的箭頭，靠近時變成明顯的 ↑ 按鍵泡泡
+    const by = bottom + 8 - Math.abs(Math.sin(t * 4)) * 6;
+    if (near) {
+      const label = G.input.label('up');
+      ctx.font = 'bold 16px ' + A.FONT;
+      const w = Math.max(30, ctx.measureText(label).width + 14);
+      ctx.fillStyle = 'rgba(255,248,220,0.95)';
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      A.roundRect(ctx, x - w / 2, by - 44, w, 28, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#4a2e1f';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, by - 30);
+      ctx.font = 'bold 12px ' + A.FONT;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(40,24,12,0.8)';
+      ctx.strokeText('爬', x, by - 6);
+      ctx.fillStyle = '#fff6d0';
+      ctx.fillText('爬', x, by - 6);
+    } else {
+      ctx.globalAlpha = 0.6 + pulse * 0.4;
+      ctx.fillStyle = '#fff6c0';
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, by - 22);
+      ctx.lineTo(x + 7, by - 13);
+      ctx.lineTo(x - 7, by - 13);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
   };
 

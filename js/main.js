@@ -38,6 +38,7 @@
       }
       G.ui.handleKeys();
       if (!G.ui.blocking()) G.world.update(dt);
+      G.tutorial.update(dt);
       G.fx.update(dt);
       G.hud.update(dt);
     } else if (G.scene === 'intro') {
@@ -53,6 +54,7 @@
     if (G.scene === 'play' && G.world.map) {
       G.world.draw(ctx);
       G.hud.draw(ctx);
+      G.tutorial.draw(ctx);
       G.evolve.draw(ctx);
       G.fx.drawScreen(ctx);
       if (G.world.fade > 0) {
