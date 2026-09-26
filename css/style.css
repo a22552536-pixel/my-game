@@ -265,3 +265,7 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .usebtn.on { outline: 2px solid #ffd35a; }
 .misc .leaves img { width: 24px; }
 .misc .leaves i { display: inline-block; width: 18px; height: 18px; margin: 0 3px; border-radius: 50%; background: rgba(90, 60, 30, 0.25); }
+.tut-glow { animation: tutGlow 0.8s ease-in-out infinite alternate; transform-origin: center; }
+@keyframes tutGlow { from { box-shadow: 0 0 0 3px #ffd83a, 0 0 10px #ffd83a; transform: scale(1); } to { box-shadow: 0 0 0 6px #ffd83a, 0 0 26px #ffb020; transform: scale(1.25); } }
+.tut-point { font-weight: bold; color: #c05a00; font-size: 18px; animation: tutPoint 0.5s ease-in-out infinite alternate; display: inline-block; }
+@keyframes tutPoint { from { transform: translateX(0); } to { transform: translateX(8px); } }

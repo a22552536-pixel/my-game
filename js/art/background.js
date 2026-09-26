@@ -666,7 +666,7 @@
     }
   }
 
-  // 可以爬的藤蔓／梯子：粗一點、亮一點、有呼吸光，玩家靠近時底下跳出「↑」
+  // 可以爬的藤蔓／梯子：粗一點、亮一點、有呼吸光；教學時靠近會跳出「↑」
   A.drawRope = function (ctx, r, t, near) {
     const x = r[0];
     const top = r[1] - 8;
@@ -745,7 +745,9 @@
       A.ellipse(ctx, x + 8, top - 2, 1.8, 1.8, '#ff9a3a', null, { noStroke: true, hl: false });
     }
 
-    // 底部提示：一直有淡淡的箭頭，靠近時變成明顯的 ↑ 按鍵泡泡
+    // 底部提示：只在操作教學的「爬藤蔓」這一步出現
+    const tut = G.tutorial && G.tutorial.current();
+    if (!tut || tut.id !== 'climb') return;
     const by = bottom + 8 - Math.abs(Math.sin(t * 4)) * 6;
     if (near) {
       const label = G.input.label('up');

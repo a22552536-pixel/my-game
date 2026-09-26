@@ -1,52 +1,90 @@
-// 新遊戲的按鍵教學：畫面上方一次只提示一個動作，做到就自動換下一個。
+// 新遊戲的按鍵教學（強制）：一步一步照順序做，做到才會換下一步；教學沒做完，營地的傳送門不會開。
+// 每一步都有一支會跳的大箭頭指著要看的地方（玩家、藤蔓、怪物、技能欄、NPC）。
 // 按鍵名稱跟著玩家的改鍵設定走。完成後記在 world.flags.tutorialDone。
 (function () {
   'use strict';
 
+  const slotOf = (id) => Math.max(0, G.player.hotbar.indexOf(id));
+  const slotKey = (id) => G.data.keys.skillSlots[slotOf(id)];
+
   const STEPS = [
-    { id: 'move', keys: ['left', 'right'], text: '走路' },
-    { id: 'jump', keys: ['jump'], text: '跳躍' },
-    { id: 'attack', keys: ['attack'], text: '攻擊露珠蝸' },
-    { id: 'climb', keys: ['up'], text: '跳上左邊的平台，站到發光的藤蔓前往上爬' },
-    { id: 'talk', keys: ['up'], text: '走到營地的動物旁邊，和牠說話' },
+    { id: 'move', keys: () => ['left', 'right'], text: '左右走路' },
+    { id: 'jump', keys: () => ['jump'], text: '跳躍' },
+    { id: 'attack', keys: () => ['attack'], text: '攻擊露珠蝸' },
+    { id: 'climb', keys: () => ['up'], text: '跳上平台，站到發光的藤蔓前往上爬' },
+    { id: 'openSkills', keys: () => ['skills'], text: '打開技能視窗' },
+    { id: 'learn', keys: () => [], text: '按「＋」學會「小吼」（送你 1 點技能點）' },
+    { id: 'useSkill', keys: () => [slotKey('roar')], text: '放出小吼（先按 Esc 關掉視窗）' },
+    { id: 'potion', keys: () => ['hpPot'], text: '受傷了！吃一顆紅漿果回血' },
+    { id: 'talk', keys: () => ['up'], text: '走到刺蝟婆婆旁邊，和她說話' },
   ];
 
   const T = (G.tutorial = {
     active: false,
-    done: {},
+    idx: 0,
     moved: 0,
     lastX: 0,
-    doneT: 0, // 某一步剛完成的打勾動畫
-    outroT: 0, // 全部完成後的補充說明
+    doneT: 0,
+    outroT: 0,
+    potions0: 0,
 
     start() {
       this.active = true;
-      this.done = {};
+      this.idx = 0;
       this.moved = 0;
       this.lastX = G.player.x;
       this.doneT = 0;
       this.outroT = 0;
+      this.enter();
+    },
+
+    // 還沒教完就要擋住的事（例如離開營地）
+    blocking() {
+      return this.active && this.outroT <= 0;
     },
 
     current() {
-      return STEPS.find((s) => !this.done[s.id]) || null;
+      return this.active && this.outroT <= 0 ? STEPS[this.idx] || null : null;
     },
 
-    // 外部事件（例如開啟對話）
+    // 進入某一步時要準備的東西
+    enter() {
+      const s = this.current();
+      if (!s) return;
+      const P = G.player;
+      if (s.id === 'learn' && P.sp <= 0 && !(P.skills.roar > 0)) P.sp = 1;
+      if (s.id === 'potion') {
+        P.hp = Math.max(1, Math.round(P.maxHp * 0.45));
+        P.potions.hp = Math.max(1, P.potions.hp || 0);
+        this.potions0 = P.potions.hp;
+        G.fx.damage(P.x, P.y - 70, Math.round(P.maxHp * 0.55), 'player');
+        G.fx.shake(6, 0.2);
+        G.audio.play('hurt');
+      }
+      if (G.ui.render && G.ui.isOpen('skills')) G.ui.render('skills');
+    },
+
+    // 只接受目前這一步
     on(id) {
-      if (!this.active || this.done[id]) return;
-      this.done[id] = true;
+      const s = this.current();
+      if (!s || s.id !== id) return;
+      this.idx++;
       this.doneT = 0.8;
       G.audio.play('pickup');
-      if (!this.current()) this.finish();
+      if (this.idx >= STEPS.length) this.finish();
+      else this.enter();
     },
 
     finish() {
       this.outroT = 9;
       G.world.flags.tutorialDone = true;
+      G.hud.toast('操作教學完成！傳送門開啟了', '#7dff7a');
+      const hook = G.data.story.regions[G.world.map.region];
+      if (hook && hook.hook) setTimeout(() => G.hud.story(hook.hook), 9500);
       G.save.write();
     },
 
+    // 在 world.update 之後、清掉按鍵狀態之前呼叫；UI 開著時也會跑
     update(dt) {
       if (!this.active) return;
       if (this.doneT > 0) this.doneT -= dt;
@@ -55,30 +93,126 @@
         if (this.outroT <= 0) this.active = false;
         return;
       }
+      const s = this.current();
+      if (!s) return;
       const P = G.player;
       const I = G.input;
-      this.moved += Math.abs(P.x - this.lastX);
+      switch (s.id) {
+        case 'move':
+          this.moved += Math.abs(P.x - this.lastX);
+          if (this.moved > 100) this.on('move');
+          break;
+        case 'jump':
+          if (I.wasPressed('jump') && P.climbing < 0) this.on('jump');
+          break;
+        case 'attack':
+          if (I.wasPressed('attack')) this.on('attack');
+          break;
+        case 'climb':
+          if (P.climbing >= 0) this.on('climb');
+          break;
+        case 'openSkills':
+          if (G.ui.isOpen('skills')) this.on('openSkills');
+          break;
+        case 'learn':
+          if (P.skills.roar > 0) this.on('learn');
+          break;
+        case 'useSkill':
+          if (!G.ui.blocking() && I.wasPressed(slotKey('roar'))) this.on('useSkill');
+          break;
+        case 'potion':
+          if ((P.potions.hp || 0) < this.potions0) this.on('potion');
+          break;
+      }
       this.lastX = P.x;
-      if (this.moved > 140) this.on('move');
-      if (I.wasPressed('jump') && P.climbing < 0) this.on('jump');
-      if (I.wasPressed('attack')) this.on('attack');
-      if (P.climbing >= 0) this.on('climb');
     },
 
-    keycap(ctx, label, x, y) {
-      ctx.font = 'bold 18px ' + G.art.FONT;
-      const w = Math.max(34, ctx.measureText(label).width + 18);
-      G.hud.panel(ctx, x, y - 17, w, 34, 7, '#fff6de');
+    // ── 繪圖 ──
+    keycap(ctx, label, x, y, big) {
+      const fs = big ? 22 : 18;
+      ctx.font = 'bold ' + fs + 'px ' + G.art.FONT;
+      const h = big ? 40 : 34;
+      const w = Math.max(h, ctx.measureText(label).width + 18);
+      G.hud.panel(ctx, x, y - h / 2, w, h, 7, '#fff6de');
       ctx.strokeStyle = '#8a5a30';
       ctx.lineWidth = 2;
-      ctx.strokeRect(x + 0.5, y - 16.5, w - 1, 33);
+      ctx.strokeRect(x + 0.5, y - h / 2 + 0.5, w - 1, h - 1);
       ctx.fillStyle = 'rgba(138,90,48,0.35)';
-      ctx.fillRect(x + 2, y + 12, w - 4, 3);
+      ctx.fillRect(x + 2, y + h / 2 - 5, w - 4, 3);
       ctx.fillStyle = '#4a2e1f';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(label, x + w / 2, y);
       return w;
+    },
+
+    // 會跳的大箭頭，尖端在 (x, y)；dir：down / up / left / right
+    arrow(ctx, x, y, dir) {
+      const b = Math.abs(Math.sin(G.time * 5)) * 14;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate({ down: 0, up: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 }[dir || 'down']);
+      ctx.translate(0, -b);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-30, -34);
+      ctx.lineTo(-13, -34);
+      ctx.lineTo(-13, -74);
+      ctx.lineTo(13, -74);
+      ctx.lineTo(13, -34);
+      ctx.lineTo(30, -34);
+      ctx.closePath();
+      ctx.shadowColor = 'rgba(255,220,80,0.9)';
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = '#ffd83a';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#6a3a0a';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillRect(-7, -68, 5, 30);
+      ctx.restore();
+    },
+
+    // 這一步的箭頭要指哪裡（畫面座標）
+    target(s) {
+      const P = G.player;
+      const cam = G.cam;
+      const map = G.world.map;
+      const sx = (x) => x - cam.x;
+      const sy = (y) => y - cam.y;
+      const Hh = G.H;
+      const barY = Hh - 66;
+      const nSlots = G.data.keys.skillSlots.length;
+      const sx0 = G.W - 8 - (nSlots + 2) * 52 - 8;
+      switch (s.id) {
+        case 'move':
+          return [[sx(P.x) - 60, sy(P.y) - 40, 'left'], [sx(P.x) + 60, sy(P.y) - 40, 'right']];
+        case 'jump':
+          return [[sx(P.x), sy(P.y) - 110, 'up']];
+        case 'attack': {
+          let best = null;
+          for (const m of G.world.monsters) {
+            if (m.dead) continue;
+            if (!best || Math.abs(m.x - P.x) < Math.abs(best.x - P.x)) best = m;
+          }
+          return best ? [[sx(best.x), sy(best.y - best.h * (best.scale || 1)) - 26, 'down']] : [];
+        }
+        case 'climb': {
+          const r = map.ropes && map.ropes[0];
+          return r ? [[sx(r[0]), sy(r[2]) - 44, 'down']] : [];
+        }
+        case 'useSkill':
+          return G.ui.blocking() ? [] : [[sx0 + slotOf('roar') * 52 + 24, barY - 4, 'down']];
+        case 'potion':
+          return [[sx0 + nSlots * 52 + 24, barY - 4, 'down']];
+        case 'talk': {
+          const n = G.world.npcs.find((k) => k.id === 'hedgehog');
+          return n ? [[sx(n.x), sy(n.y) - 110, 'down']] : [];
+        }
+      }
+      return [];
     },
 
     draw(ctx) {
@@ -94,8 +228,8 @@
         items.forEach(([k, t]) => (total += Math.max(34, ctx.measureText(L(k)).width + 18) + ctx.measureText(t).width + 26));
         total += ctx.measureText('Esc 選單').width;
         const x0 = W / 2 - total / 2 - 20;
-        G.hud.panel(ctx, x0, 60, total + 40, 84, 14, 'rgba(30,20,12,0.78)');
-        G.hud.text(ctx, '學會了！其他按鍵：', W / 2, 80, 15, '#ffe9a0', 'center', false);
+        G.hud.panel(ctx, x0, 60, total + 40, 84, 14, 'rgba(30,20,12,0.8)');
+        G.hud.text(ctx, '教學完成！其他按鍵：', W / 2, 80, 15, '#ffe9a0', 'center', false);
         let x = x0 + 20;
         items.forEach(([k, t]) => {
           x += this.keycap(ctx, L(k), x, 118) + 6;
@@ -112,25 +246,30 @@
       }
       const s = this.current();
       if (!s) return;
-      const idx = STEPS.indexOf(s);
-      ctx.font = 'bold 18px ' + G.art.FONT;
-      const keysW = s.keys.reduce((a, k) => a + Math.max(34, ctx.measureText(L(k)).width + 18) + 6, 0);
+      this.target(s).forEach(([x, y, d]) => this.arrow(ctx, x, y, d));
+      const keys = s.keys();
+      ctx.font = 'bold 22px ' + G.art.FONT;
+      const keysW = keys.reduce((a, k) => a + Math.max(40, ctx.measureText(L(k)).width + 18) + 8, 0);
+      ctx.font = 'bold 22px ' + G.art.FONT;
       const tw = ctx.measureText(s.text).width;
-      const w = keysW + tw + 60;
+      const w = keysW + tw + 70;
       const x0 = W / 2 - w / 2;
       const bob = Math.sin(G.time * 3) * 2;
-      G.hud.panel(ctx, x0, 64 + bob, w, 72, 14, 'rgba(30,20,12,0.78)');
-      G.hud.text(ctx, '操作教學 ' + (idx + 1) + '/' + STEPS.length, W / 2, 80 + bob, 13, '#ffe9a0', 'center', false);
-      let x = x0 + 24;
-      s.keys.forEach((k) => (x += this.keycap(ctx, L(k), x, 110 + bob) + 6));
-      ctx.font = 'bold 18px ' + G.art.FONT;
+      G.hud.panel(ctx, x0, 60 + bob, w, 86, 16, 'rgba(30,20,12,0.85)');
+      ctx.strokeStyle = '#ffd83a';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x0 + 4, 64 + bob, w - 8, 78);
+      G.hud.text(ctx, '操作教學 ' + (this.idx + 1) + ' / ' + STEPS.length + '（必做）', W / 2, 80 + bob, 14, '#ffe9a0', 'center', false);
+      let x = x0 + 30;
+      keys.forEach((k) => (x += this.keycap(ctx, L(k), x, 116 + bob, true) + 8));
+      ctx.font = 'bold 22px ' + G.art.FONT;
       ctx.fillStyle = '#fff6e0';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(s.text, x + 8, 110 + bob);
+      ctx.fillText(s.text, x + 8, 116 + bob);
       if (this.doneT > 0) {
         ctx.globalAlpha = Math.min(1, this.doneT * 2);
-        G.hud.text(ctx, '✔', x0 + w - 18, 80 + bob, 22, '#7dff7a', 'center');
+        G.hud.text(ctx, '✔', x0 + w - 22, 84 + bob, 28, '#7dff7a', 'center');
         ctx.globalAlpha = 1;
       }
     },

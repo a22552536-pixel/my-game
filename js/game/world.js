@@ -145,6 +145,11 @@
       if (!P.onGround) return false;
       for (const p of this.map.portals || []) {
         if (Math.abs(P.x - p.x) < 36 && P.plat === p.p) {
+          if (G.tutorial.blocking()) {
+            G.hud.toast('先完成畫面上方的操作教學，傳送門才會開', '#ffd84a');
+            G.audio.play('error');
+            return true;
+          }
           this.changeMap(p.to, p.target);
           return true;
         }

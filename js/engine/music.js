@@ -20,24 +20,30 @@
       double: { inst: 'glock', from: 8, to: 16, oct: 0 },
     },
 
-    // 第一章 苔光森林：輕快的森林冒險
+    // 第一章 狩獵場：魔法森林風。3/4 拍、豎琴流水、鋼片琴旋律、夢幻的小調
     forest: {
-      bpm: 118, lead: 'flute', comp: 'harp', pad: 'strings', bass: 'pizz', drums: 'forest', verb: 0.35,
-      chords:
-        'Fmaj7 Gm7:C7 Am7:Dm7 Gm7:C7 Bbmaj7 Am7:Dm7 Gm7:C7 F:C7 ' +
-        'Fmaj7 Gm7:C7 Am7:Dm7 Gm7:C7 Bbmaj7 Am7:Dm7 Gm7:C7 F ' +
-        'Bbmaj7 C Am7 Dm7 Gm7 Am7 Bb:C C7',
+      bpm: 84, barLen: 12, lead: 'celesta', comp: 'flow', pad: 'strings', bass: 'long', drums: null, verb: 0.6,
+      chords: 'Dm7 Bbmaj7 Gm7 A7 Dm7 Fmaj7 Gm7 A7 Bbmaj7 C Am7 Dm7 Gm7 C7 Fmaj7 A7',
       melody:
-        'C5/2 F5/2 A5/2 C6/4 A5/2 G5/2 F5/2 | G5/6 A5/2 Bb5/4 A5/2 G5/2 | A5/6 C6/2 D6/4 C6/2 A5/2 | G5/8 r/4 C5/2 D5/2 |' +
-        'D5/2 F5/2 Bb5/2 D6/4 C6/2 Bb5/2 A5/2 | A5/4 G5/2 A5/2 F5/8 | G5/2 A5/2 Bb5/2 C6/2 D6/2 C6/2 Bb5/2 G5/2 | A5/8 r/4 C5/2 D5/2 |' +
-        'C5/2 F5/2 A5/2 C6/4 A5/2 C6/2 F6/2 | D6/6 C6/2 Bb5/4 A5/2 G5/2 | A5/2 C6/2 E6/4 D6/4 A5/4 | Bb5/4 A5/2 G5/2 E5/4 G5/4 |' +
-        'F5/2 Bb5/2 D6/2 F6/6 D6/2 Bb5/2 | C6/4 A5/4 D6/4 F5/4 | G5/2 F5/2 G5/2 A5/2 Bb5/2 A5/2 G5/2 E5/2 | F5/12 r/4 |' +
-        'D6/6 C6/2 Bb5/4 A5/4 | G5/6 E5/2 C5/4 E5/4 | A5/6 G5/2 E5/4 C6/4 | A5/12 F5/2 A5/2 |' +
-        'Bb5/6 A5/2 G5/4 D6/4 | C6/6 Bb5/2 A5/4 E5/4 | F5/4 G5/4 A5/4 Bb5/4 | C6/8 E5/2 G5/2 Bb5/2 r/2',
-      double: { inst: 'glock', from: 8, to: 16, oct: 12 },
+        'A5/4 D6/4 C6/2 A5/2 | F5/6 G5/2 A5/2 F5/2 | G5/4 Bb5/4 D6/4 | C#6/6 E6/2 C#6/2 A5/2 |' +
+        'D6/4 F6/4 E6/2 D6/2 | C6/6 A5/2 G5/2 F5/2 | G5/4 A5/4 Bb5/2 D6/2 | A5/12 |' +
+        'D6/4 F6/4 E6/2 D6/2 | E6/6 D6/2 C6/2 G5/2 | C6/4 E6/4 D6/2 C6/2 | A5/6 F5/2 G5/2 A5/2 |' +
+        'Bb5/4 D6/4 G6/4 | G6/4 E6/4 C6/4 | A5/4 C6/4 E6/4 | C#6/6 A5/6',
+      double: { inst: 'flute', from: 8, to: 16, oct: -12 },
     },
 
-    // Boss：弦樂急奏、銅管重音、定音鼓
+    // 第一章 營地：港口小鎮風。3/4 圓舞曲、手風琴、碰恰恰
+    town: {
+      bpm: 104, barLen: 12, lead: 'accordion', comp: ['waltz', 'harp'], pad: null, bass: 'oom', drums: 'town', verb: 0.35,
+      chords: 'F Dm Bb C F Am Bb:C F Bb C Am Dm Gm C F C7',
+      melody:
+        'C5/4 F5/4 A5/4 | A5/6 G5/2 F5/4 | D5/4 F5/4 Bb5/4 | A5/6 G5/6 |' +
+        'C5/4 F5/4 A5/4 | C6/6 B5/2 A5/4 | Bb5/4 A5/2 G5/6 | F5/12 |' +
+        'D6/4 C6/4 Bb5/4 | C6/6 G5/6 | A5/4 C6/4 E6/4 | D6/6 C6/2 A5/4 |' +
+        'Bb5/4 A5/4 G5/4 | E5/4 G5/4 C6/4 | A5/6 G5/2 F5/4 | G5/6 E5/6',
+    },
+
+    // Boss：弦樂急奏、銅管重音、勇士村式的太鼓
     boss: {
       bpm: 150, lead: 'brass', comp: 'ostinato', pad: 'stabs', bass: 'drive', drums: 'boss', verb: 0.25,
       chords: 'Cm Cm Ab Bb Cm Cm Ab G Fm Cm Ab Bb Fm Ab G G',
@@ -80,6 +86,8 @@
   };
 
   const REGION_SONG = { 1: 'forest', 2: 'sea', 3: 'canyon', 4: 'snow', 5: 'sky' };
+  // 營地另有一首（小鎮感），沒有的區域就沿用狩獵場的曲子
+  const CAMP_SONG = { 1: 'town' };
 
   // 鼓組（每小節 16 格）
   const DRUMS = {
@@ -89,7 +97,14 @@
       h: 'x.x.x.x.x.x.x.x.',
       t: '......x.......x.',
     },
+    town: {
+      k: 'x...........',
+      t: '....x...x...',
+      h: '..x...x...x.',
+    },
     boss: {
+      T: 'x.....x.x.....x.',
+      r: '..x.x.....x.x..x',
       k: 'x.....x.x.......',
       s: '....x.......x.xx',
       h: 'x.xxx.xxx.xxx.xx',
@@ -143,7 +158,8 @@
     const chords = s.chords.split(/\s+/).filter(Boolean).map((b) => b.split(':').map(parseChord));
     const byStep = {};
     mel.notes.forEach((n) => (byStep[n.step] = n));
-    s._c = { steps: Math.max(mel.steps, chords.length * 16), byStep, chords, bars: mel.bars };
+    const barLen = s.barLen || 16;
+    s._c = { steps: Math.max(mel.steps, chords.length * barLen), byStep, chords, bars: mel.bars, barLen };
     return s._c;
   }
 
@@ -219,6 +235,7 @@
       if (!map) return 'title';
       if (map.music) return map.music;
       if (map.type === 'boss') return 'boss';
+      if (map.type === 'camp' && CAMP_SONG[map.region]) return CAMP_SONG[map.region];
       return REGION_SONG[map.region] || 'forest';
     },
 
@@ -284,19 +301,20 @@
     },
 
     chordAt(C, step) {
-      const bar = C.chords[Math.floor(step / 16) % C.chords.length];
-      const pos = step % 16;
-      if (bar.length === 1) return { ch: bar[0], start: pos === 0, len: 16, pos };
-      const half = pos < 8 ? 0 : 1;
-      return { ch: bar[half], start: pos % 8 === 0, len: 8, pos };
+      const n = C.barLen;
+      const bar = C.chords[Math.floor(step / n) % C.chords.length];
+      const pos = step % n;
+      if (bar.length === 1) return { ch: bar[0], start: pos === 0, len: n, pos, barLen: n };
+      const h = n / 2;
+      return { ch: bar[pos < h ? 0 : 1], start: pos % h === 0, len: h, pos, barLen: n };
     },
 
     scheduleStep(tr, step, t, dt) {
       const s = tr.song;
       const C = tr.c;
       const out = tr.gain;
-      const bar = Math.floor(step / 16);
-      const pos = step % 16;
+      const bar = Math.floor(step / C.barLen);
+      const pos = step % C.barLen;
       const cur = this.chordAt(C, step);
       try {
         const n = C.byStep[step];
@@ -306,7 +324,7 @@
           if (d && bar >= d.from && bar < d.to) INST[d.inst](out, hz(n.note + d.oct), t, n.len * dt, 0.5);
         }
         if (cur.start && s.pad) PAD[s.pad](out, cur.ch, t, cur.len * dt);
-        if (s.comp) COMP[s.comp](out, cur.ch, pos, t, dt);
+        if (s.comp) [].concat(s.comp).forEach((c) => COMP[c](out, cur.ch, pos, t, dt, cur));
         if (s.bass) BASS[s.bass](out, cur, pos, t, dt);
         if (s.drums) {
           const D = DRUMS[s.drums];
@@ -416,6 +434,22 @@
       M.voice(d, 'sine', f * 2, t, 0, 0.07 * k, { a: 0.003, decay: 0.9, pan: 0.25 });
       M.voice(d, 'sine', f * 2 * 3.99, t, 0, 0.012 * k, { a: 0.002, decay: 0.25, pan: 0.25 });
     },
+    // 手風琴：兩支微走音的方波＋鋸齒波，輕輕的顫音（維多利亞港那種溫暖的港口味）
+    accordion(d, f, t, dur, k) {
+      k = k || 1;
+      const o1 = M.voice(d, 'square', f, t, dur * 0.95, 0.055 * k, { a: 0.04, r: 0.12, lp: 2000, detune: -8, pan: -0.15 });
+      const o2 = M.voice(d, 'sawtooth', f, t, dur * 0.95, 0.055 * k, { a: 0.04, r: 0.12, lp: 2200, detune: 8, pan: 0.15 });
+      M.voice(d, 'triangle', f, t, dur * 0.95, 0.11 * k, { a: 0.04, r: 0.12 });
+      vibrato(o1, f, t, dur, 0.004);
+      vibrato(o2, f, t, dur, 0.004);
+    },
+    // 鋼片琴：魔法森林那種亮晶晶的旋律
+    celesta(d, f, t, dur, k) {
+      k = k || 1;
+      M.voice(d, 'sine', f, t, 0, 0.14 * k, { a: 0.003, decay: Math.max(0.9, dur * 1.3) });
+      M.voice(d, 'sine', f * 2, t, 0, 0.04 * k, { a: 0.003, decay: 0.5 });
+      M.voice(d, 'triangle', f * 4, t, 0, 0.012 * k, { a: 0.002, decay: 0.18 });
+    },
     // 銅管：鋸齒波加濾波器掃開，Boss 用
     brass(d, f, t, dur, k) {
       k = k || 1;
@@ -448,7 +482,19 @@
 
   // 伴奏
   const ARP_ORDER = [0, 1, 2, 3, 2, 1, 2, 1];
+  const FLOW = [0, 1, 2, 3, 4, 5, 4, 3, 2, 3, 4, 3, 2, 1, 2, 1];
   const COMP = {
+    // 豎琴流水：十六分音符跨兩個八度上下滾動（魔法森林）
+    flow(d, ch, pos, t, dt) {
+      const iv = [0, 7, 12, ch.iv[1] + 12, 19, 24];
+      const f = hz(50 + ch.root + iv[FLOW[pos % FLOW.length]]);
+      M.voice(d, 'triangle', f, t, 0, 0.04, { a: 0.003, decay: 0.9, pan: pos % 2 ? 0.3 : -0.3 });
+    },
+    // 圓舞曲的「碰—恰—恰」：第 2、3 拍的和弦
+    waltz(d, ch, pos, t, dt, cur) {
+      if (pos !== 4 && pos !== 8) return;
+      tones(ch, 60).slice(1, 3).forEach((f) => M.voice(d, 'triangle', f, t, dt * 2, 0.065, { a: 0.005, r: 0.08, lp: 2400 }));
+    },
     // 豎琴：八分音符分解和弦
     harp(d, ch, pos, t, dt) {
       if (pos % 2) return;
@@ -474,6 +520,13 @@
       const f = hz(36 + cur.ch.root + seq[i]);
       M.voice(d, 'triangle', f, t, 0, 0.26, { a: 0.004, decay: 0.45, lp: 900 });
       M.voice(d, 'sine', f, t, 0, 0.16, { a: 0.004, decay: 0.35 });
+    },
+    // 圓舞曲低音：每小節第一拍，換和弦時跟著換
+    oom(d, cur, pos, t, dt) {
+      if (!cur.start) return;
+      const f = hz(36 + cur.ch.root);
+      M.voice(d, 'triangle', f, t, 0, 0.28, { a: 0.004, decay: 0.6, lp: 900 });
+      M.voice(d, 'sine', f, t, 0, 0.18, { a: 0.004, decay: 0.5 });
     },
     long(d, cur, pos, t, dt) {
       if (!cur.start) return;
@@ -502,6 +555,17 @@
     t(d, t) {
       M.noise(d, t, 0.12, 0.035, 9000, 'bandpass', 3);
       M.noise(d, t + 0.02, 0.08, 0.02, 11000, 'bandpass', 3);
+    },
+    // 太鼓：勇士村那種低沉的大鼓
+    T(d, t) {
+      const o = M.voice(d, 'sine', 75, t, 0, 0.42, { a: 0.003, decay: 0.55 });
+      o.frequency.exponentialRampToValueAtTime(42, t + 0.35);
+      M.noise(d, t, 0.18, 0.12, 320, 'lowpass');
+    },
+    // 木框邊擊
+    r(d, t) {
+      M.noise(d, t, 0.04, 0.06, 1800, 'bandpass', 4);
+      M.voice(d, 'square', 820, t, 0, 0.025, { a: 0.001, decay: 0.04 });
     },
     m(d, t) {
       const o = M.voice(d, 'sine', 90, t, 0, 0.3, { a: 0.003, decay: 0.6 });

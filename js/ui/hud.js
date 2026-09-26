@@ -29,7 +29,8 @@
     regionCard(region) {
       const r = G.data.story.regions[region];
       if (r) this.region = { no: r.no, name: r.name, sub: r.sub, t: 0, life: 4.5 };
-      if (r && r.hook) setTimeout(() => this.story(r.hook), 4200);
+      // 教學進行中先不講故事，免得蓋住提示；教學結束後再補上
+      if (r && r.hook && !(G.tutorial && G.tutorial.active)) setTimeout(() => this.story(r.hook), 4200);
     },
     bossBanner(name) {
       this.banner = { text: name, t: 0, life: 2.6 };

@@ -294,7 +294,9 @@
         h += '<div class="ds">' + (lv > 0 ? S.desc(lv) + '（MP ' + S.mp(lv) + '）' : '尚未學會') + '</div>';
         if (lv < S.maxLv) h += '<div class="ds next">下一級：' + S.desc(lv + 1) + '（MP ' + S.mp(lv + 1) + '）</div>';
         h += '</div><div class="btns">';
-        h += '<button class="primary" data-act="learn" data-arg="' + id + '"' + (P.sp > 0 && lv < S.maxLv ? '' : ' disabled') + '>＋</button>';
+        const tut = id === 'roar' && G.tutorial.current() && G.tutorial.current().id === 'learn';
+        h += '<button class="primary' + (tut ? ' tut-glow' : '') + '" data-act="learn" data-arg="' + id + '"' + (P.sp > 0 && lv < S.maxLv ? '' : ' disabled') + '>＋</button>';
+        if (tut) h += '<span class="tut-point">◀ 按這裡</span>';
         if (S.type === 'passive') h += '<span class="passive-tag">被動</span>';
         else h += '<button data-act="bind" data-arg="' + id + '">設定按鍵</button>';
         h += '</div></div>';
