@@ -61,8 +61,9 @@
       G.fx.kick(dir * (r.crit ? 7 : opts.heavy ? 5 : 3), r.crit ? -2 : 0);
       m.squash = 1;
       if (r.crit) {
-        // 爆擊：紅邊的黑色閃電
+        // 黑閃：紅邊的黑色閃電
         G.fx.blackFlash(cx, cy, dir);
+        if (P.specials.focus) P.mp = Math.min(P.maxMp, P.mp + 3);
         G.fx.addHitstop(0.13);
         G.fx.shake(b.shake.crit[0] + 3, b.shake.crit[1] + 0.05);
         G.audio.play('crit');

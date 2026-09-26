@@ -43,9 +43,22 @@
       this.respawns = [];
       this.boss = null;
       G.fx.reset();
+      G.music.forMap(map);
 
       this.npcs = (map.npcs || []).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: map.platforms[n.p][2] }));
       this.chests = (map.chests || []).map((c) => ({ id: c.id, x: c.x, y: map.platforms[c.p][2], opened: !!this.openedChests[c.id] }));
+      this.springs = (map.springs || []).map((s) => ({ x: s.x, p: s.p, y: map.platforms[s.p][2], power: s.power, squash: 0 }));
+      this.signs = (map.signs || []).map((s) => ({ x: s.x, y: map.platforms[s.p][2], text: s.text }));
+      this.critters = [];
+      const th = map.theme;
+      const nC = th === 'rootCave' ? 14 : th === 'queenHall' ? 0 : 6;
+      for (let i = 0; i < nC; i++) {
+        this.critters.push({
+          kind: th === 'rootCave' ? 'firefly' : 'butterfly',
+          x: U.rand(100, map.w - 100), y: U.rand(map.h * 0.3, map.h - 140),
+          vx: 0, vy: 0, seed: Math.random() * 6, flee: false, color: U.pick(['#ffd35a', '#ff9fc4', '#8fd3f4', '#ffffff']),
+        });
+      }
 
       (map.mobs || []).forEach((g, gi) => {
         for (let i = 0; i < g.n; i++) this.spawnFromGroup(gi);
@@ -83,6 +96,8 @@
       P.invT = Math.max(P.invT, 1);
 
       if (map.boss) this.boss = new G.bosses[map.boss.m](map.boss.x);
+      // 漂浮的金葉：飄在空中，走過去就撿到
+      (map.leaves || []).forEach(([x, y]) => this.drops.push({ kind: 'gold', amount: 5, x, y, vx: 0, vy: 0, onGround: true, float: true, plat: 0, ignorePlat: -1, ignoreT: 0, halfW: 10, t: 1, bob: x * 0.01, announced: true }));
 
       this.snapCamera();
       if (!this.visited[mapId]) {
@@ -109,7 +124,7 @@
     spawnAdd(id, x) {
       const map = this.map;
       const p = map.platforms[0];
-      const m = new G.Monster(id, 0, U.clamp(x, p[0] + 40, p[1] - 40), {});
+      const m = new G.Monster(id, 0, U.clamp(x, p[0] + 40, p[1] - 40), { noVariant: true });
       m.isAdd = true;
       m.aggroT = 30;
       m.shiny = false;
@@ -142,6 +157,13 @@
       for (const n of this.npcs) {
         if (Math.abs(P.x - n.x) < 64 && Math.abs(P.y - n.y) < 40) {
           G.ui.openDialogue(n);
+          return true;
+        }
+      }
+      for (const s of this.signs) {
+        if (Math.abs(P.x - s.x) < 40 && Math.abs(P.y - s.y) < 30) {
+          G.hud.story(s.text);
+          G.audio.play('ui');
           return true;
         }
       }
@@ -182,6 +204,7 @@
       const first = !this.flags[b.id + 'Defeated'];
       this.flags[b.id + 'Defeated'] = true;
       G.hud.story(G.data.story.bossDefeated[b.id] || '');
+      G.music.play(G.music.songFor({ region: this.map.region }));
       G.save.write();
       if (first) {
         setTimeout(() => {
@@ -255,6 +278,7 @@
         }
       }
 
+      this.updateMapToys(dt);
       G.loot.update(dt);
       this.updateCamera(dt);
 
@@ -262,6 +286,55 @@
       if (this.saveT >= G.data.balance.autosaveInterval) {
         this.saveT = 0;
         G.save.write();
+      }
+    },
+
+    updateMapToys(dt) {
+      const P = G.player;
+      // 彈跳菇
+      for (const s of this.springs) {
+        if (s.squash > 0) s.squash -= dt * 4;
+        if (P.alive() && P.onGround && P.plat === s.p && Math.abs(P.x - s.x) < 28 && P.climbing < 0) {
+          P.vy = -s.power;
+          P.onGround = false;
+          s.squash = 1;
+          G.audio.play('boing');
+          G.fx.burst(s.x, s.y - 30, ['#ffffff', '#ffd0c0'], 8, 200, { angle: -Math.PI / 2, spread: 0.8 });
+        }
+      }
+      // 小生物：靠近就飛走
+      for (const c of this.critters) {
+        const d = U.dist(c.x, c.y, P.x, P.y - 30);
+        if (!c.flee && d < 90) {
+          c.flee = true;
+          c.vx = U.sign(c.x - P.x) * U.rand(120, 200);
+          c.vy = -U.rand(120, 220);
+        }
+        if (c.flee) {
+          c.x += c.vx * dt;
+          c.y += c.vy * dt;
+          if (c.y < -40) {
+            c.flee = false;
+            c.x = U.rand(100, this.map.w - 100);
+            c.y = this.map.h - U.rand(160, 400);
+          }
+        } else {
+          c.x += Math.sin(this.t * 0.8 + c.seed) * 20 * dt;
+          c.y += Math.cos(this.t * 1.1 + c.seed * 2) * 14 * dt;
+        }
+      }
+      // 營火旁回復
+      const camp = this.map.camp;
+      if (camp && P.alive() && P.onGround && P.plat === 0 && P.x > camp.x1 && P.x < camp.x2) {
+        this.campT = (this.campT || 0) + dt;
+        if (this.campT >= 1) {
+          this.campT = 0;
+          if (P.hp < P.maxHp || P.mp < P.maxMp) {
+            P.hp = Math.min(P.maxHp, P.hp + Math.ceil(P.maxHp * 0.04));
+            P.mp = Math.min(P.maxMp, P.mp + Math.ceil(P.maxMp * 0.04));
+            G.fx.text(P.x, P.y - 80, '+', '#9fffb0', 18, 0.6);
+          }
+        }
       }
     },
 
@@ -373,8 +446,15 @@
 
       map.ropes.forEach((r) => G.art.drawRope(ctx, r, t));
       G.art.drawPlatforms(ctx, map, cam);
-      (map.portals || []).forEach((p) => G.art.drawPortal(ctx, p.x, map.platforms[p.p][2], t));
-      if (map.camp) this.drawCamp(ctx, map, t);
+      G.art.drawProps(ctx, map, cam, t);
+      (map.portals || []).forEach((p) => G.art.drawPortal(ctx, p.x, map.platforms[p.p][2], t, G.data.maps[p.to] && G.data.maps[p.to].name));
+      if (map.camp) {
+        G.art.drawCampHouses(ctx, map.camp.x1, map.camp.x2, map.platforms[0][2], t);
+        this.drawCamp(ctx, map, t);
+      }
+      this.signs.forEach((s) => G.art.drawSign(ctx, s.x, s.y));
+      this.springs.forEach((s) => G.art.drawSpring(ctx, s.x, s.y, s.squash, t));
+      this.critters.forEach((c) => G.art.drawCritter(ctx, c, t));
       this.chests.forEach((c) => G.art.drawChest(ctx, c, t));
       this.npcs.forEach((n) => G.art.drawNpc(ctx, n, t, G.quests.marker(n.id)));
       this.zones.forEach((z) => G.art.drawZone(ctx, z, t));
@@ -384,6 +464,7 @@
       G.fx.drawGhosts(ctx);
       G.player.draw(ctx);
       this.projectiles.forEach((p) => G.art.drawProjectile(ctx, p, t));
+      G.art.drawForeground(ctx, map, cam, t);
       G.fx.drawWorld(ctx);
 
       if (G.opts.showHitboxes) this.drawHitboxes(ctx);

@@ -269,6 +269,33 @@
       }
       return list;
     });
+    // 地面擺設：依主題挑選（樹樁、倒木、灌木、蘑菇叢、石頭、花叢、水晶、發光菇）
+    const propSets = {
+      forestMorning: ['stump', 'bush', 'log', 'flowers', 'rock', 'bush'],
+      forestMushroom: ['mushCluster', 'bigMush', 'bush', 'stump', 'flowers', 'mushCluster'],
+      forestDeep: ['fern', 'log', 'rock', 'stump', 'fern', 'bush'],
+      rootCave: ['crystal', 'glowCluster', 'rock', 'root', 'crystal'],
+      queenHall: ['crystal', 'bigMush', 'mushCluster'],
+    };
+    const set = propSets[map.theme] || propSets.forestMorning;
+    const g = map.platforms[0];
+    const avoid = [].concat((map.portals || []).map((p) => p.x), (map.npcs || []).map((n) => n.x), (map.signs || []).map((s) => s.x), (map.springs || []).map((s) => s.x), map.camp ? [map.camp.x1 - 60, (map.camp.x1 + map.camp.x2) / 2, map.camp.x2 + 60] : []);
+    map._props = [];
+    for (let x = g[0] + 140; x < g[1] - 100; x += 180 + rnd() * 160) {
+      if (avoid.some((a) => Math.abs(a - x) < 90)) continue;
+      if (map.camp && x > map.camp.x1 - 80 && x < map.camp.x2 + 80) continue;
+      map._props.push({ kind: set[Math.floor(rnd() * set.length)], x, y: g[2], s: 0.8 + rnd() * 0.5, flip: rnd() < 0.5 ? -1 : 1 });
+    }
+    // 平台底下垂著的藤蔓／樹根
+    map._hang = [];
+    map.platforms.forEach((p, i) => {
+      if (i === 0) return;
+      const n = Math.floor((p[1] - p[0]) / 140);
+      for (let k = 0; k < n; k++) map._hang.push({ x: p[0] + 30 + rnd() * (p[1] - p[0] - 60), y: p[2] + 20, len: 20 + rnd() * 40, seed: rnd() * 6 });
+    });
+    // 前景的高草（畫在角色前面）
+    map._fore = [];
+    for (let x = g[0] + 60; x < g[1]; x += 220 + rnd() * 260) map._fore.push({ x, s: 0.8 + rnd() * 0.6 });
     map._motes = [];
     for (let i = 0; i < 40; i++) {
       map._motes.push({ x: rnd() * G.W, y: rnd() * G.H, s: 1 + rnd() * 2.5, p: rnd() * 6, v: 6 + rnd() * 14 });
@@ -315,8 +342,171 @@
   };
 
   // 前景：漂浮光點與暗角（畫在世界之後）
+  // 地面擺設（畫在角色後面）
+  A.drawProps = function (ctx, map, cam, t) {
+    const x0 = cam.x - 120;
+    const x1 = cam.x + G.W + 120;
+    const leafy = map.theme === 'rootCave' ? '#4a6a3a' : '#5f9f3a';
+    for (const h of map._hang) {
+      if (h.x < x0 || h.x > x1) continue;
+      const sw = Math.sin(t * 1.5 + h.seed) * 3;
+      ctx.strokeStyle = map.theme === 'rootCave' ? '#5a3e28' : '#4f8a34';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(h.x, h.y - 4);
+      ctx.quadraticCurveTo(h.x + sw, h.y + h.len * 0.5, h.x + sw * 1.5, h.y + h.len);
+      ctx.stroke();
+      ctx.fillStyle = leafy;
+      ctx.beginPath();
+      ctx.ellipse(h.x + sw * 1.5, h.y + h.len, 4, 2.5, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (const p of map._props) {
+      if (p.x < x0 || p.x > x1) continue;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(p.s * p.flip, p.s);
+      PROP[p.kind](ctx, t, p);
+      ctx.restore();
+    }
+  };
+
+  // 前景高草（畫在角色前面，營造深度）
+  A.drawForeground = function (ctx, map, cam, t) {
+    const y = map.platforms[0][2];
+    const col = map.theme === 'rootCave' ? ['#3f5a30', '#4a6a36'] : map.theme === 'queenHall' ? ['#8a5a8a', '#a070a0'] : ['#4f9a32', '#6ab846'];
+    for (const f of map._fore) {
+      if (f.x < cam.x - 60 || f.x > cam.x + G.W + 60) continue;
+      for (let k = -3; k <= 3; k++) {
+        const sw = Math.sin(t * 2 + f.x * 0.01 + k) * 3;
+        ctx.fillStyle = col[(k + 3) % 2];
+        ctx.beginPath();
+        ctx.moveTo(f.x + k * 5 - 4, y + 12);
+        ctx.quadraticCurveTo(f.x + k * 6 + sw, y - 20 * f.s - Math.abs(k) * -3, f.x + k * 7 + sw * 1.5, y - 26 * f.s + Math.abs(k) * 4);
+        ctx.quadraticCurveTo(f.x + k * 6 + 2, y - 8, f.x + k * 5 + 4, y + 12);
+        ctx.fill();
+      }
+    }
+  };
+
+  const PROP = {
+    stump(ctx) {
+      A.shape(ctx, (c) => A.roundRect(c, -16, -24, 32, 26, 5), '#8b5e3c', '#6b4428', { cel: [3, 2], lw: 2.5 });
+      A.ellipse(ctx, 0, -24, 16, 5, '#e3be86', '#c9a068', { hl: false, lw: 2.2 });
+      A.ellipse(ctx, 0, -24, 8, 2.5, '#c9a068', null, { noStroke: true, hl: false });
+    },
+    log(ctx) {
+      A.shape(ctx, (c) => A.roundRect(c, -44, -18, 80, 18, 9), '#8b5e3c', '#6b4428', { cel: [2, 2], lw: 2.5 });
+      A.ellipse(ctx, 36, -9, 6, 9, '#e3be86', '#c9a068', { hl: false, lw: 2.2 });
+      A.ellipse(ctx, -20, -18, 8, 4, '#79b04a', null, { lw: 1.8, hl: false });
+    },
+    bush(ctx) {
+      [[-14, -12, 14], [4, -18, 17], [18, -10, 12]].forEach(([x, y, r]) => A.ellipse(ctx, x, y, r, r * 0.85, '#6aae4a', '#4f8a36', { cel: [3, 3], hl: false, lw: 2.3 }));
+      A.ellipse(ctx, -6, -20, 2.5, 2.5, '#ff6a6a', null, { noStroke: true, hl: false });
+      A.ellipse(ctx, 12, -14, 2.5, 2.5, '#ff6a6a', null, { noStroke: true, hl: false });
+    },
+    flowers(ctx, t) {
+      for (let i = 0; i < 5; i++) {
+        const x = -20 + i * 10;
+        const h = 10 + (i % 3) * 5;
+        ctx.strokeStyle = '#4f8a34';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + Math.sin(t * 2 + i) * 2, -h);
+        ctx.stroke();
+        A.ellipse(ctx, x + Math.sin(t * 2 + i) * 2, -h, 3.5, 3.5, ['#ff9fbf', '#ffe36b', '#b8a0ff'][i % 3], null, { lw: 1.4, hl: false });
+      }
+    },
+    rock(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(-20, 0); c.lineTo(-16, -14); c.lineTo(-2, -20); c.lineTo(14, -14); c.lineTo(20, 0); c.closePath(); }, '#a8a498', '#7e7a70', { cel: [3, 3], lw: 2.3 });
+      A.ellipse(ctx, -6, -16, 6, 3, '#79b04a', null, { lw: 1.6, hl: false });
+    },
+    mushCluster(ctx) {
+      [[-10, 1, '#f28c38'], [4, 1.3, '#e0513a'], [14, 0.8, '#f5c26b']].forEach(([x, k, col]) => {
+        A.shape(ctx, (c) => A.roundRect(c, x - 2.5 * k, -12 * k, 5 * k, 12 * k, 2), '#fff0d6', null, { lw: 1.8, hl: false });
+        A.shape(ctx, (c) => c.ellipse(x, -12 * k, 9 * k, 7 * k, 0, Math.PI, 0), col, null, { lw: 1.8, hl: false });
+      });
+    },
+    bigMush(ctx) {
+      A.shape(ctx, (c) => A.roundRect(c, -8, -46, 16, 46, 6), '#fff0d6', '#e8cfa6', { cel: [3, 2], lw: 2.3 });
+      A.shape(ctx, (c) => { c.moveTo(-34, -42); c.bezierCurveTo(-34, -76, 34, -76, 34, -42); c.quadraticCurveTo(0, -36, -34, -42); c.closePath(); }, '#c2408f', '#982f70', { cel: [4, 4], lw: 2.5 });
+      [[-14, -56, 5], [10, -62, 6]].forEach(([x, y, r]) => A.ellipse(ctx, x, y, r, r * 0.8, '#fff6fb', null, { lw: 1.6, hl: false }));
+    },
+    fern(ctx, t) {
+      ctx.strokeStyle = '#3f7f2a';
+      ctx.lineWidth = 3;
+      for (let k = -2; k <= 2; k++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(k * 10, -30, k * 18 + Math.sin(t * 1.5 + k) * 2, -22 + Math.abs(k) * 6);
+        ctx.stroke();
+      }
+    },
+    crystal(ctx, t) {
+      const glow = 0.5 + Math.sin(t * 2) * 0.2;
+      const g = ctx.createRadialGradient(0, -14, 0, 0, -14, 34);
+      g.addColorStop(0, 'rgba(160,255,230,' + glow.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(160,255,230,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, -14, 34, 0, Math.PI * 2);
+      ctx.fill();
+      [[-8, 20, -0.3], [4, 30, 0.1], [12, 16, 0.4]].forEach(([x, h, r]) => {
+        ctx.save();
+        ctx.translate(x, 0);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-5, 0); c.lineTo(-5, -h * 0.7); c.lineTo(0, -h); c.lineTo(5, -h * 0.7); c.lineTo(5, 0); c.closePath(); }, '#9ff0e0', '#5ec8b8', { cel: [2, 0], lw: 2 });
+        ctx.restore();
+      });
+    },
+    glowCluster(ctx, t) {
+      [[-10, 1], [2, 1.4], [12, 0.9]].forEach(([x, k]) => {
+        const g = ctx.createRadialGradient(x, -10 * k, 0, x, -10 * k, 18 * k);
+        g.addColorStop(0, 'rgba(140,255,210,0.5)');
+        g.addColorStop(1, 'rgba(140,255,210,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, -10 * k, 18 * k, 0, Math.PI * 2);
+        ctx.fill();
+        A.shape(ctx, (c) => A.roundRect(c, x - 2 * k, -10 * k, 4 * k, 10 * k, 2), '#d8fff0', null, { lw: 1.6, hl: false });
+        A.shape(ctx, (c) => c.ellipse(x, -10 * k, 7 * k, 5 * k, 0, Math.PI, 0), '#7df0d0', null, { lw: 1.6, hl: false });
+      });
+    },
+    root(ctx) {
+      ctx.strokeStyle = '#4e3420';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-40, 4);
+      ctx.bezierCurveTo(-20, -30, 10, -20, 30, 4);
+      ctx.stroke();
+      ctx.strokeStyle = '#6a4a30';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    },
+  };
+
   A.drawAtmosphere = function (ctx, map, cam, t) {
     const th = map._theme;
+    // 森林裡緩緩飄落的葉子
+    if (map.theme !== 'rootCave' && map.theme !== 'queenHall') {
+      for (let i = 0; i < 8; i++) {
+        const sp = 18 + (i % 3) * 8;
+        const x = ((i * 173 + t * 12 - cam.x * 0.8) % (G.W + 100) + G.W + 100) % (G.W + 100) - 50 + Math.sin(t + i) * 30;
+        const y = ((i * 97 + t * sp) % (G.H + 60)) - 30;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(t * 1.5 + i);
+        ctx.fillStyle = ['#e8a040', '#9fcf5a', '#f0c060'][i % 3];
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = th.motes;
     for (const m of map._motes) {
       const x = ((m.x - cam.x * 0.6 + Math.sin(t * 0.7 + m.p) * 20) % G.W + G.W) % G.W;

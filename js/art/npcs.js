@@ -130,7 +130,217 @@
     A.shape(ctx, (c) => A.roundRect(c, -4, -60 + bob, 20, 7, 3), '#3d6fb3', '#2d5690', { shadeY: -56 + bob, lw: 2 });
   }
 
-  const NPC_DRAW = { owl, hedgehog, squirrel };
+  function frog(ctx, t) {
+    const bob = Math.abs(Math.sin(t * 2)) * -2;
+    A.ellipse(ctx, -8, -3, 8, 4, '#6ab04a', null, { lw: 2, hl: false });
+    A.ellipse(ctx, 10, -3, 8, 4, '#6ab04a', null, { lw: 2, hl: false });
+    A.ellipse(ctx, 0, -20 + bob, 20, 17, '#7cc85a', '#5a9e3e', { cel: [3, 3] });
+    A.ellipse(ctx, 3, -14 + bob, 12, 9, '#e8f4c0', null, { noStroke: true, hl: false });
+    // 採集籃
+    A.shape(ctx, (c) => A.roundRect(c, -24, -22 + bob, 14, 12, 3), '#c8903a', '#9a6a28', { shadeY: -14 + bob, lw: 2 });
+    A.ellipse(ctx, -17, -24 + bob, 4, 3, '#f28c38', null, { lw: 1.5, hl: false });
+    // 凸眼
+    A.ellipse(ctx, -5, -36 + bob, 7, 7, '#7cc85a', '#5a9e3e', { lw: 2.2, hl: false });
+    A.ellipse(ctx, 9, -36 + bob, 7, 7, '#7cc85a', '#5a9e3e', { lw: 2.2, hl: false });
+    A.eye(ctx, -4, -36 + bob, 3, 3.6, Math.sin(t * 0.8) > 0.97 ? 'closed' : 'normal', 1);
+    A.eye(ctx, 10, -36 + bob, 3, 3.6, 'normal', 1);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(4, -24 + bob, 7, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    A.blush(ctx, -8, -24 + bob, 3.5);
+    // 草帽
+    A.shape(ctx, (c) => c.ellipse(2, -44 + bob, 16, 4, 0, 0, Math.PI * 2), '#f0d080', '#c8a850', { shadeY: -43 + bob, lw: 2 });
+    A.shape(ctx, (c) => c.ellipse(2, -46 + bob, 8, 6, 0, Math.PI, 0), '#f0d080', null, { lw: 2, hl: false });
+  }
+
+  function fawn(ctx, t) {
+    const bob = Math.sin(t * 2) * 1;
+    [-10, -4, 6, 12].forEach((x, i) => A.shape(ctx, (c) => A.roundRect(c, x - 2.5, -18, 5, 18, 2.5), i % 2 ? '#c88a5a' : '#b87a4a', null, { lw: 2, hl: false }));
+    A.ellipse(ctx, 0, -24 + bob, 17, 10, '#d8986a', '#b87a4a', { cel: [3, 3] });
+    [[-6, -27], [2, -23], [-2, -30]].forEach(([x, y]) => A.ellipse(ctx, x, y + bob, 2.2, 1.6, '#fff4e0', null, { noStroke: true, hl: false }));
+    A.ellipse(ctx, -16, -28 + bob, 4, 3, '#fff4e0', null, { lw: 1.8, hl: false });
+    A.ellipse(ctx, 14, -40 + bob, 11, 10, '#d8986a', '#b87a4a', { cel: [2, 2] });
+    A.ellipse(ctx, 6, -52 + bob, 3.5, 7, '#d8986a', null, { rot: -0.5, lw: 2, hl: false });
+    A.ellipse(ctx, 20, -52 + bob, 3.5, 7, '#d8986a', null, { rot: 0.5, lw: 2, hl: false });
+    A.eye(ctx, 15, -41 + bob, 3, 4, Math.sin(t * 0.6) > 0.97 ? 'closed' : 'normal', 1);
+    A.ellipse(ctx, 23, -36 + bob, 2.5, 2, '#3a2418', null, { noStroke: true, hl: false });
+    A.blush(ctx, 11, -35 + bob, 3);
+    // 眼淚
+    A.ellipse(ctx, 18, -35 + bob + ((t * 20) % 8), 1.4, 2, '#8fd3f4', null, { noStroke: true, hl: false });
+  }
+
+  function mole(ctx, t) {
+    const bob = Math.sin(t * 2.2) * 1;
+    A.ellipse(ctx, 0, -20 + bob, 18, 20, '#7a6a8a', '#5a4a6a', { cel: [3, 3] });
+    A.ellipse(ctx, 4, -14 + bob, 10, 10, '#b8a8c8', null, { noStroke: true, hl: false });
+    // 大爪子與鏟子
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(18, -4);
+    ctx.lineTo(24, -40);
+    ctx.stroke();
+    ctx.strokeStyle = A.c('#a87a4a');
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    A.shape(ctx, (c) => { c.moveTo(18, -4); c.lineTo(28, -6); c.lineTo(26, 4); c.lineTo(16, 6); c.closePath(); }, '#b8c0c8', '#8a92a0', { lw: 2, hl: false });
+    A.ellipse(ctx, 16, -20 + bob, 6, 5, '#ffb3c8', null, { lw: 2, hl: false });
+    // 頭燈
+    A.shape(ctx, (c) => c.ellipse(2, -38 + bob, 14, 7, 0, Math.PI, 0), '#ffcf3a', '#d8a010', { shadeY: -38 + bob, lw: 2 });
+    A.ellipse(ctx, 2, -44 + bob, 4, 4, '#fff6c0', null, { lw: 1.8, hl: false });
+    // 小眼睛與粉紅鼻子
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-2, -30 + bob);
+    ctx.lineTo(2, -30 + bob);
+    ctx.moveTo(8, -30 + bob);
+    ctx.lineTo(12, -30 + bob);
+    ctx.stroke();
+    A.ellipse(ctx, 14, -26 + bob, 4, 3, '#ff8aa8', null, { lw: 1.8, hl: false });
+    A.blush(ctx, 0, -24 + bob, 3);
+  }
+
+  // 營地的房子：蘑菇屋、樹屋、晾衣繩與小燈串
+  A.drawCampHouses = function (ctx, x1, x2, y, t) {
+    const mid = (x1 + x2) / 2;
+    // 樹屋
+    const tx = x1 + 30;
+    ctx.fillStyle = A.c('#7a5234');
+    ctx.fillRect(tx - 10, y - 200, 20, 200);
+    A.shape(ctx, (c) => { for (let i = 0; i < 7; i++) c.arc(tx + Math.cos(i) * 40, y - 230 + Math.sin(i * 1.7) * 20, 36, 0, Math.PI * 2); }, '#6aa84a', '#4f8a36', { noStroke: true, hl: false });
+    A.shape(ctx, (c) => A.roundRect(c, tx - 34, y - 190, 68, 46, 6), '#c8905a', '#a8703c', { cel: [4, 3] });
+    A.shape(ctx, (c) => { c.moveTo(tx - 42, y - 188); c.lineTo(tx, y - 222); c.lineTo(tx + 42, y - 188); c.closePath(); }, '#b8502e', '#8a3a20', { cel: [3, 3] });
+    A.shape(ctx, (c) => A.roundRect(c, tx - 8, y - 174, 16, 22, 7), '#ffe8a0', null, { lw: 2.2, hl: false });
+    ctx.strokeStyle = A.c('#6b4428');
+    ctx.lineWidth = 3;
+    for (let k = 0; k < 7; k++) {
+      ctx.beginPath();
+      ctx.moveTo(tx + 26, y - 140 + k * 20);
+      ctx.lineTo(tx + 44, y - 140 + k * 20);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(tx + 26, y - 144);
+    ctx.lineTo(tx + 26, y);
+    ctx.moveTo(tx + 44, y - 144);
+    ctx.lineTo(tx + 44, y);
+    ctx.stroke();
+    // 蘑菇屋
+    const hx = x2 - 60;
+    A.shape(ctx, (c) => A.roundRect(c, hx - 42, y - 80, 84, 80, 14), '#fff0d6', '#e8cfa6', { cel: [5, 3] });
+    A.shape(ctx, (c) => { c.moveTo(hx - 70, y - 70); c.bezierCurveTo(hx - 70, y - 160, hx + 70, y - 160, hx + 70, y - 70); c.quadraticCurveTo(hx, y - 58, hx - 70, y - 70); c.closePath(); }, '#e8483a', '#b8302a', { cel: [6, 6] });
+    [[-38, -104, 10], [14, -126, 12], [44, -92, 8], [-10, -86, 7]].forEach(([dx, dy, r]) => A.ellipse(ctx, hx + dx, y + dy, r, r * 0.8, '#fff8ee', null, { lw: 2, hl: false }));
+    A.shape(ctx, (c) => { c.moveTo(hx - 14, y); c.lineTo(hx - 14, y - 36); c.quadraticCurveTo(hx, y - 50, hx + 14, y - 36); c.lineTo(hx + 14, y); c.closePath(); }, '#9a6a42', '#7a5033', { shadeY: y - 12, lw: 2.5 });
+    A.ellipse(ctx, hx + 26, y - 50, 9, 9, '#ffe8a0', null, { lw: 2.5, hl: false });
+    // 煙囪的煙
+    for (let k = 0; k < 3; k++) {
+      const ph = ((t * 0.4 + k / 3) % 1);
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.5 * (1 - ph)).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(hx + 30 + Math.sin(ph * 6) * 6, y - 150 - ph * 60, 6 + ph * 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 小燈串
+    ctx.strokeStyle = A.c('#5a3a22');
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(tx + 34, y - 150);
+    ctx.quadraticCurveTo(mid, y - 110, hx - 40, y - 120);
+    ctx.stroke();
+    for (let k = 1; k < 10; k++) {
+      const u = k / 10;
+      const lx = (1 - u) * (1 - u) * (tx + 34) + 2 * (1 - u) * u * mid + u * u * (hx - 40);
+      const ly = (1 - u) * (1 - u) * (y - 150) + 2 * (1 - u) * u * (y - 110) + u * u * (y - 120);
+      const on = 0.6 + Math.sin(t * 3 + k) * 0.4;
+      const g = ctx.createRadialGradient(lx, ly + 5, 0, lx, ly + 5, 12);
+      g.addColorStop(0, 'rgba(255,220,120,' + (0.6 * on).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,220,120,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(lx, ly + 5, 12, 0, Math.PI * 2);
+      ctx.fill();
+      A.ellipse(ctx, lx, ly + 5, 3, 4, ['#ffd35a', '#ff9fc4', '#8fd3f4'][k % 3], null, { lw: 1.2, hl: false });
+    }
+    // 營地招牌
+    const sx = mid - 150;
+    ctx.fillStyle = A.c('#6b4428');
+    ctx.fillRect(sx - 3, y - 60, 6, 60);
+    A.shape(ctx, (c) => A.roundRect(c, sx - 46, y - 84, 92, 30, 6), '#c8905a', '#a8703c', { cel: [2, 2] });
+    ctx.font = 'bold 16px ' + A.FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = A.c('#4a2e1f');
+    ctx.fillText('苔光營地', sx, y - 68);
+  };
+
+  A.drawSign = function (ctx, x, y) {
+    ctx.fillStyle = A.c('#6b4428');
+    ctx.fillRect(x - 2.5, y - 34, 5, 34);
+    A.shape(ctx, (c) => { c.moveTo(x - 18, y - 48); c.lineTo(x + 14, y - 48); c.lineTo(x + 22, y - 39); c.lineTo(x + 14, y - 30); c.lineTo(x - 18, y - 30); c.closePath(); }, '#c8905a', '#a8703c', { cel: [2, 2], lw: 2.2 });
+    ctx.strokeStyle = A.c('#6b4428');
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 12, y - 42);
+    ctx.lineTo(x + 10, y - 42);
+    ctx.moveTo(x - 12, y - 36);
+    ctx.lineTo(x + 4, y - 36);
+    ctx.stroke();
+  };
+
+  // 彈跳菇：被踩時壓扁
+  A.drawSpring = function (ctx, x, y, squash, t) {
+    const sq = Math.max(0, squash);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1 + sq * 0.25, 1 - sq * 0.35);
+    A.shape(ctx, (c) => A.roundRect(c, -8, -20, 16, 20, 6), '#fff0d6', '#e8cfa6', { cel: [3, 2] });
+    A.shape(ctx, (c) => { c.moveTo(-30, -18); c.bezierCurveTo(-30, -48, 30, -48, 30, -18); c.quadraticCurveTo(0, -12, -30, -18); c.closePath(); }, '#e8483a', '#b8302a', { cel: [4, 4] });
+    [[-14, -30, 5], [8, -36, 6], [20, -24, 4]].forEach(([dx, dy, r]) => A.ellipse(ctx, dx, dy, r, r * 0.8, '#fff8ee', null, { lw: 1.8, hl: false }));
+    ctx.restore();
+    // 往上的小箭頭，提示可以彈
+    ctx.globalAlpha = 0.5 + Math.sin(t * 4) * 0.3;
+    ctx.fillStyle = '#fff6c0';
+    ctx.beginPath();
+    ctx.moveTo(x, y - 70 - Math.sin(t * 4) * 4);
+    ctx.lineTo(x - 7, y - 60 - Math.sin(t * 4) * 4);
+    ctx.lineTo(x + 7, y - 60 - Math.sin(t * 4) * 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  };
+
+  // 小生物：蝴蝶與螢火蟲
+  A.drawCritter = function (ctx, c, t) {
+    if (c.kind === 'firefly') {
+      const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, 10);
+      g.addColorStop(0, 'rgba(210,255,140,' + (0.7 + Math.sin(t * 5 + c.seed) * 0.3).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(210,255,140,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    const flap = Math.abs(Math.sin(t * (c.flee ? 30 : 14) + c.seed));
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.fillStyle = A.c(c.color);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 1.2;
+    [-1, 1].forEach((s) => {
+      ctx.beginPath();
+      ctx.ellipse(s * 4 * flap, -2, 5 * flap + 1, 4, s * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+    ctx.fillStyle = A.outline();
+    ctx.fillRect(-0.8, -4, 1.6, 7);
+    ctx.restore();
+  };
+
+  const NPC_DRAW = { owl, hedgehog, squirrel, frog, fawn, mole };
 
   A.drawNpc = function (ctx, npc, t, marker, noTag) {
     ctx.save();
@@ -177,9 +387,37 @@
     ctx.restore();
   };
 
-  A.drawPortal = function (ctx, x, y, t) {
+  A.drawPortal = function (ctx, x, y, t, label) {
     ctx.save();
     ctx.translate(x, y);
+    // 光柱
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const beam = ctx.createLinearGradient(0, -190, 0, 0);
+    beam.addColorStop(0, 'rgba(140,220,255,0)');
+    beam.addColorStop(1, 'rgba(160,230,255,' + (0.35 + Math.sin(t * 3) * 0.1).toFixed(3) + ')');
+    ctx.fillStyle = beam;
+    ctx.fillRect(-34, -190, 68, 190);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(-8, -190, 16, 190);
+    // 往上飄的光點
+    for (let i = 0; i < 10; i++) {
+      const k = (t * 0.6 + i / 10) % 1;
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = i % 2 ? '#c9f0ff' : '#e8d4ff';
+      ctx.beginPath();
+      ctx.arc(Math.sin(i * 2.3 + t * 2) * 22, -k * 170, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    // 地面光圈
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = 'rgba(150,220,255,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 40 + Math.sin(t * 4) * 3, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.scale(1.35, 1.35);
     for (let i = 0; i < 4; i++) {
       const k = ((t * 0.8 + i / 4) % 1);
       ctx.globalAlpha = 0.65 * (1 - k);
@@ -199,6 +437,23 @@
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.restore();
+    // 上下彈跳的箭頭與目的地
+    const ay = y - 150 + Math.sin(t * 4) * 6;
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#2a4a7a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, ay - 12);
+    ctx.lineTo(x - 11, ay + 2);
+    ctx.lineTo(x - 4, ay + 2);
+    ctx.lineTo(x - 4, ay + 12);
+    ctx.lineTo(x + 4, ay + 12);
+    ctx.lineTo(x + 4, ay + 2);
+    ctx.lineTo(x + 11, ay + 2);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+    if (label) A.nameTag(ctx, x, y + 16, '→ ' + label, '#bfe8ff');
   };
 
   A.drawProjectile = function (ctx, p, t) {

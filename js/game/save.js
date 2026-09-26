@@ -23,7 +23,7 @@
           level: P.level, exp: P.exp, form: P.form, sp: P.sp,
           hp: Math.max(1, Math.round(P.hp)), mp: Math.round(P.mp),
           gold: P.gold, skills: P.skills, hotbar: P.hotbar,
-          equip: P.equip, bag: P.bag, potions: P.potions,
+          equip: P.equip, bag: P.bag, potions: P.potions, buffs: P.buffs,
           questItems: P.questItems, playTime: P.playTime,
         },
         pos: P.dead ? null : { map: G.world.mapId, x: Math.round(P.x), y: Math.round(P.y) },
@@ -44,14 +44,20 @@
       Object.assign(P, {
         level: d.level, exp: d.exp, form: d.form || 'base', sp: d.sp,
         gold: d.gold, skills: Object.assign({}, P.skills, d.skills), hotbar: d.hotbar || P.hotbar,
-        equip: d.equip || P.equip, bag: d.bag || [], potions: d.potions || { hp: 0, mp: 0 },
+        equip: d.equip || P.equip, bag: d.bag || [], potions: d.potions || { hp: 0, mp: 0 }, buffs: d.buffs || {},
         questItems: d.questItems || {}, playTime: d.playTime || 0,
       });
       P.recalc();
       P.hp = Math.min(P.maxHp, d.hp || P.maxHp);
       P.mp = Math.min(P.maxMp, d.mp || P.maxMp);
-      G.quests.state = (data.quests && data.quests.state) || {};
-      G.quests.progress = (data.quests && data.quests.progress) || {};
+      G.quests.state = {};
+      G.quests.progress = {};
+      const qs = (data.quests && data.quests.state) || {};
+      for (const id in qs) {
+        if (!G.data.quests[id]) continue;
+        G.quests.state[id] = qs[id];
+        G.quests.progress[id] = (data.quests.progress || {})[id] || 0;
+      }
       G.world.flags = (data.world && data.world.flags) || {};
       G.world.visited = (data.world && data.world.visited) || {};
       G.world.openedChests = (data.world && data.world.openedChests) || {};

@@ -129,14 +129,47 @@
       return false;
     },
 
+    // 會掉這個材料的怪物名稱
+    sources(item) {
+      return Object.keys(G.data.monsters).filter((k) => {
+        const d = G.data.monsters[k].drops;
+        return d && (d.mats || []).some((m) => m[0] === item);
+      }).map((k) => G.data.monsters[k].name);
+    },
+
+    // 材料被賣掉或拿去交換後，重新對一次收集任務的進度
+    recount() {
+      for (const id in this.state) {
+        const q = this.def(id);
+        const st = this.state[id];
+        if (q.type !== 'collect' || (st !== 'active' && st !== 'ready')) continue;
+        this.progress[id] = Math.min(q.count, G.player.questItems[q.item] || 0);
+        if (st === 'ready' && this.progress[id] < q.count) this.state[id] = 'active';
+        else this.check(id);
+      }
+    },
+
+    // 身上有進行中的收集任務要這個材料時，回傳還需要保留的數量
+    reserved(item) {
+      let n = 0;
+      for (const id in this.state) {
+        const q = this.def(id);
+        if (q.type === 'collect' && q.item === item && (this.state[id] === 'active' || this.state[id] === 'ready')) n += q.count;
+      }
+      return n;
+    },
+
     onCollect(item) {
+      let hit = false;
       for (const id in this.state) {
         const q = this.def(id);
         if (this.state[id] !== 'active' || q.type !== 'collect' || q.item !== item) continue;
+        hit = true;
         this.progress[id] = Math.min(q.count, G.player.questItems[item] || 0);
         G.fx.text(G.player.x, G.player.y - 100, G.data.items.questItems[item].name + ' ' + this.progress[id] + '/' + q.count, '#9fe0ff', 14, 0.9);
         this.check(id);
       }
+      return hit;
     },
 
     // 追蹤欄用
@@ -157,7 +190,10 @@
       const q = this.def(id);
       const n = Math.min(this.progress[id] || 0, q.count);
       if (q.type === 'kill') return '打倒 ' + G.data.monsters[q.target].name + ' ' + n + '/' + q.count;
-      if (q.type === 'collect') return '收集 ' + G.data.items.questItems[q.item].name + ' ' + n + '/' + q.count;
+      if (q.type === 'collect') {
+        const from = this.sources(q.item);
+        return '收集 ' + G.data.items.questItems[q.item].name + ' ' + n + '/' + q.count + '（' + from.join('、') + '）';
+      }
       if (q.type === 'boss') return '討伐 ' + G.data.monsters[q.target].name;
       if (q.type === 'visit') return '前往 ' + G.data.maps[q.target].name;
       return '';

@@ -100,6 +100,11 @@ button.small { font-size: 12px; padding: 2px 8px; border-radius: 7px; }
 .misc { display: flex; gap: 14px; margin: 10px 0; font-weight: bold; }
 .misc span { display: inline-flex; align-items: center; gap: 2px; }
 .misc img { width: 26px; }
+.cons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.cons .lbl { width: 100%; font-size: 12px; color: #8a6a4a; }
+.usebtn { position: relative; width: 44px; height: 44px; padding: 0; background: #3a2a1e; border-radius: 8px; }
+.usebtn img { width: 40px; height: 40px; }
+.usebtn span { position: absolute; right: 2px; bottom: 0; color: #fff; font-size: 12px; text-shadow: 0 1px 2px #000; }
 .detail { background: #f6e8c8; border-radius: 10px; padding: 10px 12px; min-height: 120px; }
 .item-name { font-size: 18px; font-weight: bold; }
 .item-meta { font-size: 12px; color: #8a6a4a; margin-bottom: 4px; }
@@ -166,8 +171,8 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .dlg .btns { justify-content: flex-end; }
 
 /* 商店 */
-.shop { display: flex; gap: 16px; width: 820px; }
-.shop .col { flex: 1; }
+.shop { display: flex; gap: 16px; width: 820px; max-width: 100%; }
+.shop .col { flex: 1; min-width: 0; max-height: 540px; overflow-y: auto; padding-right: 4px; }
 .shop h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .good { display: flex; align-items: center; gap: 8px; background: #f6e8c8; border-radius: 10px; padding: 6px 8px; margin-bottom: 6px; }
 .good img { width: 40px; height: 40px; background: #3a2a1e; border-radius: 8px; }
@@ -175,9 +180,9 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .good .nm { font-weight: bold; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2); }
 .good .ds { font-size: 12px; }
 .good button { padding: 4px 10px; font-size: 13px; }
-.sellgrid { max-height: 440px; overflow-y: auto; }
+.sellgrid { margin-bottom: 10px; }
 .sellrow { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-weight: bold; font-size: 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); }
-.sellrow span { flex: 1; }
+.sellrow span { flex: 1; min-width: 0; }
 .sellrow button { padding: 3px 8px; font-size: 13px; text-shadow: none; }
 
 /* 選單 */
@@ -256,3 +261,5 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .evo-confirm { margin-top: 12px; display: flex; gap: 10px; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
 .evolve-btn { background: linear-gradient(#ffe9ff, #f0a0e8); border-color: #a0408a; }
 .passive-tag { font-size: 12px; color: #6a5a45; padding: 4px 8px; background: #e9dcc0; border-radius: 6px; }
+.sellrow img.mat { width: 30px; height: 30px; }
+.usebtn.on { outline: 2px solid #ffd35a; }

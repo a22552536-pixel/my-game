@@ -140,8 +140,10 @@
         });
       });
       const px = sx0 + slots.length * 52;
-      this.slot(ctx, px, barY + 5, I.label('hpPot'), 'hpPot', () => (P.potions.hp > 0 ? null : 'nomp'), P.potions.hp);
-      this.slot(ctx, px + 52, barY + 5, I.label('mpPot'), 'mpPot', () => (P.potions.mp > 0 ? null : 'nomp'), P.potions.mp);
+      const hpN = (P.potions.hp || 0) + (P.potions.hpL || 0);
+      const mpN = (P.potions.mp || 0) + (P.potions.mpL || 0);
+      this.slot(ctx, px, barY + 5, I.label('hpPot'), P.potions.hp > 0 || !P.potions.hpL ? 'hpPot' : 'hpPotL', () => (hpN > 0 ? null : 'nomp'), hpN);
+      this.slot(ctx, px + 52, barY + 5, I.label('mpPot'), P.potions.mp > 0 || !P.potions.mpL ? 'mpPot' : 'mpPotL', () => (mpN > 0 ? null : 'nomp'), mpN);
 
       // ── 經驗條 ──
       const need = P.expNeed();
@@ -160,12 +162,22 @@
         this.panel(ctx, 8, 8, 210, 34, 10);
         this.text(ctx, this.title.text, 20, 25, 16, '#ffe9b0');
       }
+      if (P.buffs) {
+        let bx = 14;
+        for (const k in P.buffs) {
+          const b = P.buffs[k];
+          this.panel(ctx, bx - 4, 48, 70, 30, 8);
+          A.drawIcon(ctx, b.icon, bx + 10, 63, 0.6);
+          this.text(ctx, Math.ceil(b.t) + 's', bx + 26, 63, 13, '#fff');
+          bx += 76;
+        }
+      }
       if (G.debug) this.text(ctx, 'FPS ' + G.fps + '  ' + G.world.mapId + '  x' + Math.round(P.x) + ' y' + Math.round(P.y), 230, 25, 12, '#9f9');
 
       // ── 任務追蹤 ──
       const tr = G.quests.tracked();
       if (tr.length) {
-        const w = 250;
+        const w = 290;
         const h = 22 + tr.length * 40;
         this.panel(ctx, W - w - 8, 8, w, h, 10);
         this.text(ctx, '任務（' + I.label('quests') + '）', W - w + 4, 22, 13, '#ffe9b0');

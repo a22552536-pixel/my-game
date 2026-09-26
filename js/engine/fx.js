@@ -130,7 +130,7 @@
       this.rings.push({ x, y, color, r: 4, maxR: maxR || 80, t: 0, life: life || 0.4, w: width || 4 });
     },
 
-    // 爆擊：從命中點向外迸出紅邊的黑色閃電，畫面瞬間轉暗、邊緣泛紅
+    // 黑閃：從命中點向外迸出紅邊的黑色閃電，畫面瞬間轉暗、邊緣泛紅
     blackFlash(x, y, dir) {
       const n = 7;
       for (let i = 0; i < n; i++) {
@@ -268,6 +268,7 @@
         ctx.globalAlpha = 0.45 * (1 - k);
         G.art.mode = 'tint';
         G.art.modeColor = g.color;
+        G.art.modeAmt = 0.7;
         G.art.drawLion(ctx, g.x, g.y, g.dir, g.st);
         G.art.mode = null;
       }
@@ -491,7 +492,7 @@
         if (t.screen) this.drawFloatText(ctx, t);
       }
       if (this.darkFlash > 0) {
-        // 爆擊瞬間：畫面變暗，四周泛紅
+        // 黑閃瞬間：畫面變暗，四周泛紅
         const k = this.darkFlash / 0.16;
         ctx.fillStyle = 'rgba(8,0,4,' + (0.38 * k).toFixed(3) + ')';
         ctx.fillRect(0, 0, G.W, G.H);
@@ -556,12 +557,15 @@
         g.addColorStop(1, st.bottom);
         ctx.fillStyle = g;
         ctx.fillText(n.value, n.x, y);
-        if (n.kind === 'crit' && k < 0.5) {
-          ctx.font = 'bold 16px ' + G.art.FONT;
-          ctx.lineWidth = 4;
-          ctx.strokeText('爆擊!', n.x, y - size + 2);
-          ctx.fillStyle = '#ffe36b';
-          ctx.fillText('爆擊!', n.x, y - size + 2);
+        if (n.kind === 'crit' && k < 0.8) {
+          // 黑閃：黑字紅邊，蓋在傷害數字上方
+          const pop2 = k < 0.1 ? 1.5 - k * 5 : 1;
+          ctx.font = '900 ' + Math.round(28 * pop2) + 'px ' + G.art.FONT;
+          ctx.lineWidth = 7;
+          ctx.strokeStyle = '#ff1a30';
+          ctx.strokeText('黑閃！', n.x, y - size - 4);
+          ctx.fillStyle = '#0a0004';
+          ctx.fillText('黑閃！', n.x, y - size - 4);
         }
       }
       ctx.globalAlpha = 1;

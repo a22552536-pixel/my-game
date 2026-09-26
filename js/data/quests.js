@@ -1,7 +1,8 @@
 // 任務資料。type：kill 打倒、collect 收集、boss 討伐、visit 前往某張地圖。
-// 每個怪物系列有一條 3 段的任務鏈，分給三位 NPC：
-//   刺蝟婆婆：蝸牛系 + 主線      貓頭鷹商人：菇系      松鼠信差：草精系 + 跑腿探索
-// 任務 id 沿用舊存檔的 q1～q4，新任務從 q5 開始。
+// 第一區共 7 個任務，照等級一個接一個解鎖，同時最多 2 個在進行（主線另計）：
+//   Lv1 露珠蝸 → Lv3 孢子粉 → Lv4 種子殼 → Lv5 送信到深谷 → Lv6 嫩芽精 → Lv8 發光燈芯
+//   Lv8 起可以接主線「森林的女王」
+// 任務 id 沿用舊存檔的編號。
 G.data.quests = {
   // ── 刺蝟婆婆：蝸牛系 ──
   q1: {
@@ -16,34 +17,6 @@ G.data.quests = {
       offer: '露珠蝸把小徑的草都啃光了……幫婆婆趕走 10 隻好嗎？牠們就在營地左邊。',
       progress: '露珠蝸還在啃草呢，慢慢來，別累著了。',
       done: '哎呀，小徑乾淨多了！這些金葉拿去買果子吃吧。',
-    },
-  },
-  q5: {
-    name: '青苔地毯',
-    npc: 'hedgehog',
-    req: { lv: 4, quest: 'q1' },
-    type: 'collect',
-    item: 'moss',
-    count: 6,
-    reward: { exp: 150, potions: { hp: 5 } },
-    lines: {
-      offer: '婆婆的窩冬天好冷。苔殼蝸背上的青苔又軟又暖，幫我帶 6 片回來好嗎？蘑菇林地的上層就有。',
-      progress: '青苔要挑乾淨的喔，婆婆的鼻子很靈的。',
-      done: '好軟呀……今年冬天不怕冷了。這些紅漿果收下吧。',
-    },
-  },
-  q6: {
-    name: '會走路的樹樁',
-    npc: 'hedgehog',
-    req: { lv: 8, quest: 'q5' },
-    type: 'kill',
-    target: 'woodsnail',
-    count: 8,
-    reward: { exp: 350, gold: 150, equip: { base: 'mane2', rarity: 'rare' } },
-    lines: {
-      offer: '古樹根洞裡有背著樹樁的古木蝸，牠們會把小動物的洞口堵住。打倒 8 隻，把路清出來吧。',
-      progress: '古木蝸被打會縮進殼裡，等牠探出頭再打，比較省力。',
-      done: '路通了，小動物們都在謝謝你呢。這是婆婆織的鬃飾，戴上會暖和一點。',
     },
   },
   q4: {
@@ -66,7 +39,7 @@ G.data.quests = {
   q2: {
     name: '藥水的原料',
     npc: 'owl',
-    req: { lv: 2 },
+    req: { lv: 3, quest: 'q1' },
     type: 'collect',
     item: 'spore',
     count: 8,
@@ -77,24 +50,10 @@ G.data.quests = {
       done: '咕！品質不錯。這幾瓶藍花蜜是你的了，做生意要講信用。',
     },
   },
-  q7: {
-    name: '脾氣不好的斑點菇',
-    npc: 'owl',
-    req: { lv: 5, quest: 'q2' },
-    type: 'kill',
-    target: 'spotshroom',
-    count: 12,
-    reward: { exp: 220, gold: 120 },
-    lines: {
-      offer: '咕……斑點菇把我的貨車撞翻了，還在木漏日深谷橫衝直撞。教訓 12 隻，運費我照付。',
-      progress: '斑點菇被打會直直衝過來，跳起來就躲得掉，咕。',
-      done: '咕咕，貨車終於能上路了。這是說好的運費。',
-    },
-  },
   q8: {
     name: '會發光的燈芯',
     npc: 'owl',
-    req: { lv: 9, quest: 'q7' },
+    req: { lv: 8, quest: 'q3' },
     type: 'collect',
     item: 'wick',
     count: 5,
@@ -110,7 +69,7 @@ G.data.quests = {
   q9: {
     name: '種子搬家',
     npc: 'squirrel',
-    req: { lv: 3 },
+    req: { lv: 4, quest: 'q2' },
     type: 'collect',
     item: 'seedshell',
     count: 6,
@@ -124,7 +83,7 @@ G.data.quests = {
   q3: {
     name: '不安分的草精',
     npc: 'squirrel',
-    req: { lv: 6, quest: 'q9' },
+    req: { lv: 6, quest: 'q11' },
     type: 'kill',
     target: 'sproutling',
     count: 15,
@@ -135,26 +94,12 @@ G.data.quests = {
       done: '終於可以安心送信了！這副石爪套是客人寄錯地址的，送你吧，嘿嘿。',
     },
   },
-  q10: {
-    name: '花冠的祕密',
-    npc: 'squirrel',
-    req: { lv: 9, quest: 'q3' },
-    type: 'collect',
-    item: 'petal',
-    count: 5,
-    reward: { exp: 380, potions: { hp: 10 } },
-    lines: {
-      offer: '聽說花冠精頭上的花瓣可以寫信給很遠很遠的人……說不定能寄到天上喔？幫我收集 5 片！',
-      progress: '花冠精會丟花瓣，被打到還挺痛的吧？',
-      done: '好香……我試著寫一封信給天上的你的家人好了。這些紅漿果是謝禮！',
-    },
-  },
 
   // ── 松鼠信差：跑腿探索 ──
   q11: {
     name: '送信到深谷',
     npc: 'squirrel',
-    req: { lv: 3 },
+    req: { lv: 5, quest: 'q9' },
     type: 'visit',
     target: '1-3',
     count: 1,
@@ -163,20 +108,6 @@ G.data.quests = {
       offer: '我今天信太多了，幫我跑一趟木漏日深谷好不好？走到那裡就算送到了！',
       progress: '木漏日深谷在蘑菇林地的右邊，一直往右走就對了！',
       done: '送到了？太快了吧！你是不是也會飛呀？',
-    },
-  },
-  q12: {
-    name: '根洞的回音',
-    npc: 'squirrel',
-    req: { lv: 6, quest: 'q11' },
-    type: 'visit',
-    target: '1-4',
-    count: 1,
-    reward: { exp: 160, gold: 80 },
-    lines: {
-      offer: '古樹根洞裡有人在喊「有沒有信」……我不敢進去，你幫我去看看？',
-      progress: '古樹根洞在木漏日深谷再往右。裡面有點暗，小心腳下！',
-      done: '原來是回音啊……害我緊張了一整天，嘿嘿。謝謝你！',
     },
   },
 };

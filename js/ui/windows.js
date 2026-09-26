@@ -127,7 +127,7 @@
       const R = D.rarity[it.rarity];
       const st = G.loot.totalStats(it);
       let h = '<div class="item-name" style="color:' + R.text + '">' + esc(it.name) + '</div>';
-      h += '<div class="item-meta">' + R.name + ' · ' + D.slots[it.slot] + ' · 需要 Lv.' + it.req + '</div>';
+      h += '<div class="item-meta">' + (it.unique ? '獨特 · ' : '') + R.name + ' · ' + D.slots[it.slot] + ' · 需要 Lv.' + it.req + '</div>';
       h += '<ul class="stats">';
       for (const k in it.stats) h += '<li>' + G.loot.fmtStat(k, it.stats[k]) + '</li>';
       if (it.sub) h += '<li class="sub">' + G.loot.fmtStat(it.sub.stat, it.sub.value) + '</li>';
@@ -159,7 +159,7 @@
       const sel = this.selected === it.uid ? ' sel' : '';
       const up = act === 'select' && this.isUpgrade(it) && G.player.level >= it.req ? '<span class="uparrow">▲</span>' : '';
       const low = G.player.level < it.req ? ' low' : '';
-      return '<button class="cell' + sel + low + '" style="border-color:' + R.color + '" data-act="' + act + '" data-arg="' + it.uid + '" title="' + esc(it.name) + '"><img src="' + G.art.iconURL(it.slot) + '" alt="">' + up + (extra || '') + '</button>';
+      return '<button class="cell' + sel + low + '" style="border-color:' + R.color + '" data-act="' + act + '" data-arg="' + it.uid + '" title="' + esc(it.name) + '"><img src="' + G.art.iconURL(it.slot, it.tint) + '" alt="">' + up + (extra || '') + '</button>';
     },
 
     // ───────── 背包 ─────────
@@ -175,7 +175,7 @@
       }
       eq += '</div>';
       const stats =
-        '<div class="charstats"><div>攻擊 <b>' + Math.round(P.atk) + '</b></div><div>HP <b>' + P.maxHp + '</b></div><div>MP <b>' + P.maxMp + '</b></div><div>防禦 <b>' + Math.round(P.def) + '</b></div><div>爆擊 <b>' + (P.crit * 100).toFixed(1) + '%</b></div></div>';
+        '<div class="charstats"><div>攻擊 <b>' + Math.round(P.atk) + '</b></div><div>HP <b>' + P.maxHp + '</b></div><div>MP <b>' + P.maxMp + '</b></div><div>防禦 <b>' + Math.round(P.def) + '</b></div><div>黑閃 <b>' + (P.crit * 100).toFixed(1) + '%</b></div></div>';
       let grid = '<div class="grid">';
       for (let i = 0; i < G.data.balance.bagSize; i++) {
         const it = P.bag[i];
@@ -183,13 +183,26 @@
       }
       grid += '</div>';
       const misc =
-        '<div class="misc"><span><img src="' + G.art.iconURL('gold') + '">' + P.gold + ' 金葉</span><span><img src="' + G.art.iconURL('hpPot') + '">' + P.potions.hp + '</span><span><img src="' + G.art.iconURL('mpPot') + '">' + P.potions.mp + '</span>' +
-        Object.keys(G.data.items.questItems).filter((k) => P.questItems[k] > 0).map((k) => '<span title="' + G.data.items.questItems[k].name + '"><img src="' + G.art.iconURL(k) + '">' + P.questItems[k] + '</span>').join('') +
+        '<div class="misc"><span><img src="' + G.art.iconURL('gold') + '">' + P.gold + ' 金葉</span>' +
         (G.world.flags.starleaf1 ? '<span><img src="' + G.art.iconURL('starleaf') + '">星楓葉</span>' : '') +
         '</div>';
+      const cons = Object.keys(D.potions).filter((k) => (P.potions[k] || 0) > 0);
+      const consHTML = '<div class="cons"><div class="lbl">消耗品（點一下使用）</div>' + (cons.length ? cons.map((k) => '<button class="usebtn" data-act="useItem" data-arg="' + k + '" title="' + D.potions[k].name + '：' + D.potions[k].desc + '"><img src="' + G.art.iconURL(D.potions[k].icon) + '"><span>' + P.potions[k] + '</span></button>').join('') : '<span class="dim">沒有消耗品</span>') + '</div>';
+      const mats = Object.keys(D.materials).filter((k) => (P.questItems[k] || 0) > 0);
+      const matsHTML = '<div class="cons"><div class="lbl">材料（可以賣給商店，或拿去貓頭鷹的小舖交換）</div>' + (mats.length ? mats.map((k) => '<button class="usebtn' + (this.selected === 'mat:' + k ? ' on' : '') + '" data-act="select" data-arg="mat:' + k + '" title="' + D.materials[k].name + '"><img src="' + G.art.iconURL(k) + '"><span>' + P.questItems[k] + '</span></button>').join('') : '<span class="dim">打倒怪物會掉材料</span>') + '</div>';
       let detail = '<div class="detail dim">點一下物品查看詳細資料。<br>▲ 表示比身上的更好。</div>';
       const sel = this.findItem(this.selected);
-      if (sel) {
+      if (this.selected && this.selected.startsWith('mat:') && P.questItems[this.selected.slice(4)] > 0) {
+        const k = this.selected.slice(4);
+        const m = D.materials[k];
+        const from = G.quests.sources(k);
+        const res = G.quests.reserved(k);
+        const uses = D.trades.filter((t) => t.need[k]).map((t) => this.tradeGiveName(t)).join('、');
+        detail = '<div class="detail"><div class="nm" style="font-weight:bold;font-size:16px">' + m.name + ' ×' + P.questItems[k] + '</div><div class="small">' + m.desc + '</div>' +
+          '<div class="small dim">' + (from.length ? '掉落：' + from.join('、') + '　' : '') + '賣價 ' + m.price + ' 金葉</div>' +
+          (uses ? '<div class="small">可交換：' + uses + '</div>' : '') +
+          (res ? '<div class="small warn">進行中的任務需要 ' + res + ' 個</div>' : '') + '</div>';
+      } else if (sel) {
         const equipped = sel.where === 'equip';
         detail = '<div class="detail">' + this.itemHTML(sel.item, equipped ? undefined : P.equip[sel.item.slot] || null) + '<div class="btns">';
         if (equipped) detail += '<button data-act="unequip" data-arg="' + sel.item.uid + '">卸下</button>';
@@ -199,7 +212,7 @@
         }
         detail += '</div></div>';
       }
-      return this.frame('背包（' + P.bag.length + '/' + G.data.balance.bagSize + '）', '<div class="inv"><div class="left">' + eq + stats + '</div><div class="right">' + grid + misc + detail + '</div></div>');
+      return this.frame('背包（' + P.bag.length + '/' + G.data.balance.bagSize + '）', '<div class="inv"><div class="left">' + eq + stats + '</div><div class="right">' + grid + misc + consHTML + matsHTML + detail + '</div></div>');
     },
 
     findItem(uid) {
@@ -208,6 +221,10 @@
       for (const s in P.equip) if (P.equip[s] && P.equip[s].uid === uid) return { item: P.equip[s], where: 'equip' };
       const it = P.bag.find((b) => b.uid === uid);
       return it ? { item: it, where: 'bag' } : null;
+    },
+
+    a_useItem(id) {
+      G.player.useItem(id);
     },
 
     a_select(uid) {
@@ -438,18 +455,18 @@
     r_shop() {
       const P = G.player;
       const D = G.data.items;
-      const goods = D.shops[this.shopId || 'owl'] || [];
+      const goods = (this.shopId === 'mole' ? D.moleShop : D.shops[this.shopId || 'owl']) || [];
       let buy = '<h3>購買</h3>';
       goods.forEach((g, i) => {
         if (g.type === 'potion') {
           const p = D.potions[g.id];
-          buy += '<div class="good"><img src="' + G.art.iconURL(g.id === 'hp' ? 'hpPot' : 'mpPot') + '"><div class="info"><div class="nm">' + p.name + '</div><div class="ds">' + p.desc + ' · ' + p.price + ' 金葉 · 持有 ' + P.potions[g.id] + '</div></div>' +
+          buy += '<div class="good"><img src="' + G.art.iconURL(p.icon) + '"><div class="info"><div class="nm">' + p.name + '</div><div class="ds">' + p.desc + ' · ' + p.price + ' 金葉 · 持有 ' + (P.potions[g.id] || 0) + '</div></div>' +
             '<button data-act="buy" data-arg="' + i + ':1"' + (P.gold >= p.price ? '' : ' disabled') + '>買 1</button><button data-act="buy" data-arg="' + i + ':10"' + (P.gold >= p.price * 10 ? '' : ' disabled') + '>買 10</button></div>';
         } else {
           const base = D.bases[g.base];
           const R = D.rarity[g.rarity];
           const stats = Object.keys(g.fixed).map((k) => G.loot.fmtStat(k, g.fixed[k])).join('、');
-          buy += '<div class="good"><img src="' + G.art.iconURL(base.slot) + '"><div class="info"><div class="nm" style="color:' + R.text + '">' + R.name + ' ' + base.name + '</div><div class="ds">' + stats + ' · 需要 Lv.' + base.req + ' · ' + g.price + ' 金葉</div></div>' +
+          buy += '<div class="good"><img src="' + G.art.iconURL(base.slot, base.tint) + '"><div class="info"><div class="nm" style="color:' + R.text + '">' + R.name + ' ' + base.name + '</div><div class="ds">' + stats + ' · 需要 Lv.' + base.req + ' · ' + g.price + ' 金葉</div></div>' +
             '<button data-act="buy" data-arg="' + i + ':1"' + (P.gold >= g.price ? '' : ' disabled') + '>購買</button></div>';
         }
       });
@@ -459,18 +476,41 @@
         sell += '<div class="sellrow">' + this.itemCell(it, 'noop') + '<span style="color:' + D.rarity[it.rarity].text + '">' + esc(it.name) + '</span><button data-act="sell" data-arg="' + it.uid + '">' + G.data.items.sellPrice(it) + ' 金葉</button></div>';
       });
       sell += '</div>';
-      return this.frame('貓頭鷹的小舖　<span class="gold"><img src="' + G.art.iconURL('gold') + '">' + P.gold + '</span>', '<div class="shop"><div class="col">' + buy + '</div><div class="col">' + sell + '</div></div>', 'shop');
+      const mats = Object.keys(D.materials).filter((k) => (P.questItems[k] || 0) > 0);
+      sell += '<h3>賣出材料' + (mats.length ? ' <button class="small" data-act="sellMats">全部賣出（保留任務要的）</button>' : '') + '</h3><div class="sellgrid">';
+      if (!mats.length) sell += '<div class="dim">沒有材料。打倒怪物會掉。</div>';
+      mats.forEach((k) => {
+        const m = D.materials[k];
+        const res = G.quests.reserved(k);
+        sell += '<div class="sellrow"><img class="mat" src="' + G.art.iconURL(k) + '"><span>' + m.name + ' ×' + P.questItems[k] + (res ? ' <small class="warn">任務要 ' + res + '</small>' : '') + '</span>' +
+          '<button data-act="sellMat" data-arg="' + k + ':1">賣 1（' + m.price + '）</button></div>';
+      });
+      sell += '</div>';
+      let trade = '';
+      if (this.shopId !== 'mole') {
+        trade = '<h3>以物易物</h3>';
+        D.trades.forEach((t, i) => {
+          const ok = this.canTrade(t);
+          const need = Object.keys(t.need).map((k) => {
+            const have = P.questItems[k] || 0;
+            return '<span class="' + (have >= t.need[k] ? '' : 'warn') + '">' + D.materials[k].name + ' ' + have + '/' + t.need[k] + '</span>';
+          }).join('、');
+          trade += '<div class="good"><img src="' + G.art.iconURL(this.tradeGiveIcon(t)) + '"><div class="info"><div class="nm">' + this.tradeGiveName(t) + '</div><div class="ds">' + need + '</div></div>' +
+            '<button data-act="trade" data-arg="' + i + '"' + (ok ? '' : ' disabled') + '>交換</button></div>';
+        });
+      }
+      return this.frame((this.shopId === 'mole' ? '鼴鼠的補給站' : '貓頭鷹的小舖') + '　<span class="gold"><img src="' + G.art.iconURL('gold') + '">' + P.gold + '</span>', '<div class="shop"><div class="col">' + buy + trade + '</div><div class="col">' + sell + '</div></div>', 'shop');
     },
     a_buy(arg) {
       const P = G.player;
       const D = G.data.items;
       const [i, n] = arg.split(':').map(Number);
-      const g = D.shops[this.shopId || 'owl'][i];
+      const g = (this.shopId === 'mole' ? D.moleShop : D.shops[this.shopId || 'owl'])[i];
       if (g.type === 'potion') {
         const cost = D.potions[g.id].price * n;
         if (P.gold < cost) return;
         P.gold -= cost;
-        P.potions[g.id] += n;
+        P.potions[g.id] = (P.potions[g.id] || 0) + n;
       } else {
         if (P.gold < g.price) return;
         if (P.bag.length >= G.data.balance.bagSize) {
@@ -507,6 +547,72 @@
         G.save.write();
       }
     },
+    a_sellMat(arg) {
+      const P = G.player;
+      const [k, n] = arg.split(':');
+      const c = Math.min(+n, P.questItems[k] || 0);
+      if (!c) return;
+      P.questItems[k] -= c;
+      P.gold += c * G.data.items.materials[k].price;
+      G.quests.recount();
+      G.audio.play('coin');
+      G.save.write();
+    },
+    a_sellMats() {
+      const P = G.player;
+      const D = G.data.items;
+      let sum = 0;
+      for (const k in D.materials) {
+        const c = Math.max(0, (P.questItems[k] || 0) - G.quests.reserved(k));
+        if (!c) continue;
+        P.questItems[k] -= c;
+        sum += c * D.materials[k].price;
+      }
+      if (!sum) return;
+      P.gold += sum;
+      G.hud.toast('賣出材料，獲得 ' + sum + ' 金葉', '#ffd84a');
+      G.audio.play('coin');
+      G.save.write();
+    },
+    canTrade(t) {
+      const P = G.player;
+      return Object.keys(t.need).every((k) => (P.questItems[k] || 0) >= t.need[k]);
+    },
+    tradeGiveName(t) {
+      const g = t.give;
+      if (g.potion) return G.data.items.potions[g.potion].name + ' ×' + g.n;
+      return g.name;
+    },
+    tradeGiveIcon(t) {
+      const g = t.give;
+      if (g.potion) return G.data.items.potions[g.potion].icon;
+      return g.unique ? 'queencap' : 'charm';
+    },
+    a_trade(i) {
+      const P = G.player;
+      const D = G.data.items;
+      const t = D.trades[+i];
+      if (!t || !this.canTrade(t)) return;
+      const g = t.give;
+      if ((g.equip || g.unique) && P.bag.length >= G.data.balance.bagSize) {
+        G.hud.toast('背包已滿', '#ff9a9a');
+        G.audio.play('error');
+        return;
+      }
+      for (const k in t.need) P.questItems[k] -= t.need[k];
+      if (g.potion) {
+        P.potions[g.potion] = (P.potions[g.potion] || 0) + g.n;
+        G.hud.toast('換到 ' + this.tradeGiveName(t), '#ffb0a0');
+        G.audio.play('potion');
+      } else {
+        const it = g.unique ? G.loot.makeUnique(G.util.pick(Object.keys(D.uniques))) : G.loot.randomEquip(P.level, g.equip);
+        P.bag.push(it);
+        G.hud.toast('換到「' + it.name + '」', D.rarity[it.rarity].color);
+        G.audio.play(it.rarity === 'legendary' ? 'legendary' : it.rarity === 'epic' ? 'epic' : 'rare');
+      }
+      G.quests.recount();
+      G.save.write();
+    },
     a_noop() {},
 
     // ───────── 選單 ─────────
@@ -518,6 +624,7 @@
           '<button class="primary" data-act="close">繼續遊戲</button>' +
           '<button data-act="openKeys">按鍵設定</button>' +
           '<button data-act="toggleSound">音效：' + (on ? '開' : '關') + '</button>' +
+          '<button data-act="toggleMusic">音樂：' + (G.music.enabled ? '開' : '關') + '</button>' +
           '<button data-act="toTitle">存檔並回到標題</button>' +
           '<button class="danger" data-act="resetGame">' + (this.confirmReset ? '再按一次：刪除存檔並重新開始' : '重新開始') + '</button>' +
           '<div class="dim small">遊玩時間 ' + U.fmtTime(G.player.playTime) + '</div>' +
@@ -530,6 +637,9 @@
     },
     a_toggleSound() {
       G.audio.setEnabled(!G.audio.enabled);
+    },
+    a_toggleMusic() {
+      G.music.setEnabled(!G.music.enabled);
     },
     a_toTitle() {
       G.save.write();

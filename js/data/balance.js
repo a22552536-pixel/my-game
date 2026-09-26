@@ -26,11 +26,11 @@ G.data.balance = {
   expToNext: (lv) => Math.floor(10 * Math.pow(lv, 1.6)) + 5,
   // 各形態的能力倍率。進化每升一轉，攻擊再乘上一點。
   forms: (function () {
-    const f = { base: { hp: 1, mp: 1, atk: 1, crit: 0.15 } };
+    const f = { base: { hp: 1, mp: 1, atk: 1, crit: 0.2 } };
     for (let k = 1; k <= 4; k++) {
-      f['might' + k] = { hp: 1.4 + 0.1 * (k - 1), mp: 0.6, atk: 1.15 + 0.08 * (k - 1), crit: 0.15 };
-      f['magic' + k] = { hp: 0.8, mp: 1.8 + 0.1 * (k - 1), atk: 1.2 + 0.08 * (k - 1), crit: 0.18 };
-      f['agile' + k] = { hp: 1.0, mp: 0.9, atk: 1.1 + 0.08 * (k - 1), crit: 0.3 + 0.02 * (k - 1) };
+      f['might' + k] = { hp: 1.4 + 0.1 * (k - 1), mp: 0.6, atk: 1.15 + 0.08 * (k - 1), crit: 0.2 };
+      f['magic' + k] = { hp: 0.8, mp: 1.8 + 0.1 * (k - 1), atk: 1.2 + 0.08 * (k - 1), crit: 0.23 };
+      f['agile' + k] = { hp: 1.0, mp: 0.9, atk: 1.1 + 0.08 * (k - 1), crit: 0.33 + 0.02 * (k - 1) };
     }
     return f;
   })(),
@@ -61,6 +61,13 @@ G.data.balance = {
   eliteScale: 1.45,
   shinyChance: 0.01,
   shinyExpMult: 5,
+  // 變異個體：同一種怪的變體，不用重新設計，靠大小、色調、動作做出差異
+  variants: {
+    giant: { chance: 0.04, name: '巨大', color: '#ffb070', scale: 1.45, hp: 3, atk: 1.3, exp: 3, speed: 0.8, loot: 'elite' },
+    tiny: { chance: 0.04, name: '迷你', color: '#b0f0ff', scale: 0.65, hp: 0.6, atk: 0.8, exp: 2, speed: 1.7, loot: 'gold' },
+    rage: { chance: 0.03, name: '狂暴', color: '#ff7a6a', tint: '#ff3a2a', tintAmt: 0.38, hp: 1.6, atk: 1.6, exp: 2.5, speed: 1.4, aggressive: true, loot: 'elite' },
+    ghost: { chance: 0.02, name: '幽靈', color: '#c8d8ff', tint: '#b8c8ff', tintAmt: 0.5, alpha: 0.6, hp: 1.3, atk: 1.2, exp: 3, speed: 1.1, float: true, loot: 'elite' },
+  },
 
   // ── 掉落 ──
   pickupDelay: 0.35,

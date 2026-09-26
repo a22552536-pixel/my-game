@@ -34,6 +34,7 @@
         stats,
         sub: null,
         special: null,
+        tint: base.tint || null,
       };
       if (!fixed && (rarity === 'epic' || rarity === 'legendary')) {
         const s = U.pick(D().substats);
@@ -48,6 +49,18 @@
         item.name = base.name + '·' + D().specials[item.special].name;
       }
       return item;
+    },
+
+    makeUnique(id) {
+      const u = D().uniques[id];
+      return {
+        uid: 'i' + uidSeq++, base: id, slot: u.slot, name: u.name, req: u.req, tier: u.tier,
+        rarity: 'legendary', stats: Object.assign({}, u.stats), sub: null, special: u.special, tint: u.tint, unique: true,
+      };
+    },
+
+    rollPotion() {
+      return U.weighted(D().potionDrops);
     },
 
     totalStats(item) {
@@ -86,15 +99,21 @@
       if (d.gold) this.spawn('gold', x, y, { amount: U.randi(d.gold[0], d.gold[1]) * (m.elite ? 4 : 1) * (m.shiny ? 5 : 1) });
       if (m.shiny) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'shiny') });
+      } else if (m.V && m.V.loot === 'elite' && Math.random() < 0.6) {
+        this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'elite') });
+      } else if (m.V && m.V.loot === 'gold') {
+        this.spawn('gold', x, y, { amount: U.randi(d.gold[0], d.gold[1]) * 4 });
       } else if (m.elite) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'elite') });
       } else if (d.equip && Math.random() < d.equip) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'normal') });
       }
-      if (d.potion && Math.random() < d.potion) this.spawn('potion', x, y, { potion: Math.random() < 0.65 ? 'hp' : 'mp' });
-      if (d.quest && G.quests.collectActive(d.quest.item) && Math.random() < d.quest.chance) {
-        this.spawn('quest', x, y, { qitem: d.quest.item });
-      }
+      if (d.potion && Math.random() < d.potion * (m.elite || m.V ? 3 : 1)) this.spawn('potion', x, y, { potion: this.rollPotion() });
+      // 材料：身上有對應的收集任務時更容易掉
+      (d.mats || []).forEach(([id, chance]) => {
+        const c = G.quests.collectActive(id) ? Math.max(chance, 0.6) : chance;
+        if (Math.random() < c * (m.V ? 2 : 1)) this.spawn('quest', x, y, { qitem: id });
+      });
     },
 
     dropFromBoss(b) {
@@ -102,8 +121,10 @@
       for (let i = 0; i < 4; i++) this.spawn('gold', b.x + U.rand(-60, 60), b.y - 120, { amount: Math.round(U.randi(d.gold[0], d.gold[1]) / 4) });
       this.spawn('equip', b.x - 30, b.y - 120, { item: this.randomEquip(10, 'boss') });
       this.spawn('equip', b.x + 30, b.y - 120, { item: this.randomEquip(10, 'boss') });
-      this.spawn('potion', b.x, b.y - 120, { potion: 'hp', count: 5 });
+      this.spawn('potion', b.x, b.y - 120, { potion: 'hpL', count: 3 });
+      if (Math.random() < 0.35) this.spawn('equip', b.x, b.y - 130, { item: this.makeUnique(U.pick(Object.keys(D().uniques))) });
       this.spawn('starleaf', b.x, b.y - 140, {});
+      this.spawn('quest', b.x + 50, b.y - 120, { qitem: 'queencap' });
     },
 
     dropFromChest(ch) {
@@ -148,6 +169,7 @@
           continue;
         }
         if (dr.blocked && dist > b.magnetRadius * 1.5) dr.blocked = false;
+        if (dr.float) continue;
         if (!dr.onGround) {
           G.physics.step(dr, dt, map);
           if (dr.onGround) dr.vx = 0;
@@ -185,7 +207,7 @@
         }
         case 'quest':
           P.questItems[dr.qitem] = (P.questItems[dr.qitem] || 0) + 1;
-          G.quests.onCollect(dr.qitem);
+          if (!G.quests.onCollect(dr.qitem)) G.fx.text(P.x, P.y - 90, '+' + I.materials[dr.qitem].name, '#d8f0b0', 13, 0.7);
           G.audio.play('pickup');
           return true;
         case 'starleaf':
@@ -230,7 +252,7 @@
         }
         let icon = dr.kind;
         if (dr.kind === 'equip') icon = dr.item.slot;
-        else if (dr.kind === 'potion') icon = dr.potion === 'hp' ? 'hpPot' : 'mpPot';
+        else if (dr.kind === 'potion') icon = D().potions[dr.potion].icon;
         else if (dr.kind === 'quest') icon = dr.qitem;
         if (dr.kind === 'equip') {
           const R = D().rarity[dr.item.rarity];
@@ -245,7 +267,13 @@
         ctx.save();
         ctx.translate(dr.x, y);
         ctx.scale(dr.kind === 'gold' ? spin : 1, 1);
+        if (dr.kind === 'equip' && dr.item.tint) {
+          G.art.mode = 'tint';
+          G.art.modeColor = dr.item.tint;
+          G.art.modeAmt = 0.45;
+        }
         G.art.drawIcon(ctx, icon, 0, 0, dr.kind === 'gold' ? 0.8 : 0.9);
+        G.art.mode = null;
         ctx.restore();
       }
     },

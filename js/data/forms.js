@@ -3,7 +3,7 @@
 G.data.lines = {
   might: { name: '力量', role: '對應劍士', desc: '貼身重擊，皮粗肉厚，不容易被擊退。' },
   magic: { name: '法術', role: '對應法師', desc: '站遠施法，無視地形，MP 同時是彈藥和護盾。' },
-  agile: { name: '敏捷', role: '對應盜賊', desc: '身輕腳快，連擊與爆擊，遠近都能打。' },
+  agile: { name: '敏捷', role: '對應盜賊', desc: '身輕腳快，連擊與黑閃，遠近都能打。' },
 };
 
 G.data.forms = {

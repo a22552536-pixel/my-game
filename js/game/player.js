@@ -40,6 +40,7 @@
       this.equip = { claw: G.loot.makeEquip('claw1', 'common', { atk: 4 }), mane: null, charm: null };
       this.bag = [];
       this.potions = { hp: 5, mp: 3 };
+      this.buffs = {};
       this.questItems = {};
       this.playTime = 0;
       this.resetBody();
@@ -78,6 +79,7 @@
       }
       this.maxHp = Math.round(hp);
       this.maxMp = Math.round(mp);
+      if (this.buffs && this.buffs.atk) atk *= 1 + this.buffs.atk.v;
       this.atk = atk;
       this.def = def;
       this.crit = Math.min(0.8, crit);
@@ -127,6 +129,17 @@
       if (this.landT > 0) this.landT -= dt;
       if (this.slowT > 0) this.slowT -= dt;
       if (this.glowT > 0) this.glowT -= dt;
+      if (this.buffs) {
+        let changed = false;
+        for (const k in this.buffs) {
+          this.buffs[k].t -= dt;
+          if (this.buffs[k].t <= 0) {
+            delete this.buffs[k];
+            changed = true;
+          }
+        }
+        if (changed) this.recalc();
+      }
 
       if (this.dead) {
         this.deadT += dt;
@@ -222,7 +235,7 @@
     updateMove(dt, inputX, canControl, Dn) {
       const b = B();
       const gale = this.passive('galeStep');
-      const speed = b.walkSpeed * (this.slowT > 0 ? 0.55 : 1) * (gale ? 1 + gale.speed : 1);
+      const speed = b.walkSpeed * (this.slowT > 0 ? 0.55 : 1) * (gale ? 1 + gale.speed : 1) * (this.specials.swift ? 1.1 : 1);
       if (this.action && this.action.type === 'dash') return;
       if (this.onGround) {
         let target = inputX * speed;
@@ -504,17 +517,43 @@
       return { x: this.x - this.w / 2, y: this.y - this.h, w: this.w, h: this.h };
     },
 
+    // 快捷鍵 1／2：先用小的，用完再用大的
     usePotion(kind) {
-      if (this.potCd > 0) return;
+      const big = kind + 'L';
+      if ((this.potions[kind] || 0) <= 0 && (this.potions[big] || 0) > 0) return this.useItem(big);
       if ((this.potions[kind] || 0) <= 0) {
         G.hud.toast((kind === 'hp' ? '紅漿果' : '藍花蜜') + '用完了', '#ddd');
         G.audio.play('error');
         return;
       }
+      return this.useItem(kind);
+    },
+
+    useItem(id) {
+      const def = G.data.items.potions[id];
+      if (!def || (this.potions[id] || 0) <= 0) return;
+      if (def.kind === 'buff') {
+        this.potions[id]--;
+        this.buffs = this.buffs || {};
+        this.buffs[def.buff] = { v: def.value, t: def.time, icon: def.icon, name: def.name };
+        this.recalc();
+        G.fx.pillar(this.x, this.y, def.buff === 'atk' ? 'rgba(255,140,80,0.8)' : 'rgba(140,200,255,0.8)', 0.8, 60);
+        G.hud.toast(def.name + '：' + def.desc, '#ffd0a0');
+        G.audio.play('potion');
+        return;
+      }
+      if (def.kind === 'home') {
+        this.potions[id]--;
+        G.ui.closeAll();
+        const camp = G.data.camps[G.world.map.region] || '1-1';
+        G.world.changeMap(camp, 'camp');
+        return;
+      }
+      const kind = def.kind;
+      if (this.potCd > 0) return;
       if (kind === 'hp' && this.hp >= this.maxHp) return;
       if (kind === 'mp' && this.mp >= this.maxMp) return;
-      const def = G.data.items.potions[kind];
-      this.potions[kind]--;
+      this.potions[id]--;
       this.potCd = B().potionCooldown;
       if (kind === 'hp') {
         const n = Math.min(def.heal, this.maxHp - this.hp);
@@ -536,6 +575,7 @@
       let dmg = Math.max(1, Math.round(raw * U.rand(0.9, 1.1) - this.def * b.defFactor));
       const rock = this.passive('rockSkin');
       if (rock) dmg = Math.max(1, Math.round(dmg * (1 - rock.reduce)));
+      if (this.buffs && this.buffs.guard) dmg = Math.max(1, Math.round(dmg * (1 - this.buffs.guard.v)));
       const shield = this.passive('manaShield');
       if (shield && this.mp > 0) {
         const take = Math.min(Math.floor(this.mp), Math.round(dmg * shield.absorb));

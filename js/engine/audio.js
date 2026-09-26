@@ -26,12 +26,13 @@
           this.ctx = null;
         }
       }
-      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      if (this.ctx && this.ctx.state === 'suspended' && !document.hidden) this.ctx.resume();
+      if (this.ctx && G.music) G.music.onUnlock();
     },
 
     setEnabled(on) {
       this.enabled = on;
-      G.store.set('xiaozong_audio_v1', { enabled: on });
+      G.store.set('xiaozong_audio_v1', Object.assign(G.store.get('xiaozong_audio_v1') || {}, { enabled: on }));
     },
 
     loadPrefs() {
@@ -100,7 +101,7 @@
         this.tone(240, 0.12, 'sine', 0.5, 80);
         this.tone(1400, 0.08, 'square', 0.08, 900, 0.01);
       },
-      // 以下沿用爆擊音效的做法：噪音爆裂 + 低頻重擊 + 高頻清脆音頭
+      // 以下沿用黑閃音效的做法：噪音爆裂 + 低頻重擊 + 高頻清脆音頭
       claw() {
         this.noise(0.06, 0.4, 2800);
         this.tone(200, 0.08, 'sine', 0.4, 90);
@@ -150,6 +151,10 @@
         [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.35, 'triangle', 0.14, null, i * 0.09));
         this.noise(1.2, 0.18, 6000, 'highpass', 0.5);
         this.tone(55, 1.2, 'sine', 0.4, 110, 0.6);
+      },
+      boing() {
+        this.tone(180, 0.3, 'sine', 0.3, 720);
+        this.tone(360, 0.2, 'triangle', 0.08, 900, 0.03);
       },
       jump() { this.tone(260, 0.09, 'square', 0.07, 520); },
       land() { this.noise(0.05, 0.12, 500); },

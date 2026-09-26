@@ -12,17 +12,30 @@
     this.id = id;
     this.def = d;
     this.elite = !!opts.elite;
-    this.shiny = !this.elite && Math.random() < b.shinyChance;
-    this.scale = this.elite ? b.eliteScale : 1;
+    this.shiny = !this.elite && !opts.noVariant && Math.random() < b.shinyChance;
+    this.variant = null;
+    if (!this.elite && !this.shiny && !opts.noVariant) {
+      let r = Math.random();
+      for (const k in b.variants) {
+        r -= b.variants[k].chance;
+        if (r < 0) {
+          this.variant = k;
+          break;
+        }
+      }
+    }
+    const V = this.variant ? b.variants[this.variant] : null;
+    this.V = V;
+    this.scale = this.elite ? b.eliteScale : V ? V.scale || 1 : 1;
     this.w = d.w;
     this.h = d.h;
     this.halfW = (d.w * this.scale) / 2;
     this.level = d.lv;
-    this.maxHp = Math.round(b.monsterHp(d.lv) * (d.hpMul || 1) * (this.elite ? b.eliteHpMult : 1));
+    this.maxHp = Math.round(b.monsterHp(d.lv) * (d.hpMul || 1) * (this.elite ? b.eliteHpMult : 1) * (V ? V.hp : 1));
     this.hp = this.maxHp;
-    this.atk = Math.round(b.monsterAtk(d.lv) * (d.atkMul || 1) * (this.elite ? b.eliteAtkMult : 1));
+    this.atk = Math.round(b.monsterAtk(d.lv) * (d.atkMul || 1) * (this.elite ? b.eliteAtkMult : 1) * (V ? V.atk : 1));
     this.armor = b.monsterDef(d.lv);
-    this.exp = Math.round(b.monsterExp(d.lv) * (this.elite ? b.eliteExpMult : 1) * (this.shiny ? b.shinyExpMult : 1));
+    this.exp = Math.round(b.monsterExp(d.lv) * (this.elite ? b.eliteExpMult : 1) * (this.shiny ? b.shinyExpMult : 1) * (V ? V.exp : 1));
     this.x = x;
     this.y = p[2];
     this.vx = 0;
@@ -154,12 +167,12 @@
     }
 
     if (this.aggroT > 0) this.aggroT -= dt;
-    if (d.behavior === 'aggressive' && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < (d.sight || 300)) {
+    if ((d.behavior === 'aggressive' || (this.V && this.V.aggressive)) && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < (d.sight || 300)) {
       this.aggroT = Math.max(this.aggroT, 2);
     }
     const aggro = this.aggroT > 0 && P.alive();
     const [minX, maxX] = this.bounds();
-    const speed = d.speed;
+    const speed = d.speed * (this.V ? this.V.speed : 1);
 
     if (this.shellT > 0) {
       this.shellT -= dt;
@@ -304,10 +317,10 @@
       ctx.fillStyle = '#e8433a';
       ctx.fillRect(this.x - w / 2, top, w * (this.hp / this.maxHp), 5);
     }
-    if (this.elite || this.shiny) {
-      const label = (this.elite ? '菁英 ' : '閃光 ') + this.def.name;
-      G.art.nameTag(ctx, this.x, this.y + 14, label, this.elite ? '#8fd0ff' : '#ffe066');
-    } else if (this.hpShowT > 0) {
+    if (this.elite || this.shiny || this.V) {
+      const label = (this.elite ? '菁英 ' : this.shiny ? '閃光 ' : this.V.name + ' ') + this.def.name;
+      G.art.nameTag(ctx, this.x, this.y + 14, label, this.elite ? '#8fd0ff' : this.shiny ? '#ffe066' : this.V.color);
+    } else {
       G.art.nameTag(ctx, this.x, this.y + 14, 'Lv.' + this.level + ' ' + this.def.name, '#fff');
     }
   };

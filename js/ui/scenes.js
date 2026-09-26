@@ -15,6 +15,7 @@
       this.titleT = 0;
       G.ui.closeAll();
       G.hud.reset();
+      G.music.play('title');
       this.showTitle();
     },
 

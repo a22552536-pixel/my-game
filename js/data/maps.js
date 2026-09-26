@@ -3,6 +3,7 @@
 // ropes：[x, 上端 y, 下端 y, 'vine' | 'ladder']，上下端要對齊平台表面。
 // portals：{ id, x, p（所在平台）, to（目標地圖）, target（目標傳送門 id） }
 // mobs：{ m（怪物 id）, p（平台）, n（數量）, x1?, x2?（限制範圍） }
+// springs：彈跳菇 { x, p, power }；signs：告示牌 { x, p, text }；leaves：漂浮金葉 { x, y }
 // 跳躍高度約 116px，層距超過就要放繩子。
 G.data.maps = {
   '1-1': {
@@ -28,6 +29,10 @@ G.data.maps = {
       { id: 'squirrel', x: 1400, p: 0 },
     ],
     camp: { x1: 980, x2: 1480 },
+    signs: [
+      { x: 920, p: 0, text: '苔光營地　營火旁邊休息，HP 和 MP 回得比較快。' },
+      { x: 2380, p: 0, text: '→ 蘑菇林地　小心會跳的蘑菇。' },
+    ],
     mobs: [
       { m: 'dewsnail', p: 0, n: 4, x1: 420, x2: 900 },
       { m: 'dewsnail', p: 1, n: 2 },
@@ -63,6 +68,9 @@ G.data.maps = {
       { id: 'l', x: 70, p: 0, to: '1-1', target: 'r' },
       { id: 'r', x: 3330, p: 0, to: '1-3', target: 'l' },
     ],
+    npcs: [{ id: 'frog', x: 1150, p: 0 }],
+    springs: [{ x: 1560, p: 0, power: 1420 }],
+    signs: [{ x: 230, p: 0, text: '蘑菇林地　踩上紅色的大蘑菇，可以一口氣跳到最上層。' }],
     mobs: [
       { m: 'dewsnail', p: 0, n: 2, x1: 300, x2: 1400 },
       { m: 'capshroom', p: 0, n: 3, x1: 1500, x2: 3100 },
@@ -107,6 +115,10 @@ G.data.maps = {
       { id: '1-3a', x: 430, p: 6 },
       { id: '1-3b', x: 2820, p: 7 },
     ],
+    npcs: [{ id: 'fawn', x: 1180, p: 0 }],
+    springs: [{ x: 440, p: 0, power: 1310 }],
+    signs: [{ x: 2600, p: 0, text: '木漏日深谷　有人說，樹梢上藏著會發光的箱子。' }],
+    leaves: [[900, 600], [960, 580], [1020, 570], [1080, 575], [1140, 590], [1200, 610], [2000, 600], [2060, 585], [2120, 590]],
     elites: [
       { m: 'spotshroom', p: 4, x: 1050 },
     ],
@@ -155,6 +167,8 @@ G.data.maps = {
       { id: 'l', x: 70, p: 0, to: '1-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '1-B', target: 'l' },
     ],
+    npcs: [{ id: 'mole', x: 3420, p: 0 }],
+    signs: [{ x: 3620, p: 0, text: '女王菇的殿堂　閒雜菇等，請勿進入。' }],
     mobs: [
       { m: 'woodsnail', p: 0, n: 2, x1: 400, x2: 1800 },
       { m: 'spotshroom', p: 0, n: 2, x1: 2000, x2: 3500 },

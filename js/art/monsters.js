@@ -708,11 +708,18 @@
       ctx.translate(0, -k * 10);
     }
     const flash = m.hurtFlash > 0 ? Math.min(1, m.hurtFlash / 0.06) : 0;
+    const V = m.V;
+    if (V && V.float && !m.dead) ctx.translate(0, -6 + Math.sin(m.t * 3) * 3);
+    if (V && V.alpha && !m.dead) ctx.globalAlpha = V.alpha + Math.sin(m.t * 4) * 0.1;
     if (flash > 0) {
       A.mode = 'flash';
       A.modeAmt = 0.85 * flash;
     } else if (m.shiny) {
       A.mode = 'shiny';
+    } else if (V && V.tint) {
+      A.mode = 'tint';
+      A.modeColor = V.tint;
+      A.modeAmt = V.tintAmt;
     }
     fn(ctx, m);
     A.mode = null;
@@ -720,6 +727,9 @@
     ctx.globalAlpha = 1;
     if (m.shiny && !m.dead && Math.random() < 0.15) {
       G.fx.sparkle(m.x, m.y - m.h * 0.6 * sc, '#ffe066', 1, m.w * 0.5);
+    }
+    if (V && !m.dead && m.variant === 'rage' && Math.random() < 0.2) {
+      G.fx.particles.push({ x: m.x + G.util.rand(-10, 10), y: m.y - m.h * sc, vx: G.util.rand(-10, 10), vy: -60, life: 0.6, t: 0, size: 4, color: 'rgba(255,90,70,0.6)', grav: -30, shape: 'circle', drag: 0 });
     }
   };
 })();

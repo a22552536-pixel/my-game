@@ -19,7 +19,7 @@
     if (A.mode === 'flash') return U.mix(col, '#ffffff', A.modeAmt);
     if (A.mode === 'shiny') return U.mix(col, '#ffd24a', 0.55);
     if (A.mode === 'dark') return U.mix(col, '#1d1330', A.modeAmt);
-    if (A.mode === 'tint') return U.mix(col, A.modeColor, 0.7);
+    if (A.mode === 'tint') return U.mix(col, A.modeColor, A.modeAmt || 0.7);
     return col;
   };
   A.outline = function () {
