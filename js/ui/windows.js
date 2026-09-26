@@ -81,7 +81,13 @@
       const el = this.els[name];
       if (!el) return;
       const fn = this['r_' + name];
-      el.innerHTML = fn ? fn.call(this) : '';
+      try {
+        el.innerHTML = fn ? fn.call(this) : '';
+      } catch (e) {
+        // 畫面出錯時至少留一個能關掉的視窗，不要卡住整個遊戲
+        console.error(e);
+        el.innerHTML = this.frame('出了點問題', '<div class="dim">這個視窗暫時打不開（' + esc(String(e.message || e)) + '）。按 Esc 關閉。</div>');
+      }
     },
 
     // 每幀從主迴圈呼叫：處理 Esc 與開關視窗的按鍵
@@ -291,8 +297,9 @@
         const slot = P.hotbar.indexOf(id);
         h += '<div class="skill"><img src="' + G.art.iconURL(S.icon) + '"><div class="info">';
         h += '<div class="nm">' + S.name + ' <span class="lv">Lv.' + lv + ' / ' + S.maxLv + '</span>' + (slot >= 0 ? ' <span class="key">[' + I.label(G.data.keys.skillSlots[slot]) + ']</span>' : '') + '</div>';
-        h += '<div class="ds">' + (lv > 0 ? S.desc(lv) + '（MP ' + S.mp(lv) + '）' : '尚未學會') + '</div>';
-        if (lv < S.maxLv) h += '<div class="ds next">下一級：' + S.desc(lv + 1) + '（MP ' + S.mp(lv + 1) + '）</div>';
+        const mpTxt = (l) => (typeof S.mp === 'function' ? '（MP ' + S.mp(l) + '）' : '');
+        h += '<div class="ds">' + (lv > 0 ? S.desc(lv) + mpTxt(lv) : '尚未學會') + '</div>';
+        if (lv < S.maxLv) h += '<div class="ds next">下一級：' + S.desc(lv + 1) + mpTxt(lv + 1) + '</div>';
         h += '</div><div class="btns">';
         const tut = id === 'roar' && G.tutorial.current() && G.tutorial.current().id === 'learn';
         h += '<button class="primary' + (tut ? ' tut-glow' : '') + '" data-act="learn" data-arg="' + id + '"' + (P.sp > 0 && lv < S.maxLv ? '' : ' disabled') + '>＋</button>';
