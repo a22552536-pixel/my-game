@@ -58,6 +58,7 @@
       this.climbing = -1;
       this.slowT = 0;
       this.ignorePlat = -1;
+      this.delayed = [];
     },
 
     recalc() {
@@ -110,6 +111,7 @@
         G.fx.text(this.x, this.y - 120, 'LEVEL UP!', '#ffe14a', 34, 1.8);
         G.audio.play('levelup');
         G.hud.toast('等級提升到 Lv.' + this.level + '！獲得 ' + ups + ' 點技能點（按 ' + I.label('skills') + ' 分配）', '#ffe14a');
+        if (G.evolve.canEvolve()) G.hud.toast('星楓葉在發光……可以進化了！去營地找刺蝟婆婆', '#ffb0f0');
         G.save.write();
       }
     },
@@ -153,6 +155,7 @@
       const Dn = canControl && I.isDown('down');
       const inputX = (R ? 1 : 0) - (L ? 1 : 0);
 
+      this.updateDelayed(dt);
       if (canControl) this.handleActions(inputX, Dn);
 
       if (this.climbing >= 0) {
@@ -207,7 +210,8 @@
             this.onGround = false;
             this.vy = 60;
           } else {
-            this.vy = -B().jumpVel;
+            const gj = this.passive('galeStep');
+            this.vy = -B().jumpVel * (gj ? 1 + gj.speed * 0.5 : 1);
             this.onGround = false;
             G.audio.play('jump');
           }
@@ -217,7 +221,8 @@
 
     updateMove(dt, inputX, canControl, Dn) {
       const b = B();
-      const speed = b.walkSpeed * (this.slowT > 0 ? 0.55 : 1);
+      const gale = this.passive('galeStep');
+      const speed = b.walkSpeed * (this.slowT > 0 ? 0.55 : 1) * (gale ? 1 + gale.speed : 1);
       if (this.action && this.action.type === 'dash') return;
       if (this.onGround) {
         let target = inputX * speed;
@@ -306,10 +311,22 @@
       G.audio.play('swing');
     },
 
+    skillLv(id) {
+      return this.skills[id] || 0;
+    },
+    passive(id) {
+      const lv = this.skillLv(id);
+      return lv > 0 ? G.data.skills[id].value(lv) : null;
+    },
+
     useSkill(id) {
       const S = G.data.skills[id];
       const lv = this.skills[id] || 0;
       if (!S) return;
+      if (S.type === 'passive') {
+        G.hud.toast(S.name + ' 是被動技能，學會後自動生效', '#ddd');
+        return;
+      }
       if (lv <= 0) {
         G.hud.toast(S.name + ' 還沒學會。按 ' + I.label('skills') + ' 用技能點學習', '#ddd');
         G.audio.play('error');
@@ -335,12 +352,96 @@
         this.glowT = 0.5;
         G.fx.sparkle(this.x, this.y - 40, '#fff0b0', 8, 26);
         G.audio.play('roar');
+      } else if (S.type === 'melee') {
+        this.action = { type: 'strike', id, lv, t: 0, dur: S.castTime, hitIdx: 0 };
+        this.glowT = 0.3;
+        G.audio.play(S.fx === 'rock' ? 'heavyWind' : S.fx === 'sweep' ? 'sweep' : 'swing');
+      } else if (S.type === 'bolt') {
+        this.action = { type: 'cast', id, lv, t: 0, dur: S.castTime, fired: 0 };
+        this.glowT = 0.3;
+        G.audio.play('charge');
+      } else if (S.type === 'lockon') {
+        this.action = { type: 'lockon', id, lv, t: 0, dur: S.castTime, done: false };
+        this.glowT = 0.5;
+        G.fx.sparkle(this.x, this.y - 40, '#8ff0e8', 10, 30);
+        G.audio.play('charge');
+      }
+    },
+
+    // 延遲命中（靈爪的第二下等）
+    updateDelayed(dt) {
+      if (!this.delayed || !this.delayed.length) return;
+      for (let i = this.delayed.length - 1; i >= 0; i--) {
+        const d = this.delayed[i];
+        d.t -= dt;
+        if (d.t > 0) continue;
+        this.delayed.splice(i, 1);
+        if (!d.m.dead) d.fn(d.m);
       }
     },
 
     updateAction(dt) {
       const a = this.action;
       a.t += dt;
+      if (a.type === 'strike') {
+        const S = G.data.skills[a.id];
+        while (a.hitIdx < S.hits.length && a.t >= S.hits[a.hitIdx]) {
+          const box = this.frontBox(S.range.w, S.range.h);
+          const fxX = this.x + this.dir * 40;
+          const fxY = this.y - 30;
+          if (S.fx === 'rock') {
+            G.fx.slash(fxX, fxY, this.dir, 40, '#e8d0a8', 'wide');
+            G.fx.burst(fxX + this.dir * 20, fxY, ['#9a7b5a', '#c8aa80', '#6e5236'], 10, 280, { shape: 'square', size: 6 });
+          } else if (S.fx === 'sweep') {
+            G.fx.slash(this.x + this.dir * 60, fxY, this.dir, 80, '#fff0d0', 'wide');
+            G.fx.slash(this.x + this.dir * 70, fxY + 6, this.dir, 64, 'rgba(210,180,130,0.9)', 'wide');
+            G.fx.dust(this.x + this.dir * 40, this.y, -this.dir, 10);
+          } else {
+            G.fx.slash(fxX, fxY - 4 + a.hitIdx * 10, this.dir, 30, a.hitIdx ? '#d8ff9a' : '#ffffff', 'claw');
+          }
+          const n = G.combat.playerHit(box, S.targets, S.mult(a.lv), { knock: S.knock, heavy: !!S.heavy, sound: S.fx });
+          if (n && S.fx === 'rock') {
+            G.fx.shake(6, 0.2);
+          }
+          a.hitIdx++;
+        }
+      } else if (a.type === 'cast') {
+        const S = G.data.skills[a.id];
+        while (a.fired < S.count && a.t >= S.fireAt + a.fired * 0.08) {
+          const spread = S.count > 1 ? (a.fired - (S.count - 1) / 2) * 10 : 0;
+          G.world.projectiles.push({
+            kind: S.proj, owner: 'player', id: a.id, lv: a.lv,
+            x: this.x + this.dir * 30, y: this.y - 34 + spread,
+            vx: this.dir * S.speed, vy: 0, dir: this.dir,
+            r: S.proj === 'spirit' ? 12 : 9, life: S.reach / S.speed, t: 0, seed: Math.random() * 6,
+          });
+          G.audio.play(S.proj === 'spirit' ? 'spiritShot' : 'featherShot');
+          a.fired++;
+        }
+      } else if (a.type === 'lockon') {
+        const S = G.data.skills[a.id];
+        if (!a.done && a.t >= S.hitAt) {
+          a.done = true;
+          const list = G.combat.targets()
+            .filter((m) => U.dist(m.x, m.y - 30, this.x, this.y - 30) < S.radius)
+            .sort((p, q) => U.dist(p.x, p.y, this.x, this.y) - U.dist(q.x, q.y, this.x, this.y))
+            .slice(0, S.targets);
+          if (!list.length) G.hud.toast('附近沒有目標', '#cfe');
+          this.delayed = this.delayed || [];
+          list.forEach((m, i) => {
+            for (let k = 0; k < S.repeat; k++) {
+              this.delayed.push({
+                m, t: i * 0.05 + k * 0.12,
+                fn: (mm) => {
+                  const cy = mm.y - mm.h * (mm.scale || 1) * 0.5;
+                  G.fx.slash(mm.x, cy, k ? -1 : 1, 26, '#8ff0e8', 'claw');
+                  G.combat.hitMonster(mm, S.mult(a.lv), { knock: 60, sound: 'spirit' });
+                },
+              });
+            }
+          });
+        }
+      }
       if (a.type === 'attack') {
         if (!a.done && a.t >= a.hitAt) {
           a.done = true;
@@ -379,7 +480,7 @@
         a.ghostT -= dt;
         if (a.ghostT <= 0) {
           a.ghostT = 0.035;
-          G.fx.ghost(this.x, this.y, this.dir, { state: 'dash', t: this.t, p: 0 }, '#ffd98a');
+          G.fx.ghost(this.x, this.y, this.dir, { state: 'dash', t: this.t, p: 0, form: this.form }, '#ffd98a');
         }
         // 速度線
         G.fx.streak(this.x - this.dir * U.rand(30, 70), this.y - U.rand(10, 55), this.dir > 0 ? 0 : Math.PI, U.rand(50, 90), 'rgba(255,245,210,0.9)', 2);
@@ -432,7 +533,17 @@
       opts = opts || {};
       if (this.dead || (this.invT > 0 && !opts.ignoreInv) || G.opts.godMode) return false;
       const b = B();
-      const dmg = Math.max(1, Math.round(raw * U.rand(0.9, 1.1) - this.def * b.defFactor));
+      let dmg = Math.max(1, Math.round(raw * U.rand(0.9, 1.1) - this.def * b.defFactor));
+      const rock = this.passive('rockSkin');
+      if (rock) dmg = Math.max(1, Math.round(dmg * (1 - rock.reduce)));
+      const shield = this.passive('manaShield');
+      if (shield && this.mp > 0) {
+        const take = Math.min(Math.floor(this.mp), Math.round(dmg * shield.absorb));
+        this.mp -= take;
+        dmg -= take;
+        if (take > 0) G.fx.damage(this.x + 20, this.y - 70, take, 'mp');
+      }
+      if (rock && Math.random() < rock.steady) opts = Object.assign({}, opts, { noKnock: true, steady: true });
       this.hp -= dmg;
       G.fx.damage(this.x, this.y - 70, dmg, 'player');
       if (opts.ignoreInv) {
@@ -467,12 +578,13 @@
 
     // ── 繪製 ──
     draw(ctx) {
+      if (G.evolve.anim) return;
       let state = 'idle';
       let p = 0;
       if (this.dead) state = 'dead';
       else if (this.climbing >= 0) state = 'climb';
       else if (this.action) {
-        state = this.action.type === 'attack' ? 'attack' : this.action.type;
+        state = this.action.type === 'attack' ? 'attack' : this.action.type === 'lockon' ? 'cast' : this.action.type;
         p = this.action.t / this.action.dur;
       } else if (this.hurtT > 0) state = 'hurt';
       else if (!this.onGround) state = this.vy < 0 ? 'jump' : 'fall';
@@ -495,6 +607,7 @@
         t: state === 'climb' ? this.climbAnim : this.t,
         p,
         moving: state === 'climb' && (I.isDown('up') || I.isDown('down')),
+        form: this.form,
         onGround: this.onGround,
       });
       ctx.globalAlpha = 1;

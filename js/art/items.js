@@ -118,6 +118,78 @@
         ctx.stroke();
       }
     },
+    heavyClaw(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(-10, 8); c.lineTo(-12, -4); c.lineTo(-2, -12); c.lineTo(10, -8); c.lineTo(12, 4); c.lineTo(2, 12); c.closePath(); }, '#9a7b5a', '#6e5236', { cel: [2, 2], lw: 2 });
+      ctx.strokeStyle = A.c('#ffffff');
+      ctx.lineWidth = 2.5;
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-6 + i * 5, -10);
+        ctx.lineTo(4 + i * 5, 10);
+        ctx.stroke();
+      }
+    },
+    maneSweep(ctx) {
+      ctx.strokeStyle = A.c('#fff0d0');
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(-4, 2, 14, -1.3, 1.3);
+      ctx.stroke();
+      A.ellipse(ctx, -6, 0, 7, 7, '#9a7b5a', '#6e5236', { cel: [1.5, 1.5], lw: 2, hl: false });
+    },
+    rockSkin(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(0, -13); c.lineTo(11, -7); c.lineTo(10, 6); c.lineTo(0, 13); c.lineTo(-10, 6); c.lineTo(-11, -7); c.closePath(); }, '#9a7b5a', '#6e5236', { cel: [2, 2], lw: 2 });
+      A.shape(ctx, (c) => { c.moveTo(0, -7); c.lineTo(6, -3); c.lineTo(5, 4); c.lineTo(0, 7); c.lineTo(-5, 4); c.lineTo(-6, -3); c.closePath(); }, '#c8aa80', null, { lw: 1.5, hl: false });
+    },
+    spiritBolt(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(12, 0); c.quadraticCurveTo(0, -10, -14, -2); c.quadraticCurveTo(0, 10, 12, 0); c.closePath(); }, '#8ff0e8', '#5fd0c8', { cel: [1.5, 1.5], lw: 2 });
+      A.ellipse(ctx, 4, 0, 4, 3, '#ffffff', null, { noStroke: true, hl: false });
+    },
+    spiritClaw(ctx) {
+      ctx.strokeStyle = A.c('#5fd0c8');
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-10 + i * 6, -12);
+        ctx.quadraticCurveTo(-2 + i * 6, 0, -8 + i * 6, 12);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = A.c('#e8fffc');
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    },
+    manaShield(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(0, -13); c.quadraticCurveTo(12, -10, 11, 0); c.quadraticCurveTo(9, 10, 0, 14); c.quadraticCurveTo(-9, 10, -11, 0); c.quadraticCurveTo(-12, -10, 0, -13); c.closePath(); }, '#6ab0ff', '#3a80d8', { cel: [2, 2], lw: 2 });
+      A.ellipse(ctx, 0, 0, 4, 4, '#e8fffc', null, { lw: 1.5, hl: false });
+    },
+    doubleClaw(ctx) {
+      ctx.strokeStyle = A.c('#ffffff');
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      [[-4, -1], [5, 1]].forEach(([dx, s]) => {
+        ctx.beginPath();
+        ctx.arc(dx, 0, 11, -1.1 * s, 1.1 * s, s < 0);
+        ctx.stroke();
+      });
+      A.ellipse(ctx, 0, 0, 5, 5, '#a8d04a', '#78a030', { lw: 2, hl: false });
+    },
+    featherThrow(ctx) {
+      [-5, 5].forEach((dy) => A.shape(ctx, (c) => { c.moveTo(12, dy); c.quadraticCurveTo(0, dy - 6, -12, dy - 1); c.quadraticCurveTo(0, dy + 5, 12, dy); c.closePath(); }, '#d8ff9a', '#a8d04a', { lw: 2, hl: false }));
+    },
+    galeStep(ctx) {
+      ctx.strokeStyle = A.c('#a8d04a');
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      [[-12, -6, 10], [-8, 1, 14], [-12, 8, 8]].forEach(([x, y, l]) => {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + l * 0.6, y - 4, x + l, y);
+        ctx.stroke();
+      });
+      A.ellipse(ctx, 8, 0, 5, 5, '#f2c24a', '#d49e2e', { lw: 2, hl: false });
+    },
     roar(ctx) {
       A.ellipse(ctx, -8, 0, 9, 9, '#f7b547', '#e0913a');
       ctx.fillStyle = A.c('#7a2323');

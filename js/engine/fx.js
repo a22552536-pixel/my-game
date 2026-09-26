@@ -12,6 +12,8 @@
     rings: [],
     bolts: [],
     impacts: [],
+    blackBolts: [],
+    darkFlash: 0,
     streaks: [],
     ghosts: [],
     waves: [],
@@ -34,6 +36,8 @@
       this.rings.length = 0;
       this.bolts.length = 0;
       this.impacts.length = 0;
+      this.blackBolts.length = 0;
+      this.darkFlash = 0;
       this.streaks.length = 0;
       this.ghosts.length = 0;
       this.waves.length = 0;
@@ -126,6 +130,35 @@
       this.rings.push({ x, y, color, r: 4, maxR: maxR || 80, t: 0, life: life || 0.4, w: width || 4 });
     },
 
+    // 爆擊：從命中點向外迸出紅邊的黑色閃電，畫面瞬間轉暗、邊緣泛紅
+    blackFlash(x, y, dir) {
+      const n = 7;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + U.rand(-0.3, 0.3);
+        const len = U.rand(70, 170);
+        const pts = [[x, y]];
+        let px = x;
+        let py = y;
+        const seg = 6;
+        for (let k = 1; k <= seg; k++) {
+          const d = (len * k) / seg;
+          const jitter = (k < seg ? U.rand(-16, 16) : 0);
+          px = x + Math.cos(a) * d - Math.sin(a) * jitter;
+          py = y + Math.sin(a) * d + Math.cos(a) * jitter;
+          pts.push([px, py]);
+        }
+        this.blackBolts.push({ pts, t: 0, life: U.rand(0.22, 0.34), w: U.rand(5, 9) });
+      }
+      this.darkFlash = 0.16;
+      this.impacts.push({ x, y, size: 90, color: '#ff2a3a', t: 0, life: 0.2, rot: Math.random() * Math.PI, dark: true });
+      for (let i = 0; i < 16; i++) {
+        this.particles.push({
+          x, y, vx: U.rand(-420, 420), vy: U.rand(-420, 260), life: U.rand(0.25, 0.5), t: 0,
+          size: U.rand(2, 5), color: U.pick(['#ff2a3a', '#1a0006', '#ff6a6a']), grav: 500, shape: 'square', drag: 1.5,
+        });
+      }
+    },
+
     // 命中瞬間的星形爆光
     impact(x, y, size, color) {
       this.impacts.push({ x, y, size: size || 40, color: color || '#ffffff', t: 0, life: 0.16, rot: Math.random() * Math.PI });
@@ -215,6 +248,8 @@
       });
       step(this.bolts);
       step(this.impacts);
+      step(this.blackBolts);
+      if (this.darkFlash > 0) this.darkFlash -= dt;
       step(this.streaks);
       step(this.ghosts);
       for (let i = this.waves.length - 1; i >= 0; i--) {
@@ -329,6 +364,7 @@
         ctx.restore();
       }
       for (const im of this.impacts) {
+        if (im.dark) continue;
         const k = im.t / im.life;
         const r = im.size * (0.5 + k * 0.8);
         ctx.save();
@@ -351,6 +387,46 @@
         ctx.restore();
       }
       ctx.restore();
+
+      // 黑色閃電（一般合成模式，才看得到黑色）
+      for (const im of this.impacts) {
+        if (!im.dark) continue;
+        const k = im.t / im.life;
+        ctx.save();
+        ctx.globalAlpha = 1 - k;
+        const g = ctx.createRadialGradient(im.x, im.y, 0, im.x, im.y, im.size * (0.6 + k));
+        g.addColorStop(0, 'rgba(10,0,4,0.9)');
+        g.addColorStop(0.45, 'rgba(120,0,16,0.55)');
+        g.addColorStop(1, 'rgba(255,40,60,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(im.x, im.y, im.size * (0.6 + k), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      for (const b of this.blackBolts) {
+        const k = b.t / b.life;
+        const shown = Math.min(b.pts.length, Math.ceil(b.pts.length * Math.min(1, k * 4)));
+        ctx.save();
+        ctx.globalAlpha = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
+        ctx.lineJoin = 'miter';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let i = 0; i < shown; i++) (i ? ctx.lineTo(b.pts[i][0], b.pts[i][1]) : ctx.moveTo(b.pts[i][0], b.pts[i][1]));
+        ctx.shadowColor = '#ff1a30';
+        ctx.shadowBlur = 14;
+        ctx.strokeStyle = '#ff2a3a';
+        ctx.lineWidth = b.w + 4;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#0a0004';
+        ctx.lineWidth = b.w;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,90,100,0.9)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.restore();
+      }
 
       for (const r of this.rings) {
         if (r.t < 0) continue;
@@ -414,6 +490,17 @@
       for (const t of this.texts) {
         if (t.screen) this.drawFloatText(ctx, t);
       }
+      if (this.darkFlash > 0) {
+        // 爆擊瞬間：畫面變暗，四周泛紅
+        const k = this.darkFlash / 0.16;
+        ctx.fillStyle = 'rgba(8,0,4,' + (0.38 * k).toFixed(3) + ')';
+        ctx.fillRect(0, 0, G.W, G.H);
+        const g = ctx.createRadialGradient(G.W / 2, G.H / 2, G.H * 0.3, G.W / 2, G.H / 2, G.H * 0.85);
+        g.addColorStop(0, 'rgba(255,20,40,0)');
+        g.addColorStop(1, 'rgba(200,0,24,' + (0.45 * k).toFixed(3) + ')');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, G.W, G.H);
+      }
       if (this.flash > 0) {
         ctx.globalAlpha = Math.min(1, this.flash);
         ctx.fillStyle = this.flashColor;
@@ -442,7 +529,7 @@
     drawNumbers(ctx) {
       const style = {
         normal: { size: 30, top: '#fff7c2', bottom: '#ffb52e', stroke: '#5a2a00' },
-        crit: { size: 40, top: '#ffe08a', bottom: '#ff5a1f', stroke: '#4a0f00' },
+        crit: { size: 42, top: '#ff8a8a', bottom: '#d0101e', stroke: '#140004' },
         player: { size: 30, top: '#f3c6ff', bottom: '#b03cd6', stroke: '#2a0036' },
         heal: { size: 26, top: '#d4ffd0', bottom: '#35c24a', stroke: '#063a10' },
         mp: { size: 26, top: '#d6ecff', bottom: '#3d8cff', stroke: '#06224a' },

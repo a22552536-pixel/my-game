@@ -31,6 +31,11 @@
   function update(dt) {
     G.time += dt;
     if (G.scene === 'play') {
+      if (G.evolve.update(dt)) {
+        G.fx.update(dt);
+        G.hud.update(dt);
+        return;
+      }
       G.ui.handleKeys();
       if (!G.ui.blocking()) G.world.update(dt);
       G.fx.update(dt);
@@ -48,6 +53,7 @@
     if (G.scene === 'play' && G.world.map) {
       G.world.draw(ctx);
       G.hud.draw(ctx);
+      G.evolve.draw(ctx);
       G.fx.drawScreen(ctx);
       if (G.world.fade > 0) {
         ctx.fillStyle = 'rgba(0,0,0,' + G.world.fade + ')';

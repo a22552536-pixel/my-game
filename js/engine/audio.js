@@ -89,6 +89,7 @@
       hit() {
         this.noise(0.07, 0.45, 1600);
         this.tone(170, 0.09, 'sine', 0.45, 70);
+        this.tone(1500, 0.035, 'square', 0.04, 1000, 0.005);
       },
       heavy() {
         this.noise(0.12, 0.55, 900);
@@ -98,6 +99,57 @@
         this.noise(0.1, 0.5, 2400);
         this.tone(240, 0.12, 'sine', 0.5, 80);
         this.tone(1400, 0.08, 'square', 0.08, 900, 0.01);
+      },
+      // 以下沿用爆擊音效的做法：噪音爆裂 + 低頻重擊 + 高頻清脆音頭
+      claw() {
+        this.noise(0.06, 0.4, 2800);
+        this.tone(200, 0.08, 'sine', 0.4, 90);
+        this.tone(1800, 0.04, 'square', 0.05, 1200, 0.005);
+      },
+      rockHit() {
+        this.noise(0.16, 0.6, 700);
+        this.tone(90, 0.22, 'sine', 0.65, 38);
+        this.tone(900, 0.06, 'square', 0.06, 500, 0.01);
+      },
+      sweepHit() {
+        this.noise(0.14, 0.5, 1400);
+        this.tone(140, 0.16, 'sine', 0.5, 60);
+        this.tone(1400, 0.06, 'triangle', 0.08, 900, 0.01);
+      },
+      spiritHit() {
+        this.noise(0.08, 0.35, 3200, 'bandpass');
+        this.tone(260, 0.12, 'sine', 0.4, 110);
+        this.tone(1760, 0.12, 'triangle', 0.1, 2200, 0.01);
+      },
+      featherHit() {
+        this.noise(0.05, 0.4, 4000, 'highpass');
+        this.tone(220, 0.08, 'sine', 0.35, 100);
+        this.tone(2400, 0.04, 'square', 0.05, 1600, 0.005);
+      },
+      heavyWind() {
+        this.noise(0.18, 0.28, 900, 'bandpass');
+        this.tone(120, 0.18, 'triangle', 0.12, 70);
+      },
+      sweep() {
+        this.noise(0.22, 0.3, 1600, 'bandpass');
+        this.tone(300, 0.2, 'triangle', 0.08, 160);
+      },
+      charge() {
+        this.tone(440, 0.14, 'sine', 0.12, 880);
+        this.noise(0.1, 0.1, 5000, 'highpass');
+      },
+      spiritShot() {
+        this.tone(660, 0.18, 'triangle', 0.14, 1320);
+        this.noise(0.12, 0.15, 3000, 'bandpass');
+      },
+      featherShot() {
+        this.noise(0.08, 0.25, 5000, 'highpass');
+        this.tone(1200, 0.05, 'square', 0.04, 1800);
+      },
+      evolve() {
+        [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.35, 'triangle', 0.14, null, i * 0.09));
+        this.noise(1.2, 0.18, 6000, 'highpass', 0.5);
+        this.tone(55, 1.2, 'sine', 0.4, 110, 0.6);
       },
       jump() { this.tone(260, 0.09, 'square', 0.07, 520); },
       land() { this.noise(0.05, 0.12, 500); },
@@ -144,12 +196,14 @@
         this.noise(0.3, 0.08, 3000, 'bandpass');
       },
       skill() {
-        this.noise(0.14, 0.2, 1800, 'bandpass');
-        this.tone(400, 0.12, 'triangle', 0.1, 700);
+        this.noise(0.14, 0.3, 1800, 'bandpass');
+        this.tone(110, 0.14, 'sine', 0.35, 60);
+        this.tone(900, 0.06, 'square', 0.05, 600, 0.01);
       },
       roar() {
-        this.tone(160, 0.35, 'sawtooth', 0.18, 90);
-        this.noise(0.3, 0.2, 700);
+        this.tone(160, 0.38, 'sawtooth', 0.2, 80);
+        this.noise(0.32, 0.35, 700);
+        this.tone(70, 0.3, 'sine', 0.5, 40, 0.02);
       },
       bossWarn() {
         this.tone(110, 0.5, 'sawtooth', 0.14, 100);

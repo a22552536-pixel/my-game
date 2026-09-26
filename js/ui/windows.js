@@ -269,7 +269,7 @@
       h += '<div class="skill basic"><img src="' + G.art.iconURL('pounce') + '" class="hide"><div class="info"><div class="nm">爪擊 <span class="dim">普通攻擊 · ' + I.label('attack') + '</span></div><div class="ds">用前爪攻擊前方 1 隻敵人。</div></div></div>';
       for (const id in G.data.skills) {
         const S = G.data.skills[id];
-        if (S.form !== P.form && S.form !== 'base') continue;
+        if (!this.skillVisible(S)) continue;
         const lv = P.skills[id] || 0;
         const slot = P.hotbar.indexOf(id);
         h += '<div class="skill"><img src="' + G.art.iconURL(S.icon) + '"><div class="info">';
@@ -278,7 +278,8 @@
         if (lv < S.maxLv) h += '<div class="ds next">下一級：' + S.desc(lv + 1) + '（MP ' + S.mp(lv + 1) + '）</div>';
         h += '</div><div class="btns">';
         h += '<button class="primary" data-act="learn" data-arg="' + id + '"' + (P.sp > 0 && lv < S.maxLv ? '' : ' disabled') + '>＋</button>';
-        h += '<button data-act="bind" data-arg="' + id + '">設定按鍵</button>';
+        if (S.type === 'passive') h += '<span class="passive-tag">被動</span>';
+        else h += '<button data-act="bind" data-arg="' + id + '">設定按鍵</button>';
         h += '</div></div>';
       }
       h += '<div class="hotbar">技能欄：';
@@ -295,7 +296,7 @@
       if (P.sp <= 0 || (P.skills[id] || 0) >= S.maxLv) return;
       P.skills[id] = (P.skills[id] || 0) + 1;
       P.sp--;
-      if (P.hotbar.indexOf(id) < 0) {
+      if (S.type !== 'passive' && P.hotbar.indexOf(id) < 0) {
         const free = P.hotbar.indexOf(null);
         if (free >= 0) P.hotbar[free] = id;
       }
@@ -319,6 +320,14 @@
         this.render('skills');
       };
     },
+    skillVisible(S) {
+      if (S.form === 'base') return true;
+      const F = G.data.forms;
+      const mine = F[G.player.form];
+      const f = F[S.form];
+      return !!(f && mine && f.line === mine.line && f.tier <= mine.tier);
+    },
+
     a_unbind(i) {
       G.player.hotbar[+i] = null;
     },
@@ -382,6 +391,9 @@
             else if (Q.available(id)) btns += '<button class="primary" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
           });
         }
+        if (npc.id === 'hedgehog' && G.evolve.tierOf(G.player.form) === 0 && G.world.flags.queenShroomDefeated) {
+          btns += G.evolve.canEvolve() ? '<button class="primary evolve-btn" data-act="openEvolve">✦ 感受星楓葉的力量（進化）</button>' : '<button disabled>進化（需要 Lv10）</button>';
+        }
         if (def.role === 'shop') btns += '<button class="primary" data-act="openShop">交易</button>';
         if (def.role === 'travel') btns += '<button disabled>苔光小徑（目前所在）</button>';
         btns += '<button data-act="close">再見</button>';
@@ -410,6 +422,11 @@
     a_dlgBack() {
       this.dialogue.page = 'main';
     },
+    a_openEvolve() {
+      this.close('dialogue');
+      this.open('evolve');
+    },
+
     a_openShop() {
       const shop = this.dialogue.npc.def.shop;
       this.close('dialogue');
@@ -565,6 +582,38 @@
       this.keyMsg = '已恢復預設按鍵';
     },
 
+    // ───────── 進化 ─────────
+    r_evolve() {
+      const opts = G.evolve.options();
+      const pick = this.evolvePick;
+      let h = '<div class="evo-intro">星楓葉的光芒流進身體。選擇你要成為的樣子。<b>選了之後就不能更改。</b></div><div class="evo-cards">';
+      opts.forEach((id) => {
+        const f = G.data.forms[id];
+        const line = G.data.lines[f.line];
+        const skills = Object.keys(G.data.skills).filter((k) => G.data.skills[k].form === id).map((k) => {
+          const S = G.data.skills[k];
+          return '<li><img src="' + G.art.iconURL(S.icon) + '"><div><b>' + S.name + '</b>' + (S.type === 'passive' ? '（被動）' : '') + '<br><span>' + S.desc(1) + '</span></div></li>';
+        }).join('');
+        h += '<div class="evo-card' + (pick === id ? ' picked' : '') + '"><canvas class="evo-preview" data-form="' + id + '" width="220" height="170"></canvas>' +
+          '<div class="evo-name">' + f.name + '</div><div class="evo-line">' + line.name + '路線 · ' + line.role + '</div>' +
+          '<div class="evo-desc">' + f.desc + '</div><div class="evo-style">' + line.desc + '</div><ul class="evo-skills">' + skills + '</ul>' +
+          '<button class="primary" data-act="pickForm" data-arg="' + id + '">選擇' + f.name + '</button></div>';
+      });
+      h += '</div>';
+      if (pick) {
+        h += '<div class="evo-confirm">確定要進化成「' + G.data.forms[pick].name + '」嗎？<button class="primary" data-act="confirmEvolve">確定進化</button><button data-act="pickForm" data-arg="">再想想</button></div>';
+      }
+      return this.frame('進化', h, 'evolve');
+    },
+    a_pickForm(id) {
+      this.evolvePick = id || null;
+    },
+    a_confirmEvolve() {
+      const id = this.evolvePick;
+      this.evolvePick = null;
+      if (id && G.evolve.canEvolve()) G.evolve.start(id);
+    },
+
     // ───────── 死亡 ─────────
     r_death() {
       return '<div class="panel death"><div class="body"><div class="big">小獅子倒下了……</div><div class="dim">沒有任何損失。會在營地醒來，HP 與 MP 全滿。</div><button class="primary" data-act="revive">在營地復活</button></div></div>';
@@ -583,6 +632,24 @@
 
   // 對話頭像：開視窗後把 NPC 畫進小 canvas
   const obs = new MutationObserver(() => {
+    document.querySelectorAll('canvas.evo-preview:not([data-done])').forEach((c) => {
+      c.setAttribute('data-done', '1');
+      const form = c.getAttribute('data-form');
+      const ctx = c.getContext('2d');
+      let t = 0;
+      const tick = () => {
+        if (!c.isConnected) return;
+        t += 1 / 30;
+        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.save();
+        ctx.translate(110, 150);
+        ctx.scale(1.7, 1.7);
+        G.art.drawLion(ctx, 0, 0, 1, { state: 'idle', t, p: 0, onGround: true, form });
+        ctx.restore();
+        setTimeout(tick, 33);
+      };
+      tick();
+    });
     document.querySelectorAll('canvas.portrait:not([data-done])').forEach((c) => {
       c.setAttribute('data-done', '1');
       const ctx = c.getContext('2d');

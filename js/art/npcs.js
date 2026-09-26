@@ -228,6 +228,27 @@
       ctx.fill();
       ctx.fillStyle = 'rgba(120,80,40,0.8)';
       for (let i = 0; i < 4; i++) ctx.fillRect(-14 + i * 8 + Math.sin(t * 30 + i) * 3, -6 - (i % 2) * 6, 5, 5);
+    } else if (p.kind === 'spirit') {
+      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, 18);
+      g.addColorStop(0, 'rgba(230,255,252,1)');
+      g.addColorStop(0.4, 'rgba(120,230,220,0.8)');
+      g.addColorStop(1, 'rgba(95,208,200,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.scale(p.dir, 1);
+      A.shape(ctx, (c) => { c.moveTo(9, 0); c.quadraticCurveTo(0, -9, -14, -2 + Math.sin(t * 20) * 2); c.quadraticCurveTo(0, 9, 9, 0); c.closePath(); }, '#8ff0e8', '#5fd0c8', { lw: 2, hl: false });
+    } else if (p.kind === 'feather') {
+      ctx.scale(p.dir, 1);
+      ctx.rotate(Math.sin(t * 30 + p.seed) * 0.08);
+      A.shape(ctx, (c) => { c.moveTo(12, 0); c.quadraticCurveTo(0, -6, -12, -1); c.quadraticCurveTo(0, 5, 12, 0); c.closePath(); }, '#d8ff9a', '#a8d04a', { lw: 2, hl: false });
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-20, 0);
+      ctx.lineTo(-34, 0);
+      ctx.stroke();
     } else if (p.kind === 'sporeBomb') {
       A.ellipse(ctx, 0, 0, 10, 10, '#c9a0e8', '#9a70c0', { lw: 2.2 });
     }

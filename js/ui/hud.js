@@ -115,7 +115,7 @@
       ctx.stroke();
       this.text(ctx, 'Lv', 40, barY + 16, 11, '#6a3a0a', 'center', false);
       this.text(ctx, String(P.level), 40, barY + 32, 18, '#4a2a05', 'center', false);
-      this.text(ctx, G.data.balance.forms[P.form].name, 72, barY + 13, 13, '#ffe9b0');
+      this.text(ctx, G.data.forms[P.form].name, 72, barY + 13, 13, '#ffe9b0');
       this.bar(ctx, 72, barY + 22, 220, 14, P.hp / P.maxHp, '#ff6a5a', '#c42a2a', 'HP ' + Math.ceil(P.hp) + ' / ' + P.maxHp);
       this.bar(ctx, 72, barY + 37, 220, 12, P.mp / P.maxMp, '#6ab0ff', '#2a62c4', 'MP ' + Math.floor(P.mp) + ' / ' + P.maxMp);
       // 金葉

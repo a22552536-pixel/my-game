@@ -61,16 +61,19 @@
       G.fx.kick(dir * (r.crit ? 7 : opts.heavy ? 5 : 3), r.crit ? -2 : 0);
       m.squash = 1;
       if (r.crit) {
-        G.fx.addHitstop(b.hitstop.heavy);
-        G.fx.shake(b.shake.crit[0], b.shake.crit[1]);
+        // 爆擊：紅邊的黑色閃電
+        G.fx.blackFlash(cx, cy, dir);
+        G.fx.addHitstop(0.13);
+        G.fx.shake(b.shake.crit[0] + 3, b.shake.crit[1] + 0.05);
         G.audio.play('crit');
       } else if (opts.heavy) {
         G.fx.addHitstop(b.hitstop.heavy * 0.8);
         G.fx.shake(b.shake.heavy[0] * 0.6, b.shake.heavy[1]);
-        G.audio.play('heavy');
+        G.audio.play(opts.sound === 'rock' ? 'rockHit' : opts.sound === 'sweep' ? 'sweepHit' : 'heavy');
       } else {
         G.fx.addHitstop(b.hitstop.normal);
-        G.audio.play('hit');
+        const snd = { spirit: 'spiritHit', feather: 'featherHit', double: 'claw' }[opts.sound];
+        G.audio.play(snd || 'hit');
       }
 
       // 傳說特效

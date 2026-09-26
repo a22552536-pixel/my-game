@@ -237,3 +237,22 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .debug button { font-size: 11px; padding: 2px 6px; border-radius: 4px; }
 .debug input[type='number'] { width: 50px; }
 .debug select { width: 120px; }
+
+/* 進化 */
+.panel.evolve { width: 1000px; }
+.evo-intro { margin-bottom: 10px; font-size: 15px; }
+.evo-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.evo-card { background: #f6e8c8; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 4px; align-items: center; border: 3px solid transparent; }
+.evo-card.picked { border-color: #f29a3a; background: #fff0c8; }
+.evo-preview { width: 220px; height: 170px; background: radial-gradient(#fffaf0, #eedcb4); border-radius: 10px; }
+.evo-name { font-size: 22px; font-weight: bold; color: #a4581a; }
+.evo-line { font-size: 13px; color: #8a6a4a; }
+.evo-desc, .evo-style { font-size: 13px; text-align: center; }
+.evo-style { color: #6a5a45; }
+.evo-skills { list-style: none; padding: 0; margin: 4px 0; font-size: 12px; width: 100%; }
+.evo-skills li { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; }
+.evo-skills img { width: 28px; height: 28px; flex: none; background: #3a2a1e; border-radius: 6px; }
+.evo-skills span { color: #6a5a45; }
+.evo-confirm { margin-top: 12px; display: flex; gap: 10px; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
+.evolve-btn { background: linear-gradient(#ffe9ff, #f0a0e8); border-color: #a0408a; }
+.passive-tag { font-size: 12px; color: #6a5a45; padding: 4px 8px; background: #e9dcc0; border-radius: 6px; }

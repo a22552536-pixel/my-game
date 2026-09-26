@@ -185,7 +185,7 @@
       G.save.write();
       if (first) {
         setTimeout(() => {
-          if (G.scene === 'play') G.ui.open('m1end');
+          if (G.scene === 'play') G.ui.open(G.evolve.canEvolve() ? 'evolve' : 'm1end');
         }, 6500);
       }
     },
@@ -275,6 +275,25 @@
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         let remove = p.t > p.life || p.x < -50 || p.x > this.map.w + 50;
+        if (p.owner === 'player') {
+          if (!remove) {
+            for (const m of G.combat.targets()) {
+              const hb = m.hitbox();
+              const cx = U.clamp(p.x, hb.x, hb.x + hb.w);
+              const cy = U.clamp(p.y, hb.y, hb.y + hb.h);
+              if (U.dist(cx, cy, p.x, p.y) < p.r) {
+                const S = G.data.skills[p.id];
+                G.combat.hitMonster(m, S.mult(p.lv), { knock: S.knock, sound: p.kind });
+                G.fx.burst(p.x, p.y, p.kind === 'spirit' ? ['#8ff0e8', '#ffffff', '#5fd0c8'] : ['#d8ff9a', '#ffffff'], 10, 240);
+                remove = true;
+                break;
+              }
+            }
+          }
+          if (p.kind === 'spirit' && Math.random() < 0.7) G.fx.particles.push({ x: p.x, y: p.y + U.rand(-4, 4), vx: -p.dir * 40, vy: U.rand(-20, 20), life: 0.35, t: 0, size: U.rand(2, 4), color: '#8ff0e8', grav: 0, shape: 'circle', drag: 2 });
+          if (remove) this.projectiles.splice(i, 1);
+          continue;
+        }
         if (p.kind === 'sporeBomb' && p.y >= ground) {
           this.zones.push({ x: p.x, y: ground, r: 70, t: 0, life: 4.5, tick: 0, dmg: p.dmg });
           G.fx.burst(p.x, ground - 10, ['#c9a0e8', '#e8d0ff'], 12, 200, { angle: -Math.PI / 2, spread: 1.2 });
