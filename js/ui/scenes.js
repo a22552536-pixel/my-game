@@ -29,7 +29,7 @@
         cont = '<button class="primary big" data-t="continue">繼續遊戲<small>Lv.' + save.player.level + ' · ' + m + ' · ' + U.fmtTime(save.player.playTime || 0) + '</small></button>';
       }
       el.innerHTML =
-        '<div class="logo"><div class="name">小鬃的冒險</div><div class="sub">一隻小獅子，往天空的家爬回去</div></div>' +
+        '<div class="logo"><div class="name">小獅子的冒險</div><div class="sub">一隻小獅子，往天空的家爬回去</div></div>' +
         '<div class="tbtns">' + cont +
         '<button class="' + (cont ? '' : 'primary ') + 'big" data-t="new">' + (cont ? '新遊戲' : '開始冒險') + '</button>' +
         '<button data-t="keys">按鍵設定</button></div>' +

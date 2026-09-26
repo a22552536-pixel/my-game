@@ -36,7 +36,19 @@
     path(ctx);
     ctx.fillStyle = A.c(fill);
     ctx.fill();
-    if (shade) {
+    if (shade && opts.cel) {
+      // 寶可夢式月牙陰影：整片塗陰影色，再把往左上偏移的本體蓋回去，右下留下一道硬邊陰影
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = A.c(shade);
+      ctx.fillRect(-500, -500, 1000, 1000);
+      ctx.translate(-opts.cel[0], -opts.cel[1]);
+      ctx.beginPath();
+      path(ctx);
+      ctx.fillStyle = A.c(fill);
+      ctx.fill();
+      ctx.restore();
+    } else if (shade) {
       ctx.save();
       ctx.clip();
       ctx.fillStyle = A.c(shade);
@@ -70,6 +82,7 @@
       hl: opts.hl === false ? null : opts.hl || [x - rx * 0.35, y - ry * 0.45, rx * 0.25, ry * 0.16],
       lw: opts.lw,
       noStroke: opts.noStroke,
+      cel: opts.cel,
     });
   };
 
