@@ -121,7 +121,7 @@
         G.fx.text(this.x, this.y - 120, 'LEVEL UP!', '#ffe14a', 34, 1.8);
         G.audio.play('levelup');
         G.hud.toast('等級提升到 Lv.' + this.level + '！獲得 ' + ups + ' 點技能點（按 ' + I.label('skills') + ' 分配）', '#ffe14a');
-        if (G.evolve.canEvolve()) G.hud.toast('星楓葉在發光……可以進化了！去營地找刺蝟婆婆', '#ffb0f0');
+        if (G.evolve.canEvolve()) G.hud.toast('力量滿出來了……可以進化了！回營地找長輩（刺蝟婆婆、海豹爺爺、老猴子）', '#ffb0f0');
         G.save.write();
       }
     },
@@ -448,13 +448,13 @@
         }
       } else if (a.type === 'cast') {
         const S = G.data.skills[a.id];
-        while (a.fired < S.count && a.t >= S.fireAt + a.fired * 0.08) {
-          const spread = S.count > 1 ? (a.fired - (S.count - 1) / 2) * 10 : 0;
+        while (a.fired < S.count && a.t >= S.fireAt + a.fired * (S.rapid ? 0.07 : 0.08)) {
+          const spread = S.count > 1 && !S.rapid ? (a.fired - (S.count - 1) / 2) * 10 : 0;
           G.world.projectiles.push({
             kind: S.proj, owner: 'player', id: a.id, lv: a.lv,
             x: this.x + this.dir * 30, y: this.y - 34 + spread,
             vx: this.dir * S.speed, vy: 0, dir: this.dir,
-            r: S.proj === 'spirit' ? 12 : 9, life: S.reach / S.speed, t: 0, seed: Math.random() * 6,
+            r: S.proj === 'spirit' ? 12 : S.pierce ? 16 : 9, life: S.reach / S.speed, t: 0, seed: Math.random() * 6, pierce: S.pierce || 0,
           });
           G.audio.play(S.proj === 'spirit' ? 'spiritShot' : 'featherShot');
           a.fired++;

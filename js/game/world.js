@@ -369,11 +369,21 @@
           }
           if (!remove) {
             for (const m of G.combat.targets()) {
+              if (p.pierce && p.hitSet && p.hitSet.has(m)) continue;
               const hb = m.hitbox();
               const cx = U.clamp(p.x, hb.x, hb.x + hb.w);
               const cy = U.clamp(p.y, hb.y, hb.y + hb.h);
               if (U.dist(cx, cy, p.x, p.y) < p.r) {
                 const S = G.data.skills[p.id];
+                if (p.pierce) {
+                  // 貫穿：打到就記下來，繼續往前飛
+                  p.hitSet = p.hitSet || new Set();
+                  p.hitSet.add(m);
+                  G.combat.hitMonster(m, S.mult(p.lv), { knock: S.knock, sound: 'feather' });
+                  G.fx.burst(p.x, p.y, ['#b88aff', '#2e1f44', '#ffffff'], 8, 220);
+                  if (p.hitSet.size >= p.pierce) remove = true;
+                  continue;
+                }
                 G.combat.hitMonster(m, S.mult(p.lv), { knock: S.knock, sound: p.kind });
                 G.fx.burst(p.x, p.y, p.kind === 'spirit' ? ['#8ff0e8', '#ffffff', '#5fd0c8'] : ['#d8ff9a', '#ffffff'], 10, 240);
                 remove = true;

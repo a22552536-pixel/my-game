@@ -88,12 +88,13 @@ Object.assign(G.data.skills, {
   },
 
   // 敏捷：風鬃獅
+  // 敏捷路線全部以投刃為主，沒有近戰技能
   doubleClaw: {
-    name: '連爪', form: 'agile1', maxLv: 10, icon: 'doubleClaw', type: 'melee', fx: 'double',
+    name: '疾刃連射', form: 'agile1', maxLv: 10, icon: 'doubleClaw', type: 'bolt', proj: 'feather',
     mp: (lv) => 4 + Math.floor((lv - 1) / 3),
-    mult: (lv) => 1.3 + 0.08 * (lv - 1),
-    targets: 1, range: { w: 92, h: 64 }, castTime: 0.3, hits: [0.07, 0.17], knock: 120,
-    desc: (lv) => '對 1 隻敵人快速 2 連擊，各 ' + Math.round((1.3 + 0.08 * (lv - 1)) * 100) + '%',
+    mult: (lv) => 0.95 + 0.06 * (lv - 1),
+    count: 3, rapid: true, speed: 900, reach: 480, castTime: 0.34, fireAt: 0.05, knock: 60,
+    desc: (lv) => '快速連續擲出 3 枚短羽刃，各 ' + Math.round((0.95 + 0.06 * (lv - 1)) * 100) + '%',
   },
   featherThrow: {
     name: '羽刃投擲', form: 'agile1', maxLv: 10, icon: 'featherThrow', type: 'bolt', proj: 'feather',

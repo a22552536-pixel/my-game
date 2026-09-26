@@ -81,8 +81,13 @@
       const el = this.els[name];
       if (!el) return;
       const fn = this['r_' + name];
+      // 重畫時保留捲動位置，不要每按一下就跳回最上面
+      const scrolls = Array.from(el.querySelectorAll('.body, .col, .sellgrid')).map((n) => n.scrollTop);
       try {
         el.innerHTML = fn ? fn.call(this) : '';
+        Array.from(el.querySelectorAll('.body, .col, .sellgrid')).forEach((n, i) => {
+          if (scrolls[i]) n.scrollTop = scrolls[i];
+        });
       } catch (e) {
         // 畫面出錯時至少留一個能關掉的視窗，不要卡住整個遊戲
         console.error(e);
@@ -299,13 +304,20 @@
         h += '<div class="nm">' + S.name + ' <span class="lv">Lv.' + lv + ' / ' + S.maxLv + '</span>' + (slot >= 0 ? ' <span class="key">[' + I.label(G.data.keys.skillSlots[slot]) + ']</span>' : '') + '</div>';
         const mpTxt = (l) => (typeof S.mp === 'function' ? '（MP ' + S.mp(l) + '）' : '');
         h += '<div class="ds">' + (lv > 0 ? S.desc(lv) + mpTxt(lv) : '尚未學會') + '</div>';
+        // 直接點按鍵把技能放上技能欄
+        if (S.type !== 'passive') {
+          h += '<div class="slotpick">放在：' + G.data.keys.skillSlots.map((a, i) => {
+            const on = P.hotbar[i] === id;
+            const other = P.hotbar[i] && !on ? G.data.skills[P.hotbar[i]] : null;
+            return '<button class="sp' + (on ? ' on' : '') + '" data-act="setSlot" data-arg="' + id + ':' + i + '" title="' + (on ? '點一下拿下來' : other ? '換掉「' + other.name + '」' : '空格') + '">' + I.label(a) + (other ? '<i>' + other.name.slice(0, 1) + '</i>' : '') + '</button>';
+          }).join('') + '</div>';
+        }
         if (lv < S.maxLv) h += '<div class="ds next">下一級：' + S.desc(lv + 1) + mpTxt(lv + 1) + '</div>';
         h += '</div><div class="btns">';
         const tut = id === 'roar' && G.tutorial.current() && G.tutorial.current().id === 'learn';
         h += '<button class="primary' + (tut ? ' tut-glow' : '') + '" data-act="learn" data-arg="' + id + '"' + (P.sp > 0 && lv < S.maxLv ? '' : ' disabled') + '>＋</button>';
         if (tut) h += '<span class="tut-point">◀ 按這裡</span>';
         if (S.type === 'passive') h += '<span class="passive-tag">被動</span>';
-        else h += '<button data-act="bind" data-arg="' + id + '">設定按鍵</button>';
         h += '</div></div>';
       }
       h += '<div class="hotbar">技能欄：';
@@ -327,6 +339,19 @@
         if (free >= 0) P.hotbar[free] = id;
       }
       G.audio.play('quest');
+      G.save.write();
+    },
+    a_setSlot(arg) {
+      const [id, n] = arg.split(':');
+      const i = +n;
+      const P = G.player;
+      if (P.hotbar[i] === id) P.hotbar[i] = null;
+      else {
+        const old = P.hotbar.indexOf(id);
+        if (old >= 0) P.hotbar[old] = null;
+        P.hotbar[i] = id;
+      }
+      G.audio.play('ui');
       G.save.write();
     },
     a_bind(id) {
@@ -417,10 +442,10 @@
             else if (Q.available(id)) btns += '<button class="primary" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
           });
         }
-        // 各營地的長輩可以幫忙進化：只要下一轉的 Boss 已經打倒就顯示按鈕
+        // 各營地的長輩可以幫忙進化：每 10 級一次，不用先打 Boss
         const nt = G.evolve.nextTier();
-        if (def.evolver && nt <= 4 && G.world.flags[G.evolve.BOSSES[nt - 1] + 'Defeated']) {
-          btns += G.evolve.canEvolve() ? '<button class="primary evolve-btn" data-act="openEvolve">✦ 感受星楓葉的力量（' + ['一', '二', '三', '四'][nt - 1] + '轉進化）</button>' : '<button disabled>進化（' + G.evolve.missing() + '）</button>';
+        if (def.evolver && nt <= 4) {
+          btns += G.evolve.canEvolve() ? '<button class="primary evolve-btn" data-act="openEvolve">✦ ' + ['一', '二', '三', '四'][nt - 1] + '轉進化</button>' : '<button disabled>進化（' + G.evolve.missing() + '）</button>';
         }
         if (def.role === 'shop') btns += '<button class="primary" data-act="openShop">交易</button>';
         if (def.role === 'travel') {
@@ -721,7 +746,7 @@
       const opts = G.evolve.options();
       const pick = this.evolvePick;
       const first = G.evolve.tierOf(G.player.form) === 0;
-      let h = '<div class="evo-intro">' + (first ? '星楓葉的光芒流進身體。選擇你要成為的樣子。<b>選了之後就不能更改。</b>' : '新的星楓葉和身體裡的葉子共鳴起來了。') + '</div><div class="evo-cards">';
+      let h = '<div class="evo-intro">' + (first ? '身體裡的力量滿溢出來了。選擇你要成為的樣子。<b>選了之後就不能更改。</b>' : '力量又一次滿溢出來，身體開始改變了。') + '</div><div class="evo-cards">';
       opts.forEach((id) => {
         const f = G.data.forms[id];
         const line = G.data.lines[f.line];

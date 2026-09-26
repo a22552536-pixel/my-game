@@ -118,10 +118,9 @@
 
     // ── 敏捷 二轉：影鬃獅 ──
     shadowStep: {
-      name: '影步', form: 'agile2', maxLv: 10, icon: 'shadowStep', type: 'dash',
-      mp: mpf(9), mult: lin(2.0, 0.12), targets: 5, dashSpeed: 1100, dashTime: 0.24,
-      invuln: true, ghost: '#5a3e78', hitFx: 'shadow', knock: 180,
-      desc: (lv) => '化成黑影穿過最多 5 隻怪（過程無敵），穿過後斬痕爆開，各 ' + pct(2.0 + 0.12 * (lv - 1)),
+      name: '影刃穿刺', form: 'agile2', maxLv: 10, icon: 'shadowStep', type: 'bolt', proj: 'shadowblade',
+      mp: mpf(9), mult: lin(2.0, 0.12), count: 1, pierce: 5, speed: 820, reach: 640, castTime: 0.36, fireAt: 0.12, knock: 160,
+      desc: (lv) => '擲出一把黑影長刃，貫穿一直線上最多 5 隻怪，各 ' + pct(2.0 + 0.12 * (lv - 1)),
     },
     boomerang: {
       name: '迴旋羽刃', form: 'agile2', maxLv: 10, icon: 'boomerang', type: 'boomerang',
@@ -135,9 +134,9 @@
     },
     // ── 敏捷 三轉：雷影獅 ──
     thunderCombo: {
-      name: '雷閃連擊', form: 'agile3', maxLv: 10, icon: 'thunderCombo', type: 'chain',
+      name: '雷刃連鎖', form: 'agile3', maxLv: 10, icon: 'thunderCombo', type: 'chain', thrown: true,
       mp: mpf(16), mult: lin(0.9, 0.05), targets: 3, repeat: 6, radius: 360, castTime: 0.7, hitAt: 0.12,
-      desc: (lv) => '雷光在最多 3 隻敵人之間連跳，每隻 6 下 ' + pct(0.9 + 0.05 * (lv - 1)) + '，每一下都能打出黑閃',
+      desc: (lv) => '擲出雷刃，在最多 3 隻敵人之間連跳，每隻 6 下 ' + pct(0.9 + 0.05 * (lv - 1)) + '，每一下都能打出黑閃',
     },
     shadowClone: {
       name: '分身', form: 'agile3', maxLv: 10, icon: 'shadowClone', type: 'buff',

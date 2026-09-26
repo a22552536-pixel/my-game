@@ -163,6 +163,12 @@
         a.done = true;
         const list = X.nearTargets(P, S.radius, S.targets);
         if (!list.length) G.hud.toast('附近沒有目標', '#cfe');
+        if (S.thrown && list.length) {
+          const m0 = list[0];
+          const ty = m0.y - m0.h * 0.5;
+          G.fx.streak(P.x, P.y - 34, Math.atan2(ty - (P.y - 34), m0.x - P.x), Math.abs(m0.x - P.x) + 20, '#ffe44a', 5);
+          G.audio.play('featherShot');
+        }
         let n = 0;
         for (let k = 0; k < S.repeat; k++) {
           list.forEach((m, i) => {
@@ -301,6 +307,23 @@
       return false;
     },
   });
+
+  // 影刃穿刺的畫法
+  G.art.PROJ_DRAW.shadowblade = function (ctx, p, t) {
+    const A = G.art;
+    ctx.scale(p.dir, 1);
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#5a3e78';
+    ctx.fillRect(-60, -3, 40, 6);
+    ctx.globalAlpha = 1;
+    A.shape(ctx, (c) => { c.moveTo(22, 0); c.lineTo(-4, -7); c.lineTo(-18, -2); c.lineTo(-18, 2); c.lineTo(-4, 7); c.closePath(); }, '#2e1f44', '#1a1028', { lw: 2, hl: false });
+    ctx.strokeStyle = '#c8a0ff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(18, 0);
+    ctx.lineTo(-12, 0);
+    ctx.stroke();
+  };
 
   // 迴旋羽刃的畫法
   G.art.PROJ_DRAW = G.art.PROJ_DRAW || {};

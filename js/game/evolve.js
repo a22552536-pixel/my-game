@@ -1,5 +1,5 @@
 // 進化：條件判斷、選擇、演出。
-// 第 n 轉：打倒第 n 章的 Boss 並達到 Lv(10n)。一轉選路線，之後直線進化。
+// 第 n 轉：達到 Lv(10n) 就可以進化，不用先打倒 Boss。一轉選路線，之後直線進化。
 (function () {
   'use strict';
   const U = G.util;
@@ -23,8 +23,6 @@
       const P = G.player;
       const n = this.nextTier();
       if (n > 4) return '已經是最終形態';
-      const boss = this.BOSSES[n - 1];
-      if (!G.world.flags[boss + 'Defeated']) return '打倒' + ((G.data.monsters[boss] || {}).name || 'Boss');
       if (P.level < n * 10) return '需要 Lv' + n * 10;
       return null;
     },
