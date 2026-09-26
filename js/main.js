@@ -64,6 +64,10 @@
   function draw(frameDt) {
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
+    // 每一幀從乾淨的狀態開始：任何特效漏還原的混色模式、透明度都不會殘留到下一幀
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
     if (G.scene === 'play' && G.world.map) {
       G.world.draw(ctx);
       G.hud.draw(ctx);

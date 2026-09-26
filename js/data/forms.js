@@ -126,9 +126,10 @@ G.data.forms = {
     desc: '岩與劍、火與星、影與夜，三股力量終於在身體裡匯成一股。鬃毛化成燃燒的星楓，頭頂的星楓之冠完整亮起。',
     look: {
       scale: 1.3,
-      pal: { body: '#ffd27a', bodyShade: '#eaa84a', cream: '#fff6e2', mane: '#ffc53a', maneShade: '#e88a1a', maneCore: '#fff4c4', maneCoreShade: '#ffd46a', aura: '#fff0a0', ear: '#ffc0a0', tuft: '#ffd35a', tuftShade: '#e0a020', trim: '#ffd84a', trimShade: '#d89a10', gem: '#ff4a6a', bracer: '#ffd84a', bracerShade: '#d89a10', wing: '#fffaf0', wingShade: '#f2d890', might: '#ff5a3a', mightShade: '#c42a2a', magic: '#46d8ff', magicShade: '#1a8ad0', agile: '#b07aff', agileShade: '#6a36c0', farLeg: '#eab45e', farLegShade: '#cf9040' },
-      bodyRx: 24, bodyRy: 15.5, legW: 12, brows: true, bracers: true,
-      mane: 'starmaple', tail: 'starleaf', crown: 'starmaple', lwings: true, brooch: true, fx: 'trinity', eyeTint: '#ffb02e',
+      pal: { body: '#fff4dc', bodyShade: '#f6ddaa', cream: '#ffffff', mane: '#fff0c0', maneShade: '#f8d88a', ear: '#ffd8c0', tuft: '#ffe7a0', tuftShade: '#f5cc70', nose: '#b0703a', farLeg: '#f8e6c0', farLegShade: '#eed09a', aura: '#fff2b0', haloRing: '#fffbe6', leaf: '#ffd35a', leafShade: '#f2a83a', leafCore: '#fff6d0', wing: '#ffffff', wingShade: '#f8e8c0' },
+      bodyRx: 23, bodyRy: 15, legW: 11,
+      softLine: '#dcae62', faceLine: '#6a4028',
+      mane: 'radiant', tail: 'glow', crown: 'sprig', lwings: true, fx: 'aura', float: true, eyeTint: '#ffb02e', eyeGlow: true,
     },
   },
 };
