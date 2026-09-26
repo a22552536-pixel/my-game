@@ -59,7 +59,7 @@ G.data.balance = {
   // 打怪經驗：等級越高每隻給越多（任務、Boss 的經驗在 progression.js 依章節等級帶重新分配）
   monsterExp: (lv) => Math.max(1, Math.round(lv * (0.6 + 0.045 * lv))),
   respawnTime: 7,
-  aggroTime: 8,
+  aggroTime: 5,
   eliteHpMult: 5,
   eliteAtkMult: 1.4,
   eliteExpMult: 4,

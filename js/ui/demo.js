@@ -180,7 +180,7 @@
 
   // ───────── 圖鑑：一張圖畫出所有形態與怪物 ─────────
   const GW = 1800;
-  const GH = 2440;
+  const GH = 2700;
 
   function fakeMonster(art, stage, t) {
     return {
@@ -331,7 +331,7 @@
         m.def.boss = true;
         m.isBoss = true;
         m.state = 'walk';
-        const bs = Math.min(0.78, 230 / Math.max(d.h, 1));
+        const bs = Math.min(0.72, 165 / Math.max(d.h, 1));
         sil(hid('mobs', id), x, 1440 + oy, 360, 250, (c) => {
           c.save();
           c.translate(x + 160, 1670 + oy);

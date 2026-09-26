@@ -634,6 +634,13 @@
         return false;
       }
       let dmg = Math.max(1, Math.round(raw * U.rand(0.9, 1.1) - this.def * b.defFactor));
+      // 包圍減傷：5 秒內連續挨打，後面每一下遞減（最低 45%），無敵時間也拉長，留出逃跑的空檔
+      const now = this.t || 0;
+      this.recentHits = (this.recentHits || []).filter((h) => now - h < 5);
+      const inBoss = !!(G.world.boss && !G.world.boss.dead);
+      const streak = opts.ignoreInv || inBoss ? 0 : this.recentHits.length;
+      if (streak > 0) dmg = Math.max(1, Math.round(dmg * Math.max(0.45, 1 - 0.18 * streak)));
+      if (!opts.ignoreInv) this.recentHits.push(now);
       if (this.buffs && this.buffs.soul) dmg = Math.max(1, Math.round(dmg * (1 - this.buffs.soul.v)));
       const rock = this.passive('rockSkin');
       if (rock) dmg = Math.max(1, Math.round(dmg * (1 - rock.reduce)));
@@ -665,7 +672,7 @@
       }
       G.audio.play('hurt');
       G.fx.burst(this.x, this.y - 30, ['#ffffff', '#ffb0b0'], 6, 180);
-      this.invT = b.invincible;
+      this.invT = b.invincible + Math.min(1.1, 0.35 * streak);
       if (!opts.noKnock) {
         const d = fromX != null ? U.sign(this.x - fromX) : -this.dir;
         this.vx = d * b.hurtKnockX;

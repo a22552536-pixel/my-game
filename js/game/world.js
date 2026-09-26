@@ -112,13 +112,20 @@
       G.quests.onVisit(mapId);
     },
 
-    spawnFromGroup(gi) {
+    spawnFromGroup(gi, avoid) {
       const map = this.map;
       const g = map.mobs[gi];
       const p = map.platforms[g.p];
       const x1 = Math.max(p[0] + 40, g.x1 != null ? g.x1 : -Infinity);
       const x2 = Math.min(p[1] - 40, g.x2 != null ? g.x2 : Infinity);
-      const x = U.rand(x1, Math.max(x1 + 1, x2));
+      let x = U.rand(x1, Math.max(x1 + 1, x2));
+      // 重生避讓：不要生在玩家旁邊（清完一圈又冒一圈，是被圍毆的主因）
+      if (avoid) {
+        const P = G.player;
+        const close = (xx) => Math.abs(xx - P.x) < 350 && Math.abs(P.y - p[2]) < 160;
+        for (let k = 0; k < 8 && close(x); k++) x = U.rand(x1, Math.max(x1 + 1, x2));
+        if (close(x)) return null;
+      }
       const m = new G.Monster(g.m, g.p, x, { spawn: { group: gi } });
       this.monsters.push(m);
       return m;
@@ -326,7 +333,12 @@
           const e = r.spawn.elite;
           this.monsters.push(new G.Monster(e.m, e.p, e.x, { elite: true, spawn: r.spawn }));
         } else {
-          const m = this.spawnFromGroup(r.spawn.group);
+          const m = this.spawnFromGroup(r.spawn.group, true);
+          if (!m) {
+            r.t = 2;
+            this.respawns.push(r);
+            continue;
+          }
           G.fx.burst(m.x, m.y - 16, ['#fff', '#e8ffd8'], 8, 120, { life: 0.4 });
         }
       }
