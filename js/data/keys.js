@@ -15,12 +15,7 @@ G.data.keys = {
     ['skill6', '技能欄 6'],
     ['hpPot', 'HP 藥水'],
     ['mpPot', 'MP 藥水'],
-    ['inventory', '背包'],
-    ['skills', '技能'],
-    ['quests', '任務'],
-    ['forms', '切換形態'],
-    ['worldmap', '世界地圖'],
-    ['codex', '圖鑑'],
+    // 背包、技能、形態、地圖、任務、圖鑑：改成只用畫面左上角的圖示打開，不佔按鍵
   ],
   defaults: {
     left: 'ArrowLeft',
@@ -37,12 +32,6 @@ G.data.keys = {
     skill6: 'KeyW',
     hpPot: 'Digit1',
     mpPot: 'Digit2',
-    inventory: 'KeyI',
-    skills: 'KeyK',
-    quests: 'KeyJ',
-    forms: 'KeyV',
-    worldmap: 'KeyM',
-    codex: 'KeyB',
   },
   skillSlots: ['skill1', 'skill2', 'skill3', 'skill4', 'skill5', 'skill6'],
   // Esc 保留給選單；其餘會和瀏覽器功能衝突

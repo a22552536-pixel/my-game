@@ -17,7 +17,7 @@
     { id: 'infoHp', info: true, keys: () => ['jump'], text: '紅色的是 HP（生命）', sub: '被怪物打到會減少，歸零就會倒下（倒下沒有懲罰，會在營地醒來）' },
     { id: 'infoMp', info: true, keys: () => ['jump'], text: '藍色的是 MP（魔力）', sub: '放技能會用掉 MP，不夠的時候技能放不出來' },
     { id: 'infoExp', info: true, keys: () => ['jump'], text: '最下面黃色的是 EXP（經驗）', sub: '打怪、完成任務會增加；集滿就升級，HP、MP 全滿，還會拿到技能點' },
-    { id: 'openSkills', keys: () => ['skills'], text: '點左上角的「技能」圖示（或按鍵）' },
+    { id: 'openSkills', keys: () => [], text: '點左上角的「技能」圖示' },
     { id: 'learn', keys: () => [], text: '按「＋」學會「小吼」', sub: '送你 1 點技能點。每升一級都會再拿到 1 點' },
     { id: 'useSkill', keys: () => [slotKey('roar')], text: '放出小吼（先按 Esc 關掉視窗）', sub: '注意看，放完之後 MP 會變少' },
     { id: 'potion', keys: () => ['hpPot'], text: '受傷了！吃一顆紅漿果補 HP' },
@@ -283,14 +283,14 @@
       if (this.outroT > 0) {
         const a = Math.min(1, this.outroT, (9 - this.outroT) * 3);
         ctx.globalAlpha = Math.max(0, a);
-        const items = [['inventory', '背包'], ['skills', '技能'], ['quests', '任務'], ['hpPot', '紅果'], ['mpPot', '藍花蜜']];
+        const items = [['hpPot', '紅果'], ['mpPot', '藍花蜜']];
         ctx.font = 'bold 16px ' + G.art.FONT;
         let total = 0;
         items.forEach(([k, t]) => (total += Math.max(34, ctx.measureText(L(k)).width + 18) + ctx.measureText(t).width + 26));
         total += ctx.measureText('Esc 選單').width;
         const x0 = W / 2 - total / 2 - 20;
         G.hud.panel(ctx, x0, 60, total + 40, 84, 14, 'rgba(30,20,12,0.8)');
-        G.hud.text(ctx, '教學完成！其他按鍵：', W / 2, 80, 15, '#ffe9a0', 'center', false);
+        G.hud.text(ctx, '教學完成！背包、技能、地圖都在左上角的圖示。其他按鍵：', W / 2, 80, 15, '#ffe9a0', 'center', false);
         let x = x0 + 20;
         items.forEach(([k, t]) => {
           x += this.keycap(ctx, L(k), x, 118) + 6;

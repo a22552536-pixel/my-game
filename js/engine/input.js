@@ -15,7 +15,10 @@
 
     init() {
       const saved = G.store.get(KEY_STORE);
-      this.bind = Object.assign({}, G.data.keys.defaults, saved || {});
+      // 舊的存檔可能還綁著已經拿掉的動作（例如圖鑑的 B），只保留現在還存在的動作
+      const known = {};
+      if (saved) for (const a in saved) if (a in G.data.keys.defaults) known[a] = saved[a];
+      this.bind = Object.assign({}, G.data.keys.defaults, known);
       this.rebuild();
       window.addEventListener('keydown', (e) => this.onDown(e));
       window.addEventListener('keyup', (e) => this.onUp(e));

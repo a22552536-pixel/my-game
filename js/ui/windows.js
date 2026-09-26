@@ -108,13 +108,8 @@
         return;
       }
       if (this.isOpen('death') || this.isOpen('m1end') || this.isOpen('menu') || this.isOpen('keys')) return;
-      if (I.wasPressed('inventory')) this.toggle('inventory');
-      else if (I.wasPressed('skills')) this.toggle('skills');
-      else if (I.wasPressed('quests')) this.toggle('quests');
-      else if (I.wasPressed('forms')) this.toggle('forms');
-      else if (I.wasPressed('worldmap')) this.toggle('worldmap');
-      else if (I.wasPressed('codex')) this.toggle('codex');
-      else if (this.isOpen('dialogue') && (I.wasPressed('up') || I.wasPressed('jump'))) this.close('dialogue');
+      // 背包、技能等視窗只用左上角的圖示打開（不佔按鍵）
+      if (this.isOpen('dialogue') && (I.wasPressed('up') || I.wasPressed('jump'))) this.close('dialogue');
     },
 
     frame(title, body, extraClass) {

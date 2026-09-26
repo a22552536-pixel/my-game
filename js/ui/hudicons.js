@@ -88,7 +88,7 @@
       LIST.forEach(([id, name]) => {
         const b = document.createElement('button');
         b.setAttribute('data-win', id);
-        b.innerHTML = '<img alt="" src="' + ICONS[id]() + '"><span class="tip">' + name + '（' + G.input.label(id) + '）</span><span class="badge hide"></span>';
+        b.innerHTML = '<img alt="" src="' + ICONS[id]() + '"><span class="tip">' + name + '</span><span class="badge hide"></span>';
         b.addEventListener('click', (e) => {
           e.stopPropagation();
           G.audio.unlock();
