@@ -459,7 +459,7 @@
       G.art.drawProps(ctx, map, cam, t);
       (map.portals || []).forEach((p) => G.art.drawPortal(ctx, p.x, map.platforms[p.p][2], t, G.data.maps[p.to] && G.data.maps[p.to].name));
       if (map.camp) {
-        G.art.drawCampHouses(ctx, map.camp.x1, map.camp.x2, map.platforms[0][2], t);
+        G.art.drawCampHouses(ctx, map.camp.x1, map.camp.x2, map.platforms[0][2], t, map.region);
         this.drawCamp(ctx, map, t);
       }
       this.signs.forEach((s) => G.art.drawSign(ctx, s.x, s.y));

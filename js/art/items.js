@@ -304,6 +304,8 @@
     },
   };
 
+  // 其他檔案可以往 A.ICON 裡加新的圖示
+  A.ICON = ICON;
   A.drawIcon = function (ctx, kind, x, y, scale) {
     const fn = ICON[kind];
     if (!fn) return;

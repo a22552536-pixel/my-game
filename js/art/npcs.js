@@ -204,7 +204,10 @@
   }
 
   // 營地的房子：蘑菇屋、樹屋、晾衣繩與小燈串
-  A.drawCampHouses = function (ctx, x1, x2, y, t) {
+  // 營地建築：第一章用這個；其他區域在 A.CAMP_DRAW[區域編號] 註冊自己的畫法
+  A.CAMP_DRAW = A.CAMP_DRAW || {};
+  A.drawCampHouses = function (ctx, x1, x2, y, t, region) {
+    if (region && region !== 1 && A.CAMP_DRAW[region]) return A.CAMP_DRAW[region](ctx, x1, x2, y, t);
     const mid = (x1 + x2) / 2;
     // 樹屋
     const tx = x1 + 30;
@@ -414,7 +417,8 @@
     ctx.restore();
   }
 
-  const NPC_DRAW = { owl, hedgehog, squirrel, frog, fawn, mole, turtle, hedgekid, mushgirl };
+  // 其他檔案（npcs2.js）可以往 A.NPC_DRAW 裡加新的 NPC
+  const NPC_DRAW = (A.NPC_DRAW = { owl, hedgehog, squirrel, frog, fawn, mole, turtle, hedgekid, mushgirl });
 
   A.drawNpc = function (ctx, npc, t, marker, noTag) {
     ctx.save();
@@ -530,6 +534,7 @@
     if (label) A.nameTag(ctx, x, y + 16, '→ ' + label, '#bfe8ff');
   };
 
+  A.PROJ_DRAW = A.PROJ_DRAW || {};
   A.drawProjectile = function (ctx, p, t) {
     ctx.save();
     ctx.translate(p.x, p.y);
@@ -580,6 +585,9 @@
       ctx.stroke();
     } else if (p.kind === 'sporeBomb') {
       A.ellipse(ctx, 0, 0, 10, 10, '#c9a0e8', '#9a70c0', { lw: 2.2 });
+    } else if (A.PROJ_DRAW[p.kind]) {
+      // 新章節的投射物畫在 monsters2.js 等檔案裡
+      A.PROJ_DRAW[p.kind](ctx, p, t);
     }
     ctx.restore();
   };
