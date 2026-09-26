@@ -57,7 +57,7 @@ G.data.monsters = {
   // ── Boss ──
   queenShroom: {
     name: '菇菇女王', lv: 14, art: 'queen', boss: true,
-    w: 150, h: 190, hp: 6000, atk: 46, def: 10, exp: 900, speed: 70,
+    w: 150, h: 190, hp: 3000, atk: 46, def: 10, exp: 900, speed: 70,
     drops: { gold: [250, 350] },
   },
 };
