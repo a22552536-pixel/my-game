@@ -180,7 +180,7 @@
 
   // ───────── 圖鑑：一張圖畫出所有形態與怪物 ─────────
   const GW = 1800;
-  const GH = 1990;
+  const GH = 2440;
 
   function fakeMonster(art, stage, t) {
     return {
@@ -291,7 +291,9 @@
         { no: '第一章　苔光森林', ids: ['dewsnail', 'mosssnail', 'woodsnail', 'capshroom', 'spotshroom', 'lampshroom', 'seedling', 'sproutling', 'flowerling'] },
         { no: '第二章　潮風海岬', ids: ['postcrab', 'bulbjelly', 'umbrellagull', 'alarmurchin', 'kiteray', 'blockcoral', 'stampstar', 'accordioneel', 'musicturtle'] },
         { no: '第三章　赤岩峽谷', ids: ['matchlizard', 'angerrock', 'magnetdillo', 'candlesnake', 'weightbeetle', 'bellowsbat', 'potgoat', 'moodchameleon', 'mapvulture'] },
-      ];
+        { no: '第四章　霜鈴雪峰', ids: ['echoferret', 'crystalowl', 'avalanchehare', 'drumyak', 'shadowwolf', 'dreamsheep', 'silencefox', 'heartcedar', 'shieldbear'] },
+        { no: '終章　時空間神殿', ids: ['hourowl', 'mirrordeer', 'stopmoth', 'ouroboros', 'clocksnail', 'pouchroo', 'gravjelly', 'parallelfox', 'constellfish'] },
+      ].map((c) => ({ no: c.no, ids: c.ids.filter((id) => M[id]) }));
       chapters.forEach((c, r) => {
         const y0 = 720 + r * 230;
         G.hud.text(ctx, c.no, 40, y0 + 16, 20, '#6a3a0a', 'left', false);
@@ -316,27 +318,30 @@
       });
 
       // Boss
-      title('Boss', 1432);
-      [['queenShroom', 1], ['hermitCrab', 2], ['lavaTortoise', 3]].forEach(([id, ch], i) => {
+      const BY = 1432 + 460;
+      title('Boss', BY);
+      [['queenShroom', 1], ['hermitCrab', 2], ['lavaTortoise', 3], ['frostSpirit', 4], ['timeItself', 5]].filter(([id]) => M[id] && A.MONSTER_DRAW[M[id].art]).forEach(([id, ch], i) => {
         const d = M[id];
-        const x = 40 + i * 580;
-        card(x, 1470, 560, 220, '#e08a8a');
+        const x = 40 + (i % 3) * 580;
+        const oy = BY - 1432 + Math.floor(i / 3) * 250;
+        card(x, 1470 + oy, 560, 220, '#e08a8a');
         const m = fakeMonster(d.art, 1, t);
         m.w = d.w;
         m.h = d.h;
         m.def.boss = true;
         m.isBoss = true;
         m.state = 'walk';
-        sil(hid('mobs', id), x, 1440, 360, 250, (c) => {
+        const bs = Math.min(0.78, 230 / Math.max(d.h, 1));
+        sil(hid('mobs', id), x, 1440 + oy, 360, 250, (c) => {
           c.save();
-          c.translate(x + 160, 1670);
-          c.scale(0.78, 0.78);
+          c.translate(x + 160, 1670 + oy);
+          c.scale(bs, bs);
           A.drawMonster(c, m);
           c.restore();
         });
-        G.hud.text(ctx, hid('mobs', id) ? '？？？' : d.name, x + 360, 1560, 26, '#8a2020', 'left', false);
-        G.hud.text(ctx, '第' + '一二三'[ch - 1] + '章 Boss', x + 360, 1596, 16, '#8a735c', 'left', false);
-        G.hud.text(ctx, 'Lv.' + d.lv, x + 360, 1620, 16, '#8a735c', 'left', false);
+        G.hud.text(ctx, hid('mobs', id) ? '？？？' : d.name, x + 360, 1560 + oy, 26, '#8a2020', 'left', false);
+        G.hud.text(ctx, ch === 5 ? '終章 Boss' : '第' + '一二三四'[ch - 1] + '章 Boss', x + 360, 1596 + oy, 16, '#8a735c', 'left', false);
+        G.hud.text(ctx, 'Lv.' + d.lv, x + 360, 1620 + oy, 16, '#8a735c', 'left', false);
       });
       ctx.restore();
     },

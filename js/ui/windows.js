@@ -673,7 +673,7 @@
     tradeGiveIcon(t) {
       const g = t.give;
       if (g.potion) return G.data.items.potions[g.potion].icon;
-      return g.unique ? { queenShroom: 'queencap', hermitCrab: 'lampshard', lavaTortoise: 'volcanocore' }[g.unique] || 'queencap' : 'charm';
+      return g.unique ? { queenShroom: 'queencap', hermitCrab: 'lampshard', lavaTortoise: 'volcanocore', frostSpirit: 'frostbell', timeItself: 'timeshard' }[g.unique] || 'queencap' : 'charm';
     },
     a_trade(i) {
       const P = G.player;

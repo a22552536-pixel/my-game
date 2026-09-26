@@ -142,6 +142,8 @@
       if (this.potCd > 0) this.potCd -= dt;
       if (this.landT > 0) this.landT -= dt;
       if (this.slowT > 0) this.slowT -= dt;
+      else this.slowMul = 0;
+      if (this.silenceT > 0) this.silenceT -= dt;
       if (this.glowT > 0) this.glowT -= dt;
       G.skillExec.tick(this, dt);
       if (this.buffs) {
@@ -261,7 +263,7 @@
     updateMove(dt, inputX, canControl, Dn) {
       const b = B();
       const gale = this.passive('galeStep');
-      const speed = b.walkSpeed * (this.slowT > 0 ? 0.55 : 1) * (gale ? 1 + gale.speed : 1) * (this.specials.swift ? 1.1 : 1) * (this.buffs && this.buffs.storm ? 1.3 : 1);
+      const speed = b.walkSpeed * (this.slowT > 0 ? this.slowMul || 0.55 : 1) * (gale ? 1 + gale.speed : 1) * (this.specials.swift ? 1.1 : 1) * (this.buffs && this.buffs.storm ? 1.3 : 1);
       if (this.action && this.action.type === 'dash') return;
       if (this.onGround) {
         let target = inputX * speed;
@@ -364,6 +366,11 @@
       if (!S) return;
       if (S.type === 'passive') {
         G.hud.toast(S.name + ' 是被動技能，學會後自動生效', '#ddd');
+        return;
+      }
+      if (this.silenceT > 0) {
+        G.hud.toast('被封印結界封住了，暫時只能普攻', '#c8a0ff');
+        G.audio.play('error');
         return;
       }
       if (lv <= 0) {

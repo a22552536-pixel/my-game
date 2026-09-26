@@ -853,7 +853,7 @@
     ctx.save();
     ctx.translate(m.x, m.y);
     const sc = m.scale || 1;
-    if (!m.def.boss) A.groundShadow(ctx, 0, 0, (m.w * 0.55) * sc * (m.hover ? Math.max(0.4, 1 - m.hover / 300) : 1));
+    if (!m.def.boss && !(m.fx && m.fx.shadowless)) A.groundShadow(ctx, 0, 0, (m.w * 0.55) * sc * (m.hover ? Math.max(0.4, 1 - m.hover / 300) : 1));
     else A.groundShadow(ctx, 0, 0, 90);
     // 飛行怪：影子留在地上，身體往上畫
     if (m.hover) ctx.translate(0, -m.hover);

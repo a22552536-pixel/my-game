@@ -32,7 +32,9 @@
       const mobs = ['dewsnail', 'mosssnail', 'woodsnail', 'capshroom', 'spotshroom', 'lampshroom', 'seedling', 'sproutling', 'flowerling',
         'postcrab', 'bulbjelly', 'umbrellagull', 'alarmurchin', 'kiteray', 'blockcoral', 'stampstar', 'accordioneel', 'musicturtle',
         'matchlizard', 'angerrock', 'magnetdillo', 'candlesnake', 'weightbeetle', 'bellowsbat', 'potgoat', 'moodchameleon', 'mapvulture',
-        'queenShroom', 'hermitCrab', 'lavaTortoise'];
+        'echoferret', 'crystalowl', 'avalanchehare', 'drumyak', 'shadowwolf', 'dreamsheep', 'silencefox', 'heartcedar', 'shieldbear',
+        'hourowl', 'mirrordeer', 'stopmoth', 'ouroboros', 'clocksnail', 'pouchroo', 'gravjelly', 'parallelfox', 'constellfish',
+        'queenShroom', 'hermitCrab', 'lavaTortoise', 'frostSpirit', 'timeItself'].filter((id) => G.data.monsters[id]);
       return {
         forms: forms.filter((id) => d.forms[id]).length,
         formsAll: forms.length,

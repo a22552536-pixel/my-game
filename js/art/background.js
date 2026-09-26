@@ -1521,7 +1521,8 @@
       if (th.atmo) for (let k = 0; k < themeId.length; k++) seed += themeId.charCodeAt(k) * (k + 1);
       const rnd = U.seeded(seed);
       const anim = LAYER[L.type](ctx, L, rnd, G.H) || null;
-      return { canvas: c, f: L.f, anim };
+      // 只有動畫貼圖的層（鐘環、齒輪）不用每格貼一張空白大圖
+      return { canvas: c, f: L.f, anim, empty: L.type === 'clockRings' || L.type === 'gears' };
     });
     layerCache[themeId] = out;
     return out;
@@ -1589,7 +1590,7 @@
     for (const L of map._layers) {
       const ox = -((cam.x * L.f) % TW);
       const oy = (maxY - cam.y) * L.f * 0.7;
-      for (let x = ox; x < G.W; x += TW) ctx.drawImage(L.canvas, x, oy);
+      if (!L.empty) for (let x = ox; x < G.W; x += TW) ctx.drawImage(L.canvas, x, oy);
       if (L.anim) {
         for (let x = ox - TW; x < G.W; x += TW) {
           ctx.save();
@@ -1769,6 +1770,7 @@
     const col = fore ? fore.colors : map.theme === 'rootCave' ? ['#3f5a30', '#4a6a36'] : map.theme === 'queenHall' ? ['#8a5a8a', '#a070a0'] : ['#4f9a32', '#6ab846'];
     for (const f of map._fore) {
       if (f.x < cam.x - 60 || f.x > cam.x + G.W + 60) continue;
+      if (fore && drawForeExtra(ctx, kind, f, y, col, t)) continue;
       if (kind === 'rocks') {
         // 火山地帶：前景是幾顆被熔岩照亮的黑石
         const s = f.s;
@@ -2572,6 +2574,7 @@
 
   // 第二、三章的平台：木板（planks）、沙（sand）、岩石（rock）、石板（slab）
   function drawStyledPlatform(ctx, P, style, left, right, y, bodyH, isGround, i, x0, x1) {
+    if (style === 'snow' || style === 'ice' || style === 'marble') return drawColdOrMarble(ctx, P, style, left, right, y, bodyH, isGround, i, x0, x1);
     const w = right - left;
     const vx0 = Math.max(left, x0);
     const vx1 = Math.min(right, x1);
@@ -3088,6 +3091,8 @@
     }
     if (style === 'rope' || style === 'chain') {
       drawRopeLine(ctx, x, top, bottom, t, style);
+    } else if (ROPE_EXTRA[style]) {
+      ROPE_EXTRA[style](ctx, x, top, bottom, t);
     } else if (r[3] === 'ladder') {
       ctx.lineCap = 'round';
       [[A.outline(), 8], ['#b5824a', 4]].forEach(([col, w]) => {
@@ -3181,6 +3186,3971 @@
       ctx.globalAlpha = 1;
     }
   };
+
+  // ════════════════════════════════════════════════════════════
+  // 第四章　霜鈴雪峰／終章　時空間神殿
+  // 新的背景層、動畫、擺設、垂吊物、大氣、平台與繩索樣式都放在這一段；前面的主題完全不動。
+  // ════════════════════════════════════════════════════════════
+  Object.assign(THEMES, {
+    // ── 第四章　霜鈴雪峰：雪山、風鈴、神社 ──
+    snowCamp: {
+      sky: ['#6a80b4', '#c2c8e2', '#f8d8bc'],
+      layers: [
+        { type: 'peaks', f: 0.03, base: 0.5, w: [380, 560], hgt: [170, 260], gap: [0.45, 0.7], color: '#8e98c0', shade: '#7882ac', snow: '#f2f0f8', snowShade: '#c6c8e2', cap: 0.45, rim: 'rgba(255,236,220,0.8)', mist: '222,222,240', mistH: 90, mistA: 0.92 },
+        { type: 'pines', f: 0.1, base: 0.6, n: 18, size: [56, 96], colors: ['#667c96', '#5c7290'], trunk: '#4a5060', snow: '#eceff8', snowShade: '#bcc4dc', alpha: 0.92, ground: '#e2e4f2' },
+        { type: 'village', f: 0.2, base: 0.75, w: [110, 170], hgt: [60, 86], gap: [60, 150], wall: '#9a6446', wallShade: '#7c4c36', roof: '#5a3444', snow: '#f8f8ff', snowShade: '#cfd4ec', win: '#ffd88a', glowRgb: '255,186,110', lantern: '#ee5a3a', ground: '#eef0fa', groundShade: '#d4d8ec' },
+        { type: 'pines', f: 0.34, base: 0.97, n: 4, size: [150, 200], colors: ['#3f6468', '#365a60'], trunk: '#5a4034', snow: '#f6f8ff', snowShade: '#c6d0e6' },
+      ],
+      beams: 0.07,
+      motes: 'rgba(255,226,180,0.85)',
+      atmo: 'snow',
+      snowAmt: 0.55,
+      rope: 'bellrope',
+      tint: ['rgba(255,190,120,0.03)', 'rgba(255,150,90,0.09)'],
+      props: ['lanternPost', 'woodpile', 'snowman', 'windBell', 'snowPine', 'barrel', 'lanternPost'],
+      hang: 'bells',
+      fore: { kind: 'snow', colors: ['#f6f8ff', '#cdd6ec'] },
+      plat: { style: 'snow', top: '#f7f9ff', topHi: '#ffffff', snowShade: '#c6d0ea', body: '#8a6a58', shade: '#6e5446', edge: '#3e2c26', deco: 'snowy', tuft: false },
+    },
+    snowField: {
+      sky: ['#9cbce0', '#dde8f4', '#f7f5f0'],
+      layers: [
+        { type: 'peaks', f: 0.02, base: 0.52, w: [460, 700], hgt: [220, 320], gap: [0.4, 0.62], color: '#a8b6d4', shade: '#93a3c6', snow: '#f5f8fd', snowShade: '#d0d8ec', cap: 0.5, rim: 'rgba(255,255,255,0.85)', mist: '232,238,248', mistH: 80 },
+        { type: 'peaks', f: 0.06, base: 0.63, w: [300, 460], hgt: [120, 200], gap: [0.55, 0.9], color: '#7c90b2', shade: '#687ca0', snow: '#eff4fa', snowShade: '#c0cce2', cap: 0.55, rim: 'rgba(255,255,255,0.75)', mist: '236,241,249', mistH: 60 },
+        { type: 'drifts', f: 0.13, base: 0.64, amp: 30, colors: ['#f6f9fd', '#dfe7f2'], shadow: 'rgba(150,175,215,0.35)', sparkle: 34 },
+        { type: 'pines', f: 0.22, base: 0.74, n: 9, size: [70, 120], colors: ['#4f7470', '#466a68'], trunk: '#4e4a4e', snow: '#f5f8ff', snowShade: '#c4d0e6' },
+      ],
+      beams: 0.12,
+      motes: 'rgba(255,255,255,0.9)',
+      atmo: 'snow',
+      snowAmt: 1,
+      rope: 'rope',
+      props: ['snowPine', 'snowRock', 'frozenShrub', 'cairn', 'snowPine', 'snowRock'],
+      hang: 'icicle',
+      fore: { kind: 'snow', colors: ['#ffffff', '#d4def0'] },
+      plat: { style: 'snow', top: '#f8fbff', topHi: '#ffffff', snowShade: '#c4d2ea', body: '#7e8498', shade: '#666c82', edge: '#2e3040', deco: 'snowy', tuft: false },
+    },
+    iceFall: {
+      sky: ['#1c3052', '#3a6890', '#8cc6e0'],
+      layers: [
+        { type: 'peaks', f: 0.03, base: 0.44, w: [360, 520], hgt: [160, 240], gap: [0.5, 0.8], color: '#3e5a82', shade: '#344e74', snow: '#bcd8f0', snowShade: '#86a6cc', cap: 0.5, rim: 'rgba(200,240,255,0.6)', mist: '120,170,210', mistH: 60, mistA: 0.7 },
+        { type: 'icefall', f: 0.1, top: 0.14, base: 0.82, color: '#4c6a8e', shade: '#3a5678', falls: [[0.17, 110], [0.5, 170], [0.83, 96]], ice: ['#f2fcff', '#a8e2f6', '#5eaad4'], snow: '#eaf6ff', glowRgb: '140,220,255' },
+        { type: 'crystals', f: 0.26, base: 0.85, n: 6, size: [70, 130], colors: ['#e4faff', '#94d8f0', '#4e98c8'], glowRgb: '130,220,255' },
+      ],
+      beams: 0.06,
+      motes: 'rgba(190,240,255,0.9)',
+      atmo: 'snow',
+      snowAmt: 0.4,
+      dark: 0.08,
+      rope: 'chain',
+      tint: ['rgba(80,160,220,0.04)', 'rgba(20,40,90,0.1)'],
+      props: ['iceCrystal', 'icicleRock', 'snowRock', 'frozenShrub', 'iceCrystal'],
+      hang: 'icicle',
+      fore: { kind: 'snow', colors: ['#e6f4fd', '#a6c8e4'] },
+      plat: { style: 'ice', top: '#eef8ff', topHi: '#ffffff', snowShade: '#a8d0ec', body: '#6cb0da', shade: '#4a88bc', edge: '#1c3858', deco: 'frost', tuft: false },
+    },
+    bellShrine: {
+      sky: ['#3a3268', '#b46e90', '#ffc48a'],
+      layers: [
+        { type: 'sun', f: 0.02, x: 0.62, y: 0.36, r: 44, color: '#ffe4b4', glow: 'rgba(255,170,120,0.5)' },
+        { type: 'peaks', f: 0.04, base: 0.6, w: [340, 520], hgt: [150, 240], gap: [0.45, 0.75], color: '#6a5888', shade: '#564672', snow: '#f4ccd2', snowShade: '#a08ab8', cap: 0.46, rim: 'rgba(255,210,180,0.85)', mist: '214,160,176', mistH: 70, mistA: 0.9 },
+        { type: 'torii', f: 0.12, base: 0.68, s: 0.55, n: 5, color: '#6a3456', shade: '#582a48', cap: '#34203a', snow: '#e4c4d4', bell: '#b8905e', bellShade: '#8a6a48', cord: '#7a3a50', rows: 2, alpha: 0.9 },
+        { type: 'torii', f: 0.28, base: 0.84, s: 1.12, n: 3, color: '#d8452e', shade: '#a83222', cap: '#2a1e2a', snow: '#fbf4f6', bell: '#f2c75a', bellShade: '#b8862a', cord: '#c8302a', rows: 3, lanterns: true, ground: '#6a5a6e', groundHi: '#f2e8f0' },
+      ],
+      beams: 0.14,
+      motes: 'rgba(255,220,170,0.9)',
+      atmo: 'snow',
+      snowAmt: 0.35,
+      rope: 'bellrope',
+      tint: ['rgba(255,150,120,0.04)', 'rgba(90,50,120,0.1)'],
+      props: ['snowLantern', 'bellPost', 'snowRock', 'shrineBox', 'snowLantern', 'bellPost'],
+      hang: 'bells',
+      fore: { kind: 'snow', colors: ['#f8eef4', '#d2bcd6'] },
+      plat: { style: 'snow', top: '#fbf5f8', topHi: '#ffffff', snowShade: '#d6c0da', body: '#7a6070', shade: '#624a5a', edge: '#2e2030', deco: 'snowy', tuft: false },
+    },
+    frostAltar: {
+      sky: ['#0a1030', '#20366a', '#6484b4'],
+      layers: [
+        { type: 'moon', f: 0.01, x: 0.26, y: 0.2, r: 64, color: '#eef6ff', spot: 'rgba(150,180,225,0.35)', limb: 'rgba(120,150,210,0.5)', glowRgb: '170,210,255', glowA: 0.45 },
+        { type: 'peaks', f: 0.03, base: 0.56, w: [380, 560], hgt: [180, 280], gap: [0.45, 0.7], color: '#223258', shade: '#1a2848', snow: '#8ea6d0', snowShade: '#56709e', cap: 0.5, rim: 'rgba(200,225,255,0.75)', mist: '60,84,130', mistH: 60, mistA: 0.8 },
+        { type: 'altar', f: 0.08, x: 0.42, base: 0.8, s: 1, stone: '#6f8cb4', stoneShade: '#56729c', top: '#dff0ff', snow: '#f0f8ff', ice: ['#f4fdff', '#9adcf4', '#4a98cc'], glowRgb: '130,210,255', ground: '#3a5480', groundShade: '#2a3e66' },
+        { type: 'crystals', f: 0.22, base: 0.94, n: 5, size: [80, 140], colors: ['#dcf6ff', '#86c8ec', '#3e7cb4'], glowRgb: '120,200,255' },
+      ],
+      beams: 0.05,
+      motes: 'rgba(200,235,255,0.9)',
+      atmo: 'blizzard',
+      dark: 0.16,
+      rope: 'chain',
+      tint: ['rgba(120,180,255,0.04)', 'rgba(10,20,60,0.14)'],
+      props: ['iceShard', 'snowRock', 'iceCrystal', 'iceShard', 'icicleRock'],
+      hang: 'icicle',
+      fore: { kind: 'snow', colors: ['#dceaf8', '#8aa6cc'] },
+      plat: { style: 'ice', top: '#e6f2ff', topHi: '#ffffff', snowShade: '#98b8dc', body: '#5a88bc', shade: '#44709e', edge: '#142646', deco: 'frost', tuft: false },
+    },
+
+    // ── 終章　時空間神殿：雲海上的大理石與金、星空、時鐘 ──
+    templeCourt: {
+      sky: ['#7cb0e6', '#f6e6c8', '#ffd896'],
+      layers: [
+        { type: 'clockRings', f: 0.01, rings: [[0.42, 0.3, 240, 0.02], [0.42, 0.3, 150, -0.035], [0.86, 0.17, 110, 0.05]], color: '#fff0c0', alpha: 0.4 },
+        { type: 'clouds', f: 0.02, n: 5, y0: 0.1, y1: 0.34, size: [60, 100], color: '#fff8ec', shade: '#f0d8c0', alpha: 0.85 },
+        { type: 'temple', f: 0.05, x: 0.44, base: 0.52, s: 0.85, isles: 5, rock: '#c8b4a4', rockShade: '#a08878', marble: '#fbf7ef', marbleShade: '#ddd2c2', inner: '#b8a894', gold: '#e8b84a', top: '#f4ecdc', glowRgb: '255,220,150', glowA: 0.28 },
+        { type: 'cloudSea', f: 0.08, base: 0.64, r: 46, colors: ['#fff6e6', '#f6dcc0'], shade: '#ecccb0', hi: '#ffffff', rows: 3 },
+        { type: 'balustrade', f: 0.22, base: 0.7, s: 1, marble: '#f8f3ea', shade: '#dcd0bf', wall: '#e8dccb', gold: '#e2b04a', step: 260, glowRgb: '255,210,130' },
+      ],
+      beams: 0.2,
+      motes: 'rgba(255,236,170,0.9)',
+      atmo: 'timeDust',
+      rope: 'goldchain',
+      props: ['urn', 'brazier', 'topiary', 'hourglassSmall', 'urn', 'topiary'],
+      hang: 'tassel',
+      fore: { kind: 'cloud', colors: ['rgba(255,250,240,0.9)', 'rgba(250,226,200,0.9)'] },
+      plat: { style: 'marble', top: '#fbf7ee', topHi: '#ffffff', body: '#e8dfd0', shade: '#cfc2ae', edge: '#6e5a44', gold: '#e2b04a', deco: 'goldLeaf', tuft: false },
+    },
+    timeCorridor: {
+      sky: ['#8a82c0', '#e8d4e6', '#ffe4c2'],
+      layers: [
+        { type: 'clockRings', f: 0.01, rings: [[0.25, 0.24, 170, -0.02], [0.72, 0.32, 250, 0.014]], color: '#fff4dc', alpha: 0.28 },
+        { type: 'cloudSea', f: 0.03, base: 0.7, r: 40, colors: ['#f6ecf4', '#e2cce2'], shade: '#d4bcd8', hi: '#ffffff', rows: 2 },
+        { type: 'fragments', f: 0.06, kinds: ['forest', 'sea', 'canyon', 'snow', 'mush'], w: [150, 200], y0: 0.3, y1: 0.5, shards: 16 },
+        { type: 'arches', f: 0.2, top: 0.1, spring: 0.5, aw: 246, n: 5, marble: '#e2d6e2', shade: '#b4a2bc', dark: '#8a7894', gold: '#e0ae4a', glowRgb: '255,210,140' },
+      ],
+      beams: 0.16,
+      motes: 'rgba(255,240,200,0.9)',
+      atmo: 'timeDust',
+      rope: 'goldchain',
+      tint: ['rgba(255,220,160,0.05)', 'rgba(140,100,160,0.08)'],
+      props: ['brokenColumn', 'urn', 'floatShard', 'brokenColumn', 'hourglassSmall'],
+      hang: 'tassel',
+      fore: { kind: 'cloud', colors: ['rgba(250,244,250,0.9)', 'rgba(230,212,236,0.9)'] },
+      plat: { style: 'marble', top: '#f6f0e8', topHi: '#ffffff', body: '#ded2c6', shade: '#c4b4a6', edge: '#5e4c44', gold: '#dcaa48', deco: 'goldLeaf', tuft: false },
+    },
+    reverseGarden: {
+      sky: ['#ffd4e4', '#f2e8ff', '#a6d6f4'],
+      layers: [
+        { type: 'flip', f: 0.03, of: { type: 'hills', color: '#d0a4cc', base: 0.85, amp: 26 } },
+        { type: 'flip', f: 0.05, of: { type: 'trees', colors: ['#f4b8d0', '#eaa4c6', '#f8cadc'], trunk: '#9a7a8e', base: 0.84, n: 9, size: [60, 96], alpha: 0.9 } },
+        { type: 'hourglass', f: 0.08, x: 0.45, base: 0.78, s: 0.95, gold: '#e8b84a', goldShade: '#b8862a', sand: '#f4d08a', glowRgb: '255,220,170' },
+        { type: 'cloudSea', f: 0.1, base: 0.8, r: 40, colors: ['#ffffff', '#e2f0fa'], shade: '#cfe0f0', hi: '#ffffff', rows: 2 },
+        { type: 'trees', f: 0.24, colors: ['#f6b4ca', '#f0a0bc', '#fac6d6'], trunk: '#8a6070', base: 0.94, n: 5, size: [100, 150] },
+      ],
+      beams: 0.14,
+      motes: 'rgba(255,220,240,0.9)',
+      atmo: 'petalsUp',
+      rope: 'vine',
+      props: ['blossomBush', 'topiary', 'hourglassSmall', 'blossomBush', 'urn'],
+      hang: 'blossom',
+      fore: { kind: 'grass', colors: ['#8cc878', '#a8d890'] },
+      plat: { style: 'marble', top: '#f4f8ee', topHi: '#ffffff', body: '#e6e0d6', shade: '#ccc4b6', edge: '#5e5448', gold: '#e8b84a', deco: 'petals', tuft: '#8cc878' },
+    },
+    starStair: {
+      sky: ['#05061a', '#15163e', '#382866'],
+      layers: [
+        { type: 'stars', f: 0.01, n: 380, colors: ['#ffffff', '#cfe0ff', '#ffe8c0', '#e0c8ff'], cons: 4, line: 'rgba(170,200,255,0.4)' },
+        { type: 'nebula', f: 0.015, n: 5, colors: ['120,80,210', '60,120,230', '230,90,170'], y0: 0.12, y1: 0.62 },
+        { type: 'moon', f: 0.02, x: 0.8, y: 0.22, r: 40, color: '#cdbcff', spot: 'rgba(120,90,200,0.3)', limb: 'rgba(60,40,140,0.6)', glowRgb: '170,140,255', glowA: 0.35, ring: 'rgba(235,215,255,0.7)' },
+        { type: 'stairs', f: 0.06, spirals: [[0.36, 0.9, 200, 34, 1], [0.08, 0.7, 90, 14, 0.5]], top: '#dfe4ff', front: '#6e6aa8', glow: 'rgba(150,220,255,0.9)', glowRgb: '150,210,255' },
+        { type: 'slabs', f: 0.14, n: 7, y0: 0.3, y1: 0.7, alpha: 0.6, top: '#8e8cc4', front: '#46427a', rock: '#2c2a58', glowRgb: '140,200,255' },
+      ],
+      beams: 0,
+      motes: 'rgba(200,220,255,0.9)',
+      atmo: 'starfall',
+      dark: 0.08,
+      rope: 'goldchain',
+      props: ['starCrystal', 'floatShard', 'brokenColumn', 'starCrystal'],
+      hang: 'starcharm',
+      fore: { kind: 'cloud', colors: ['rgba(120,110,200,0.55)', 'rgba(80,70,160,0.55)'] },
+      plat: { style: 'marble', top: '#dadef6', topHi: '#ffffff', body: '#5c5a94', shade: '#48467c', edge: '#161434', gold: '#9ae0ff', deco: 'stardust', tuft: false, glow: true },
+    },
+    timeThrone: {
+      sky: ['#05040e', '#150f2e', '#3c2254'],
+      layers: [
+        { type: 'stars', f: 0.01, n: 260, colors: ['#ffffff', '#e0d0ff', '#ffe0c0'], cons: 2, line: 'rgba(220,190,255,0.3)' },
+        { type: 'nebula', f: 0.012, n: 4, colors: ['140,60,210', '230,120,90', '90,70,210'], y0: 0.1, y1: 0.7 },
+        { type: 'gears', f: 0.02, list: [[0.18, 0.28, 130, 0.05], [0.7, 0.2, 160, -0.04], [0.82, 0.55, 96, 0.07], [0.1, 0.62, 84, -0.06]], color: '#4e3e62', shade: '#3a2c4e', hi: '#8a70a8', alpha: 0.6 },
+        { type: 'clockFace', f: 0.03, x: 0.43, y: 0.4, r: 250, rim: ['#f4d27a', '#a8742e'], face: ['#2a2468', '#110e30'], num: '#f4dc9a', hand: '#f6d680', crack: 'rgba(255,220,140,0.8)', glowRgb: '200,150,255' },
+        { type: 'throne', f: 0.08, x: 0.43, base: 0.8, s: 0.9, stone: '#4a4060', stoneShade: '#382e4c', gold: '#e8b84a', floor: '#2a2240', glowRgb: '190,140,255' },
+        { type: 'lions', f: 0.16, base: 0.81, list: [[0.06, 1, 0.72], [0.23, 1, 0.82], [0.66, -1, 0.82], [0.83, -1, 0.72]], stone: '#a09aa8', shade: '#7a7388', dark: '#4e4a5a', gold: '#e8b84a', crack: 'rgba(255,210,120,0.7)' },
+      ],
+      beams: 0,
+      motes: 'rgba(230,200,255,0.9)',
+      atmo: 'timeDust',
+      dark: 0.16,
+      rope: 'goldchain',
+      tint: ['rgba(160,100,255,0.04)', 'rgba(40,10,60,0.14)'],
+      props: ['brokenColumn', 'floatShard', 'brazier', 'gearProp', 'floatShard'],
+      hang: 'tassel',
+      fore: { kind: 'cloud', colors: ['rgba(110,80,160,0.55)', 'rgba(70,50,120,0.55)'] },
+      plat: { style: 'marble', top: '#cfc8e0', topHi: '#f4f0ff', body: '#4c4262', shade: '#3a3250', edge: '#120e20', gold: '#e8b84a', deco: 'stardust', tuft: false },
+    },
+  });
+
+  // ── 共用小工具 ──
+  const glowCache = {};
+  // 預先畫好的柔光圓（動畫裡只貼圖，不每格建漸層）
+  function glowSprite(rgb) {
+    if (glowCache[rgb]) return glowCache[rgb];
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(' + rgb + ',1)');
+    g.addColorStop(0.35, 'rgba(' + rgb + ',0.42)');
+    g.addColorStop(1, 'rgba(' + rgb + ',0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 64, 64);
+    glowCache[rgb] = c;
+    return c;
+  }
+  function softGlow(ctx, x, y, r, rgb, a) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(' + rgb + ',' + a + ')');
+    g.addColorStop(1, 'rgba(' + rgb + ',0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, PI2);
+    ctx.fill();
+  }
+  function newCanvas(w, h) {
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w);
+    c.height = Math.ceil(h);
+    return c;
+  }
+  // 遠景用的小鈴鐺：圓頂＋外翻的口＋一點高光
+  function tinyBell(ctx, x, y, s, fill, shade) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(x - s, y + s * 0.8);
+    ctx.quadraticCurveTo(x - s * 0.95, y - s, x, y - s);
+    ctx.quadraticCurveTo(x + s * 0.95, y - s, x + s, y + s * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = shade;
+    ctx.fillRect(x - s * 1.1, y + s * 0.6, s * 2.2, s * 0.45);
+    if (s > 1.6) {
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.fillRect(x - s * 0.55, y - s * 0.45, s * 0.35, s * 0.6);
+    }
+  }
+  function quadAt(p0, c, p1, u) {
+    const a = (1 - u) * (1 - u);
+    const b = 2 * u * (1 - u);
+    const d = u * u;
+    return [a * p0[0] + b * c[0] + d * p1[0], a * p0[1] + b * c[1] + d * p1[1]];
+  }
+  const ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+
+  // ── 雪山 ──
+  function drawPeak(ctx, L, ax, base, w, hg, seed) {
+    const r = U.seeded(seed);
+    const top = base - hg;
+    const left = [];
+    const right = [];
+    for (let k = 1; k < 6; k++) {
+      const u = k / 6;
+      left.push([ax - (w / 2) * u + (r() - 0.5) * w * 0.07, top + hg * u + (r() - 0.5) * hg * 0.1]);
+      right.push([ax + (w / 2) * u + (r() - 0.5) * w * 0.07, top + hg * u + (r() - 0.5) * hg * 0.1]);
+    }
+    const foot = base + 60;
+    const path = (c) => {
+      c.moveTo(ax - w / 2 - 30, foot);
+      for (let k = left.length - 1; k >= 0; k--) c.lineTo(left[k][0], left[k][1]);
+      c.lineTo(ax, top);
+      for (const p of right) c.lineTo(p[0], p[1]);
+      c.lineTo(ax + w / 2 + 30, foot);
+      c.closePath();
+    };
+    const rx1 = ax + (r() - 0.3) * w * 0.12;
+    const rx2 = ax + (r() - 0.2) * w * 0.14;
+    const ridge = (c) => {
+      c.moveTo(ax, top - 2);
+      c.lineTo(rx1, top + hg * 0.35);
+      c.lineTo(rx2 - w * 0.04, top + hg * 0.7);
+      c.lineTo(ax + w * 0.12, foot);
+      c.lineTo(ax + w, foot);
+      c.lineTo(ax + w, top - 30);
+      c.closePath();
+    };
+    const capY = hg * (L.cap || 0.4);
+    const zig = [];
+    for (let k = 0; k <= 14; k++) {
+      const u = k / 14;
+      const x = ax + w * 0.6 - u * w * 1.2;
+      const d = Math.abs(x - ax) / (w / 2);
+      zig.push([x, top + capY * (1 + d * 0.55) + (k % 2 ? hg * 0.12 * r() : -hg * 0.05 * r())]);
+    }
+    const cap = (c) => {
+      c.moveTo(ax - w, top - 30);
+      c.lineTo(ax + w, top - 30);
+      for (const p of zig) c.lineTo(p[0], p[1]);
+      c.closePath();
+    };
+    ctx.fillStyle = L.color;
+    ctx.beginPath();
+    path(ctx);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    path(ctx);
+    ctx.clip();
+    ctx.fillStyle = L.shade;
+    ctx.beginPath();
+    ridge(ctx);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+    ctx.lineWidth = 2;
+    for (let k = 0; k < 6; k++) {
+      const gx = ax + (r() - 0.5) * w * 0.7;
+      const gy = top + hg * (0.4 + r() * 0.25);
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.lineTo(gx + (gx - ax) * 0.15, gy + 40 + r() * 60);
+      ctx.stroke();
+    }
+    if (L.snow) {
+      ctx.fillStyle = L.snow;
+      ctx.beginPath();
+      cap(ctx);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      cap(ctx);
+      ctx.clip();
+      ctx.fillStyle = L.snowShade;
+      ctx.beginPath();
+      ridge(ctx);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+    if (L.rim) {
+      ctx.strokeStyle = L.rim;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(ax, top);
+      for (let k = 0; k < 3; k++) ctx.lineTo(left[k][0] + 1, left[k][1] + 1);
+      ctx.stroke();
+    }
+  }
+
+  // ── 雪松（遠景，不描邊） ──
+  function drawPine(ctx, L, x, y, s, col) {
+    ctx.fillStyle = L.trunk;
+    ctx.fillRect(x - s * 0.045, y - s * 0.3, s * 0.09, s * 0.3 + 80);
+    const tiers = L.tiers || 4;
+    for (let k = 0; k < tiers; k++) {
+      const hw = s * 0.34 * (1 - k * 0.19);
+      const by = y - s * 0.14 - k * s * 0.2;
+      const ty = by - s * 0.32;
+      const tier = (c) => {
+        c.moveTo(x, ty);
+        c.quadraticCurveTo(x - hw * 0.45, ty + (by - ty) * 0.55, x - hw, by);
+        c.quadraticCurveTo(x - hw * 0.3, by - s * 0.05, x, by - s * 0.02);
+        c.quadraticCurveTo(x + hw * 0.3, by - s * 0.05, x + hw, by);
+        c.quadraticCurveTo(x + hw * 0.45, ty + (by - ty) * 0.55, x, ty);
+        c.closePath();
+      };
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      tier(ctx);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      tier(ctx);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(20,30,60,0.2)';
+      ctx.fillRect(x + s * 0.02, ty - 2, hw + 4, by - ty + 6);
+      if (L.snow) {
+        const sy = (u) => by - (by - ty) * (0.2 + u * 0.32);
+        const g = ctx.createLinearGradient(x - hw, 0, x + hw, 0);
+        g.addColorStop(0, L.snow);
+        g.addColorStop(0.5, L.snow);
+        g.addColorStop(0.58, L.snowShade);
+        g.addColorStop(1, L.snowShade);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x - hw - 6, by + 4);
+        const m = 5;
+        for (let j = 0; j <= m; j++) {
+          const u = j / m;
+          const px = x - hw + u * hw * 2;
+          ctx.quadraticCurveTo(px - hw / m, sy(u) + (by - ty) * 0.22, px, sy(u));
+        }
+        ctx.lineTo(x + hw + 6, ty - 6);
+        ctx.lineTo(x - hw - 6, ty - 6);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  // ── 雪村的小木屋 ──
+  function drawCabin(ctx, L, x, base, w, hg, r, glows, smoke) {
+    const l = x - w / 2;
+    const rt = x + w / 2;
+    const top = base - hg;
+    const roofH = w * 0.4;
+    // 山牆
+    ctx.fillStyle = L.wall;
+    ctx.beginPath();
+    ctx.moveTo(l, base + 10);
+    ctx.lineTo(l, top);
+    ctx.lineTo(x, top - roofH + 8);
+    ctx.lineTo(rt, top);
+    ctx.lineTo(rt, base + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = L.wallShade;
+    ctx.fillRect(x + w * 0.2, top - roofH, w, hg + roofH + 20);
+    ctx.strokeStyle = 'rgba(40,20,10,0.28)';
+    ctx.lineWidth = 1.5;
+    for (let y = top - roofH + 14; y < base + 10; y += 9) {
+      ctx.beginPath();
+      ctx.moveTo(l, y);
+      ctx.lineTo(rt, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // 木頭的切口
+    ctx.fillStyle = 'rgba(230,190,140,0.55)';
+    for (let y = top + 4; y < base; y += 9) {
+      ctx.beginPath();
+      ctx.arc(l + 2, y, 3, 0, PI2);
+      ctx.arc(rt - 2, y, 3, 0, PI2);
+      ctx.fill();
+    }
+    // 窗
+    const nw = w > 130 ? 2 : 1;
+    for (let k = 0; k < nw; k++) {
+      const wx = nw === 1 ? x - w * 0.18 : l + w * (0.26 + k * 0.42);
+      const wy = top + hg * 0.26;
+      const ws = 17;
+      softGlow(ctx, wx, wy + ws / 2, 52, L.glowRgb, 0.4);
+      ctx.fillStyle = '#3a2418';
+      ctx.fillRect(wx - ws / 2 - 3, wy - 3, ws + 6, ws + 6);
+      ctx.fillStyle = L.win;
+      ctx.fillRect(wx - ws / 2, wy, ws, ws);
+      ctx.fillStyle = 'rgba(255,250,220,0.8)';
+      ctx.fillRect(wx - ws / 2, wy, ws, ws * 0.35);
+      ctx.fillStyle = '#3a2418';
+      ctx.fillRect(wx - 1, wy, 2, ws);
+      ctx.fillRect(wx - ws / 2, wy + ws / 2 - 1, ws, 2);
+      ctx.fillStyle = L.snow;
+      ctx.beginPath();
+      A.roundRect(ctx, wx - ws / 2 - 5, wy + ws + 2, ws + 10, 5, 2.5);
+      ctx.fill();
+      glows.push({ x: wx, y: wy + ws / 2, r: 36, p: r() });
+    }
+    // 門：半開，漏出暖光
+    if (nw === 1 || w > 150) {
+      const dx = nw === 1 ? x + w * 0.2 : x;
+      ctx.fillStyle = '#4a2c1e';
+      ctx.fillRect(dx - 12, base - 38, 24, 40);
+      ctx.fillStyle = L.win;
+      ctx.fillRect(dx - 12, base - 36, 6, 38);
+      softGlow(ctx, dx - 9, base - 10, 30, L.glowRgb, 0.35);
+    }
+    // 屋頂（兩片斜板）
+    const ext = 16;
+    const yL = top + 8;
+    ctx.fillStyle = L.roof;
+    ctx.beginPath();
+    ctx.moveTo(l - ext, yL);
+    ctx.lineTo(x, top - roofH);
+    ctx.lineTo(rt + ext, yL);
+    ctx.lineTo(rt + ext, yL + 9);
+    ctx.lineTo(x, top - roofH + 11);
+    ctx.lineTo(l - ext, yL + 9);
+    ctx.closePath();
+    ctx.fill();
+    // 煙囪
+    const cx = x + w * 0.24;
+    const roofY = (px) => yL - (1 - Math.abs(px - x) / (w / 2 + ext)) * (yL - (top - roofH));
+    const cTop = roofY(cx) - 26;
+    ctx.fillStyle = '#5a4e52';
+    ctx.fillRect(cx - 7, cTop, 14, roofY(cx) - cTop + 6);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(cx + 2, cTop, 5, roofY(cx) - cTop + 6);
+    smoke.push({ x: cx, y: cTop - 6, p: r(), r: 9, rise: 110, drift: 30 });
+    // 屋頂上的厚雪：下緣圓圓地垂出屋簷
+    const sn = (c) => {
+      c.moveTo(l - ext - 6, yL + 4);
+      c.quadraticCurveTo(l - ext - 8, yL - 6, l - ext + 4, yL - 7);
+      c.lineTo(x, top - roofH - 12);
+      c.lineTo(rt + ext - 4, yL - 7);
+      c.quadraticCurveTo(rt + ext + 8, yL - 6, rt + ext + 6, yL + 4);
+      const n = 7;
+      for (let k = 0; k <= n; k++) {
+        const u = k / n;
+        const px = rt + ext - u * (rt - l + ext * 2);
+        const py = roofY(px) + 2 + (k % 2 ? 5 : 1);
+        c.lineTo(px, py);
+      }
+      c.closePath();
+    };
+    ctx.fillStyle = L.snow;
+    ctx.beginPath();
+    sn(ctx);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    sn(ctx);
+    ctx.clip();
+    ctx.fillStyle = L.snowShade;
+    ctx.beginPath();
+    ctx.moveTo(x, top - roofH - 20);
+    ctx.lineTo(rt + ext + 10, yL - 10);
+    ctx.lineTo(rt + ext + 10, yL + 20);
+    ctx.lineTo(x + 4, top - roofH + 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // 煙囪帽上的雪
+    ctx.fillStyle = L.snow;
+    ctx.beginPath();
+    A.roundRect(ctx, cx - 9, cTop - 5, 18, 7, 3.5);
+    ctx.fill();
+    // 屋簷下的冰柱
+    ctx.fillStyle = 'rgba(220,240,255,0.9)';
+    for (let px = l - ext + 6; px < rt + ext - 4; px += 9) {
+      if (Math.abs(px - x) < w * 0.3) continue;
+      const py = roofY(px) + 9;
+      const len = 5 + hash(px) * 10;
+      ctx.beginPath();
+      ctx.moveTo(px - 2, py);
+      ctx.lineTo(px + 2, py);
+      ctx.lineTo(px, py + len);
+      ctx.fill();
+    }
+    // 腳邊的積雪
+    ctx.fillStyle = L.snow;
+    ctx.beginPath();
+    ctx.ellipse(l + 6, base + 6, 18, 8, 0, 0, PI2);
+    ctx.ellipse(rt - 4, base + 6, 22, 9, 0, 0, PI2);
+    ctx.fill();
+  }
+
+  // ── 冰晶簇 ──
+  function drawCrystal(ctx, x, y, w, hgt, rot, cols) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    const path = (c) => {
+      c.moveTo(-w / 2, 20);
+      c.lineTo(-w / 2, -hgt * 0.72);
+      c.lineTo(0, -hgt);
+      c.lineTo(w / 2, -hgt * 0.72);
+      c.lineTo(w / 2, 20);
+      c.closePath();
+    };
+    ctx.fillStyle = cols[1];
+    ctx.beginPath();
+    path(ctx);
+    ctx.fill();
+    ctx.fillStyle = cols[0];
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, 20);
+    ctx.lineTo(-w / 2, -hgt * 0.72);
+    ctx.lineTo(0, -hgt);
+    ctx.lineTo(-w * 0.08, -hgt * 0.7);
+    ctx.lineTo(-w * 0.08, 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = cols[2];
+    ctx.beginPath();
+    ctx.moveTo(w * 0.22, 20);
+    ctx.lineTo(w * 0.22, -hgt * 0.68);
+    ctx.lineTo(0, -hgt);
+    ctx.lineTo(w / 2, -hgt * 0.72);
+    ctx.lineTo(w / 2, 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.32, -hgt * 0.1);
+    ctx.lineTo(-w * 0.32, -hgt * 0.62);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── 鳥居 ──
+  function drawTorii(ctx, L, x, base, s, glints) {
+    const ph = 150 * s;
+    const sp = 96 * s;
+    const pw = 13 * s;
+    // 柱
+    for (const side of [-1, 1]) {
+      const px = x + side * sp;
+      ctx.fillStyle = L.color;
+      ctx.beginPath();
+      ctx.moveTo(px - pw / 2 - s, base + 4);
+      ctx.lineTo(px - pw / 2 + s, base - ph);
+      ctx.lineTo(px + pw / 2 - s, base - ph);
+      ctx.lineTo(px + pw / 2 + s, base + 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = L.shade;
+      ctx.fillRect(px + pw * 0.12, base - ph, pw * 0.38, ph + 4);
+      ctx.fillStyle = L.cap;
+      ctx.fillRect(px - pw / 2 - 2 * s, base - 14 * s, pw + 4 * s, 18 * s);
+    }
+    // 貫
+    const ny = base - ph * 0.7;
+    ctx.fillStyle = L.color;
+    ctx.fillRect(x - sp - 22 * s, ny, (sp + 22 * s) * 2, 9 * s);
+    ctx.fillStyle = L.shade;
+    ctx.fillRect(x - sp - 22 * s, ny + 6 * s, (sp + 22 * s) * 2, 3 * s);
+    // 額束
+    ctx.fillStyle = L.color;
+    ctx.fillRect(x - 6 * s, base - ph - 2 * s, 12 * s, ph * 0.3 + 4 * s);
+    ctx.fillStyle = L.cap;
+    ctx.fillRect(x - 10 * s, base - ph + 8 * s, 20 * s, 18 * s);
+    ctx.fillStyle = L.bell || '#e8c060';
+    ctx.fillRect(x - 7 * s, base - ph + 11 * s, 14 * s, 12 * s);
+    // 島木
+    ctx.fillStyle = L.color;
+    ctx.fillRect(x - sp - 30 * s, base - ph - 6 * s, (sp + 30 * s) * 2, 10 * s);
+    // 笠木：兩端上翹
+    const ky = base - ph - 6 * s;
+    const kx = sp + 48 * s;
+    ctx.fillStyle = L.cap;
+    ctx.beginPath();
+    ctx.moveTo(x - kx, ky - 16 * s);
+    ctx.quadraticCurveTo(x, ky - 2 * s, x + kx, ky - 16 * s);
+    ctx.lineTo(x + kx - 6 * s, ky - 5 * s);
+    ctx.quadraticCurveTo(x, ky + 8 * s, x - kx + 6 * s, ky - 5 * s);
+    ctx.closePath();
+    ctx.fill();
+    // 笠木上的雪
+    ctx.strokeStyle = L.snow;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 5 * s;
+    ctx.beginPath();
+    ctx.moveTo(x - kx + 10 * s, ky - 16 * s);
+    ctx.quadraticCurveTo(x, ky - 6 * s, x + kx - 10 * s, ky - 16 * s);
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+    // 貫下垂著一整排鈴串（成千上百的小鈴）
+    const bs = Math.max(1.3, 2.3 * s);
+    for (let bx = x - sp + 12 * s; bx < x + sp - 8 * s; bx += 11 * s) {
+      const len = (26 + hash(bx * 0.37 + s) * 34) * s;
+      ctx.strokeStyle = L.cord;
+      ctx.lineWidth = Math.max(0.8, s);
+      ctx.beginPath();
+      ctx.moveTo(bx, ny + 9 * s);
+      ctx.lineTo(bx, ny + 9 * s + len);
+      ctx.stroke();
+      for (let by = ny + 16 * s; by < ny + 9 * s + len; by += 8 * s) tinyBell(ctx, bx, by, bs, L.bell, L.bellShade || L.shade);
+      if (glints && hash(bx * 1.3) > 0.55) glints.push({ x: bx, y: ny + 9 * s + len - 4 * s, p: hash(bx) * 6 });
+    }
+    // 正中央的大鈴
+    const cy = ny + 26 * s;
+    ctx.strokeStyle = '#f4f0e8';
+    ctx.lineWidth = 2.5 * s;
+    ctx.beginPath();
+    ctx.moveTo(x, ny + 9 * s);
+    ctx.lineTo(x, cy);
+    ctx.stroke();
+    tinyBell(ctx, x, cy + 6 * s, 9 * s, L.bell, L.bellShade || L.shade);
+  }
+
+  // ── 浮島（神殿、碎片共用） ──
+  function drawIsle(ctx, L, x, y, w, seed, kind) {
+    const r = U.seeded(seed);
+    const d = w * 0.55;
+    const pts = [];
+    for (let k = 1; k < 7; k++) {
+      const u = k / 7;
+      const sp = (1 - Math.pow(u, 0.8)) * w * 0.5;
+      pts.push([sp + (r() - 0.5) * w * 0.05, y + d * u + (r() - 0.5) * 8]);
+    }
+    const tipX = x + (r() - 0.5) * w * 0.08;
+    const path = (c) => {
+      c.moveTo(x - w / 2, y);
+      for (const p of pts) c.lineTo(x - p[0], p[1]);
+      c.lineTo(tipX, y + d);
+      for (let k = pts.length - 1; k >= 0; k--) c.lineTo(x + pts[k][0] * 0.96, pts[k][1] + 4);
+      c.lineTo(x + w / 2, y);
+      c.closePath();
+    };
+    fillShaded(ctx, path, L.rock, L.rockShade, -w * 0.16, 0);
+    ctx.save();
+    ctx.beginPath();
+    path(ctx);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(60,40,30,0.14)';
+    ctx.lineWidth = 2;
+    for (let k = 1; k < 4; k++) {
+      ctx.beginPath();
+      ctx.moveTo(x - w / 2, y + d * k * 0.2);
+      ctx.quadraticCurveTo(x, y + d * k * 0.2 + 8, x + w / 2, y + d * k * 0.2 - 2);
+      ctx.stroke();
+    }
+    if (L.gold) {
+      ctx.strokeStyle = L.gold;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 1.6;
+      for (let k = 0; k < 2; k++) {
+        const vx = x + (r() - 0.5) * w * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(vx, y + 6);
+        ctx.lineTo(vx + 8, y + d * 0.3);
+        ctx.lineTo(vx - 4, y + d * 0.5);
+        ctx.lineTo(vx + 4, y + d * 0.7);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    // 頂面
+    ctx.fillStyle = L.top;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w / 2 + 3, Math.max(6, w * 0.05), 0, 0, PI2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(x - w * 0.08, y - w * 0.015, w * 0.34, Math.max(2, w * 0.02), 0, 0, PI2);
+    ctx.fill();
+    // 底端的金色晶石
+    if (L.gold) {
+      softGlow(ctx, tipX, y + d, 22, '255,220,140', 0.6);
+      ctx.fillStyle = L.gold;
+      ctx.beginPath();
+      ctx.moveTo(tipX, y + d - 6);
+      ctx.lineTo(tipX + 5, y + d + 3);
+      ctx.lineTo(tipX, y + d + 14);
+      ctx.lineTo(tipX - 5, y + d + 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // 小浮島上的東西
+    if (kind === 'cols') {
+      for (const dx of [-0.22, 0.2]) {
+        const cx = x + dx * w;
+        const hh = w * (0.45 + r() * 0.25);
+        ctx.fillStyle = L.marble;
+        ctx.fillRect(cx - w * 0.04, y - hh, w * 0.08, hh);
+        ctx.fillStyle = L.marbleShade;
+        ctx.fillRect(cx + w * 0.01, y - hh, w * 0.03, hh);
+        ctx.fillStyle = L.marble;
+        ctx.fillRect(cx - w * 0.06, y - hh - 5, w * 0.12, 5);
+      }
+    } else if (kind === 'arch') {
+      const aw = w * 0.5;
+      const ah = w * 0.55;
+      ctx.fillStyle = L.marble;
+      ctx.beginPath();
+      ctx.moveTo(x - aw / 2 - 6, y);
+      ctx.lineTo(x - aw / 2 - 6, y - ah);
+      ctx.arc(x, y - ah, aw / 2 + 6, Math.PI, 0);
+      ctx.lineTo(x + aw / 2 + 6, y);
+      ctx.lineTo(x + aw / 2 - 4, y);
+      ctx.lineTo(x + aw / 2 - 4, y - ah);
+      ctx.arc(x, y - ah, aw / 2 - 4, 0, Math.PI, true);
+      ctx.lineTo(x - aw / 2 + 4, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = L.gold;
+      ctx.fillRect(x - 3, y - ah - aw / 2 - 6, 6, 7);
+    } else if (kind === 'tree') {
+      ctx.fillStyle = '#8a6a50';
+      ctx.fillRect(x - 3, y - w * 0.3, 6, w * 0.3);
+      ctx.fillStyle = '#9cc878';
+      ctx.beginPath();
+      ctx.arc(x, y - w * 0.36, w * 0.16, 0, PI2);
+      ctx.arc(x - w * 0.12, y - w * 0.28, w * 0.12, 0, PI2);
+      ctx.arc(x + w * 0.12, y - w * 0.28, w * 0.12, 0, PI2);
+      ctx.fill();
+    }
+  }
+
+  function drawTempleBuilding(ctx, L, x, y, s) {
+    const W = 360 * s;
+    // 台基三階
+    for (let k = 0; k < 3; k++) {
+      const sw = W + (2 - k) * 22 * s;
+      const sy = y - k * 9 * s;
+      ctx.fillStyle = L.marble;
+      ctx.fillRect(x - sw / 2, sy - 9 * s, sw, 9 * s);
+      ctx.fillStyle = L.marbleShade;
+      ctx.fillRect(x - sw / 2, sy - 3 * s, sw, 3 * s);
+    }
+    const floor = y - 27 * s;
+    const colH = 150 * s;
+    const entY = floor - colH;
+    // 後方的圓頂
+    const domeR = 92 * s;
+    const dy = entY - 40 * s;
+    ctx.fillStyle = L.marble;
+    ctx.fillRect(x - domeR * 0.9, dy - 10 * s, domeR * 1.8, 50 * s);
+    fillShaded(ctx, (c) => c.arc(x, dy - 10 * s, domeR, Math.PI, 0), L.marble, L.marbleShade, -domeR * 0.35, 0);
+    ctx.strokeStyle = L.gold;
+    ctx.lineWidth = 2.5 * s;
+    for (const k of [-0.6, -0.25, 0.25, 0.6]) {
+      ctx.beginPath();
+      ctx.moveTo(x + k * domeR, dy - 10 * s);
+      ctx.quadraticCurveTo(x + k * domeR * 0.55, dy - 10 * s - domeR * 0.9, x, dy - 10 * s - domeR);
+      ctx.stroke();
+    }
+    ctx.fillStyle = L.gold;
+    ctx.fillRect(x - 6 * s, dy - 10 * s - domeR - 26 * s, 12 * s, 28 * s);
+    ctx.beginPath();
+    ctx.moveTo(x, dy - 10 * s - domeR - 50 * s);
+    ctx.lineTo(x + 6 * s, dy - 10 * s - domeR - 26 * s);
+    ctx.lineTo(x - 6 * s, dy - 10 * s - domeR - 26 * s);
+    ctx.closePath();
+    ctx.fill();
+    softGlow(ctx, x, dy - 10 * s - domeR - 50 * s, 30 * s, '255,240,190', 0.9);
+    // 內殿（柱子後面的陰影與發光的門）
+    ctx.fillStyle = L.inner;
+    ctx.fillRect(x - W / 2 + 20 * s, entY, W - 40 * s, colH);
+    softGlow(ctx, x, floor - 40 * s, 90 * s, L.glowRgb, 0.8);
+    ctx.fillStyle = '#fff2c8';
+    ctx.beginPath();
+    ctx.moveTo(x - 22 * s, floor);
+    ctx.lineTo(x - 22 * s, floor - 70 * s);
+    ctx.arc(x, floor - 70 * s, 22 * s, Math.PI, 0);
+    ctx.lineTo(x + 22 * s, floor);
+    ctx.closePath();
+    ctx.fill();
+    // 柱廊
+    const n = 6;
+    for (let k = 0; k < n; k++) {
+      const cx = x - W / 2 + 26 * s + (k / (n - 1)) * (W - 52 * s);
+      const cw = 22 * s;
+      ctx.fillStyle = L.marble;
+      ctx.fillRect(cx - cw / 2, entY + 10 * s, cw, colH - 16 * s);
+      ctx.fillStyle = L.marbleShade;
+      ctx.fillRect(cx + cw * 0.18, entY + 10 * s, cw * 0.32, colH - 16 * s);
+      ctx.strokeStyle = 'rgba(150,130,110,0.3)';
+      ctx.lineWidth = 1;
+      for (const f of [-0.25, 0]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + f * cw, entY + 12 * s);
+        ctx.lineTo(cx + f * cw, floor - 8 * s);
+        ctx.stroke();
+      }
+      ctx.fillStyle = L.marble;
+      ctx.fillRect(cx - cw * 0.75, entY + 2 * s, cw * 1.5, 9 * s);
+      ctx.fillRect(cx - cw * 0.7, floor - 7 * s, cw * 1.4, 7 * s);
+      ctx.fillStyle = L.gold;
+      ctx.fillRect(cx - cw * 0.75, entY + 9 * s, cw * 1.5, 2 * s);
+    }
+    // 楣
+    ctx.fillStyle = L.marble;
+    ctx.fillRect(x - W / 2 - 6 * s, entY - 22 * s, W + 12 * s, 24 * s);
+    ctx.fillStyle = L.marbleShade;
+    ctx.fillRect(x - W / 2 - 6 * s, entY - 4 * s, W + 12 * s, 4 * s);
+    ctx.fillStyle = L.gold;
+    ctx.fillRect(x - W / 2 - 6 * s, entY - 14 * s, W + 12 * s, 3 * s);
+    // 山牆
+    const pk = entY - 22 * s;
+    const ph = 62 * s;
+    ctx.fillStyle = L.marble;
+    ctx.beginPath();
+    ctx.moveTo(x - W / 2 - 14 * s, pk);
+    ctx.lineTo(x, pk - ph);
+    ctx.lineTo(x + W / 2 + 14 * s, pk);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = L.marbleShade;
+    ctx.beginPath();
+    ctx.moveTo(x - W / 2 + 14 * s, pk - 4 * s);
+    ctx.lineTo(x, pk - ph + 14 * s);
+    ctx.lineTo(x + W / 2 - 14 * s, pk - 4 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = L.gold;
+    ctx.lineWidth = 2.5 * s;
+    ctx.beginPath();
+    ctx.moveTo(x - W / 2 - 14 * s, pk);
+    ctx.lineTo(x, pk - ph);
+    ctx.lineTo(x + W / 2 + 14 * s, pk);
+    ctx.stroke();
+    // 山牆裡的鐘
+    const cr = 20 * s;
+    const cy = pk - ph * 0.42;
+    ctx.fillStyle = '#fff6dc';
+    ctx.beginPath();
+    ctx.arc(x, cy, cr, 0, PI2);
+    ctx.fill();
+    ctx.lineWidth = 3 * s;
+    ctx.stroke();
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    ctx.moveTo(x, cy);
+    ctx.lineTo(x, cy - cr * 0.75);
+    ctx.moveTo(x, cy);
+    ctx.lineTo(x + cr * 0.5, cy + cr * 0.2);
+    ctx.stroke();
+    // 頂飾
+    for (const [ax, ay] of [[x, pk - ph], [x - W / 2 - 12 * s, pk], [x + W / 2 + 12 * s, pk]]) {
+      ctx.fillStyle = L.gold;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay - 16 * s);
+      ctx.quadraticCurveTo(ax + 9 * s, ay - 6 * s, ax, ay);
+      ctx.quadraticCurveTo(ax - 9 * s, ay - 6 * s, ax, ay - 16 * s);
+      ctx.fill();
+    }
+  }
+
+  // ── 回憶的碎片：浮島上放著前面章節的風景 ──
+  function fragmentSprite(kind, w, seed) {
+    const W = w + 60;
+    const H = w * 1.05;
+    const c = newCanvas(W, H);
+    const ctx = c.getContext('2d');
+    const r = U.seeded(seed);
+    const x = W / 2;
+    const y = H * 0.46;
+    const tops = { forest: '#7bbf4a', sea: '#f2d6a0', canyon: '#dc9470', snow: '#f4f8ff', mush: '#c09ac8' };
+    const Li = { rock: '#b4a090', rockShade: '#8e7a6c', top: tops[kind], gold: '#f0c060' };
+    drawIsle(ctx, Li, x, y, w, seed + 7, null);
+    // 景物
+    if (kind === 'forest') {
+      ctx.fillStyle = '#8fcf6a';
+      ctx.beginPath();
+      ctx.ellipse(x - w * 0.1, y, w * 0.34, w * 0.14, 0, Math.PI, 0);
+      ctx.fill();
+      for (const [dx, sc, col] of [[-0.26, 0.9, '#5f9e4c'], [0.02, 1.2, '#6fae5a'], [0.26, 0.8, '#5a964a']]) {
+        const tx = x + dx * w;
+        const s = w * 0.2 * sc;
+        ctx.fillStyle = '#7a5a40';
+        ctx.fillRect(tx - 3, y - s * 1.1, 6, s * 1.1);
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(tx, y - s * 1.35, s * 0.5, 0, PI2);
+        ctx.arc(tx - s * 0.35, y - s * 1.05, s * 0.38, 0, PI2);
+        ctx.arc(tx + s * 0.35, y - s * 1.05, s * 0.38, 0, PI2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,220,0.18)';
+        ctx.beginPath();
+        ctx.arc(tx - s * 0.15, y - s * 1.5, s * 0.28, 0, PI2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ff9fbf';
+      for (let k = 0; k < 6; k++) ctx.fillRect(x + (r() - 0.5) * w * 0.7, y - 4 - r() * 4, 3, 3);
+    } else if (kind === 'sea') {
+      ctx.fillStyle = '#4aaede';
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.06, y - 2, w * 0.36, w * 0.06, 0, 0, PI2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.06, y - 2, w * 0.3, w * 0.045, 0, 0.2, 2.6);
+      ctx.stroke();
+      // 燈塔
+      const lx = x - w * 0.3;
+      ctx.fillStyle = '#fbf6ee';
+      ctx.beginPath();
+      ctx.moveTo(lx - 9, y);
+      ctx.lineTo(lx - 6, y - w * 0.42);
+      ctx.lineTo(lx + 6, y - w * 0.42);
+      ctx.lineTo(lx + 9, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#e0584a';
+      ctx.fillRect(lx - 8, y - w * 0.16, 16, 7);
+      ctx.fillRect(lx - 7, y - w * 0.3, 14, 7);
+      ctx.fillStyle = '#ffe890';
+      ctx.fillRect(lx - 5, y - w * 0.49, 10, 8);
+      ctx.fillStyle = '#e0584a';
+      ctx.beginPath();
+      ctx.moveTo(lx - 8, y - w * 0.49);
+      ctx.lineTo(lx, y - w * 0.56);
+      ctx.lineTo(lx + 8, y - w * 0.49);
+      ctx.fill();
+      // 小帆船
+      const bx = x + w * 0.14;
+      ctx.fillStyle = '#6a5a6a';
+      ctx.beginPath();
+      ctx.moveTo(bx - 16, y - 6);
+      ctx.lineTo(bx + 16, y - 6);
+      ctx.lineTo(bx + 11, y + 1);
+      ctx.lineTo(bx - 11, y + 1);
+      ctx.fill();
+      ctx.fillStyle = '#fff8ee';
+      ctx.beginPath();
+      ctx.moveTo(bx, y - 8);
+      ctx.lineTo(bx, y - 40);
+      ctx.lineTo(bx + 16, y - 10);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(bx - 2, y - 10);
+      ctx.lineTo(bx - 2, y - 32);
+      ctx.lineTo(bx - 14, y - 10);
+      ctx.fill();
+    } else if (kind === 'canyon') {
+      for (const [dx, mw, mh, col] of [[-0.18, 0.3, 0.34, '#d88a68'], [0.16, 0.26, 0.5, '#c87458']]) {
+        const mx = x + dx * w;
+        const m = (cc) => {
+          cc.moveTo(mx - (mw * w) / 2, y);
+          cc.lineTo(mx - (mw * w) / 2 + 6, y - mh * w);
+          cc.lineTo(mx + (mw * w) / 2 - 6, y - mh * w);
+          cc.lineTo(mx + (mw * w) / 2, y);
+          cc.closePath();
+        };
+        fillShaded(ctx, m, col, '#a85c44', -mw * w * 0.25, 0);
+        ctx.fillStyle = 'rgba(255,230,200,0.3)';
+        for (let k = 1; k < 4; k++) ctx.fillRect(mx - (mw * w) / 2 + 3, y - mh * w + k * mh * w * 0.24, mw * w - 6, 2);
+      }
+      ctx.fillStyle = '#7aae5a';
+      ctx.fillRect(x + w * 0.36, y - 22, 6, 22);
+      ctx.fillRect(x + w * 0.36 - 7, y - 16, 7, 4);
+      ctx.fillRect(x + w * 0.36 - 7, y - 22, 4, 8);
+    } else if (kind === 'snow') {
+      const pk = (cc) => {
+        cc.moveTo(x - w * 0.34, y);
+        cc.lineTo(x - w * 0.02, y - w * 0.52);
+        cc.lineTo(x + w * 0.3, y);
+        cc.closePath();
+      };
+      fillShaded(ctx, pk, '#8e9cc0', '#74829e', -w * 0.16, 0);
+      ctx.fillStyle = '#f6f8ff';
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.02, y - w * 0.52);
+      ctx.lineTo(x - w * 0.15, y - w * 0.3);
+      ctx.lineTo(x - w * 0.08, y - w * 0.33);
+      ctx.lineTo(x - w * 0.02, y - w * 0.27);
+      ctx.lineTo(x + w * 0.05, y - w * 0.32);
+      ctx.lineTo(x + w * 0.11, y - w * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      const Lp = { trunk: '#5a4a44', snow: '#f6f8ff', snowShade: '#c8d4e8', tiers: 3 };
+      drawPine(ctx, Lp, x + w * 0.3, y + 2, w * 0.3, '#4f7470');
+      drawPine(ctx, Lp, x - w * 0.32, y + 2, w * 0.24, '#466a68');
+    } else if (kind === 'mush') {
+      for (const [dx, sc, col] of [[-0.18, 1, '#f2a36a'], [0.14, 1.3, '#e88a8a'], [0.34, 0.7, '#f5c26b']]) {
+        const mx = x + dx * w;
+        const s = w * 0.2 * sc;
+        ctx.fillStyle = '#f3e3c8';
+        ctx.fillRect(mx - s * 0.12, y - s, s * 0.24, s);
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(mx - s * 0.55, y - s + 4);
+        ctx.bezierCurveTo(mx - s * 0.55, y - s * 1.6, mx + s * 0.55, y - s * 1.6, mx + s * 0.55, y - s + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.arc(mx - s * 0.2, y - s * 1.2, s * 0.07, 0, PI2);
+        ctx.arc(mx + s * 0.15, y - s * 1.3, s * 0.06, 0, PI2);
+        ctx.fill();
+      }
+    }
+    // 回憶的色調：整體罩一層淡金
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = 'rgba(255,226,170,0.26)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    // 背後的光暈
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    softGlow(ctx, x, y - w * 0.1, w * 0.62, '255,240,200', 0.45);
+    ctx.restore();
+    return c;
+  }
+
+  // ── 齒輪、鐘環（預先畫好，動畫時只旋轉貼圖） ──
+  function gearSprite(r, L) {
+    const S = r * 2 + 8;
+    const c = newCanvas(S, S);
+    const ctx = c.getContext('2d');
+    const m = S / 2;
+    const n = Math.max(8, Math.round(r / 9));
+    const path = (cc) => {
+      for (let k = 0; k < n; k++) {
+        const a0 = (k / n) * PI2;
+        const a1 = ((k + 0.5) / n) * PI2;
+        const da = (0.12 / n) * PI2;
+        const ro = r;
+        const ri = r - 12;
+        const p = (a, rad) => [m + Math.cos(a) * rad, m + Math.sin(a) * rad];
+        const q = [p(a0, ri), p(a0 + da, ro), p(a1 - da, ro), p(a1, ri)];
+        if (k === 0) cc.moveTo(q[0][0], q[0][1]);
+        else cc.lineTo(q[0][0], q[0][1]);
+        for (let j = 1; j < 4; j++) cc.lineTo(q[j][0], q[j][1]);
+      }
+      cc.closePath();
+    };
+    ctx.fillStyle = L.color;
+    ctx.beginPath();
+    path(ctx);
+    ctx.fill();
+    ctx.strokeStyle = L.hi;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(m, m, r - 18, 0, PI2);
+    ctx.stroke();
+    ctx.fillStyle = L.shade;
+    ctx.beginPath();
+    ctx.arc(m, m, r - 24, 0, PI2);
+    ctx.fill();
+    // 輻條之間挖空
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    const spokes = 5;
+    for (let k = 0; k < spokes; k++) {
+      const a = (k / spokes) * PI2;
+      ctx.beginPath();
+      ctx.moveTo(m + Math.cos(a + 0.18) * r * 0.3, m + Math.sin(a + 0.18) * r * 0.3);
+      ctx.arc(m, m, r - 30, a + 0.18, a + PI2 / spokes - 0.18);
+      ctx.lineTo(m + Math.cos(a + PI2 / spokes - 0.18) * r * 0.3, m + Math.sin(a + PI2 / spokes - 0.18) * r * 0.3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.fillStyle = L.color;
+    ctx.beginPath();
+    ctx.arc(m, m, r * 0.22, 0, PI2);
+    ctx.fill();
+    ctx.strokeStyle = L.hi;
+    ctx.beginPath();
+    ctx.arc(m, m, r * 0.14, 0, PI2);
+    ctx.stroke();
+    return c;
+  }
+  function ringSprite(r, col) {
+    const S = Math.ceil(r * 2 + 16);
+    const c = newCanvas(S, S);
+    const ctx = c.getContext('2d');
+    const m = S / 2;
+    ctx.strokeStyle = col;
+    ctx.fillStyle = col;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(m, m, r, 0, PI2);
+    ctx.stroke();
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(m, m, r - 16, 0, PI2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(m, m, r * 0.6, 0, PI2);
+    ctx.stroke();
+    for (let k = 0; k < 60; k++) {
+      const a = (k / 60) * PI2;
+      const big = k % 5 === 0;
+      ctx.lineWidth = big ? 3 : 1.2;
+      ctx.beginPath();
+      ctx.moveTo(m + Math.cos(a) * (r - 2), m + Math.sin(a) * (r - 2));
+      ctx.lineTo(m + Math.cos(a) * (r - (big ? 14 : 7)), m + Math.sin(a) * (r - (big ? 14 : 7)));
+      ctx.stroke();
+    }
+    ctx.font = 'bold ' + Math.round(r * 0.1) + 'px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let k = 0; k < 12; k++) {
+      ctx.save();
+      ctx.translate(m, m);
+      ctx.rotate((k / 12) * PI2);
+      ctx.fillText(ROMAN[k], 0, -(r - 16 - r * 0.08));
+      ctx.restore();
+    }
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * PI2;
+      ctx.beginPath();
+      ctx.arc(m + Math.cos(a) * (r * 0.6 + 7), m + Math.sin(a) * (r * 0.6 + 7), k % 2 ? 1.5 : 2.5, 0, PI2);
+      ctx.fill();
+    }
+    return c;
+  }
+
+  // ── 石獅（歷代守葉獸化成的石像） ──
+  function drawLionStatue(ctx, L, x, base, s, dir) {
+    ctx.save();
+    ctx.translate(x, base);
+    ctx.scale(dir * s, s);
+    const st = L.stone;
+    const sh = L.shade;
+    // 台座
+    fillShaded(ctx, (c) => c.rect(-78, -74, 156, 74), st, sh, -14, 0);
+    ctx.fillStyle = L.dark;
+    ctx.fillRect(-86, -8, 172, 10);
+    fillShaded(ctx, (c) => c.rect(-88, -86, 176, 13), st, sh, -10, 0);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(-88, -86, 176, 3);
+    ctx.fillStyle = L.gold;
+    ctx.fillRect(-28, -56, 56, 22);
+    ctx.fillStyle = 'rgba(80,50,20,0.55)';
+    ctx.fillRect(-20, -48, 40, 2);
+    ctx.fillRect(-16, -42, 32, 2);
+    const y0 = -86;
+    // 尾巴
+    ctx.strokeStyle = sh;
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-54, y0 - 8);
+    ctx.bezierCurveTo(-92, y0 - 12, -96, y0 - 70, -70, y0 - 84);
+    ctx.stroke();
+    ctx.fillStyle = sh;
+    ctx.beginPath();
+    ctx.arc(-66, y0 - 88, 12, 0, PI2);
+    ctx.fill();
+    ctx.lineCap = 'butt';
+    // 後腿與身體
+    fillShaded(ctx, (c) => c.ellipse(-26, y0 - 34, 40, 36, 0, 0, PI2), st, sh, -8, -6);
+    fillShaded(ctx, (c) => c.ellipse(4, y0 - 52, 50, 34, -0.55, 0, PI2), st, sh, -6, -8);
+    fillShaded(ctx, (c) => c.ellipse(-6, y0 - 6, 26, 8, 0, 0, PI2), st, sh, 0, -3);
+    // 前腳（遠的那隻暗一點）
+    ctx.fillStyle = sh;
+    ctx.beginPath();
+    A.roundRect(ctx, 44, y0 - 76, 18, 74, 8);
+    ctx.fill();
+    fillShaded(ctx, (c) => A.roundRect(c, 28, y0 - 76, 20, 76, 9), st, sh, -5, 0);
+    fillShaded(ctx, (c) => c.ellipse(46, y0 - 6, 18, 8, 0, 0, PI2), st, sh, 0, -3);
+    ctx.fillStyle = sh;
+    ctx.beginPath();
+    ctx.ellipse(64, y0 - 5, 14, 6, 0, 0, PI2);
+    ctx.fill();
+    // 胸
+    fillShaded(ctx, (c) => c.ellipse(40, y0 - 84, 30, 34, 0, 0, PI2), st, sh, -6, -4);
+    // 鬃毛：一圈圓弧
+    const mx = 40;
+    const my = y0 - 124;
+    const mane = (c) => {
+      const n = 14;
+      for (let k = 0; k <= n; k++) {
+        const a = (k / n) * PI2;
+        const rr2 = 46 + (k % 2 ? 4 : 0);
+        const px = mx + Math.cos(a) * rr2;
+        const py = my + Math.sin(a) * rr2 * 0.95;
+        if (k === 0) c.moveTo(px, py);
+        else c.quadraticCurveTo(mx + Math.cos(a - Math.PI / n) * (rr2 + 12), my + Math.sin(a - Math.PI / n) * (rr2 + 12) * 0.95, px, py);
+      }
+      c.closePath();
+    };
+    fillShaded(ctx, mane, st, sh, -10, -6);
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 2;
+    for (let k = 0; k < 7; k++) {
+      const a = -1.2 + k * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(mx + Math.cos(a) * 22, my + Math.sin(a) * 22);
+      ctx.quadraticCurveTo(mx + Math.cos(a + 0.2) * 34, my + Math.sin(a + 0.2) * 34, mx + Math.cos(a) * 44, my + Math.sin(a) * 44);
+      ctx.stroke();
+    }
+    // 臉
+    fillShaded(ctx, (c) => c.ellipse(mx + 18, my + 2, 26, 24, 0, 0, PI2), st, sh, -6, -4);
+    fillShaded(ctx, (c) => c.ellipse(mx + 40, my + 10, 17, 13, 0, 0, PI2), st, sh, -4, -3);
+    ctx.fillStyle = L.dark;
+    ctx.beginPath();
+    ctx.moveTo(mx + 50, my + 2);
+    ctx.lineTo(mx + 58, my + 4);
+    ctx.lineTo(mx + 54, my + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = L.dark;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(mx + 26, my - 6, 6, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mx + 42, my + 18);
+    ctx.quadraticCurveTo(mx + 48, my + 22, mx + 54, my + 16);
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = sh;
+    ctx.beginPath();
+    ctx.ellipse(mx + 4, my - 26, 9, 7, -0.4, 0, PI2);
+    ctx.fill();
+    // 裂痕裡透出的微光（沉睡的守護者）
+    ctx.strokeStyle = L.crack;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-10, y0 - 70);
+    ctx.lineTo(-2, y0 - 56);
+    ctx.lineTo(-8, y0 - 44);
+    ctx.lineTo(0, y0 - 30);
+    ctx.moveTo(mx - 20, my - 30);
+    ctx.lineTo(mx - 12, my - 16);
+    ctx.lineTo(mx - 18, my - 4);
+    ctx.stroke();
+    // 苔
+    ctx.fillStyle = 'rgba(110,150,90,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(-60, -86, 18, 5, 0, 0, PI2);
+    ctx.ellipse(mx - 30, my - 30, 10, 5, -0.6, 0, PI2);
+    ctx.ellipse(60, -80, 12, 4, 0, 0, PI2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  Object.assign(LAYER, {
+    // 雪山連峰：稜線分出受光面與背光面，山頂積雪，山腳一層霧
+    peaks(ctx, L, rnd, h) {
+      const base = h * L.base;
+      let x = rnd() * 120;
+      while (x < TW) {
+        const w = rr(rnd, L.w);
+        const hg = rr(rnd, L.hgt);
+        const seed = Math.floor(rnd() * 1e6);
+        wrap2(x, w * 0.5 + 40, (xx) => drawPeak(ctx, L, xx, base, w, hg, seed));
+        x += w * rr(rnd, L.gap || [0.45, 0.75]);
+      }
+      ctx.fillStyle = L.color;
+      ctx.fillRect(0, base + 50, TW, h);
+      if (L.mist) {
+        const mh = L.mistH || 70;
+        const ma = L.mistA || 0.9;
+        const g = ctx.createLinearGradient(0, base - mh, 0, base + 50);
+        g.addColorStop(0, 'rgba(' + L.mist + ',0)');
+        g.addColorStop(1, 'rgba(' + L.mist + ',' + ma + ')');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, base - mh, TW, mh + 50);
+        ctx.fillStyle = 'rgba(' + L.mist + ',' + ma + ')';
+        ctx.fillRect(0, base + 50, TW, h);
+      }
+    },
+    // 雪松林
+    pines(ctx, L, rnd, h) {
+      if (L.ground) {
+        const base = h * L.base + 6;
+        ctx.fillStyle = L.ground;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        for (let x = 0; x <= TW; x += 20) ctx.lineTo(x, base + Math.sin((x / TW) * PI2 * 3) * 8 + Math.sin((x / TW) * PI2 * 7 + 1) * 4);
+        ctx.lineTo(TW, h);
+        ctx.fill();
+      }
+      ctx.globalAlpha = L.alpha || 1;
+      for (let i = 0; i < L.n; i++) {
+        const x = (i / L.n) * TW + rnd() * (TW / L.n) * 0.8;
+        const s = rr(rnd, L.size);
+        const y = h * L.base + rnd() * 26;
+        const col = L.colors[Math.floor(rnd() * L.colors.length)];
+        wrap2(x, s * 0.5, (xx) => drawPine(ctx, L, xx, y, s, col));
+      }
+      ctx.globalAlpha = 1;
+    },
+    // 起伏的雪丘，稜上閃著細碎的光
+    drifts(ctx, L, rnd, h) {
+      const base = h * L.base;
+      const p1 = rnd() * 6;
+      const p2 = rnd() * 6;
+      const yAt = (x) => base - Math.sin((x / TW) * PI2 * 2 + p1) * L.amp - Math.sin((x / TW) * PI2 * 5 + p2) * L.amp * 0.4;
+      const path = (c) => {
+        c.moveTo(0, h);
+        for (let x = 0; x <= TW; x += 10) c.lineTo(x, yAt(x));
+        c.lineTo(TW, h);
+        c.closePath();
+      };
+      const g = ctx.createLinearGradient(0, base - L.amp * 1.4, 0, h);
+      g.addColorStop(0, L.colors[0]);
+      g.addColorStop(1, L.colors[1]);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      path(ctx);
+      ctx.fill();
+      // 背光的斜坡：往左上偏移的同一條線，差出來的地方塗藍影
+      ctx.save();
+      ctx.beginPath();
+      path(ctx);
+      ctx.clip();
+      ctx.fillStyle = L.shadow;
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= TW; x += 10) ctx.lineTo(x, Math.max(yAt(x), yAt(x - 70) + 10));
+      ctx.lineTo(TW, h);
+      ctx.fill();
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= TW; x += 10) ctx.lineTo(x, yAt(x - 70) + 26);
+      ctx.lineTo(TW, h);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let x = 0; x <= TW; x += 10) x ? ctx.lineTo(x, yAt(x) + 1.5) : ctx.moveTo(x, yAt(x) + 1.5);
+      ctx.stroke();
+      const pts = [];
+      for (let i = 0; i < (L.sparkle || 0); i++) {
+        const x = 20 + rnd() * (TW - 40);
+        pts.push({ x, y: yAt(x) + 6 + rnd() * 50, p: rnd() * 6 });
+      }
+      return [{ type: 'glint', pts }];
+    },
+    // 霜鈴村：木屋、暖窗、煙囪炊煙、屋與屋之間的燈籠串和風鈴
+    village(ctx, L, rnd, h) {
+      const base = h * L.base;
+      const glows = [];
+      const smoke = [];
+      const houses = [];
+      let x = 30 + rnd() * 60;
+      for (;;) {
+        const w = rr(rnd, L.w);
+        if (x + w > TW - 30) break;
+        houses.push({ x: x + w / 2, w, hg: rr(rnd, L.hgt), dy: rnd() * 14 });
+        x += w + rr(rnd, L.gap);
+      }
+      // 燈籠串（在房子後面）
+      for (let i = 0; i + 1 < houses.length; i++) {
+        const a = houses[i];
+        const b = houses[i + 1];
+        const p0 = [a.x + a.w * 0.3, base + a.dy - a.hg - 4];
+        const p1 = [b.x - b.w * 0.3, base + b.dy - b.hg - 4];
+        const c = [(p0[0] + p1[0]) / 2, Math.max(p0[1], p1[1]) + 34];
+        ctx.strokeStyle = 'rgba(60,40,40,0.8)';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(p0[0], p0[1]);
+        ctx.quadraticCurveTo(c[0], c[1], p1[0], p1[1]);
+        ctx.stroke();
+        const n = 5;
+        for (let k = 1; k < n; k++) {
+          const q = quadAt(p0, c, p1, k / n);
+          if (k % 2) {
+            softGlow(ctx, q[0], q[1] + 8, 26, L.glowRgb, 0.35);
+            ctx.fillStyle = L.lantern;
+            ctx.beginPath();
+            ctx.ellipse(q[0], q[1] + 8, 5, 7, 0, 0, PI2);
+            ctx.fill();
+            ctx.fillStyle = '#ffe2a0';
+            ctx.fillRect(q[0] - 1.5, q[1] + 4, 3, 8);
+            ctx.fillStyle = '#3a2418';
+            ctx.fillRect(q[0] - 3, q[1] + 0.5, 6, 2);
+            ctx.fillRect(q[0] - 3, q[1] + 14, 6, 2);
+            glows.push({ x: q[0], y: q[1] + 8, r: 22, p: rnd() });
+          } else {
+            // 風鈴＋短冊
+            ctx.strokeStyle = 'rgba(60,40,40,0.8)';
+            ctx.beginPath();
+            ctx.moveTo(q[0], q[1]);
+            ctx.lineTo(q[0], q[1] + 4);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(210,240,255,0.95)';
+            ctx.beginPath();
+            ctx.arc(q[0], q[1] + 8, 4.5, Math.PI, 0);
+            ctx.fill();
+            ctx.fillStyle = k % 4 ? '#ff9ab0' : '#9ad0ff';
+            ctx.fillRect(q[0] - 1.5, q[1] + 9, 3, 12);
+          }
+        }
+      }
+      // 地上的雪
+      const g = ctx.createLinearGradient(0, base, 0, base + 80);
+      g.addColorStop(0, L.ground);
+      g.addColorStop(1, L.groundShade);
+      for (const hs of houses) drawCabin(ctx, L, hs.x, base + hs.dy, hs.w, hs.hg, rnd, glows, smoke);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let xx = 0; xx <= TW; xx += 16) ctx.lineTo(xx, base + 12 + Math.sin(xx * 0.01) * 4 + Math.sin(xx * 0.037) * 3);
+      ctx.lineTo(TW, h);
+      ctx.fill();
+      // 籬笆
+      ctx.fillStyle = '#6a4a3a';
+      for (let xx = 10; xx < TW; xx += 14) {
+        if (houses.some((hs) => Math.abs(xx - hs.x) < hs.w / 2 + 10)) continue;
+        const fy = base + 14 + Math.sin(xx * 0.01) * 4;
+        ctx.fillRect(xx - 2, fy - 16, 4, 18);
+        ctx.fillStyle = L.snow;
+        ctx.fillRect(xx - 3, fy - 19, 6, 4);
+        ctx.fillStyle = '#6a4a3a';
+      }
+      return [
+        { type: 'plume', pts: smoke, color: '236,236,244', a: 0.4, n: 5, speed: 0.12 },
+        { type: 'glows', pts: glows, rgb: L.glowRgb, a: 0.45 },
+      ];
+    },
+    // 冰瀑：兩側岩壁、結凍的瀑布、岩頂積雪與冰柱
+    icefall(ctx, L, rnd, h) {
+      const top = h * L.top;
+      const base = h * L.base;
+      const p1 = rnd() * 6;
+      const yAt = (x) => top + Math.sin((x / TW) * PI2 * 3 + p1) * 26 + Math.sin((x / TW) * PI2 * 8) * 10 + (hash(Math.floor(x / 50) + 3) - 0.5) * 22;
+      // 瀑布後面的冷光
+      for (const [fx, fw] of L.falls) softGlow(ctx, TW * fx, base - 120, fw * 2.2, L.glowRgb, 0.35);
+      // 岩壁
+      const wall = (c) => {
+        c.moveTo(0, h);
+        for (let x = 0; x <= TW; x += 12) c.lineTo(x, yAt(x));
+        c.lineTo(TW, h);
+        c.closePath();
+      };
+      const wg = ctx.createLinearGradient(0, top, 0, base);
+      wg.addColorStop(0, L.color);
+      wg.addColorStop(1, L.shade);
+      fillShaded(ctx, wall, L.color, L.shade, 0, -12);
+      ctx.save();
+      ctx.beginPath();
+      wall(ctx);
+      ctx.clip();
+      ctx.fillStyle = wg;
+      ctx.globalAlpha = 0.6;
+      ctx.fillRect(0, top - 40, TW, h);
+      ctx.globalAlpha = 1;
+      // 岩層與縱向裂縫
+      ctx.fillStyle = 'rgba(200,230,255,0.08)';
+      for (let y = top; y < h; y += 30 + hash(y) * 26) ctx.fillRect(0, y, TW, 4 + hash(y + 2) * 5);
+      ctx.strokeStyle = 'rgba(10,20,40,0.2)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 22; i++) {
+        const x = rnd() * TW;
+        const y = yAt(x) + 20 + rnd() * 60;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + (rnd() - 0.5) * 24, y + 60 + rnd() * 140);
+        ctx.stroke();
+      }
+      // 岩架：一條條橫向的雪棚與冰柱
+      for (let i = 0; i < 9; i++) {
+        const x = rnd() * TW;
+        const y = yAt(x) + 70 + rnd() * (base - yAt(x) - 150);
+        const w = 60 + rnd() * 90;
+        ctx.fillStyle = L.snow;
+        ctx.beginPath();
+        ctx.ellipse(x, y, w / 2, 5, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(200,240,255,0.9)';
+        for (let k = x - w / 2 + 6; k < x + w / 2 - 4; k += 7) {
+          const len = 6 + hash(k) * 16;
+          ctx.beginPath();
+          ctx.moveTo(k - 2.5, y);
+          ctx.lineTo(k + 2.5, y);
+          ctx.lineTo(k, y + len);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+      // 頂上的雪
+      ctx.fillStyle = L.snow;
+      ctx.beginPath();
+      for (let x = 0; x <= TW; x += 12) x ? ctx.lineTo(x, yAt(x) - 3) : ctx.moveTo(x, yAt(x) - 3);
+      for (let x = TW; x >= 0; x -= 12) ctx.lineTo(x, yAt(x) + 8 + hash(x * 0.3) * 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(210,240,255,0.95)';
+      for (let x = 4; x < TW; x += 9) {
+        if (hash(x * 0.71) < 0.35) continue;
+        const y = yAt(x) + 8;
+        const len = 8 + hash(x) * 22;
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y);
+        ctx.lineTo(x + 3, y);
+        ctx.lineTo(x, y + len);
+        ctx.fill();
+      }
+      // 結凍的瀑布
+      const shim = [];
+      for (const [fx, fw] of L.falls) {
+        const cx = TW * fx;
+        const y0 = yAt(cx) - 6;
+        const ph = rnd() * 6;
+        const edge = (y, side) => cx + side * (fw / 2 + Math.sin(y * 0.03 + ph + side) * 7 + Math.max(0, (y - base + 90) * 0.5));
+        const fall = (c) => {
+          c.moveTo(edge(y0, -1), y0);
+          for (let y = y0; y <= base + 20; y += 10) c.lineTo(edge(y, -1), y);
+          for (let y = base + 20; y >= y0; y -= 10) c.lineTo(edge(y, 1), y);
+          c.closePath();
+        };
+        const g = ctx.createLinearGradient(0, y0, 0, base);
+        g.addColorStop(0, L.ice[0]);
+        g.addColorStop(0.45, L.ice[1]);
+        g.addColorStop(1, L.ice[2]);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        fall(ctx);
+        ctx.fill();
+        ctx.save();
+        ctx.beginPath();
+        fall(ctx);
+        ctx.clip();
+        // 冰的縱紋
+        for (let k = 0; k < fw / 9; k++) {
+          const lx = cx - fw / 2 + k * 9 + rnd() * 4;
+          ctx.strokeStyle = k % 3 ? 'rgba(255,255,255,0.45)' : 'rgba(60,130,190,0.35)';
+          ctx.lineWidth = k % 3 ? 2 : 3;
+          ctx.beginPath();
+          ctx.moveTo(lx, y0);
+          for (let y = y0; y < base + 20; y += 16) ctx.lineTo(lx + Math.sin(y * 0.04 + k) * 3 + (lx - cx) * Math.max(0, (y - base + 90) / 180), y);
+          ctx.stroke();
+        }
+        // 一層層凍住的水簾
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.lineWidth = 3;
+        for (let y = y0 + 50; y < base; y += 56 + rnd() * 30) {
+          ctx.beginPath();
+          ctx.moveTo(edge(y, -1), y);
+          ctx.quadraticCurveTo(cx, y + 18, edge(y, 1), y);
+          ctx.stroke();
+        }
+        // 右半邊的陰影
+        ctx.fillStyle = 'rgba(40,90,150,0.18)';
+        ctx.fillRect(cx + fw * 0.15, y0, fw, base - y0 + 40);
+        ctx.restore();
+        // 底下的冰堆
+        ctx.fillStyle = L.ice[0];
+        ctx.beginPath();
+        ctx.ellipse(cx, base + 16, fw * 0.9, 22, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(120,190,230,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(cx + fw * 0.2, base + 16, fw * 0.6, 12, 0, Math.PI, 0);
+        ctx.fill();
+        for (let k = 0; k < 3; k++) shim.push({ x: cx + (k - 1) * fw * 0.28, y0: y0 + 10, y1: base, w: fw, p: rnd() });
+      }
+      // 凍結的水面
+      ctx.fillStyle = '#a8d8ee';
+      ctx.fillRect(0, base + 16, TW, h);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (let i = 0; i < 20; i++) ctx.fillRect(rnd() * TW, base + 22 + rnd() * 40, 20 + rnd() * 60, 2);
+      return [{ type: 'shimmer', pts: shim }];
+    },
+    // 冰晶簇（近景）
+    crystals(ctx, L, rnd, h) {
+      const glows = [];
+      for (let i = 0; i < L.n; i++) {
+        const x = (i / L.n) * TW + rnd() * (TW / L.n) * 0.7;
+        const y = h * L.base + rnd() * 20;
+        const s = rr(rnd, L.size);
+        const parts = [];
+        const k = 3 + Math.floor(rnd() * 3);
+        for (let j = 0; j < k; j++) parts.push([(rnd() - 0.5) * s * 0.7, s * (0.14 + rnd() * 0.1), s * (0.5 + rnd() * 0.6), (rnd() - 0.5) * 0.8]);
+        parts.sort((a, b) => a[2] - b[2]).reverse();
+        wrap2(x, s, (xx) => {
+          softGlow(ctx, xx, y - s * 0.4, s * 0.9, L.glowRgb, 0.3);
+          for (const [dx, w, hg, rot] of parts) drawCrystal(ctx, xx + dx, y, w, hg, rot, L.colors);
+        });
+        glows.push({ x, y: y - s * 0.4, r: s * 0.7, p: rnd() });
+      }
+      return [{ type: 'glows', pts: glows, rgb: L.glowRgb, a: 0.25, sp: 1.4 }];
+    },
+    // 千鈴參道的鳥居群，鳥居之間拉著掛滿小鈴的繩
+    torii(ctx, L, rnd, h) {
+      const base = h * L.base;
+      const s = L.s;
+      const gap = TW / L.n;
+      const glints = [];
+      const glows = [];
+      ctx.globalAlpha = L.alpha || 1;
+      if (L.ground) {
+        ctx.fillStyle = L.ground;
+        ctx.fillRect(0, base, TW, h - base);
+        ctx.fillStyle = L.groundHi;
+        ctx.fillRect(0, base - 2, TW, 6);
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        for (let x = 0; x < TW; x += 58) ctx.fillRect(x, base + 4, 2, h - base);
+      }
+      const gates = [];
+      for (let i = 0; i < L.n; i++) gates.push(i * gap + gap * 0.5 + (rnd() - 0.5) * gap * 0.1);
+      const sp = 96 * s;
+      const ph = 150 * s;
+      // 鳥居之間的鈴繩
+      for (let i = 0; i < L.n; i++) {
+        const a = gates[i] + sp;
+        const b = (i + 1 < L.n ? gates[i + 1] : gates[0] + TW) - sp;
+        for (let k = 0; k < L.rows; k++) {
+          const y0 = base - ph * (0.6 + k * 0.13);
+          const sag = (22 + k * 6) * s;
+          const mid = (a + b) / 2;
+          wrap2(mid, (b - a) / 2 + 10, (mm) => {
+            const d = mm - mid;
+            const P0 = [a + d, y0];
+            const P1 = [b + d, y0];
+            const C = [mm, y0 + sag * 2];
+            ctx.strokeStyle = L.cord;
+            ctx.lineWidth = Math.max(1, 1.6 * s);
+            ctx.beginPath();
+            ctx.moveTo(P0[0], P0[1]);
+            ctx.quadraticCurveTo(C[0], C[1], P1[0], P1[1]);
+            ctx.stroke();
+            const n = Math.floor((b - a) / (8 * s));
+            for (let j = 1; j < n; j++) {
+              const q = quadAt(P0, C, P1, j / n);
+              tinyBell(ctx, q[0], q[1] + 3 * s, Math.max(1.2, 2.2 * s), L.bell, L.bellShade || L.shade);
+            }
+          });
+          if (s > 0.8) for (let j = 1; j < 6; j++) {
+            const q = quadAt([a, y0], [(a + b) / 2, y0 + sag * 2], [b, y0], j / 6);
+            glints.push({ x: ((q[0] % TW) + TW) % TW, y: q[1] + 3 * s, p: rnd() * 6 });
+          }
+        }
+      }
+      for (const gx of gates) wrap2(gx, sp + 60 * s, (xx) => drawTorii(ctx, L, xx, base, s, xx === gx && s > 0.8 ? glints : null));
+      // 石燈籠
+      if (L.lanterns) {
+        for (let i = 0; i < L.n; i++) {
+          const lx = gates[i] + gap / 2;
+          wrap2(lx, 40, (xx) => {
+            const y = base;
+            ctx.fillStyle = '#8a8490';
+            ctx.fillRect(xx - 14, y - 8, 28, 8);
+            ctx.fillRect(xx - 5, y - 36, 10, 28);
+            ctx.fillRect(xx - 13, y - 54, 26, 18);
+            softGlow(ctx, xx, y - 45, 40, '255,200,120', 0.55);
+            ctx.fillStyle = '#ffd88a';
+            ctx.fillRect(xx - 7, y - 50, 14, 10);
+            ctx.fillStyle = '#6e6874';
+            ctx.beginPath();
+            ctx.moveTo(xx - 22, y - 54);
+            ctx.quadraticCurveTo(xx, y - 70, xx + 22, y - 54);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = L.snow;
+            ctx.beginPath();
+            ctx.moveTo(xx - 20, y - 56);
+            ctx.quadraticCurveTo(xx, y - 74, xx + 20, y - 56);
+            ctx.quadraticCurveTo(xx, y - 64, xx - 20, y - 56);
+            ctx.fill();
+          });
+          glows.push({ x: ((lx % TW) + TW) % TW, y: base - 45, r: 34, p: rnd() });
+        }
+      }
+      ctx.globalAlpha = 1;
+      return [{ type: 'glint', pts: glints }, { type: 'glows', pts: glows, rgb: '255,190,110', a: 0.4 }];
+    },
+    // 月亮（或帶環的星球）
+    moon(ctx, L, rnd, h) {
+      const x = TW * L.x;
+      const y = h * L.y;
+      const r = L.r;
+      wrap2(x, r * 4, (xx) => {
+        softGlow(ctx, xx, y, r * 4, L.glowRgb, L.glowA || 0.4);
+        const tilt = -0.28;
+        if (L.ring) {
+          ctx.strokeStyle = L.ring;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.ellipse(xx, y, r * 1.9, r * 0.42, tilt, Math.PI, PI2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = L.color;
+        ctx.beginPath();
+        ctx.arc(xx, y, r, 0, PI2);
+        ctx.fill();
+        const rs = U.seeded(77);
+        ctx.fillStyle = L.spot;
+        for (let k = 0; k < 7; k++) {
+          ctx.beginPath();
+          ctx.ellipse(xx + (rs() - 0.5) * r * 1.1, y + (rs() - 0.5) * r * 1.1, r * (0.1 + rs() * 0.18), r * (0.08 + rs() * 0.12), rs() * 3, 0, PI2);
+          ctx.fill();
+        }
+        const g = ctx.createRadialGradient(xx - r * 0.35, y - r * 0.35, r * 0.2, xx, y, r);
+        g.addColorStop(0, 'rgba(255,255,255,0)');
+        g.addColorStop(0.7, 'rgba(255,255,255,0)');
+        g.addColorStop(1, L.limb);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(xx, y, r, 0, PI2);
+        ctx.fill();
+        if (L.ring) {
+          ctx.strokeStyle = L.ring;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.ellipse(xx, y, r * 1.9, r * 0.42, tilt, 0, Math.PI);
+          ctx.stroke();
+        }
+      });
+    },
+    // 霜靈祭壇：三層冰石台、兩根冰柱掛大鈴、浮在上方的巨大冰晶
+    altar(ctx, L, rnd, h) {
+      const x = TW * L.x;
+      const base = h * L.base;
+      const s = L.s;
+      const glows = [];
+      const glints = [];
+      softGlow(ctx, x, base - 250 * s, 420 * s, L.glowRgb, 0.4);
+      // 冰原
+      const gg = ctx.createLinearGradient(0, base - 10, 0, h);
+      gg.addColorStop(0, L.ground);
+      gg.addColorStop(1, L.groundShade);
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let xx = 0; xx <= TW; xx += 20) ctx.lineTo(xx, base - 6 + Math.sin(xx * 0.008) * 6 + Math.sin(xx * 0.03) * 3);
+      ctx.lineTo(TW, h);
+      ctx.fill();
+      // 地上的法陣
+      ctx.strokeStyle = 'rgba(' + L.glowRgb + ',0.75)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(x, base + 10, 300 * s, 30 * s, 0, 0, PI2);
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(x, base + 10, 260 * s, 24 * s, 0, 0, PI2);
+      ctx.stroke();
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * PI2;
+        const px = x + Math.cos(a) * 280 * s;
+        const py = base + 10 + Math.sin(a) * 27 * s;
+        ctx.fillStyle = 'rgba(' + L.glowRgb + ',0.8)';
+        ctx.fillRect(px - 2, py - 3, 4, 6);
+      }
+      // 台階
+      let y = base;
+      const tiers = [[380, 34], [290, 32], [200, 30]];
+      for (const [tw0, th0] of tiers) {
+        const tw = tw0 * s;
+        const th = th0 * s;
+        fillShaded(ctx, (c) => c.rect(x - tw / 2, y - th, tw, th), L.stone, L.stoneShade, -tw * 0.18, 0);
+        ctx.strokeStyle = 'rgba(20,40,80,0.25)';
+        ctx.lineWidth = 1.5;
+        for (let bx = x - tw / 2 + 36; bx < x + tw / 2; bx += 44) {
+          ctx.beginPath();
+          ctx.moveTo(bx, y - th + 8);
+          ctx.lineTo(bx, y);
+          ctx.stroke();
+        }
+        ctx.fillStyle = L.top;
+        ctx.fillRect(x - tw / 2 - 6, y - th - 7, tw + 12, 9);
+        // 邊上垂下來的雪
+        ctx.fillStyle = L.snow;
+        ctx.beginPath();
+        ctx.moveTo(x - tw / 2 - 8, y - th - 8);
+        ctx.lineTo(x + tw / 2 + 8, y - th - 8);
+        for (let bx = x + tw / 2 + 8; bx > x - tw / 2 - 8; bx -= 12) ctx.lineTo(bx - 6, y - th + 2 + hash(bx) * 8);
+        ctx.closePath();
+        ctx.fill();
+        y -= th + 8;
+      }
+      const topY = y;
+      // 冰柱（左右各一，頂端斷裂）
+      const pil = [];
+      for (const side of [-1, 1]) {
+        const px = x + side * 170 * s;
+        const pw = 40 * s;
+        const ph = 280 * s;
+        const py = base - 30 * s;
+        const path = (c) => {
+          c.moveTo(px - pw / 2, py);
+          c.lineTo(px - pw / 2, py - ph + 20 * s);
+          c.lineTo(px - pw * 0.2, py - ph);
+          c.lineTo(px + pw * 0.05, py - ph + 26 * s);
+          c.lineTo(px + pw * 0.3, py - ph + 8 * s);
+          c.lineTo(px + pw / 2, py - ph + 30 * s);
+          c.lineTo(px + pw / 2, py);
+          c.closePath();
+        };
+        const g = ctx.createLinearGradient(px - pw / 2, 0, px + pw / 2, 0);
+        g.addColorStop(0, L.ice[0]);
+        g.addColorStop(0.45, L.ice[1]);
+        g.addColorStop(1, L.ice[2]);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        path(ctx);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(px - pw * 0.2, py - ph + 30 * s);
+        ctx.lineTo(px - pw * 0.2, py - 10);
+        ctx.stroke();
+        fillShaded(ctx, (c) => c.rect(px - pw * 0.7, py - 10 * s, pw * 1.4, 26 * s), L.stone, L.stoneShade, -10, 0);
+        ctx.fillStyle = L.snow;
+        ctx.fillRect(px - pw * 0.75, py - 14 * s, pw * 1.5, 6 * s);
+        pil.push([px, py - ph + 40 * s]);
+      }
+      // 兩柱之間的注連繩與大鈴
+      const P0 = [pil[0][0] + 16 * s, pil[0][1]];
+      const P1 = [pil[1][0] - 16 * s, pil[1][1]];
+      const C = [x, pil[0][1] + 70 * s];
+      ctx.strokeStyle = '#f2ead8';
+      ctx.lineWidth = 7 * s;
+      ctx.beginPath();
+      ctx.moveTo(P0[0], P0[1]);
+      ctx.quadraticCurveTo(C[0], C[1], P1[0], P1[1]);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(160,130,90,0.6)';
+      ctx.lineWidth = 1.5;
+      for (let k = 1; k < 16; k++) {
+        const q = quadAt(P0, C, P1, k / 16);
+        ctx.beginPath();
+        ctx.moveTo(q[0] - 4 * s, q[1] - 3 * s);
+        ctx.lineTo(q[0] + 4 * s, q[1] + 3 * s);
+        ctx.stroke();
+      }
+      for (const u of [0.2, 0.5, 0.8]) {
+        const q = quadAt(P0, C, P1, u);
+        ctx.strokeStyle = '#c8302a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(q[0], q[1]);
+        ctx.lineTo(q[0], q[1] + 22 * s);
+        ctx.stroke();
+        tinyBell(ctx, q[0], q[1] + 32 * s, 11 * s, '#bfe6ff', '#6aa6d6');
+        glints.push({ x: q[0] - 4, y: q[1] + 26 * s, p: u * 9 });
+      }
+      for (const u of [0.1, 0.35, 0.65, 0.9]) {
+        const q = quadAt(P0, C, P1, u);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(q[0] - 4, q[1]);
+        ctx.lineTo(q[0] + 4, q[1]);
+        ctx.lineTo(q[0] + 2, q[1] + 10 * s);
+        ctx.lineTo(q[0] + 6, q[1] + 10 * s);
+        ctx.lineTo(q[0] + 3, q[1] + 22 * s);
+        ctx.lineTo(q[0] - 3, q[1] + 12 * s);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // 浮在上方的巨大冰晶
+      const cy = topY - 110 * s;
+      softGlow(ctx, x, cy, 170 * s, L.glowRgb, 0.55);
+      const cw = 52 * s;
+      const top = cy - 130 * s;
+      const bot = cy + 80 * s;
+      ctx.fillStyle = L.ice[1];
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x + cw, cy - 20 * s);
+      ctx.lineTo(x, bot);
+      ctx.lineTo(x - cw, cy - 20 * s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = L.ice[0];
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x - cw, cy - 20 * s);
+      ctx.lineTo(x - cw * 0.2, cy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = L.ice[2];
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x + cw, cy - 20 * s);
+      ctx.lineTo(x, bot);
+      ctx.lineTo(x + cw * 0.15, cy - 10 * s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - cw * 0.55, cy - 40 * s);
+      ctx.lineTo(x - cw * 0.15, cy - 100 * s);
+      ctx.stroke();
+      // 周圍的小碎晶
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * PI2 + 0.3;
+        const px = x + Math.cos(a) * 100 * s;
+        const py = cy + Math.sin(a) * 50 * s - 10;
+        const ss = (8 + rnd() * 8) * s;
+        ctx.fillStyle = k % 2 ? L.ice[0] : L.ice[1];
+        ctx.beginPath();
+        ctx.moveTo(px, py - ss * 1.6);
+        ctx.lineTo(px + ss * 0.6, py);
+        ctx.lineTo(px, py + ss);
+        ctx.lineTo(px - ss * 0.6, py);
+        ctx.closePath();
+        ctx.fill();
+        glints.push({ x: px, y: py - ss * 0.4, p: rnd() * 6 });
+      }
+      // 台前的冰刺
+      for (let k = 0; k < 12; k++) {
+        const px = x + (k < 6 ? -1 : 1) * (200 + rnd() * 160) * s;
+        const hh = (20 + rnd() * 50) * s;
+        ctx.fillStyle = k % 2 ? L.ice[1] : L.ice[0];
+        ctx.beginPath();
+        ctx.moveTo(px - 8 * s, base + 4);
+        ctx.lineTo(px + (rnd() - 0.5) * 10, base - hh);
+        ctx.lineTo(px + 8 * s, base + 4);
+        ctx.closePath();
+        ctx.fill();
+      }
+      glows.push({ x, y: cy - 20 * s, r: 150 * s, p: 0 });
+      return [{ type: 'glows', pts: glows, rgb: L.glowRgb, a: 0.35, sp: 1.3 }, { type: 'glint', pts: glints }];
+    },
+    // 雲海
+    cloudSea(ctx, L, rnd, h) {
+      const base = h * L.base;
+      const g = ctx.createLinearGradient(0, base, 0, h);
+      g.addColorStop(0, L.colors[0]);
+      g.addColorStop(1, L.colors[1]);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, base + 14, TW, h - base);
+      const rows = L.rows || 3;
+      for (let row = 0; row < rows; row++) {
+        const y = base + row * L.r * 0.65;
+        const puffs = [];
+        let x = rnd() * 30;
+        while (x < TW) {
+          const r = L.r * (0.55 + rnd() * 0.6) * (1 - row * 0.12);
+          puffs.push([x, y - r * 0.25 + rnd() * 10, r]);
+          x += r * (0.95 + rnd() * 0.5);
+        }
+        const fillPuffs = (col, dx, dy, k) => {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          for (const [px, py, r] of puffs) {
+            for (const ox of [0, -TW, TW]) {
+              const cx = px + ox + dx;
+              if (cx < -r - 10 || cx > TW + r + 10) continue;
+              ctx.moveTo(cx + r * k, py + dy);
+              ctx.arc(cx, py + dy, r * k, 0, PI2);
+            }
+          }
+          ctx.fill();
+        };
+        fillPuffs(L.shade, 3, 8, 1);
+        fillPuffs(row === rows - 1 ? L.colors[0] : L.colors[0], 0, 0, 0.94);
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.globalAlpha = 0.7;
+        fillPuffs(L.hi, -4, -5, 0.55);
+        ctx.globalAlpha = 1;
+        fillPuffs(L.colors[0], 2, 6, 0.8);
+        // 雲底
+        ctx.fillStyle = L.colors[0];
+        ctx.fillRect(0, y + L.r * 0.3, TW, L.r);
+      }
+    },
+    // 天上緩緩轉動的鐘環（只畫在動畫裡）
+    clockRings(ctx, L, rnd, h) {
+      return L.rings.map(([fx, fy, r, sp]) => ({ type: 'spin', img: ringSprite(r, L.color), x: TW * fx, y: h * fy, sp, a: L.alpha, p: rnd() * 6 }));
+    },
+    // 浮空神殿與小浮島
+    temple(ctx, L, rnd, h) {
+      const x = TW * L.x;
+      const y = h * L.base;
+      const s = L.s;
+      softGlow(ctx, x, y - 140 * s, 460 * s, L.glowRgb, L.glowA || 0.5);
+      const kinds = ['cols', 'arch', 'tree', null, 'cols'];
+      for (let i = 0; i < (L.isles || 0); i++) {
+        let ix = rnd() * TW;
+        if (Math.abs(ix - x) < 330 * s) ix = x + (ix < x ? -1 : 1) * (330 * s + rnd() * 200);
+        const iy = y - 250 * s + rnd() * 260 * s;
+        const iw = 60 + rnd() * 80;
+        const seed = Math.floor(rnd() * 1e6);
+        const kind = kinds[i % kinds.length];
+        ctx.globalAlpha = 0.85;
+        wrap2(((ix % TW) + TW) % TW, iw, (xx) => drawIsle(ctx, L, xx, iy, iw, seed, kind));
+        ctx.globalAlpha = 1;
+      }
+      drawIsle(ctx, L, x, y + 2, 520 * s, 4242, null);
+      drawTempleBuilding(ctx, L, x, y - 4, s);
+    },
+    // 前庭的欄杆：瓶形欄柱、台座上的壺與金燈
+    balustrade(ctx, L, rnd, h) {
+      const base = h * L.base;
+      const s = L.s;
+      const railH = 46 * s;
+      const glows = [];
+      // 下方的牆
+      const g = ctx.createLinearGradient(0, base + railH, 0, h);
+      g.addColorStop(0, L.wall);
+      g.addColorStop(1, L.shade);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, base + railH, TW, h);
+      ctx.strokeStyle = 'rgba(120,100,80,0.2)';
+      ctx.lineWidth = 1.5;
+      for (let y = base + railH + 24, k = 0; y < h; y += 24, k++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(TW, y);
+        ctx.stroke();
+        for (let x = (k % 2) * 40; x < TW; x += 80) {
+          ctx.beginPath();
+          ctx.moveTo(x, y - 24);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      }
+      ctx.fillStyle = L.gold;
+      ctx.fillRect(0, base + railH + 2, TW, 3);
+      // 欄柱
+      for (let x = 10; x < TW; x += 20 * s) {
+        const bx = x;
+        ctx.fillStyle = L.marble;
+        ctx.beginPath();
+        ctx.moveTo(bx - 4 * s, base + 6 * s);
+        ctx.quadraticCurveTo(bx - 9 * s, base + 18 * s, bx - 6 * s, base + 28 * s);
+        ctx.quadraticCurveTo(bx - 3 * s, base + 36 * s, bx - 6 * s, base + railH);
+        ctx.lineTo(bx + 6 * s, base + railH);
+        ctx.quadraticCurveTo(bx + 3 * s, base + 36 * s, bx + 6 * s, base + 28 * s);
+        ctx.quadraticCurveTo(bx + 9 * s, base + 18 * s, bx + 4 * s, base + 6 * s);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = L.shade;
+        ctx.fillRect(bx + 1.5 * s, base + 8 * s, 3 * s, railH - 10 * s);
+      }
+      // 扶手
+      ctx.fillStyle = L.marble;
+      ctx.fillRect(0, base - 4 * s, TW, 11 * s);
+      ctx.fillStyle = L.shade;
+      ctx.fillRect(0, base + 5 * s, TW, 3 * s);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillRect(0, base - 4 * s, TW, 2);
+      // 台座
+      const n = Math.round(TW / L.step);
+      for (let i = 0; i < n; i++) {
+        const px = (i + 0.5) * (TW / n);
+        const pw = 30 * s;
+        fillShaded(ctx, (c) => c.rect(px - pw / 2, base - 18 * s, pw, railH + 18 * s), L.marble, L.shade, -pw * 0.3, 0);
+        ctx.fillStyle = L.marble;
+        ctx.fillRect(px - pw / 2 - 4 * s, base - 24 * s, pw + 8 * s, 7 * s);
+        ctx.fillStyle = L.gold;
+        ctx.fillRect(px - pw / 2 - 4 * s, base - 18 * s, pw + 8 * s, 2 * s);
+        ctx.beginPath();
+        ctx.arc(px, base + 12 * s, 5 * s, 0, PI2);
+        ctx.fill();
+        if (i % 2) {
+          // 金燈
+          ctx.fillStyle = L.gold;
+          ctx.fillRect(px - 2 * s, base - 64 * s, 4 * s, 40 * s);
+          softGlow(ctx, px, base - 72 * s, 34 * s, L.glowRgb, 0.6);
+          ctx.fillStyle = '#fff4cc';
+          ctx.beginPath();
+          ctx.arc(px, base - 72 * s, 8 * s, 0, PI2);
+          ctx.fill();
+          ctx.strokeStyle = L.gold;
+          ctx.lineWidth = 2 * s;
+          ctx.beginPath();
+          ctx.arc(px, base - 72 * s, 10 * s, 0, PI2);
+          ctx.stroke();
+          glows.push({ x: px, y: base - 72 * s, r: 30 * s, p: rnd() });
+        } else {
+          // 壺與小樹
+          ctx.fillStyle = L.marble;
+          ctx.beginPath();
+          ctx.moveTo(px - 8 * s, base - 24 * s);
+          ctx.quadraticCurveTo(px - 16 * s, base - 38 * s, px - 9 * s, base - 46 * s);
+          ctx.lineTo(px + 9 * s, base - 46 * s);
+          ctx.quadraticCurveTo(px + 16 * s, base - 38 * s, px + 8 * s, base - 24 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = L.gold;
+          ctx.fillRect(px - 12 * s, base - 38 * s, 24 * s, 3 * s);
+          ctx.fillStyle = '#7cae5a';
+          ctx.beginPath();
+          ctx.arc(px, base - 58 * s, 14 * s, 0, PI2);
+          ctx.arc(px - 9 * s, base - 50 * s, 9 * s, 0, PI2);
+          ctx.arc(px + 9 * s, base - 50 * s, 9 * s, 0, PI2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,220,0.25)';
+          ctx.beginPath();
+          ctx.arc(px - 4 * s, base - 62 * s, 7 * s, 0, PI2);
+          ctx.fill();
+        }
+      }
+      return [{ type: 'glows', pts: glows, rgb: L.glowRgb, a: 0.5 }];
+    },
+    // 回憶迴廊的拱廊
+    arches(ctx, L, rnd, h) {
+      const top = h * L.top;
+      const spring = h * L.spring;
+      const aw = L.aw;
+      const pitch = TW / L.n;
+      const glows = [];
+      const g = ctx.createLinearGradient(0, top, 0, h);
+      g.addColorStop(0, L.marble);
+      g.addColorStop(1, L.shade);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, top, TW, h - top);
+      // 牆面的石塊
+      ctx.strokeStyle = 'rgba(120,100,90,0.18)';
+      ctx.lineWidth = 1.5;
+      for (let y = top + 30, k = 0; y < h; y += 30, k++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(TW, y);
+        ctx.stroke();
+        for (let x = (k % 2) * 36; x < TW; x += 72) {
+          ctx.beginPath();
+          ctx.moveTo(x, y - 30);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      }
+      // 挖出拱門
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      for (let i = 0; i < L.n; i++) {
+        const cx = i * pitch + pitch / 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - aw / 2, h + 10);
+        ctx.lineTo(cx - aw / 2, spring);
+        ctx.arc(cx, spring, aw / 2, Math.PI, 0);
+        ctx.lineTo(cx + aw / 2, h + 10);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      for (let i = 0; i < L.n; i++) {
+        const cx = i * pitch + pitch / 2;
+        // 拱的內側厚度（看得到一點深度）
+        ctx.fillStyle = L.dark;
+        ctx.beginPath();
+        ctx.moveTo(cx + aw / 2, h);
+        ctx.lineTo(cx + aw / 2, spring);
+        ctx.arc(cx, spring, aw / 2, 0, -Math.PI * 0.5, true);
+        ctx.lineTo(cx, spring - aw / 2 + 12);
+        ctx.arc(cx, spring, aw / 2 - 12, -Math.PI * 0.5, 0);
+        ctx.lineTo(cx + aw / 2 - 12, h);
+        ctx.closePath();
+        ctx.fill();
+        // 拱石
+        ctx.strokeStyle = L.marble;
+        ctx.lineWidth = 16;
+        ctx.beginPath();
+        ctx.arc(cx, spring, aw / 2 + 8, Math.PI, 0);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(120,100,90,0.3)';
+        ctx.lineWidth = 1.5;
+        for (let k = 1; k < 12; k++) {
+          const a = Math.PI + (k / 12) * Math.PI;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * aw / 2, spring + Math.sin(a) * aw / 2);
+          ctx.lineTo(cx + Math.cos(a) * (aw / 2 + 16), spring + Math.sin(a) * (aw / 2 + 16));
+          ctx.stroke();
+        }
+        ctx.strokeStyle = L.gold;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, spring, aw / 2 + 17, Math.PI, 0);
+        ctx.stroke();
+        // 金色拱心石
+        ctx.fillStyle = L.gold;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, spring - aw / 2 - 20);
+        ctx.lineTo(cx + 10, spring - aw / 2 - 20);
+        ctx.lineTo(cx + 7, spring - aw / 2 + 2);
+        ctx.lineTo(cx - 7, spring - aw / 2 + 2);
+        ctx.closePath();
+        ctx.fill();
+        // 從拱頂垂下的燈
+        const ly = spring - aw / 2 + 60;
+        ctx.strokeStyle = L.gold;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, spring - aw / 2 + 2);
+        ctx.lineTo(cx, ly - 10);
+        ctx.stroke();
+        softGlow(ctx, cx, ly, 40, L.glowRgb, 0.5);
+        ctx.fillStyle = L.gold;
+        ctx.beginPath();
+        ctx.moveTo(cx - 9, ly - 10);
+        ctx.lineTo(cx + 9, ly - 10);
+        ctx.lineTo(cx + 6, ly + 8);
+        ctx.lineTo(cx - 6, ly + 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#fff4cc';
+        ctx.fillRect(cx - 4, ly - 6, 8, 11);
+        glows.push({ x: cx, y: ly, r: 34, p: rnd() });
+        // 柱子（半柱）
+        const px = i * pitch;
+        const pw = (pitch - aw) * 0.55;
+        for (const xx of px === 0 ? [0, TW] : [px]) {
+          fillShaded(ctx, (c) => c.rect(xx - pw / 2, top + 16, pw, h - top), L.marble, L.shade, -pw * 0.3, 0);
+          ctx.strokeStyle = 'rgba(120,100,90,0.25)';
+          for (const f of [-0.3, -0.1, 0.1, 0.3]) {
+            ctx.beginPath();
+            ctx.moveTo(xx + f * pw, top + 40);
+            ctx.lineTo(xx + f * pw, h);
+            ctx.stroke();
+          }
+          ctx.fillStyle = L.marble;
+          ctx.fillRect(xx - pw / 2 - 8, spring - 8, pw + 16, 12);
+          ctx.fillStyle = L.gold;
+          ctx.fillRect(xx - pw / 2 - 8, spring + 2, pw + 16, 3);
+        }
+      }
+      // 楣與簷口
+      ctx.fillStyle = L.marble;
+      ctx.fillRect(0, top - 10, TW, 30);
+      ctx.fillStyle = L.shade;
+      ctx.fillRect(0, top + 14, TW, 6);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillRect(0, top - 10, TW, 3);
+      // 金色回紋
+      ctx.strokeStyle = L.gold;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = 0; x < TW; x += 16) {
+        ctx.moveTo(x, top + 8);
+        ctx.lineTo(x, top);
+        ctx.lineTo(x + 10, top);
+        ctx.lineTo(x + 10, top + 5);
+        ctx.lineTo(x + 5, top + 5);
+        ctx.moveTo(x + 10, top + 8);
+        ctx.lineTo(x + 16, top + 8);
+      }
+      ctx.stroke();
+      // 斷掉的簷口：幾處缺一角，露出時間的裂縫
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      for (let i = 0; i < 3; i++) {
+        const bx = rnd() * TW;
+        ctx.beginPath();
+        ctx.moveTo(bx - 40, top - 12);
+        ctx.lineTo(bx + 50, top - 12);
+        ctx.lineTo(bx + 30, top + 2);
+        ctx.lineTo(bx + 10, top - 4);
+        ctx.lineTo(bx - 14, top + 6);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      return [{ type: 'glows', pts: glows, rgb: L.glowRgb, a: 0.45 }];
+    },
+    // 回憶碎片：前面各章的風景浮在空中慢慢漂
+    fragments(ctx, L, rnd, h) {
+      // 遠處的小石片
+      for (let i = 0; i < (L.shards || 0); i++) {
+        const x = rnd() * TW;
+        const y = h * (0.15 + rnd() * 0.5);
+        const s = 5 + rnd() * 12;
+        ctx.fillStyle = 'rgba(180,150,170,0.45)';
+        ctx.beginPath();
+        ctx.moveTo(x - s, y);
+        ctx.lineTo(x + s, y - s * 0.2);
+        ctx.lineTo(x + s * 0.2, y + s * 1.2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,240,210,0.6)';
+        ctx.fillRect(x - s, y - 2, s * 2, 2);
+      }
+      const pts = L.kinds.map((kind, i) => {
+        const w = rr(rnd, L.w);
+        const x = ((i + 0.5) / L.kinds.length) * TW + (rnd() - 0.5) * 60;
+        const y = h * rr(rnd, [L.y0, L.y1]) + (i % 2 ? 40 : -20);
+        return { x, y, img: fragmentSprite(kind, w, 900 + i * 37), p: rnd() * 6, amp: 5 + rnd() * 5 };
+      });
+      return [{ type: 'bob', pts }];
+    },
+    // 上下顛倒：把另一種層翻過來畫
+    flip(ctx, L, rnd, h) {
+      ctx.save();
+      ctx.translate(0, h);
+      ctx.scale(1, -1);
+      LAYER[L.of.type](ctx, L.of, rnd, h);
+      ctx.restore();
+    },
+    // 倒轉的沙漏：沙往上流
+    hourglass(ctx, L, rnd, h) {
+      const x = TW * L.x;
+      const base = h * L.base;
+      const s = L.s;
+      const H = 300 * s;
+      const W = 150 * s;
+      const top = base - H;
+      const mid = base - H / 2;
+      softGlow(ctx, x, mid, 300 * s, L.glowRgb, 0.45);
+      const glass = (c) => {
+        c.moveTo(x - W * 0.42, top + 22 * s);
+        c.bezierCurveTo(x - W * 0.52, top + H * 0.3, x - 10 * s, mid - 30 * s, x - 6 * s, mid);
+        c.bezierCurveTo(x - 10 * s, mid + 30 * s, x - W * 0.52, base - H * 0.3, x - W * 0.42, base - 22 * s);
+        c.lineTo(x + W * 0.42, base - 22 * s);
+        c.bezierCurveTo(x + W * 0.52, base - H * 0.3, x + 10 * s, mid + 30 * s, x + 6 * s, mid);
+        c.bezierCurveTo(x + 10 * s, mid - 30 * s, x + W * 0.52, top + H * 0.3, x + W * 0.42, top + 22 * s);
+        c.closePath();
+      };
+      // 後面的柱
+      ctx.fillStyle = L.goldShade;
+      ctx.fillRect(x - 5 * s, top + 10 * s, 10 * s, H - 20 * s);
+      ctx.fillStyle = 'rgba(220,240,255,0.3)';
+      ctx.beginPath();
+      glass(ctx);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      glass(ctx);
+      ctx.clip();
+      // 上半部：沙堆倒掛在頂上（往上堆）
+      ctx.fillStyle = L.sand;
+      ctx.beginPath();
+      ctx.moveTo(x - W, top);
+      ctx.lineTo(x + W, top);
+      ctx.lineTo(x + W, top + H * 0.2);
+      ctx.quadraticCurveTo(x + W * 0.2, top + H * 0.22, x, top + H * 0.33);
+      ctx.quadraticCurveTo(x - W * 0.2, top + H * 0.22, x - W, top + H * 0.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(180,120,50,0.25)';
+      ctx.fillRect(x - W, top + H * 0.14, W * 2, 4 * s);
+      // 下半部：剩一點沙，中間凹下去（往上被吸走）
+      ctx.fillStyle = L.sand;
+      ctx.beginPath();
+      ctx.moveTo(x - W, base);
+      ctx.lineTo(x - W, base - H * 0.12);
+      ctx.quadraticCurveTo(x - W * 0.25, base - H * 0.14, x, base - H * 0.08);
+      ctx.quadraticCurveTo(x + W * 0.25, base - H * 0.14, x + W, base - H * 0.12);
+      ctx.lineTo(x + W, base);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      glass(ctx);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 4 * s;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - W * 0.3, top + 40 * s);
+      ctx.quadraticCurveTo(x - W * 0.38, top + H * 0.25, x - W * 0.2, mid - 40 * s);
+      ctx.moveTo(x - W * 0.3, base - 40 * s);
+      ctx.quadraticCurveTo(x - W * 0.36, base - H * 0.22, x - W * 0.24, base - H * 0.32);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      // 框：上下金盤、兩根扭柱
+      for (const side of [-1, 1]) {
+        const px = x + side * W * 0.56;
+        ctx.fillStyle = L.gold;
+        ctx.fillRect(px - 6 * s, top + 8 * s, 12 * s, H - 16 * s);
+        ctx.strokeStyle = L.goldShade;
+        ctx.lineWidth = 2;
+        for (let y = top + 16 * s; y < base - 16 * s; y += 14 * s) {
+          ctx.beginPath();
+          ctx.moveTo(px - 6 * s, y);
+          ctx.lineTo(px + 6 * s, y + 7 * s);
+          ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillRect(px - 4 * s, top + 10 * s, 2 * s, H - 20 * s);
+      }
+      for (const py of [top, base - 20 * s]) {
+        fillShaded(ctx, (c) => A.roundRect(c, x - W * 0.72, py, W * 1.44, 20 * s, 6 * s), L.gold, L.goldShade, 0, -6 * s);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillRect(x - W * 0.66, py + 3 * s, W * 1.3, 2 * s);
+      }
+      ctx.fillStyle = L.gold;
+      ctx.beginPath();
+      ctx.arc(x, top - 8 * s, 10 * s, 0, PI2);
+      ctx.fill();
+      return [{ type: 'sandUp', x, y0: base - H * 0.1, y1: top + H * 0.3, color: L.sand }];
+    },
+    // 星空＋星座
+    stars(ctx, L, rnd, h) {
+      const pts = [];
+      for (let i = 0; i < L.n; i++) {
+        const x = rnd() * TW;
+        const y = rnd() * h;
+        const big = rnd() < 0.08;
+        const r = big ? 1.4 + rnd() * 1.2 : 0.5 + rnd() * 1;
+        ctx.globalAlpha = 0.35 + rnd() * 0.65;
+        ctx.fillStyle = L.colors[Math.floor(rnd() * L.colors.length)];
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, PI2);
+        ctx.fill();
+        if (big) {
+          ctx.globalAlpha = 0.5;
+          ctx.fillRect(x - r * 4, y - 0.5, r * 8, 1);
+          ctx.fillRect(x - 0.5, y - r * 4, 1, r * 8);
+        }
+        if (rnd() < 0.1 && x > 10 && x < TW - 10) pts.push({ x, y, p: rnd() * 6 });
+      }
+      ctx.globalAlpha = 1;
+      for (let c = 0; c < (L.cons || 0); c++) {
+        let x = TW * ((c + 0.3 + rnd() * 0.4) / L.cons);
+        let y = h * (0.1 + rnd() * 0.35);
+        const star = [[x, y]];
+        const m = 4 + Math.floor(rnd() * 3);
+        let a = rnd() * PI2;
+        for (let k = 1; k < m; k++) {
+          a += (rnd() - 0.5) * 2;
+          x += Math.cos(a) * (40 + rnd() * 40);
+          y += Math.sin(a) * (30 + rnd() * 30);
+          star.push([x, y]);
+        }
+        ctx.strokeStyle = L.line;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        star.forEach(([sx, sy], k) => (k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy)));
+        ctx.stroke();
+        for (const [sx, sy] of star) {
+          softGlow(ctx, sx, sy, 9, '220,230,255', 0.6);
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2, 0, PI2);
+          ctx.fill();
+          if (sx > 10 && sx < TW - 10) pts.push({ x: sx, y: sy, p: rnd() * 6 });
+        }
+      }
+      return [{ type: 'glint', pts }];
+    },
+    // 星雲與銀河帶
+    nebula(ctx, L, rnd, h) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < L.n; i++) {
+        const x = (i / L.n) * TW + rnd() * (TW / L.n);
+        const y = h * rr(rnd, [L.y0, L.y1]);
+        const col = L.colors[i % L.colors.length];
+        for (let k = 0; k < 6; k++) {
+          const bx = x + (rnd() - 0.5) * 260;
+          const by = y + (rnd() - 0.5) * 120;
+          const r = 60 + rnd() * 140;
+          wrap2(bx, r, (xx) => softGlow(ctx, xx, by, r, col, 0.14 + rnd() * 0.08));
+        }
+      }
+      // 銀河帶
+      const p = rnd() * 6;
+      for (let i = 0; i < 700; i++) {
+        const x = rnd() * TW;
+        const yc = h * (0.35 + Math.sin((x / TW) * PI2 + p) * 0.18);
+        const y = yc + (rnd() + rnd() + rnd() - 1.5) * 60;
+        ctx.fillStyle = 'rgba(220,210,255,' + (0.1 + rnd() * 0.3).toFixed(2) + ')';
+        ctx.fillRect(x, y, 1.2, 1.2);
+      }
+      ctx.restore();
+    },
+    // 盤旋而上的星之階梯
+    stairs(ctx, L, rnd, h) {
+      const pts = [];
+      for (const [fx, fy, R, n, sc] of L.spirals) {
+        const cx = TW * fx;
+        const base = h * fy;
+        const rise = 17 * sc;
+        const steps = [];
+        for (let k = 0; k < n; k++) {
+          const u = k / n;
+          const a = k * 0.42;
+          steps.push({ x: cx + Math.cos(a) * R * (1 - u * 0.5), y: base - k * rise * (1 - u * 0.35), z: Math.sin(a), s: sc * (1 - u * 0.55) });
+        }
+        const topStep = steps[steps.length - 1];
+        // 中央的光柱
+        const g = ctx.createLinearGradient(0, topStep.y - 60, 0, base);
+        g.addColorStop(0, 'rgba(' + L.glowRgb + ',0.35)');
+        g.addColorStop(1, 'rgba(' + L.glowRgb + ',0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(cx - 14 * sc, topStep.y - 60, 28 * sc, base - topStep.y + 60);
+        steps.sort((a, b) => a.z - b.z);
+        for (const st of steps) {
+          const w = 74 * st.s;
+          const d = 12 * st.s;
+          const t = 9 * st.s;
+          softGlow(ctx, st.x, st.y + t + 4, w * 0.6, L.glowRgb, 0.18);
+          ctx.fillStyle = L.front;
+          ctx.fillRect(st.x - w / 2, st.y, w, t);
+          ctx.fillStyle = L.top;
+          ctx.beginPath();
+          ctx.moveTo(st.x - w / 2, st.y);
+          ctx.lineTo(st.x - w / 2 + d, st.y - d * 0.7);
+          ctx.lineTo(st.x + w / 2 + d, st.y - d * 0.7);
+          ctx.lineTo(st.x + w / 2, st.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = L.glow;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(st.x - w / 2, st.y + 0.5);
+          ctx.lineTo(st.x + w / 2, st.y + 0.5);
+          ctx.stroke();
+          if (st.z < 0) {
+            ctx.fillStyle = 'rgba(10,8,40,' + (-st.z * 0.45).toFixed(2) + ')';
+            ctx.fillRect(st.x - w / 2 - 1, st.y - d, w + d + 2, t + d + 1);
+          }
+          if (rnd() < 0.3) pts.push({ x: st.x + w / 2, y: st.y, p: rnd() * 6 });
+        }
+        // 頂端的星門
+        softGlow(ctx, topStep.x, topStep.y - 40 * sc, 90 * sc, L.glowRgb, 0.6);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        const sx = topStep.x;
+        const sy = topStep.y - 40 * sc;
+        const ss = 18 * sc;
+        ctx.moveTo(sx, sy - ss * 1.6);
+        ctx.quadraticCurveTo(sx, sy, sx + ss, sy);
+        ctx.quadraticCurveTo(sx, sy, sx, sy + ss * 1.6);
+        ctx.quadraticCurveTo(sx, sy, sx - ss, sy);
+        ctx.quadraticCurveTo(sx, sy, sx, sy - ss * 1.6);
+        ctx.fill();
+      }
+      return [{ type: 'glint', pts }];
+    },
+    // 漂浮的石階碎片
+    slabs(ctx, L, rnd, h) {
+      const glows = [];
+      ctx.globalAlpha = L.alpha || 1;
+      for (let i = 0; i < L.n; i++) {
+        const x = (i / L.n) * TW + rnd() * (TW / L.n) * 0.6;
+        const y = h * rr(rnd, [L.y0, L.y1]);
+        const w = 70 + rnd() * 80;
+        const t = 12 + rnd() * 8;
+        const dep = 26 + rnd() * 30;
+        const j = [rnd(), rnd(), rnd()];
+        wrap2(x, w, (xx) => {
+          softGlow(ctx, xx, y + t, w * 0.7, L.glowRgb, 0.22);
+          ctx.fillStyle = L.rock;
+          ctx.beginPath();
+          ctx.moveTo(xx - w / 2, y + t);
+          ctx.lineTo(xx - w * 0.2, y + t + dep * (0.5 + j[0] * 0.3));
+          ctx.lineTo(xx + w * (j[1] - 0.5) * 0.3, y + t + dep);
+          ctx.lineTo(xx + w * 0.25, y + t + dep * (0.4 + j[2] * 0.3));
+          ctx.lineTo(xx + w / 2, y + t);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = L.front;
+          ctx.fillRect(xx - w / 2, y, w, t);
+          ctx.fillStyle = L.top;
+          ctx.beginPath();
+          ctx.moveTo(xx - w / 2, y);
+          ctx.lineTo(xx - w / 2 + 10, y - 8);
+          ctx.lineTo(xx + w / 2 + 10, y - 8);
+          ctx.lineTo(xx + w / 2, y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(' + L.glowRgb + ',0.9)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(xx - w / 2 + 8, y + t * 0.5);
+          ctx.lineTo(xx + w / 2 - 8, y + t * 0.5);
+          ctx.stroke();
+        });
+        glows.push({ x, y: y + t, r: w * 0.4, p: rnd() });
+      }
+      ctx.globalAlpha = 1;
+      return [{ type: 'glows', pts: glows, rgb: L.glowRgb, a: 0.2, sp: 1.2 }];
+    },
+    // 巨大的鐘面（指針在動畫裡）
+    clockFace(ctx, L, rnd, h) {
+      const x = TW * L.x;
+      const y = h * L.y;
+      const R = L.r;
+      softGlow(ctx, x, y, R * 1.8, L.glowRgb, 0.35);
+      // 外圈放射的尖角
+      ctx.fillStyle = L.rim[1];
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * PI2;
+        const r2 = R * (k % 2 ? 1.1 : 1.18);
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a - 0.08) * R * 0.98, y + Math.sin(a - 0.08) * R * 0.98);
+        ctx.lineTo(x + Math.cos(a) * r2, y + Math.sin(a) * r2);
+        ctx.lineTo(x + Math.cos(a + 0.08) * R * 0.98, y + Math.sin(a + 0.08) * R * 0.98);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // 外框
+      const rg = ctx.createRadialGradient(x - R * 0.3, y - R * 0.3, R * 0.5, x, y, R);
+      rg.addColorStop(0, L.rim[0]);
+      rg.addColorStop(1, L.rim[1]);
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.arc(x, y, R, 0, PI2);
+      ctx.fill();
+      // 鐘面
+      const fg = ctx.createRadialGradient(x, y, 0, x, y, R * 0.88);
+      fg.addColorStop(0, L.face[0]);
+      fg.addColorStop(1, L.face[1]);
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(x, y, R * 0.86, 0, PI2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, R * 0.86, 0, PI2);
+      ctx.clip();
+      for (let k = 0; k < 90; k++) {
+        ctx.globalAlpha = 0.3 + rnd() * 0.6;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x + (rnd() - 0.5) * R * 1.7, y + (rnd() - 0.5) * R * 1.7, 1.5, 1.5);
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      // 內圈
+      ctx.strokeStyle = L.num;
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 1.5;
+      for (const k of [0.62, 0.4, 0.2]) {
+        ctx.beginPath();
+        ctx.arc(x, y, R * k, 0, PI2);
+        ctx.stroke();
+      }
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * PI2;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a) * R * 0.2, y + Math.sin(a) * R * 0.2);
+        ctx.lineTo(x + Math.cos(a) * R * 0.62, y + Math.sin(a) * R * 0.62);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      // 刻度與羅馬數字
+      ctx.strokeStyle = L.num;
+      for (let k = 0; k < 60; k++) {
+        const a = (k / 60) * PI2;
+        const big = k % 5 === 0;
+        ctx.lineWidth = big ? 4 : 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a) * R * 0.85, y + Math.sin(a) * R * 0.85);
+        ctx.lineTo(x + Math.cos(a) * R * (big ? 0.78 : 0.81), y + Math.sin(a) * R * (big ? 0.78 : 0.81));
+        ctx.stroke();
+      }
+      ctx.fillStyle = L.num;
+      ctx.font = 'bold ' + Math.round(R * 0.11) + 'px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * PI2 - Math.PI / 2;
+        ctx.fillText(ROMAN[k], x + Math.cos(a) * R * 0.7, y + Math.sin(a) * R * 0.7);
+      }
+      // 外框上的裝飾圈
+      ctx.strokeStyle = 'rgba(80,50,20,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, R * 0.93, 0, PI2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,250,220,0.8)';
+      for (let k = 0; k < 36; k++) {
+        const a = (k / 36) * PI2;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * R * 0.93, y + Math.sin(a) * R * 0.93, 2.5, 0, PI2);
+        ctx.fill();
+      }
+      // 發光的裂痕
+      ctx.strokeStyle = L.crack;
+      ctx.lineCap = 'round';
+      for (let c = 0; c < 3; c++) {
+        let a = -0.6 + c * 2.1 + rnd() * 0.4;
+        let px = x + Math.cos(a) * R;
+        let py = y + Math.sin(a) * R;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        for (let k = 0; k < 5; k++) {
+          a += (rnd() - 0.5) * 1.2;
+          px -= Math.cos(a) * R * 0.1;
+          py -= Math.sin(a) * R * 0.1;
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      ctx.lineCap = 'butt';
+      return [{ type: 'hands', x, y, R, col: L.hand }];
+    },
+    // 背後的齒輪（旋轉）
+    gears(ctx, L, rnd, h) {
+      return L.list.map(([fx, fy, r, sp]) => ({ type: 'spin', img: gearSprite(r, L), x: TW * fx, y: h * fy, sp, a: L.alpha, p: rnd() * 6 }));
+    },
+    // 時之王座：台階＋高背王座
+    throne(ctx, L, rnd, h) {
+      const x = TW * L.x;
+      const base = h * L.base;
+      const s = L.s;
+      // 地板
+      const fg = ctx.createLinearGradient(0, base, 0, h);
+      fg.addColorStop(0, L.floor);
+      fg.addColorStop(1, '#120c20');
+      ctx.fillStyle = fg;
+      ctx.fillRect(0, base, TW, h - base);
+      ctx.strokeStyle = 'rgba(232,184,74,0.35)';
+      ctx.lineWidth = 1.5;
+      for (let k = -12; k <= 12; k++) {
+        ctx.beginPath();
+        ctx.moveTo(x + k * 60, base);
+        ctx.lineTo(x + k * 140, h);
+        ctx.stroke();
+      }
+      ctx.fillStyle = L.gold;
+      ctx.fillRect(0, base, TW, 2);
+      softGlow(ctx, x, base - 190 * s, 260 * s, L.glowRgb, 0.5);
+      // 台階
+      let y = base;
+      for (let k = 0; k < 4; k++) {
+        const w = (420 - k * 70) * s;
+        const th = 16 * s;
+        fillShaded(ctx, (c) => c.rect(x - w / 2, y - th, w, th), L.stone, L.stoneShade, -w * 0.2, 0);
+        ctx.fillStyle = L.gold;
+        ctx.fillRect(x - w / 2, y - th, w, 2.5 * s);
+        y -= th;
+      }
+      const seat = y;
+      // 椅背：尖拱形的高背
+      const bw = 70 * s;
+      const bh = 250 * s;
+      const back = (c) => {
+        c.moveTo(x - bw, seat);
+        c.lineTo(x - bw, seat - bh * 0.62);
+        c.quadraticCurveTo(x - bw, seat - bh * 0.92, x, seat - bh);
+        c.quadraticCurveTo(x + bw, seat - bh * 0.92, x + bw, seat - bh * 0.62);
+        c.lineTo(x + bw, seat);
+        c.closePath();
+      };
+      fillShaded(ctx, back, L.stone, L.stoneShade, -bw * 0.4, 0);
+      ctx.strokeStyle = L.gold;
+      ctx.lineWidth = 4 * s;
+      ctx.beginPath();
+      back(ctx);
+      ctx.stroke();
+      // 椅背上的小鐘
+      const cy = seat - bh * 0.68;
+      ctx.fillStyle = '#1c1636';
+      ctx.beginPath();
+      ctx.arc(x, cy, 34 * s, 0, PI2);
+      ctx.fill();
+      ctx.lineWidth = 3 * s;
+      ctx.stroke();
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * PI2;
+        ctx.fillStyle = L.gold;
+        ctx.fillRect(x + Math.cos(a) * 27 * s - 1.5, cy + Math.sin(a) * 27 * s - 1.5, 3, 3);
+      }
+      softGlow(ctx, x, cy, 30 * s, L.glowRgb, 0.7);
+      // 內襯
+      ctx.fillStyle = '#5a2e8a';
+      ctx.beginPath();
+      A.roundRect(ctx, x - bw * 0.62, seat - bh * 0.5, bw * 1.24, bh * 0.44, 10 * s);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(x - bw * 0.5, seat - bh * 0.48, bw * 0.3, bh * 0.4);
+      // 座面與扶手
+      fillShaded(ctx, (c) => c.rect(x - bw * 1.25, seat - 40 * s, bw * 2.5, 40 * s), L.stone, L.stoneShade, -bw * 0.5, 0);
+      ctx.fillStyle = '#6a3aa0';
+      ctx.fillRect(x - bw * 0.9, seat - 50 * s, bw * 1.8, 12 * s);
+      for (const side of [-1, 1]) {
+        const ax = x + side * bw * 1.12;
+        fillShaded(ctx, (c) => A.roundRect(c, ax - 14 * s, seat - 86 * s, 28 * s, 50 * s, 8 * s), L.stone, L.stoneShade, -6 * s, 0);
+        ctx.fillStyle = L.gold;
+        ctx.beginPath();
+        ctx.arc(ax, seat - 86 * s, 12 * s, 0, PI2);
+        ctx.fill();
+      }
+      ctx.fillStyle = L.gold;
+      ctx.fillRect(x - bw * 1.25, seat - 42 * s, bw * 2.5, 3 * s);
+      // 頂上的星
+      softGlow(ctx, x, seat - bh - 20 * s, 40 * s, '255,230,170', 0.8);
+      ctx.fillStyle = '#fff6d8';
+      const sy = seat - bh - 20 * s;
+      const ss = 12 * s;
+      ctx.beginPath();
+      ctx.moveTo(x, sy - ss * 1.6);
+      ctx.quadraticCurveTo(x, sy, x + ss, sy);
+      ctx.quadraticCurveTo(x, sy, x, sy + ss * 1.6);
+      ctx.quadraticCurveTo(x, sy, x - ss, sy);
+      ctx.quadraticCurveTo(x, sy, x, sy - ss * 1.6);
+      ctx.fill();
+      // 飄在王座周圍的碎片
+      const glows = [{ x, y: cy, r: 60 * s, p: 0 }];
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * PI2;
+        const px = x + Math.cos(a) * 170 * s;
+        const py = seat - 140 * s + Math.sin(a) * 90 * s;
+        const ss2 = (6 + rnd() * 6) * s;
+        ctx.fillStyle = k % 2 ? '#d8c8ff' : L.gold;
+        ctx.beginPath();
+        ctx.moveTo(px, py - ss2 * 1.5);
+        ctx.lineTo(px + ss2 * 0.6, py);
+        ctx.lineTo(px, py + ss2);
+        ctx.lineTo(px - ss2 * 0.6, py);
+        ctx.closePath();
+        ctx.fill();
+      }
+      return [{ type: 'glows', pts: glows, rgb: L.glowRgb, a: 0.4, sp: 1.2 }];
+    },
+    // 石獅像
+    lions(ctx, L, rnd, h) {
+      const base = h * L.base;
+      for (const [fx, dir, s] of L.list) {
+        const x = TW * fx;
+        wrap2(x, 160 * s, (xx) => drawLionStatue(ctx, L, xx, base, s, dir));
+      }
+    },
+  });
+
+  // ── 第四章、終章的背景動畫 ──
+  Object.assign(ANIM, {
+    // 預先畫好的圖（鐘環、齒輪）繞中心慢慢轉
+    spin(ctx, a, t) {
+      ctx.save();
+      ctx.globalAlpha = a.a == null ? 1 : a.a;
+      ctx.translate(a.x, a.y);
+      ctx.rotate(t * a.sp + (a.p || 0));
+      ctx.drawImage(a.img, -a.img.width / 2, -a.img.height / 2);
+      ctx.restore();
+    },
+    // 燈火的呼吸光（貼預先畫好的柔光圓）
+    glows(ctx, a, t) {
+      const img = glowSprite(a.rgb);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of a.pts) {
+        ctx.globalAlpha = (a.a || 0.5) * (0.7 + 0.3 * Math.sin(t * (a.sp || 2.2) + p.p * 6));
+        ctx.drawImage(img, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+      }
+      ctx.restore();
+    },
+    // 冰瀑表面往下滑的反光
+    shimmer(ctx, a, t) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of a.pts) {
+        for (let k = 0; k < 2; k++) {
+          const ph = (t * 0.18 + p.p + k * 0.5) % 1;
+          const y = p.y0 + ph * (p.y1 - p.y0);
+          const x = p.x + Math.sin(y * 0.02 + p.p * 5) * p.w * 0.12;
+          ctx.fillStyle = 'rgba(210,250,255,' + (Math.sin(ph * Math.PI) * 0.55).toFixed(3) + ')';
+          ctx.beginPath();
+          ctx.ellipse(x, y, 2.5, 22, 0, 0, PI2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    },
+    // 浮在空中的回憶碎片上下漂
+    bob(ctx, a, t) {
+      for (const p of a.pts) {
+        const x = p.x - p.img.width / 2 + Math.sin(t * 0.13 + p.p) * 12;
+        const y = p.y - p.img.height / 2 + Math.sin(t * 0.5 + p.p) * p.amp;
+        ctx.drawImage(p.img, x, y);
+      }
+    },
+    // 巨鐘的指針：時針倒著走、分針正著走、秒針一格一格跳
+    hands(ctx, a, t) {
+      const draw = (ang, len, w) => {
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.rotate(ang);
+        ctx.fillStyle = a.col;
+        ctx.strokeStyle = 'rgba(30,16,40,0.85)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.5, len * 0.18);
+        ctx.lineTo(-w, 0);
+        ctx.lineTo(-w * 0.3, -len * 0.62);
+        ctx.lineTo(-w * 0.9, -len * 0.72);
+        ctx.lineTo(0, -len);
+        ctx.lineTo(w * 0.9, -len * 0.72);
+        ctx.lineTo(w * 0.3, -len * 0.62);
+        ctx.lineTo(w, 0);
+        ctx.lineTo(w * 0.5, len * 0.18);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      };
+      draw(1.1 - t * 0.03, a.R * 0.48, a.R * 0.05);
+      draw(t * 0.2, a.R * 0.72, a.R * 0.035);
+      const sec = Math.floor(t * 1.5) / 60 * PI2;
+      ctx.save();
+      ctx.translate(a.x, a.y);
+      ctx.rotate(sec);
+      ctx.strokeStyle = 'rgba(255,200,150,0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, a.R * 0.12);
+      ctx.lineTo(0, -a.R * 0.8);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = a.col;
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.R * 0.06, 0, PI2);
+      ctx.fill();
+      ctx.fillStyle = '#3a2250';
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.R * 0.025, 0, PI2);
+      ctx.fill();
+    },
+    // 倒轉沙漏：沙從下往上流
+    sandUp(ctx, a, t) {
+      ctx.fillStyle = a.color;
+      for (let k = 0; k < 16; k++) {
+        const ph = (t * 0.5 + k / 16) % 1;
+        const y = a.y0 - ph * (a.y0 - a.y1);
+        const x = a.x + Math.sin(k * 3.1 + ph * 12) * (1.5 + (1 - Math.abs(ph - 0.5) * 2) * 0.5);
+        ctx.fillRect(x - 1, y, 2, 3);
+      }
+    },
+  });
+
+  // ── 第四章的擺設 ──
+  function snowCap(ctx, path) {
+    A.shape(ctx, path, '#f6faff', '#cfdcee', { cel: [2, 1], lw: 2 });
+  }
+  Object.assign(PROP, {
+    snowPine(ctx) {
+      A.shape(ctx, (c) => c.rect(-4, -14, 8, 14), '#7a5a44', null, { lw: 2 });
+      [[-12, 28, 22], [-28, 22, 20], [-43, 15, 18]].forEach(([y, hw, th]) => {
+        A.shape(ctx, (c) => { c.moveTo(0, y - th); c.lineTo(hw, y); c.quadraticCurveTo(0, y - 5, -hw, y); c.closePath(); }, '#3f7a6a', '#2f5e56', { cel: [5, 0], lw: 2.2 });
+        snowCap(ctx, (c) => { c.moveTo(0, y - th - 1); c.lineTo(hw * 0.55, y - th * 0.45); c.quadraticCurveTo(hw * 0.15, y - th * 0.32, 0, y - th * 0.42); c.quadraticCurveTo(-hw * 0.35, y - th * 0.2, -hw * 0.75, y - th * 0.24); c.closePath(); });
+      });
+    },
+    snowRock(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(-26, 0); c.lineTo(-20, -18); c.lineTo(-4, -26); c.lineTo(14, -22); c.lineTo(26, 0); c.closePath(); }, '#8a94a8', '#6a7488', { cel: [4, 2], lw: 2.4 });
+      snowCap(ctx, (c) => { c.moveTo(-22, -14); c.lineTo(-20, -19); c.lineTo(-4, -28); c.lineTo(14, -24); c.lineTo(20, -12); c.quadraticCurveTo(12, -16, 6, -12); c.quadraticCurveTo(-2, -18, -8, -12); c.quadraticCurveTo(-14, -16, -22, -14); c.closePath(); });
+    },
+    snowman(ctx, t) {
+      A.ellipse(ctx, 0, -16, 18, 16, '#f8fbff', '#d4e0f0', { lw: 2.4 });
+      A.ellipse(ctx, 0, -40, 13, 12, '#f8fbff', '#d4e0f0', { lw: 2.4 });
+      ctx.strokeStyle = '#6a4a34';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      const w = Math.sin(t * 2) * 2;
+      ctx.beginPath();
+      ctx.moveTo(-14, -26); ctx.lineTo(-28, -36 + w); ctx.moveTo(-24, -33 + w); ctx.lineTo(-28, -28 + w);
+      ctx.moveTo(14, -26); ctx.lineTo(28, -34 - w);
+      ctx.stroke();
+      A.shape(ctx, (c) => { c.moveTo(-12, -30); c.quadraticCurveTo(0, -26, 12, -30); c.lineTo(12, -26); c.quadraticCurveTo(0, -22, -12, -26); c.closePath(); }, '#e8584a', null, { lw: 1.8 });
+      A.shape(ctx, (c) => { c.moveTo(6, -28); c.lineTo(12, -16); c.lineTo(4, -18); c.closePath(); }, '#e8584a', null, { lw: 1.6 });
+      ctx.fillStyle = '#3a2a2a';
+      ctx.beginPath(); ctx.arc(-4, -43, 1.8, 0, PI2); ctx.arc(5, -43, 1.8, 0, PI2); ctx.arc(0, -18, 1.6, 0, PI2); ctx.arc(0, -10, 1.6, 0, PI2); ctx.fill();
+      A.shape(ctx, (c) => { c.moveTo(1, -39); c.lineTo(12, -37); c.lineTo(1, -35); c.closePath(); }, '#f28c38', null, { lw: 1.4 });
+      A.shape(ctx, (c) => A.roundRect(c, -9, -60, 18, 10, 2), '#5a6a8a', '#46546e', { lw: 1.8 });
+    },
+    windBell(ctx, t) {
+      A.shape(ctx, (c) => c.rect(-3, -64, 6, 64), '#7a5a44', '#5e4432', { cel: [2, 0], lw: 2 });
+      A.shape(ctx, (c) => c.rect(-3, -64, 26, 5), '#7a5a44', null, { lw: 2 });
+      snowCap(ctx, (c) => A.roundRect(c, -5, -69, 30, 6, 3));
+      const sw = Math.sin(t * 2.3) * 0.25;
+      ctx.save();
+      ctx.translate(18, -59);
+      ctx.rotate(sw);
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 6); ctx.stroke();
+      A.shape(ctx, (c) => { c.moveTo(-7, 14); c.quadraticCurveTo(-7, 4, 0, 4); c.quadraticCurveTo(7, 4, 7, 14); c.closePath(); }, 'rgba(200,236,255,0.95)', null, { lw: 1.6 });
+      ctx.strokeStyle = A.outline();
+      ctx.beginPath(); ctx.moveTo(0, 14); ctx.lineTo(0, 20); ctx.stroke();
+      A.shape(ctx, (c) => c.rect(-3, 20, 6, 14), '#ff9ab0', null, { lw: 1.2 });
+      ctx.restore();
+    },
+    lanternPost(ctx, t) {
+      A.shape(ctx, (c) => c.rect(-3, -70, 6, 70), '#6a4a3a', '#52382c', { cel: [2, 0], lw: 2 });
+      A.shape(ctx, (c) => c.rect(-3, -70, 22, 5), '#6a4a3a', null, { lw: 2 });
+      snowCap(ctx, (c) => A.roundRect(c, -5, -75, 26, 6, 3));
+      const g = ctx.createRadialGradient(15, -50, 0, 15, -50, 40);
+      g.addColorStop(0, 'rgba(255,190,110,' + (0.5 + Math.sin(t * 3.3) * 0.1).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,190,110,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(15, -50, 40, 0, PI2); ctx.fill();
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(15, -65); ctx.lineTo(15, -60); ctx.stroke();
+      A.ellipse(ctx, 15, -50, 9, 11, '#ee5a3a', '#c8402a', { lw: 2 });
+      A.shape(ctx, (c) => c.rect(12, -57, 6, 14), '#ffe0a0', null, { noStroke: true });
+      A.shape(ctx, (c) => c.rect(10, -62, 10, 3), '#3a2418', null, { lw: 1.2 });
+      A.shape(ctx, (c) => c.rect(10, -40, 10, 3), '#3a2418', null, { lw: 1.2 });
+    },
+    woodpile(ctx) {
+      A.shape(ctx, (c) => c.rect(-26, -30, 52, 30), '#6a4a34', null, { lw: 2.2 });
+      for (const [x, y] of [[-17, -8], [-2, -8], [13, -8], [-10, -21], [5, -21]]) A.ellipse(ctx, x, y, 7, 7, '#e3be86', '#c9a068', { lw: 1.8, hl: false });
+      snowCap(ctx, (c) => { c.moveTo(-28, -28); c.quadraticCurveTo(-20, -40, 0, -38); c.quadraticCurveTo(20, -40, 28, -28); c.quadraticCurveTo(10, -30, 0, -26); c.quadraticCurveTo(-12, -30, -28, -28); c.closePath(); });
+    },
+    frozenShrub(ctx) {
+      ctx.strokeStyle = '#5a4a44';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      for (const [a, l] of [[-1.2, 26], [-0.6, 32], [0, 28], [0.5, 30], [1.1, 22]]) {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.sin(a) * l, -Math.cos(a) * l);
+        ctx.moveTo(Math.sin(a) * l * 0.6, -Math.cos(a) * l * 0.6);
+        ctx.lineTo(Math.sin(a + 0.5) * l * 0.85, -Math.cos(a + 0.5) * l * 0.85);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(240,250,255,0.9)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      for (const [x, y] of [[-14, -18], [8, -24], [16, -14], [-4, -26]]) A.ellipse(ctx, x, y, 3, 3, '#e8384a', null, { lw: 1.2, hl: false });
+      A.ellipse(ctx, 0, -2, 16, 5, '#f6faff', '#d4e0f0', { lw: 1.8, hl: false });
+    },
+    cairn(ctx, t) {
+      A.ellipse(ctx, 0, -8, 18, 9, '#8a8e9e', '#6e7282', { lw: 2.2, hl: false });
+      A.ellipse(ctx, 2, -22, 13, 7, '#9a9eae', '#7a7e8e', { lw: 2.2, hl: false });
+      A.ellipse(ctx, 0, -33, 9, 5, '#8a8e9e', '#6e7282', { lw: 2, hl: false });
+      snowCap(ctx, (c) => c.ellipse(0, -37, 8, 3, 0, 0, PI2));
+      ctx.save();
+      ctx.translate(12, -22);
+      ctx.rotate(Math.sin(t * 2.6) * 0.3);
+      ctx.strokeStyle = '#c8302a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 9); ctx.stroke();
+      A.ellipse(ctx, 0, 12, 4, 4, '#f2c75a', '#c89a3a', { lw: 1.4, hl: false });
+      ctx.restore();
+    },
+    iceCrystal(ctx, t) {
+      const glow = 0.45 + Math.sin(t * 2) * 0.15;
+      const g = ctx.createRadialGradient(0, -18, 0, 0, -18, 40);
+      g.addColorStop(0, 'rgba(150,230,255,' + glow.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(150,230,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -18, 40, 0, PI2); ctx.fill();
+      [[-12, 24, -0.35], [2, 40, 0.05], [14, 22, 0.45], [-3, 16, -0.9]].forEach(([x, h, r]) => {
+        ctx.save();
+        ctx.translate(x, 0);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-6, 0); c.lineTo(-6, -h * 0.72); c.lineTo(0, -h); c.lineTo(6, -h * 0.72); c.lineTo(6, 0); c.closePath(); }, '#c8f2ff', '#7ec8ea', { cel: [3, 0], lw: 2 });
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(-3, -3); ctx.lineTo(-3, -h * 0.65); ctx.stroke();
+        ctx.restore();
+      });
+    },
+    iceShard(ctx, t) {
+      const glow = 0.4 + Math.sin(t * 1.6) * 0.15;
+      const g = ctx.createRadialGradient(0, -24, 0, 0, -24, 50);
+      g.addColorStop(0, 'rgba(130,210,255,' + glow.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(130,210,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -24, 50, 0, PI2); ctx.fill();
+      [[-18, 30, 11, -0.45], [16, 36, 12, 0.35], [0, 60, 15, -0.05]].forEach(([x, h, w, r]) => {
+        ctx.save();
+        ctx.translate(x, 4);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-w / 2, 0); c.lineTo(-w / 2, -h * 0.6); c.lineTo(0, -h); c.lineTo(w / 2, -h * 0.6); c.lineTo(w / 2, 0); c.closePath(); }, '#bfeaff', '#6aaee0', { cel: [w * 0.35, 0], lw: 2.2 });
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-w * 0.22, -4); ctx.lineTo(-w * 0.22, -h * 0.58); ctx.stroke();
+        ctx.restore();
+      });
+    },
+    icicleRock(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(-30, 0); c.lineTo(-28, -24); c.lineTo(-10, -36); c.lineTo(20, -34); c.lineTo(34, -22); c.lineTo(30, 0); c.closePath(); }, '#5a6e8e', '#465a78', { cel: [4, 2], lw: 2.4 });
+      snowCap(ctx, (c) => { c.moveTo(-28, -24); c.lineTo(-10, -38); c.lineTo(20, -36); c.lineTo(34, -22); c.lineTo(20, -24); c.lineTo(4, -28); c.lineTo(-12, -26); c.closePath(); });
+      ctx.fillStyle = '#d8f2ff';
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 1.2;
+      for (const [x, l] of [[24, 12], [30, 8], [-20, 10], [-24, 6]]) {
+        ctx.beginPath(); ctx.moveTo(x - 2.5, -22); ctx.lineTo(x + 2.5, -22); ctx.lineTo(x, -22 + l); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+    },
+    snowLantern(ctx, t) {
+      PROP.stoneLantern(ctx, t);
+      snowCap(ctx, (c) => { c.moveTo(-21, -47); c.quadraticCurveTo(0, -64, 21, -47); c.quadraticCurveTo(10, -51, 0, -50); c.quadraticCurveTo(-10, -51, -21, -47); c.closePath(); });
+    },
+    bellPost(ctx, t) {
+      // 參道邊的鈴架：兩根柱子、橫木、一顆大鈴掛著紅白繩
+      for (const x of [-22, 22]) A.shape(ctx, (c) => c.rect(x - 3, -72, 6, 72), '#d8452e', '#a83222', { cel: [2, 0], lw: 2 });
+      A.shape(ctx, (c) => { c.moveTo(-32, -76); c.quadraticCurveTo(0, -70, 32, -76); c.lineTo(30, -70); c.quadraticCurveTo(0, -66, -30, -70); c.closePath(); }, '#2a1e2a', null, { lw: 2 });
+      snowCap(ctx, (c) => { c.moveTo(-30, -77); c.quadraticCurveTo(0, -72, 30, -77); c.lineTo(28, -80); c.quadraticCurveTo(0, -76, -28, -80); c.closePath(); });
+      const sw = Math.sin(t * 1.8) * 0.12;
+      ctx.save();
+      ctx.translate(0, -68);
+      ctx.rotate(sw);
+      A.shape(ctx, (c) => c.rect(-2, 0, 4, 10), '#f4f0e8', null, { lw: 1.2 });
+      A.shape(ctx, (c) => { c.moveTo(-12, 26); c.quadraticCurveTo(-12, 10, 0, 10); c.quadraticCurveTo(12, 10, 12, 26); c.closePath(); }, '#f2c75a', '#c8962a', { cel: [3, 0], lw: 2 });
+      A.shape(ctx, (c) => c.rect(-13, 24, 26, 4), '#c8962a', null, { lw: 1.6 });
+      ctx.strokeStyle = '#c8302a';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-2, 28); ctx.quadraticCurveTo(-4, 44, 0, 58); ctx.stroke();
+      ctx.strokeStyle = '#f4f0e8';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(2, 28); ctx.quadraticCurveTo(0, 44, 4, 58); ctx.stroke();
+      ctx.restore();
+    },
+    shrineBox(ctx) {
+      A.shape(ctx, (c) => c.rect(-24, -26, 48, 26), '#8a5a3a', '#6e4630', { cel: [3, 0], lw: 2.3 });
+      ctx.strokeStyle = '#3a2418';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = -18; x <= 18; x += 6) { ctx.moveTo(x, -26); ctx.lineTo(x - 2, -18); }
+      ctx.stroke();
+      A.shape(ctx, (c) => c.rect(-24, -12, 48, 4), '#e8b84a', null, { lw: 1.4 });
+      snowCap(ctx, (c) => { c.moveTo(-26, -26); c.quadraticCurveTo(0, -34, 26, -26); c.quadraticCurveTo(0, -28, -26, -26); c.closePath(); });
+    },
+
+    // ── 終章：神殿的擺設 ──
+    urn(ctx) {
+      A.shape(ctx, (c) => A.roundRect(c, -14, -8, 28, 8, 2), '#f4eee4', '#d8ccbc', { lw: 2 });
+      A.shape(ctx, (c) => { c.moveTo(-6, -8); c.quadraticCurveTo(-22, -20, -14, -38); c.lineTo(-9, -44); c.lineTo(9, -44); c.lineTo(14, -38); c.quadraticCurveTo(22, -20, 6, -8); c.closePath(); }, '#fbf7ef', '#ddd2c2', { cel: [4, 0], lw: 2.3 });
+      A.shape(ctx, (c) => c.rect(-17, -30, 34, 4), '#e8b84a', '#c0902e', { lw: 1.6 });
+      A.shape(ctx, (c) => c.rect(-11, -48, 22, 5), '#fbf7ef', null, { lw: 1.8 });
+      for (const [x, y, r] of [[-6, -52, 7], [5, -55, 8], [0, -61, 6]]) A.ellipse(ctx, x, y, r, r, '#7cae5a', '#5e8e44', { lw: 1.8, hl: false });
+    },
+    brazier(ctx, t) {
+      const f = Math.sin(t * 7) * 1.5;
+      const g = ctx.createRadialGradient(0, -46, 0, 0, -46, 44);
+      g.addColorStop(0, 'rgba(255,200,110,' + (0.55 + Math.sin(t * 5) * 0.08).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,200,110,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -46, 44, 0, PI2); ctx.fill();
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-6, -30); ctx.moveTo(14, 0); ctx.lineTo(6, -30); ctx.moveTo(0, 0); ctx.lineTo(0, -30); ctx.stroke();
+      ctx.strokeStyle = '#e8b84a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      A.shape(ctx, (c) => { c.moveTo(-18, -40); c.quadraticCurveTo(0, -24, 18, -40); c.closePath(); }, '#e8b84a', '#b8862a', { cel: [3, 0], lw: 2.2 });
+      A.shape(ctx, (c) => { c.moveTo(-12, -40); c.quadraticCurveTo(-10 + f, -58, 0, -70 - f * 2); c.quadraticCurveTo(10 - f, -58, 12, -40); c.closePath(); }, '#ffb04a', null, { lw: 1.8 });
+      A.shape(ctx, (c) => { c.moveTo(-6, -40); c.quadraticCurveTo(-4, -52, 0, -58 - f); c.quadraticCurveTo(4, -52, 6, -40); c.closePath(); }, '#fff0a0', null, { noStroke: true });
+    },
+    topiary(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(-14, 0); c.lineTo(-17, -20); c.lineTo(17, -20); c.lineTo(14, 0); c.closePath(); }, '#fbf7ef', '#ddd2c2', { cel: [4, 0], lw: 2.2 });
+      A.shape(ctx, (c) => c.rect(-18, -24, 36, 5), '#e8b84a', null, { lw: 1.6 });
+      A.shape(ctx, (c) => c.rect(-2, -34, 4, 10), '#7a5a40', null, { lw: 1.6 });
+      A.ellipse(ctx, 0, -50, 19, 19, '#6fae5a', '#4f8a40', { cel: [4, 4], lw: 2.3 });
+      A.ellipse(ctx, -6, -56, 2.5, 2.5, '#ffe36b', null, { noStroke: true, hl: false });
+      A.ellipse(ctx, 7, -46, 2.5, 2.5, '#ff9fbf', null, { noStroke: true, hl: false });
+    },
+    hourglassSmall(ctx, t) {
+      A.shape(ctx, (c) => A.roundRect(c, -15, -6, 30, 6, 2), '#e8b84a', '#b8862a', { lw: 2 });
+      A.shape(ctx, (c) => A.roundRect(c, -15, -50, 30, 6, 2), '#e8b84a', '#b8862a', { lw: 2 });
+      A.shape(ctx, (c) => { c.moveTo(-11, -44); c.quadraticCurveTo(-11, -30, -2, -26); c.quadraticCurveTo(-11, -22, -11, -6); c.lineTo(11, -6); c.quadraticCurveTo(11, -22, 2, -26); c.quadraticCurveTo(11, -30, 11, -44); c.closePath(); }, 'rgba(220,240,255,0.55)', null, { lw: 1.8 });
+      ctx.fillStyle = '#f4d08a';
+      ctx.beginPath(); ctx.moveTo(-10, -44); ctx.lineTo(10, -44); ctx.quadraticCurveTo(8, -34, 0, -32); ctx.quadraticCurveTo(-8, -34, -10, -44); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-10, -7); ctx.lineTo(10, -7); ctx.quadraticCurveTo(0, -12, -10, -7); ctx.fill();
+      const ph = (t * 1.2) % 1;
+      ctx.fillRect(-0.8, -10 - ph * 20, 1.6, 3);
+      ctx.fillRect(-0.8, -10 - ((ph + 0.5) % 1) * 20, 1.6, 3);
+      for (const x of [-13, 13]) A.shape(ctx, (c) => c.rect(x - 1.5, -44, 3, 38), '#e8b84a', null, { lw: 1.4 });
+    },
+    brokenColumn(ctx) {
+      A.shape(ctx, (c) => A.roundRect(c, -20, -10, 40, 10, 2), '#f4eee4', '#d8ccbc', { lw: 2.2 });
+      A.shape(ctx, (c) => { c.moveTo(-14, -10); c.lineTo(-14, -52); c.lineTo(-6, -58); c.lineTo(0, -50); c.lineTo(6, -62); c.lineTo(14, -54); c.lineTo(14, -10); c.closePath(); }, '#fbf7ef', '#ddd2c2', { cel: [5, 0], lw: 2.3 });
+      ctx.strokeStyle = 'rgba(150,130,110,0.4)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (const x of [-8, -2, 4, 10]) { ctx.moveTo(x, -12); ctx.lineTo(x, -48); }
+      ctx.stroke();
+      A.shape(ctx, (c) => c.rect(-15, -22, 30, 3), '#e8b84a', null, { lw: 1.4 });
+      A.shape(ctx, (c) => { c.moveTo(22, 0); c.lineTo(26, -8); c.lineTo(36, -6); c.lineTo(38, 0); c.closePath(); }, '#fbf7ef', '#ddd2c2', { lw: 2 });
+      ctx.strokeStyle = '#6fae5a';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-14, -8); ctx.quadraticCurveTo(-18, -26, -10, -36); ctx.stroke();
+      for (const [x, y] of [[-16, -18], [-13, -30]]) A.ellipse(ctx, x, y, 3.5, 2, '#7cc05a', null, { rot: 0.6, lw: 1.2, hl: false });
+    },
+    floatShard(ctx, t) {
+      const bob = Math.sin(t * 1.4) * 4;
+      A.shape(ctx, (c) => A.roundRect(c, -14, -12, 28, 12, 3), '#f4eee4', '#d8ccbc', { lw: 2 });
+      A.shape(ctx, (c) => c.rect(-14, -12, 28, 3), '#e8b84a', null, { lw: 1.4 });
+      const g = ctx.createRadialGradient(0, -40 + bob, 0, 0, -40 + bob, 30);
+      g.addColorStop(0, 'rgba(255,220,150,0.55)');
+      g.addColorStop(1, 'rgba(255,220,150,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -40 + bob, 30, 0, PI2); ctx.fill();
+      ctx.save();
+      ctx.translate(0, -40 + bob);
+      ctx.rotate(t * 0.6);
+      ctx.strokeStyle = 'rgba(255,230,160,0.9)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(0, 0, 20, 6, 0, 0, PI2); ctx.stroke();
+      ctx.restore();
+      A.shape(ctx, (c) => { c.moveTo(0, -58 + bob); c.lineTo(8, -40 + bob); c.lineTo(0, -24 + bob); c.lineTo(-8, -40 + bob); c.closePath(); }, '#fff0c0', '#e8b84a', { cel: [4, 0], lw: 2 });
+    },
+    starCrystal(ctx, t) {
+      const glow = 0.45 + Math.sin(t * 2.2) * 0.15;
+      const g = ctx.createRadialGradient(0, -18, 0, 0, -18, 40);
+      g.addColorStop(0, 'rgba(170,150,255,' + glow.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(170,150,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -18, 40, 0, PI2); ctx.fill();
+      [[-10, 22, -0.4], [3, 36, 0.05], [13, 20, 0.5]].forEach(([x, h, r]) => {
+        ctx.save();
+        ctx.translate(x, 0);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-6, 0); c.lineTo(-6, -h * 0.7); c.lineTo(0, -h); c.lineTo(6, -h * 0.7); c.lineTo(6, 0); c.closePath(); }, '#c8b8ff', '#8a78e0', { cel: [3, 0], lw: 2 });
+        ctx.restore();
+      });
+      for (let k = 0; k < 3; k++) {
+        const ph = (t * 0.6 + k / 3) % 1;
+        const s = Math.sin(ph * Math.PI) * 3.5;
+        const x = [-16, 12, 2][k];
+        const y = -30 - ph * 26 - k * 6;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.4, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.4, y); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x, y + s * 0.4); ctx.lineTo(x + s, y); ctx.lineTo(x, y - s * 0.4); ctx.closePath(); ctx.fill();
+      }
+    },
+    gearProp(ctx) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-40, -60, 80, 60);
+      ctx.clip();
+      const r = 28;
+      A.shape(ctx, (c) => {
+        for (let k = 0; k < 12; k++) {
+          const a0 = (k / 12) * PI2;
+          const a1 = ((k + 0.5) / 12) * PI2;
+          const p = (a, rad) => [Math.cos(a) * rad, -8 + Math.sin(a) * rad];
+          const q = [p(a0, r - 7), p(a0 + 0.08, r), p(a1 - 0.08, r), p(a1, r - 7)];
+          if (k === 0) c.moveTo(q[0][0], q[0][1]); else c.lineTo(q[0][0], q[0][1]);
+          for (let j = 1; j < 4; j++) c.lineTo(q[j][0], q[j][1]);
+        }
+        c.closePath();
+      }, '#b89048', '#8a6a30', { cel: [4, 2], lw: 2.3 });
+      A.ellipse(ctx, 0, -8, 9, 9, '#8a6a30', null, { lw: 2, hl: false });
+      ctx.restore();
+    },
+    blossomBush(ctx, t) {
+      [[-14, -12, 14], [4, -18, 17], [18, -10, 12]].forEach(([x, y, r]) => A.ellipse(ctx, x, y, r, r * 0.85, '#8cc878', '#6aa85a', { cel: [3, 3], hl: false, lw: 2.2 }));
+      for (const [x, y] of [[-16, -18], [-4, -26], [10, -30], [18, -16], [2, -14], [-10, -8]]) {
+        ctx.fillStyle = '#ffb8d0';
+        for (let a = 0; a < 5; a++) {
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(a * 1.26) * 2.6, y + Math.sin(a * 1.26) * 2.6, 2, 0, PI2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#fff4a0';
+        ctx.fillRect(x - 1, y - 1, 2, 2);
+      }
+      // 花瓣往上飄（時間倒轉）
+      for (let k = 0; k < 3; k++) {
+        const ph = (t * 0.35 + k / 3) % 1;
+        ctx.save();
+        ctx.translate(-10 + k * 12 + Math.sin(ph * 6 + k) * 6, -24 - ph * 60);
+        ctx.rotate(ph * 6 + k);
+        ctx.globalAlpha = Math.sin(ph * Math.PI);
+        ctx.fillStyle = '#ffc4d8';
+        ctx.beginPath(); ctx.ellipse(0, 0, 3.5, 2, 0, 0, PI2); ctx.fill();
+        ctx.restore();
+      }
+    },
+  });
+
+  // ── 平台底下垂著的東西 ──
+  Object.assign(HANG, {
+    icicle(ctx, h, t) {
+      const n = 2 + Math.floor(h.seed % 2);
+      for (let k = 0; k < n; k++) {
+        const x = h.x + (k - (n - 1) / 2) * 9;
+        const len = 10 + h.len * (0.35 + ((k * 0.37 + h.seed) % 1) * 0.5);
+        ctx.fillStyle = 'rgba(214,242,255,0.95)';
+        ctx.strokeStyle = 'rgba(70,120,170,0.7)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x - 3.5, h.y - 6);
+        ctx.lineTo(x + 3.5, h.y - 6);
+        ctx.lineTo(x, h.y - 6 + len);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillRect(x - 1.5, h.y - 5, 1.2, len * 0.5);
+      }
+      // 偶爾滴下一滴水
+      const ph = (t * 0.3 + h.seed / 6) % 1;
+      if (ph > 0.75) {
+        const u = (ph - 0.75) / 0.25;
+        ctx.fillStyle = 'rgba(200,240,255,' + (1 - u).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y + h.len * 0.6 + u * u * 70, 1.6, 2.6, 0, 0, PI2);
+        ctx.fill();
+      }
+    },
+    bells(ctx, h, t) {
+      const sw = Math.sin(t * 1.8 + h.seed) * 0.18;
+      const len = h.len * 0.6 + 6;
+      ctx.save();
+      ctx.translate(h.x, h.y - 6);
+      ctx.rotate(sw);
+      ctx.strokeStyle = '#c8302a';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, len);
+      ctx.stroke();
+      A.shape(ctx, (c) => { c.moveTo(-5.5, len + 10); c.quadraticCurveTo(-5.5, len, 0, len); c.quadraticCurveTo(5.5, len, 5.5, len + 10); c.closePath(); }, '#f2c75a', '#c8962a', { cel: [2, 0], lw: 1.6 });
+      if (h.seed > 3) A.shape(ctx, (c) => c.rect(-2, len + 11, 4, 12), '#fff6f0', null, { lw: 1.1 });
+      ctx.restore();
+    },
+    tassel(ctx, h, t) {
+      const sw = Math.sin(t * 1.2 + h.seed) * 0.12;
+      const len = h.len * 0.55 + 6;
+      ctx.save();
+      ctx.translate(h.x, h.y - 6);
+      ctx.rotate(sw);
+      ctx.strokeStyle = '#c8962a';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, len);
+      ctx.stroke();
+      A.ellipse(ctx, 0, len + 3, 4, 4, '#f2c75a', '#c8962a', { lw: 1.4, hl: false });
+      A.shape(ctx, (c) => { c.moveTo(-3, len + 6); c.lineTo(3, len + 6); c.lineTo(5, len + 20); c.lineTo(-5, len + 20); c.closePath(); }, h.seed > 3 ? '#8a5ac8' : '#d8483a', null, { lw: 1.2 });
+      ctx.restore();
+    },
+    blossom(ctx, h, t) {
+      const sw = Math.sin(t * 1.3 + h.seed) * 3;
+      ctx.strokeStyle = '#5f9a44';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(h.x, h.y - 6);
+      ctx.quadraticCurveTo(h.x + sw, h.y + h.len * 0.5, h.x + sw * 1.4, h.y + h.len);
+      ctx.stroke();
+      for (let k = 1; k <= 3; k++) {
+        const u = k / 3;
+        const x = h.x + sw * u * 1.3 + (k % 2 ? 4 : -4);
+        const y = h.y - 6 + (h.len + 6) * u;
+        ctx.fillStyle = k === 3 ? '#ffd0e0' : '#ffb0cc';
+        for (let a = 0; a < 5; a++) {
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(a * 1.26) * 2.4, y + Math.sin(a * 1.26) * 2.4, 1.9, 0, PI2);
+          ctx.fill();
+        }
+      }
+    },
+    starcharm(ctx, h, t) {
+      const sw = Math.sin(t * 1.1 + h.seed) * 2;
+      const len = h.len * 0.7 + 6;
+      ctx.strokeStyle = 'rgba(180,200,255,0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(h.x, h.y - 6);
+      ctx.lineTo(h.x + sw, h.y + len);
+      ctx.stroke();
+      const x = h.x + sw;
+      const y = h.y + len + 5;
+      const s = 5 + Math.sin(t * 3 + h.seed) * 1;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(glowSprite('150,200,255'), x - 14, y - 14, 28, 28);
+      ctx.restore();
+      ctx.fillStyle = '#f4f8ff';
+      ctx.beginPath();
+      ctx.moveTo(x, y - s * 1.5);
+      ctx.quadraticCurveTo(x, y, x + s, y);
+      ctx.quadraticCurveTo(x, y, x, y + s * 1.5);
+      ctx.quadraticCurveTo(x, y, x - s, y);
+      ctx.quadraticCurveTo(x, y, x, y - s * 1.5);
+      ctx.fill();
+    },
+  });
+
+  // ── 大氣 ──
+  Object.assign(ATMO, {
+    // 雪：大小不一的雪片，左右輕輕擺
+    snow(ctx, th, cam, t) {
+      const n = Math.round(46 * (th.snowAmt || 1));
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < n; i++) {
+        const sp = 22 + (i % 5) * 9;
+        const x = wrapX(i * 139 + t * 8 - cam.x * (0.6 + (i % 3) * 0.12), G.W + 60) - 30 + Math.sin(t * (0.8 + (i % 4) * 0.2) + i) * 14;
+        const y = wrapX(i * 83 + t * sp - cam.y * 0.6, G.H + 40) - 20;
+        const r = 1.2 + (i % 4) * 0.7;
+        ctx.globalAlpha = 0.55 + (i % 3) * 0.15;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, PI2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    },
+    // 暴風雪：斜飛的雪線＋一陣陣白霧
+    blizzard(ctx, th, cam, t) {
+      const img = glowSprite('225,238,255');
+      for (let i = 0; i < 3; i++) {
+        const span = G.W + 800;
+        const x = wrapX(i * 397 + t * (160 + i * 30) - cam.x * 0.5, span) - 400;
+        const y = G.H * (0.25 + (i % 3) * 0.22) + Math.sin(t * 0.7 + i) * 30;
+        const r = 220 + (i % 2) * 80;
+        ctx.globalAlpha = 0.09 + 0.05 * Math.sin(t * 0.9 + i * 2);
+        ctx.drawImage(img, x - r * 1.6, y - r * 0.6, r * 3.2, r * 1.2);
+      }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = 'rgba(240,248,255,0.55)';
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < 40; i++) {
+        const x = wrapX(i * 163 + t * (420 + (i % 5) * 60) - cam.x * 0.9, G.W + 100) - 50;
+        const y = wrapX(i * 97 + t * (140 + (i % 4) * 30) - cam.y * 0.6, G.H + 40) - 20;
+        const l = 10 + (i % 4) * 5;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - l, y - l * 0.35);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 50; i++) {
+        const x = wrapX(i * 151 + t * (260 + (i % 6) * 40) - cam.x * 0.8, G.W + 60) - 30;
+        const y = wrapX(i * 71 + t * (90 + (i % 5) * 20) + Math.sin(t * 2 + i) * 10 - cam.y * 0.6, G.H + 40) - 20;
+        ctx.globalAlpha = 0.6 + (i % 3) * 0.13;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.3 + (i % 3) * 0.8, 0, PI2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    },
+    // 倒轉庭園：花瓣與沙粒往上飄
+    petalsUp(ctx, th, cam, t) {
+      for (let i = 0; i < 20; i++) {
+        const x = wrapX(i * 173 - t * 6 - cam.x * 0.8, G.W + 100) - 50 + Math.sin(t * 0.9 + i) * 26;
+        const y = wrapX(i * 97 - t * (16 + (i % 3) * 7) - cam.y * 0.6, G.H + 60) - 30;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(t * 1.2 + i);
+        ctx.fillStyle = ['#ffb8d0', '#ffd6e4', '#ffe8a0'][i % 3];
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5, 2.6, 0, 0, PI2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = 'rgba(244,208,138,0.8)';
+      for (let i = 0; i < 26; i++) {
+        const x = wrapX(i * 131 - cam.x * 0.7, G.W + 40) - 20 + Math.sin(t * 1.5 + i) * 6;
+        const y = wrapX(i * 61 - t * (30 + (i % 4) * 12) - cam.y * 0.6, G.H + 20) - 10;
+        ctx.fillRect(x, y, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+    },
+    // 神殿：慢慢漂的金色時砂，偶爾有小小的鐘環淡入淡出
+    timeDust(ctx, th, cam, t) {
+      const img = glowSprite('255,220,150');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 22; i++) {
+        const x = wrapX(i * 191 + t * (6 + (i % 3) * 4) - cam.x * 0.75, G.W + 60) - 30 + Math.sin(t * 0.6 + i * 1.3) * 18;
+        const y = wrapX(i * 113 - t * (8 + (i % 4) * 3) - cam.y * 0.6, G.H + 40) - 20;
+        const r = 5 + (i % 3) * 3;
+        ctx.globalAlpha = 0.35 + 0.3 * Math.sin(t * 1.7 + i * 2.1);
+        ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+      }
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,236,180,0.5)';
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 3; i++) {
+        const ph = (t * 0.07 + i / 3) % 1;
+        const x = wrapX(i * 457 + 200 - cam.x * 0.4, G.W + 200) - 100;
+        const y = G.H * (0.2 + i * 0.18);
+        const r = 18 + ph * 26;
+        ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.7;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, PI2);
+        ctx.stroke();
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * PI2 + t * 0.3;
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+          ctx.lineTo(x + Math.cos(a) * (r - 4), y + Math.sin(a) * (r - 4));
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    },
+    // 星之階梯：閃爍的星點與偶爾劃過的流星
+    starfall(ctx, th, cam, t) {
+      const img = glowSprite('190,210,255');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 18; i++) {
+        const x = wrapX(i * 211 - cam.x * 0.7, G.W + 60) - 30;
+        const y = wrapX(i * 137 - t * (4 + (i % 3) * 3) - cam.y * 0.6, G.H + 40) - 20;
+        const r = 4 + (i % 3) * 3;
+        ctx.globalAlpha = 0.25 + 0.35 * Math.max(0, Math.sin(t * 2 + i * 2.7));
+        ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+      }
+      for (let i = 0; i < 2; i++) {
+        const per = 4.5 + i * 2.2;
+        const ph = ((t + i * 3.1) % per) / per;
+        if (ph > 0.18) continue;
+        const u = ph / 0.18;
+        const k = Math.floor((t + i * 3.1) / per);
+        const x0 = G.W * (0.2 + hash(k * 7 + i) * 0.8);
+        const y0 = G.H * (0.05 + hash(k * 3 + i) * 0.3);
+        const x = x0 - u * 360;
+        const y = y0 + u * 160;
+        const g = ctx.createLinearGradient(x, y, x + 120, y - 53);
+        g.addColorStop(0, 'rgba(255,255,255,' + (1 - u).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(160,190,255,0)');
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = g;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + 120, y - 53);
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+  });
+
+  // ── 平台小裝飾 ──
+  Object.assign(DECO, {
+    snowy(ctx, x, y, d) {
+      if (d.k > 0.62) {
+        // 冬青的紅果
+        ctx.fillStyle = '#3f6a54';
+        ctx.beginPath();
+        ctx.ellipse(x - 4, y - 7, 5 * d.s, 2.4, -0.5, 0, PI2);
+        ctx.ellipse(x + 4, y - 7, 5 * d.s, 2.4, 0.5, 0, PI2);
+        ctx.fill();
+        ctx.fillStyle = '#e8384a';
+        ctx.beginPath();
+        ctx.arc(x - 1.5, y - 9, 2.2, 0, PI2);
+        ctx.arc(x + 2, y - 10, 2.2, 0, PI2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(x, y - 6, 9 * d.s, 4 * d.s, 0, Math.PI, 0);
+        ctx.fill();
+      }
+    },
+    frost(ctx, x, y, d) {
+      ctx.fillStyle = d.k > 0.62 ? 'rgba(220,248,255,0.95)' : 'rgba(170,225,250,0.9)';
+      for (const [dx, hh, r] of [[-4, 10, -0.3], [1, 16, 0], [6, 9, 0.35]]) {
+        ctx.save();
+        ctx.translate(x + dx * d.s, y - 5);
+        ctx.rotate(r);
+        ctx.beginPath();
+        ctx.moveTo(-2.5, 0);
+        ctx.lineTo(0, -hh * d.s);
+        ctx.lineTo(2.5, 0);
+        ctx.fill();
+        ctx.restore();
+      }
+    },
+    goldLeaf(ctx, x, y, d) {
+      if (d.k > 0.62) {
+        ctx.fillStyle = '#e8b84a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - 14 * d.s);
+        ctx.lineTo(x + 4, y - 8);
+        ctx.lineTo(x, y - 4);
+        ctx.lineTo(x - 4, y - 8);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = '#6fae5a';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 4);
+        ctx.lineTo(x, y - 13 * d.s);
+        ctx.stroke();
+        ctx.fillStyle = '#fff6d8';
+        ctx.beginPath();
+        ctx.arc(x, y - 13 * d.s, 3, 0, PI2);
+        ctx.fill();
+        ctx.fillStyle = '#e8b84a';
+        ctx.fillRect(x - 1, y - 14 * d.s, 2, 2);
+      }
+    },
+    petals(ctx, x, y, d) {
+      ctx.fillStyle = d.k > 0.62 ? '#ffc4d8' : '#ffd8e6';
+      for (let k = 0; k < 3; k++) {
+        ctx.beginPath();
+        ctx.ellipse(x + (k - 1) * 6 * d.s, y - 5 - (k % 2) * 2, 3, 1.8, k, 0, PI2);
+        ctx.fill();
+      }
+    },
+    stardust(ctx, x, y, d) {
+      const s = 3 + d.s * 2;
+      ctx.fillStyle = d.k > 0.62 ? '#cfe4ff' : '#fff2c0';
+      ctx.beginPath();
+      ctx.moveTo(x, y - 8 - s);
+      ctx.quadraticCurveTo(x, y - 8, x + s * 0.7, y - 8);
+      ctx.quadraticCurveTo(x, y - 8, x, y - 8 + s);
+      ctx.quadraticCurveTo(x, y - 8, x - s * 0.7, y - 8);
+      ctx.quadraticCurveTo(x, y - 8, x, y - 8 - s);
+      ctx.fill();
+    },
+  });
+
+  // ── 平台樣式：雪（snow）、冰（ice）、大理石（marble） ──
+  function drawColdOrMarble(ctx, P, style, left, right, y, bodyH, isGround, i, x0, x1) {
+    const w = right - left;
+    const vx0 = Math.max(left, x0);
+    const vx1 = Math.min(right, x1);
+    let bodyPath;
+    if (isGround) bodyPath = (c) => c.rect(left, y, w, bodyH);
+    else if (style === 'marble') {
+      bodyPath = (c) => {
+        c.moveTo(left, y);
+        c.lineTo(right, y);
+        c.lineTo(right, y + 16);
+        c.lineTo(right - 10, y + 22);
+        c.lineTo(left + 10, y + 22);
+        c.lineTo(left, y + 16);
+        c.closePath();
+      };
+    } else {
+      // 雪／冰：底下參差的岩塊或冰晶
+      const ice = style === 'ice';
+      bodyPath = (c) => {
+        c.moveTo(left + 4, y);
+        c.lineTo(right - 4, y);
+        c.quadraticCurveTo(right + 2, y + 10, right - 8, y + 20);
+        const n = Math.max(2, Math.floor(w / (ice ? 26 : 36)));
+        for (let k = n - 1; k >= 1; k--) {
+          const u = k / n;
+          const mid = Math.sin(u * Math.PI);
+          const deep = ice ? (k % 2 ? 18 : 4) : hash(i * 7 + k) * 10;
+          c.lineTo(left + w * u + (hash(i * 13 + k) - 0.5) * (ice ? 4 : 12), y + 20 + mid * 12 + deep);
+        }
+        c.lineTo(left + 8, y + 20);
+        c.quadraticCurveTo(left - 2, y + 10, left + 4, y);
+        c.closePath();
+      };
+    }
+    // 大理石平台底下的金飾
+    if (!isGround && style === 'marble') {
+      const cx = (left + right) / 2;
+      ctx.fillStyle = P.gold;
+      ctx.beginPath();
+      ctx.moveTo(cx - 14, y + 22);
+      ctx.lineTo(cx + 14, y + 22);
+      ctx.lineTo(cx, y + 38);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = P.edge;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (P.glow) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.drawImage(glowSprite('150,210,255'), cx - 26, y + 16, 52, 52);
+        ctx.restore();
+      }
+    }
+    const grad = style === 'ice' ? ctx.createLinearGradient(0, y, 0, y + (isGround ? 160 : 40)) : null;
+    if (grad) {
+      grad.addColorStop(0, P.body);
+      grad.addColorStop(1, P.shade);
+    }
+    ctx.fillStyle = grad || P.body;
+    ctx.beginPath();
+    bodyPath(ctx);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    bodyPath(ctx);
+    ctx.clip();
+    if (style !== 'ice') {
+      ctx.fillStyle = P.shade;
+      if (isGround) ctx.fillRect(vx0 - 2, y + 30, vx1 - vx0 + 4, bodyH);
+      else ctx.fillRect(left, y + 14, w, 60);
+    }
+    if (style === 'marble') {
+      // 石塊接縫
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      ctx.lineWidth = 1.5;
+      const bh = isGround ? 34 : 22;
+      for (let row = 0; row * bh < (isGround ? Math.min(bodyH, 400) : 22); row++) {
+        const by = y + 8 + row * bh;
+        ctx.beginPath();
+        ctx.moveTo(vx0, by);
+        ctx.lineTo(vx1, by);
+        ctx.stroke();
+        const off = (row % 2) * 32;
+        for (let x = Math.floor((vx0 - off) / 64) * 64 + off; x < vx1; x += 64) {
+          if (x < left + 6) continue;
+          ctx.beginPath();
+          ctx.moveTo(x, by);
+          ctx.lineTo(x, by + bh);
+          ctx.stroke();
+        }
+      }
+      ctx.fillStyle = P.gold;
+      ctx.fillRect(vx0, y + (isGround ? 12 : 12), vx1 - vx0, 2);
+    } else if (style === 'ice') {
+      // 冰裡的裂紋與反光
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 1.4;
+      const step = isGround ? 90 : 40;
+      for (let x = Math.floor(vx0 / step) * step + 12; x < vx1; x += step) {
+        const hx = hash(x + i);
+        ctx.beginPath();
+        ctx.moveTo(x, y + 6);
+        ctx.lineTo(x + 10 + hx * 8, y + 16 + hx * 8);
+        ctx.lineTo(x + 4, y + (isGround ? 50 : 26));
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillRect(vx0, y + 8, vx1 - vx0, isGround ? 20 : 6);
+      if (isGround) {
+        ctx.fillStyle = 'rgba(30,60,110,0.25)';
+        ctx.fillRect(vx0, y + 60, vx1 - vx0, bodyH);
+      }
+    }
+    ctx.restore();
+    if (isGround) groundPebbles(ctx, left, right, y, bodyH, i, x0, x1, style === 'ice' ? 'rgba(255,255,255,0.12)' : style === 'marble' ? 'rgba(0,0,0,0.05)' : null);
+    else {
+      ctx.strokeStyle = P.edge;
+      ctx.lineWidth = style === 'ice' ? 2 : 3;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      bodyPath(ctx);
+      ctx.stroke();
+    }
+
+    // ── 頂面 ──
+    const L = left - (isGround ? 0 : 4);
+    const R = right + (isGround ? 0 : 4);
+    const tx0 = Math.max(L, x0);
+    const tx1 = Math.min(R, x1);
+    if (style === 'marble') {
+      ctx.fillStyle = P.top;
+      ctx.beginPath();
+      A.roundRect(ctx, L, y - 7, R - L, 14, 2);
+      ctx.fill();
+      // 地磚
+      ctx.fillStyle = 'rgba(0,0,0,0.05)';
+      for (let x = Math.floor(tx0 / 40) * 40; x < tx1; x += 40) {
+        if ((x / 40) % 2) continue;
+        const a = Math.max(L + 2, x);
+        const b = Math.min(R - 2, x + 40);
+        if (b > a) ctx.fillRect(a, y - 5, b - a, 10);
+      }
+      ctx.fillStyle = P.topHi;
+      ctx.fillRect(L + (isGround ? 0 : 3), y - 6, R - L - (isGround ? 0 : 6), 2.5);
+      ctx.fillStyle = P.gold;
+      ctx.fillRect(L + (isGround ? 0 : 2), y + 5, R - L - (isGround ? 0 : 4), 2.5);
+      if (P.glow) {
+        ctx.fillStyle = 'rgba(160,220,255,0.55)';
+        ctx.fillRect(L + (isGround ? 0 : 2), y + 4, R - L - (isGround ? 0 : 4), 4.5);
+      }
+      if (!isGround) {
+        ctx.strokeStyle = P.edge;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        A.roundRect(ctx, L, y - 7, R - L, 14, 2);
+        ctx.stroke();
+      }
+    } else {
+      // 厚厚的積雪（冰平台是一層薄霜）
+      const thick = style === 'ice' ? 0.6 : 1;
+      const top = (c) => {
+        c.moveTo(L, y + 6 * thick);
+        c.lineTo(L, y - 5);
+        c.quadraticCurveTo(L, y - 9 * thick - 1, L + 8, y - 9 * thick - 1);
+        c.lineTo(R - 8, y - 9 * thick - 1);
+        c.quadraticCurveTo(R, y - 9 * thick - 1, R, y - 5);
+        c.lineTo(R, y + 6 * thick);
+        const sx = Math.floor(tx0 / 14) * 14;
+        for (let x = Math.min(R, Math.ceil(tx1 / 14) * 14); x >= Math.max(L, sx); x -= 14) {
+          if (x <= L || x >= R) continue;
+          const hx = hash(x * 0.61);
+          c.quadraticCurveTo(x + 7, y + (6 + hx * 9) * thick, x, y + (4 + hx * 3) * thick);
+        }
+        c.closePath();
+      };
+      ctx.fillStyle = P.top;
+      ctx.beginPath();
+      top(ctx);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      top(ctx);
+      ctx.clip();
+      ctx.fillStyle = P.snowShade;
+      ctx.fillRect(tx0, y + 2 * thick, tx1 - tx0, 20);
+      ctx.fillStyle = P.top;
+      ctx.beginPath();
+      for (let x = Math.floor(tx0 / 14) * 14; x < tx1 + 14; x += 14) {
+        const hx = hash(x * 0.61);
+        ctx.moveTo(x + 9, y + 1);
+        ctx.ellipse(x + 3, y + 1, 7, (3 + hx * 3) * thick, 0, 0, PI2);
+      }
+      ctx.fill();
+      ctx.restore();
+      if (!isGround) {
+        ctx.strokeStyle = P.edge;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        top(ctx);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = P.topHi;
+      ctx.fillRect(L + (isGround ? 0 : 6), y - 8 * thick, R - L - (isGround ? 0 : 12), 2.5);
+      // 雪面的小亮點
+      ctx.fillStyle = '#ffffff';
+      for (let x = Math.floor(tx0 / 11) * 11; x < tx1; x += 11) {
+        if (x < L + 4 || x > R - 4) continue;
+        const hx = hash(x * 1.3);
+        if (hx < 0.7) continue;
+        ctx.fillRect(x, y - 5 + hx * 4, 2, 2);
+      }
+    }
+  }
+
+  // ── 繩索樣式：鈴繩（bellrope）、金鍊（goldchain） ──
+  const ROPE_EXTRA = {
+    bellrope(ctx, x, top, bottom, t) {
+      const sway = (y) => x + Math.sin(y * 0.05 + t * 0.9) * 1.8;
+      const path = () => {
+        ctx.beginPath();
+        for (let y = top; y <= bottom; y += 5) (y === top ? ctx.moveTo(sway(y), y) : ctx.lineTo(sway(y), y));
+      };
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 9;
+      path();
+      ctx.stroke();
+      ctx.strokeStyle = '#f4efe6';
+      ctx.lineWidth = 5.5;
+      path();
+      ctx.stroke();
+      // 紅白相間的扭紋
+      ctx.strokeStyle = '#d23a2e';
+      ctx.lineWidth = 2.6;
+      for (let y = top + 3; y < bottom; y += 8) {
+        const xx = sway(y);
+        ctx.beginPath();
+        ctx.moveTo(xx - 2.6, y - 2.5);
+        ctx.lineTo(xx + 2.6, y + 2.5);
+        ctx.stroke();
+      }
+      // 每隔一段掛一顆小鈴
+      for (let y = top + 30, k = 0; y < bottom - 8; y += 40, k++) {
+        const side = k % 2 ? 1 : -1;
+        const bx = sway(y) + side * 7;
+        const sw = Math.sin(t * 2.2 + k) * 1.2;
+        A.ellipse(ctx, bx + sw, y + 4, 4, 4, '#f2c75a', '#c8962a', { lw: 1.6, hl: false });
+        ctx.fillStyle = A.outline();
+        ctx.fillRect(bx + sw - 2, y + 5, 4, 1.2);
+      }
+      A.shape(ctx, (c) => A.roundRect(c, x - 10, top - 6, 20, 9, 3), '#6a4a3a', '#52382c', { lw: 2.2, hl: false });
+      A.shape(ctx, (c) => A.roundRect(c, x - 11, top - 10, 22, 5, 2.5), '#f6faff', null, { lw: 1.6, hl: false });
+    },
+    goldchain(ctx, x, top, bottom, t) {
+      const sway = (y) => x + Math.sin(y * 0.05 + t * 0.9) * 1.8;
+      for (let y = top, k = 0; y < bottom; y += 9, k++) {
+        const xx = sway(y);
+        ctx.strokeStyle = A.outline();
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.ellipse(xx, y + 4, k % 2 ? 2 : 5, 6, 0, 0, PI2);
+        ctx.stroke();
+        ctx.strokeStyle = k % 2 ? '#c8962a' : '#f2cf6a';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+      A.shape(ctx, (c) => A.roundRect(c, x - 11, top - 7, 22, 10, 3), '#fbf7ef', '#ddd2c2', { lw: 2.2, hl: false });
+      A.ellipse(ctx, x, top - 2, 3, 3, '#e8b84a', null, { lw: 1.4, hl: false });
+    },
+  };
+
+  // 前景：雪堆（snow）、雲朵（cloud）
+  function drawForeExtra(ctx, kind, f, y, col, t) {
+    if (kind === 'snow') {
+      const s = f.s;
+      [[-16, 16, 9], [4, 22, 12], [24, 13, 8]].forEach(([dx, rx, ry], k) => {
+        ctx.fillStyle = col[1];
+        ctx.beginPath();
+        ctx.ellipse(f.x + dx * s + 2, y + 13, rx * s, ry * s, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = col[0];
+        ctx.beginPath();
+        ctx.ellipse(f.x + dx * s - 1, y + 12, rx * s - 2, ry * s - 2, 0, Math.PI, 0);
+        ctx.fill();
+      });
+      ctx.strokeStyle = '#8a7a5a';
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = 'round';
+      for (let k = -1; k <= 1; k++) {
+        const sw = Math.sin(t * 1.6 + f.x * 0.01 + k) * 2;
+        ctx.beginPath();
+        ctx.moveTo(f.x + k * 5 + 8, y + 2);
+        ctx.lineTo(f.x + k * 7 + 8 + sw, y - (16 + (k % 2 ? 0 : 6)) * s);
+        ctx.stroke();
+      }
+      return true;
+    }
+    if (kind === 'cloud') {
+      const s = f.s;
+      const dx = Math.sin(t * 0.4 + f.x * 0.01) * 6;
+      ctx.fillStyle = col[1];
+      ctx.beginPath();
+      for (const [ox, oy, r] of [[-22, 6, 14], [0, 0, 20], [22, 6, 13], [40, 10, 9]]) {
+        ctx.moveTo(f.x + ox * s + dx + r * s, y + 14 + oy * s);
+        ctx.arc(f.x + ox * s + dx, y + 14 + oy * s, r * s, 0, PI2);
+      }
+      ctx.fill();
+      ctx.fillStyle = col[0];
+      ctx.beginPath();
+      for (const [ox, oy, r] of [[-22, 3, 12], [0, -3, 17], [22, 3, 11], [40, 7, 7]]) {
+        ctx.moveTo(f.x + ox * s + dx + r * s, y + 12 + oy * s);
+        ctx.arc(f.x + ox * s + dx, y + 12 + oy * s, r * s, 0, PI2);
+      }
+      ctx.fill();
+      return true;
+    }
+    return false;
+  }
+
 
   A.THEMES = THEMES;
 })();

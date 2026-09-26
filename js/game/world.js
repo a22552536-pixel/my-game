@@ -48,13 +48,13 @@
       if (G.mobAbil) G.mobAbil.reset();
       G.music.forMap(map);
 
-      this.npcs = (map.npcs || []).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: map.platforms[n.p][2] }));
+      this.npcs = (map.npcs || []).filter((n) => (!n.flag || this.flags[n.flag]) && (!n.noFlag || !this.flags[n.noFlag])).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: map.platforms[n.p][2] }));
       this.chests = (map.chests || []).map((c) => ({ id: c.id, x: c.x, y: map.platforms[c.p][2], opened: !!this.openedChests[c.id] }));
       this.springs = (map.springs || []).map((s) => ({ x: s.x, p: s.p, y: map.platforms[s.p][2], power: s.power, squash: 0 }));
       this.signs = (map.signs || []).map((s) => ({ x: s.x, y: map.platforms[s.p][2], text: s.text }));
       this.critters = [];
       const th = map.theme;
-      const nC = th === 'rootCave' ? 14 : ['queenHall', 'crabNest', 'lavaBed', 'volcanoNest', 'reef'].indexOf(th) >= 0 ? 0 : 6;
+      const nC = th === 'rootCave' ? 14 : ['queenHall', 'crabNest', 'lavaBed', 'volcanoNest', 'reef', 'snowCamp', 'snowField', 'iceFall', 'bellShrine', 'frostAltar', 'starStair', 'timeThrone', 'timeCorridor'].indexOf(th) >= 0 ? 0 : 6;
       for (let i = 0; i < nC; i++) {
         this.critters.push({
           kind: th === 'rootCave' ? 'firefly' : 'butterfly',
@@ -208,6 +208,8 @@
 
     // ── 事件 ──
     onMonsterKilled(m) {
+      // 幻影、鏡像、平行世界的假身：碎掉就沒了，不給經驗和掉落
+      if (m.illusion) return;
       G.codex.note('mobs', m.id);
       const hb = G.player.passive('hundredBattles');
       if (hb && G.player.alive()) {
@@ -396,7 +398,7 @@
         const p = this.projectiles[i];
         p.t += dt;
         if (p.grav) p.vy += p.grav * dt;
-        // 怪物投射物：會拐彎追人（信封）、上下飄（音符）
+        // 怪物投射物：會拐彎追人（符文飛彈）、上下飄（音符）
         if (p.owner === 'monster' && p.homing && P.alive()) {
           const a = Math.atan2(P.y - 30 - p.y, P.x - p.x);
           const sp = Math.hypot(p.vx, p.vy);
@@ -409,6 +411,7 @@
         }
         p.x += p.vx * dt;
         p.y += p.vy * dt;
+        if (p.onTick) p.onTick(p, dt);
         if (p.owner === 'monster' && p.wave) p.y += Math.cos(p.t * 8 + (p.seed || 0)) * p.wave * 8 * dt;
         let remove = p.t > p.life || p.x < -50 || p.x > this.map.w + 50;
         // 純特效的投射物（落下的巨錘、流星、冰片）：只會移動，不會打到誰

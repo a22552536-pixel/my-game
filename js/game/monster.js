@@ -104,9 +104,11 @@
 
   Monster.prototype.takeDamage = function (dmg, dir, knock, crit) {
     if (this.dead) return 0;
-    // 能力造成的無敵（例如燈泡水母熄燈的瞬間）
+    // 能力造成的無敵（例如鬼火水母熄滅的瞬間）
     if (G.mobAbilHooks && G.mobAbilHooks.invuln(this)) return 0;
     if (this.shellT > 0) dmg = Math.max(1, Math.round(dmg * 0.3));
+    // 能力造成的傷害倍率（心核打開／冰盾正面／車輪滾動……）
+    if (G.mobAbilHooks && G.mobAbilHooks.dmgMul) dmg = Math.max(1, Math.round(dmg * G.mobAbilHooks.dmgMul(this, dir)));
     this.hp -= dmg;
     this.hurtFlash = 0.1;
     this.hpShowT = 4;
@@ -214,7 +216,7 @@
     if (this.moodAggro && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < 320) this.aggroT = Math.max(this.aggroT, 2);
     const aggro = this.aggroT > 0 && P.alive();
     const [minX, maxX] = this.bounds();
-    const speed = d.speed * (this.V ? this.V.speed : 1) * (this.slowT > 0 ? 0.5 : 1);
+    const speed = d.speed * (this.V ? this.V.speed : 1) * (this.slowT > 0 ? 0.5 : 1) * (this.hasteT > 0 ? 1.6 : 1);
     // 新怪物的能力：回傳 true 時這一幀由能力自己控制移動
     const custom = this.hurtT <= 0 && G.mobAbilHooks ? G.mobAbilHooks.update(this, dt, P, aggro) : false;
 

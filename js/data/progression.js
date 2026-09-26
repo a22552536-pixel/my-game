@@ -86,7 +86,7 @@
     const u = D.items.uniques[id];
     if (reqMap[u.req]) u.req = reqMap[u.req];
   }
-  D.items.tierForLevel = (lv) => (lv >= 32 ? 6 : lv >= 26 ? 5 : lv >= 19 ? 4 : lv >= 13 ? 3 : lv >= 7 ? 2 : 1);
+  D.items.tierForLevel = (lv) => (lv >= 55 ? 10 : lv >= 50 ? 9 : lv >= 44 ? 8 : lv >= 38 ? 7 : lv >= 32 ? 6 : lv >= 26 ? 5 : lv >= 19 ? 4 : lv >= 13 ? 3 : lv >= 7 ? 2 : 1);
   // 怪物掉的裝備很少，但一掉就是好東西
   D.items.rarityTables.normal = { epic: 80, legendary: 20 };
   D.items.rarityTables.elite = { epic: 85, legendary: 15 };
@@ -138,7 +138,7 @@
   });
 
   // ── 商店的裝備：每個營地／補給站都賣當章的三件（爪套、鬃飾、護符），平常的裝備從這裡來 ──
-  const shopTiers = { owl: [2], gull: [3], pelican: [4], capybara: [5], armadillo: [6] };
+  const shopTiers = { owl: [2], gull: [3], pelican: [4], capybara: [5], armadillo: [6], yakelder: [7], crane: [8], sphinxcat: [9, 10] };
   const shopOf = (id) => (id === 'owl' ? D.items.shops.owl : D.items.moreShops[id]);
   for (const sid in shopTiers) {
     const list = shopOf(sid);

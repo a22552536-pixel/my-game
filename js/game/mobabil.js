@@ -445,9 +445,9 @@
           const next = ['red', 'blue', 'yellow'].filter((x) => x !== m.fx.mood);
           m.fx.mood = U.pick(next);
           m.moodT = U.rand(4, 5.5);
-          G.fx.text(m.x, m.y - m.h - 22, { red: '生氣！', blue: '難過……', yellow: '開心！' }[m.fx.mood], { red: '#ff6a5a', blue: '#7ab8ff', yellow: '#ffe066' }[m.fx.mood], 16, 0.9);
+          G.fx.text(m.x, m.y - m.h - 22, { red: '火之元素！', blue: '水之元素……', yellow: '光之元素！' }[m.fx.mood], { red: '#ff6a5a', blue: '#7ab8ff', yellow: '#ffe066' }[m.fx.mood], 16, 0.9);
         }
-        // 紅：主動衝撞；藍：遠遠吐眼淚；黃：替旁邊的同伴回血
+        // 紅（火）：主動衝撞；藍（水）：遠遠吐水彈；黃（光）：替旁邊的同伴回血
         m.abil.ranged = m.fx.mood === 'blue';
         m.moodAggro = m.fx.mood === 'red';
         if (m.fx.mood === 'red' && m.chargeT <= 0 && P.alive() && near(m, P, 300)) {

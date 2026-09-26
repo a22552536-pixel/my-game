@@ -144,7 +144,7 @@
       if (Math.random() < 0.35) this.spawn('equip', b.x, b.y - 130, { item: this.makeUnique(U.pick(this.uniquesOf(b.id))) });
       const ch = G.world.map.region;
       if (!G.story.hasLeaf(ch)) this.spawn('starleaf', b.x, b.y - 140, { chapter: ch });
-      this.spawn('quest', b.x + 50, b.y - 120, { qitem: { hermitCrab: 'lampshard', lavaTortoise: 'volcanocore' }[b.id] || 'queencap' });
+      this.spawn('quest', b.x + 50, b.y - 120, { qitem: { hermitCrab: 'lampshard', lavaTortoise: 'volcanocore', frostSpirit: 'frostbell', timeItself: 'timeshard' }[b.id] || 'queencap' });
     },
 
     dropFromChest(ch) {

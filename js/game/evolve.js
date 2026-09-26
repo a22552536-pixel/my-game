@@ -12,7 +12,7 @@
     },
 
     // 每一轉要打倒的 Boss
-    BOSSES: ['queenShroom', 'hermitCrab', 'lavaTortoise', 'frostSpirit'],
+    BOSSES: ['queenShroom', 'hermitCrab', 'lavaTortoise', 'frostSpirit', 'timeItself'],
 
     nextTier() {
       return this.tierOf(G.player.form) + 1;
