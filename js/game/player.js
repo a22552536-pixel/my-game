@@ -77,6 +77,11 @@
         crit += st.crit || 0;
         if (it.special) this.specials[it.special] = true;
       }
+      const steel = this.passive('steelMane');
+      if (steel) hp *= 1 + steel.hp;
+      const reso = this.passive('resonance');
+      if (reso) crit += reso.crit;
+      if (this.buffs && this.buffs.storm) crit += this.buffs.storm.v;
       const lm = G.story ? G.story.mult() : 1;
       hp *= lm;
       atk *= lm;
@@ -132,6 +137,7 @@
       if (this.landT > 0) this.landT -= dt;
       if (this.slowT > 0) this.slowT -= dt;
       if (this.glowT > 0) this.glowT -= dt;
+      G.skillExec.tick(this, dt);
       if (this.buffs) {
         let changed = false;
         for (const k in this.buffs) {
@@ -238,7 +244,7 @@
     updateMove(dt, inputX, canControl, Dn) {
       const b = B();
       const gale = this.passive('galeStep');
-      const speed = b.walkSpeed * (this.slowT > 0 ? 0.55 : 1) * (gale ? 1 + gale.speed : 1) * (this.specials.swift ? 1.1 : 1);
+      const speed = b.walkSpeed * (this.slowT > 0 ? 0.55 : 1) * (gale ? 1 + gale.speed : 1) * (this.specials.swift ? 1.1 : 1) * (this.buffs && this.buffs.storm ? 1.3 : 1);
       if (this.action && this.action.type === 'dash') return;
       if (this.onGround) {
         let target = inputX * speed;
@@ -348,15 +354,28 @@
         G.audio.play('error');
         return;
       }
-      const cost = S.mp(lv);
+      this.cds = this.cds || {};
+      if (this.cds[id] > 0) {
+        G.hud.toast(S.name + ' 冷卻中（' + Math.ceil(this.cds[id]) + ' 秒）', '#ddd');
+        return;
+      }
+      const omni = this.passive('omniscience');
+      const cost = Math.max(1, Math.round(S.mp(lv) * (omni ? 1 - omni.mpCut : 1)));
       if (this.mp < cost) {
         G.hud.toast('MP 不足', '#8fc0ff');
         G.audio.play('error');
         return;
       }
       this.mp -= cost;
+      if (S.cd) this.cds[id] = S.cd;
+      const ex = G.skillExec[S.type];
+      if (ex && ex.start) {
+        ex.start(this, S, id, lv);
+        return;
+      }
       if (S.type === 'dash') {
         this.action = { type: 'dash', id, lv, t: 0, dur: S.dashTime, hits: [], ghostT: 0 };
+        if (S.invuln) this.invT = Math.max(this.invT, S.dashTime + 0.15);
         this.glowT = 0.35;
         if (this.onGround) G.fx.dust(this.x, this.y, this.dir, 10);
         this.vx = this.dir * S.dashSpeed;
@@ -399,6 +418,12 @@
     updateAction(dt) {
       const a = this.action;
       a.t += dt;
+      const ex = G.skillExec[a.type];
+      if (ex && ex.update) {
+        ex.update(this, a, dt);
+        if (a.t >= a.dur) this.action = null;
+        return;
+      }
       if (a.type === 'strike') {
         const S = G.data.skills[a.id];
         while (a.hitIdx < S.hits.length && a.t >= S.hits[a.hitIdx]) {
@@ -496,12 +521,12 @@
         a.ghostT -= dt;
         if (a.ghostT <= 0) {
           a.ghostT = 0.035;
-          G.fx.ghost(this.x, this.y, this.dir, { state: 'dash', t: this.t, p: 0, form: this.form }, '#ffd98a');
+          G.fx.ghost(this.x, this.y, this.dir, { state: 'dash', t: this.t, p: 0, form: this.form }, S.ghost || '#ffd98a');
         }
         // 速度線
         G.fx.streak(this.x - this.dir * U.rand(30, 70), this.y - U.rand(10, 55), this.dir > 0 ? 0 : Math.PI, U.rand(50, 90), 'rgba(255,245,210,0.9)', 2);
         const box = { x: this.x - 26, y: this.y - this.h, w: 52, h: this.h };
-        G.combat.playerDashHit(box, a, S.targets, S.mult(a.lv));
+        G.combat.playerDashHit(box, a, S.targets, S.mult(a.lv), S);
         if (a.t >= a.dur) {
           this.vx = this.dir * 120;
           G.fx.ring(this.x + this.dir * 20, this.y - 28, 'rgba(255,240,190,0.9)', 46, 0.2, 3);
@@ -575,7 +600,15 @@
       opts = opts || {};
       if (this.dead || (this.invT > 0 && !opts.ignoreInv) || G.opts.godMode) return false;
       const b = B();
+      const ai = this.passive('afterimage');
+      if (ai && !opts.ignoreInv && Math.random() < ai.dodge) {
+        G.fx.ghost(this.x - this.dir * 24, this.y, this.dir, { state: 'idle', t: this.t, p: 0, form: this.form }, '#8a6aa8');
+        G.fx.text(this.x, this.y - 80, 'Miss', '#d8c8ff', 18, 0.7);
+        this.invT = 0.35;
+        return false;
+      }
       let dmg = Math.max(1, Math.round(raw * U.rand(0.9, 1.1) - this.def * b.defFactor));
+      if (this.buffs && this.buffs.soul) dmg = Math.max(1, Math.round(dmg * (1 - this.buffs.soul.v)));
       const rock = this.passive('rockSkin');
       if (rock) dmg = Math.max(1, Math.round(dmg * (1 - rock.reduce)));
       if (this.buffs && this.buffs.guard) dmg = Math.max(1, Math.round(dmg * (1 - this.buffs.guard.v)));
@@ -588,6 +621,16 @@
         if (take > 0) G.fx.damage(this.x + 20, this.y - 70, take, 'mp');
       }
       if (rock && Math.random() < rock.steady) opts = Object.assign({}, opts, { noKnock: true, steady: true });
+      const uny = this.passive('unyielding');
+      if (uny && dmg >= this.hp && !(this.unyCd > 0)) {
+        dmg = Math.max(0, Math.ceil(this.hp) - 1);
+        this.unyCd = uny.cd;
+        this.invT = 1.5;
+        G.fx.screenFlash('#ffe066', 0.4);
+        G.fx.text(this.x, this.y - 100, '不屈！', '#ffe066', 24, 1);
+        this.hp -= dmg;
+        return true;
+      }
       this.hp -= dmg;
       G.fx.damage(this.x, this.y - 70, dmg, 'player');
       if (opts.ignoreInv) {

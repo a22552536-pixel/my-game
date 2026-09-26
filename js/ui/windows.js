@@ -417,14 +417,29 @@
             else if (Q.available(id)) btns += '<button class="primary" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
           });
         }
-        if (npc.id === 'hedgehog' && G.evolve.tierOf(G.player.form) === 0 && G.world.flags.queenShroomDefeated) {
-          btns += G.evolve.canEvolve() ? '<button class="primary evolve-btn" data-act="openEvolve">✦ 感受星楓葉的力量（進化）</button>' : '<button disabled>進化（需要 Lv10）</button>';
+        // 各營地的長輩可以幫忙進化：只要下一轉的 Boss 已經打倒就顯示按鈕
+        const nt = G.evolve.nextTier();
+        if (def.evolver && nt <= 4 && G.world.flags[G.evolve.BOSSES[nt - 1] + 'Defeated']) {
+          btns += G.evolve.canEvolve() ? '<button class="primary evolve-btn" data-act="openEvolve">✦ 感受星楓葉的力量（' + ['一', '二', '三', '四'][nt - 1] + '轉進化）</button>' : '<button disabled>進化（' + G.evolve.missing() + '）</button>';
         }
         if (def.role === 'shop') btns += '<button class="primary" data-act="openShop">交易</button>';
-        if (def.role === 'travel') btns += '<button disabled>苔光小徑（目前所在）</button>';
+        if (def.role === 'travel') {
+          // 松鼠信差：到過的營地之間可以直接移動
+          Object.keys(G.data.camps).forEach((r) => {
+            const id = G.data.camps[r];
+            if (!G.world.visited[id]) return;
+            if (id === G.world.mapId) btns += '<button disabled>' + G.data.maps[id].name + '（目前所在）</button>';
+            else btns += '<button class="primary" data-act="travel" data-arg="' + id + '">帶我去「' + G.data.maps[id].name + '」</button>';
+          });
+        }
         btns += '<button data-act="close">再見</button>';
       }
       return '<div class="dlg"><div class="who"><canvas class="portrait" data-npc="' + npc.id + '" width="120" height="120"></canvas><div class="nm">' + def.name + '</div></div><div class="say">' + esc(text) + '</div><div class="btns">' + btns + '</div></div>';
+    },
+    a_travel(id) {
+      this.closeAll();
+      G.world.changeMap(id, 'camp');
+      G.audio.play('portal');
     },
     a_offerQ(id) {
       this.dialogue.page = 'offer';
@@ -705,7 +720,8 @@
     r_evolve() {
       const opts = G.evolve.options();
       const pick = this.evolvePick;
-      let h = '<div class="evo-intro">星楓葉的光芒流進身體。選擇你要成為的樣子。<b>選了之後就不能更改。</b></div><div class="evo-cards">';
+      const first = G.evolve.tierOf(G.player.form) === 0;
+      let h = '<div class="evo-intro">' + (first ? '星楓葉的光芒流進身體。選擇你要成為的樣子。<b>選了之後就不能更改。</b>' : '新的星楓葉和身體裡的葉子共鳴起來了。') + '</div><div class="evo-cards">';
       opts.forEach((id) => {
         const f = G.data.forms[id];
         const line = G.data.lines[f.line];
@@ -744,8 +760,9 @@
 
     // ───────── M1 結尾 ─────────
     r_m1end() {
-      const s = G.data.story.m1End;
-      return '<div class="panel ending"><div class="body"><img class="leaf" src="' + G.art.iconURL('starleaf', G.story.leafDef(1).color) + '"><div class="big">' + s.title + '</div><div class="txt">' + esc(s.text).replace(/\n/g, '<br>') + '</div><div class="dim">遊玩時間 ' + U.fmtTime(G.player.playTime) + ' · Lv.' + G.player.level + '</div><button class="primary" data-act="close">繼續冒險</button></div></div>';
+      const ch = this.endChapter || 1;
+      const s = G.data.story.chapters[ch].end || G.data.story.m1End;
+      return '<div class="panel ending"><div class="body"><img class="leaf" src="' + G.art.iconURL('starleaf', G.story.leafDef(ch).color) + '"><div class="big">' + s.title + '</div><div class="txt">' + esc(s.text).replace(/\n/g, '<br>') + '</div><div class="dim">遊玩時間 ' + U.fmtTime(G.player.playTime) + ' · Lv.' + G.player.level + '</div><button class="primary" data-act="close">繼續冒險</button></div></div>';
     },
   });
 

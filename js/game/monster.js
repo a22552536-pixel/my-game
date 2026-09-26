@@ -166,13 +166,23 @@
       return this.deadT >= 0.5;
     }
 
+    // 暈眩：不能動也不能攻擊
+    if (this.stunT > 0) {
+      this.stunT -= dt;
+      this.vx = 0;
+      this.attackT = 0;
+      if (Math.random() < 0.08) G.fx.text(this.x + U.rand(-10, 10), this.y - this.h * (this.scale || 1) - 16, '★', '#ffe066', 14, 0.5);
+      G.physics.step(this, dt, G.world.map);
+      return false;
+    }
+    if (this.slowT > 0) this.slowT -= dt;
     if (this.aggroT > 0) this.aggroT -= dt;
     if ((d.behavior === 'aggressive' || (this.V && this.V.aggressive)) && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < (d.sight || 300)) {
       this.aggroT = Math.max(this.aggroT, 2);
     }
     const aggro = this.aggroT > 0 && P.alive();
     const [minX, maxX] = this.bounds();
-    const speed = d.speed * (this.V ? this.V.speed : 1);
+    const speed = d.speed * (this.V ? this.V.speed : 1) * (this.slowT > 0 ? 0.5 : 1);
 
     if (this.shellT > 0) {
       this.shellT -= dt;

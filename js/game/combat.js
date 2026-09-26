@@ -8,7 +8,8 @@
       const b = G.data.balance;
       const isCrit = Math.random() < crit;
       let d = atk * mult * U.rand(b.dmgVariance[0], b.dmgVariance[1]);
-      if (isCrit) d *= b.critMult + G.story.critBonus();
+      const lethal = G.player.passive('lethal');
+      if (isCrit) d *= b.critMult + G.story.critBonus() + (lethal ? lethal.critDmg : 0);
       d -= targetDef * b.defFactor;
       return { dmg: Math.max(1, Math.round(d)), crit: isCrit };
     },
@@ -30,14 +31,26 @@
       return hits.length;
     },
 
-    playerDashHit(box, action, maxTargets, mult) {
+    playerDashHit(box, action, maxTargets, mult, S) {
       if (action.hits.length >= maxTargets) return;
       for (const m of this.targets()) {
         if (action.hits.length >= maxTargets) break;
         if (action.hits.indexOf(m) >= 0) continue;
         if (!U.overlap(box, m.hitbox())) continue;
         action.hits.push(m);
-        this.hitMonster(m, mult, { knock: 260, heavy: true });
+        if (S && S.hitFx === 'shadow') {
+          // 影步：穿過去之後斬痕才爆開
+          G.fx.slash(m.x, m.y - m.h * 0.5, 1, 30, '#b88aff', 'claw');
+          G.skillExec.later(0.22, () => {
+            if (!G.skillExec.alive(m)) return;
+            G.fx.slash(m.x, m.y - m.h * 0.5, -1, 44, '#8a5ad0', 'wide');
+            G.fx.burst(m.x, m.y - m.h * 0.5, ['#b88aff', '#2e1f44', '#ffffff'], 12, 260);
+            this.hitMonster(m, mult, { knock: S.knock, heavy: true, sound: 'double' });
+          });
+          continue;
+        }
+        if (S && S.hitFx === 'steel') G.fx.burst(m.x, m.y - m.h * 0.5, ['#ffd27a', '#ffffff', '#c8d4e6'], 10, 300, { shape: 'square', size: 3 });
+        this.hitMonster(m, mult, { knock: (S && S.knock) || 260, heavy: true, sound: S && S.hitFx === 'steel' ? 'rock' : undefined });
       }
     },
 
@@ -45,6 +58,17 @@
       opts = opts || {};
       const P = G.player;
       const b = G.data.balance;
+      const hunt = P.passive('hunterInstinct');
+      if (hunt && m.maxHp && m.hp < m.maxHp * 0.3) mult *= 1 + hunt.execute;
+      // 分身：追加一下較弱的攻擊
+      if (P.buffs && P.buffs.clone && !opts.clone) {
+        const v = P.buffs.clone.v;
+        G.skillExec.later(0.12, () => {
+          if (!G.skillExec.alive(m)) return;
+          G.fx.ghost(m.x - U.sign(m.x - P.x) * 40, P.y, U.sign(m.x - P.x), { state: 'attack', t: P.t, p: 0.5, form: P.form }, '#ffe44a');
+          this.hitMonster(m, mult * v, Object.assign({}, opts, { clone: true, knock: 0 }));
+        });
+      }
       const r = this.roll(P.atk, mult, m.armor, P.crit);
       const dir = U.sign(m.x - P.x);
       const dealt = m.takeDamage(r.dmg, dir, opts.knock || 0, r.crit);

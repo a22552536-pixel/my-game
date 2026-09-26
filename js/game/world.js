@@ -43,6 +43,7 @@
       this.respawns = [];
       this.boss = null;
       G.fx.reset();
+      G.skillExec.reset();
       G.music.forMap(map);
 
       this.npcs = (map.npcs || []).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: map.platforms[n.p][2] }));
@@ -190,6 +191,11 @@
 
     // ── 事件 ──
     onMonsterKilled(m) {
+      const hb = G.player.passive('hundredBattles');
+      if (hb && G.player.alive()) {
+        G.player.hp = Math.min(G.player.maxHp, G.player.hp + Math.max(1, Math.round(G.player.maxHp * hb.heal)));
+        G.fx.particles.push({ x: m.x, y: m.y - 30, vx: (G.player.x - m.x) * 2, vy: -120, life: 0.45, t: 0, size: 5, color: '#ff6a5a', grav: 0, shape: 'circle', drag: 0 });
+      }
       G.player.gainExp(m.exp);
       G.quests.onKill(m.id);
       G.loot.dropFromMonster(m);
@@ -214,7 +220,9 @@
       G.save.write();
       if (first) {
         setTimeout(() => {
-          if (G.scene === 'play') G.ui.open(G.evolve.canEvolve() ? 'evolve' : 'm1end');
+          if (G.scene !== 'play') return;
+          G.ui.endChapter = this.map.region;
+          G.ui.open(G.evolve.canEvolve() ? 'evolve' : 'm1end');
         }, 6500);
       }
     },
@@ -355,6 +363,10 @@
         p.y += p.vy * dt;
         let remove = p.t > p.life || p.x < -50 || p.x > this.map.w + 50;
         if (p.owner === 'player') {
+          if (p.boomerang) {
+            if (G.skillExec.updateBoomerang(p, dt) || p.t > p.life) this.projectiles.splice(i, 1);
+            continue;
+          }
           if (!remove) {
             for (const m of G.combat.targets()) {
               const hb = m.hitbox();

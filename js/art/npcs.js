@@ -592,7 +592,9 @@
     ctx.restore();
   };
 
+  A.ZONE_DRAW = A.ZONE_DRAW || {};
   A.drawZone = function (ctx, z, t) {
+    if (z.kind && A.ZONE_DRAW[z.kind]) return A.ZONE_DRAW[z.kind](ctx, z, t);
     ctx.save();
     const fade = Math.min(1, z.life - z.t, z.t * 4);
     ctx.globalAlpha = Math.max(0, fade) * 0.75;

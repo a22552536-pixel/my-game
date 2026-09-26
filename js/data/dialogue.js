@@ -22,6 +22,7 @@ G.data.npcs = {
     name: '刺蝟婆婆',
     art: 'hedgehog',
     role: 'quest',
+    evolver: true,
     talk: [
       { text: ['小獅子，你是從天上掉下來的吧？婆婆看見了喔。', '森林很大，別急。'] },
       { if: { done: 'q1' }, text: ['小徑乾淨多了，謝謝你呀。', '你打架的樣子，讓婆婆想起年輕的時候。'] },

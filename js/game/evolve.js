@@ -1,5 +1,5 @@
 // 進化：條件判斷、選擇、演出。
-// 目前開放一轉（打倒菇菇女王且 Lv10）；二轉以後等之後的區域做好再開。
+// 第 n 轉：打倒第 n 章的 Boss 並達到 Lv(10n)。一轉選路線，之後直線進化。
 (function () {
   'use strict';
   const U = G.util;
@@ -11,10 +11,26 @@
       return (G.data.forms[form] || G.data.forms.base).tier;
     },
 
-    canEvolve() {
+    // 每一轉要打倒的 Boss
+    BOSSES: ['queenShroom', 'hermitCrab', 'lavaTortoise', 'frostSpirit'],
+
+    nextTier() {
+      return this.tierOf(G.player.form) + 1;
+    },
+
+    // 下一轉還缺什麼（null 表示可以進化）
+    missing() {
       const P = G.player;
-      if (this.tierOf(P.form) >= 1) return false;
-      return P.level >= 10 && !!G.world.flags.queenShroomDefeated;
+      const n = this.nextTier();
+      if (n > 4) return '已經是最終形態';
+      const boss = this.BOSSES[n - 1];
+      if (!G.world.flags[boss + 'Defeated']) return '打倒' + ((G.data.monsters[boss] || {}).name || 'Boss');
+      if (P.level < n * 10) return '需要 Lv' + n * 10;
+      return null;
+    },
+
+    canEvolve() {
+      return !this.missing();
     },
 
     options() {
