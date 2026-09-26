@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小鬃的冒險</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+  <div id="ui"></div>
+</div>
+<noscript><p style="color:#fff">需要啟用 JavaScript 才能遊玩。</p></noscript>
+
+<!-- 引擎 -->
+<script src="js/engine/core.js"></script>
+<script src="js/engine/input.js"></script>
+<script src="js/engine/audio.js"></script>
+<script src="js/engine/fx.js"></script>
+
+<!-- 資料（調整平衡只需要改這裡） -->
+<script src="js/data/balance.js"></script>
+<script src="js/data/keys.js"></script>
+<script src="js/data/items.js"></script>
+<script src="js/data/skills.js"></script>
+<script src="js/data/monsters.js"></script>
+<script src="js/data/quests.js"></script>
+<script src="js/data/dialogue.js"></script>
+<script src="js/data/maps.js"></script>
+
+<!-- 美術（全部用程式繪製） -->
+<script src="js/art/common.js"></script>
+<script src="js/art/lion.js"></script>
+<script src="js/art/monsters.js"></script>
+<script src="js/art/npcs.js"></script>
+<script src="js/art/items.js"></script>
+<script src="js/art/background.js"></script>
+
+<!-- 遊戲邏輯 -->
+<script src="js/game/physics.js"></script>
+<script src="js/game/player.js"></script>
+<script src="js/game/combat.js"></script>
+<script src="js/game/monster.js"></script>
+<script src="js/game/boss.js"></script>
+<script src="js/game/loot.js"></script>
+<script src="js/game/quests.js"></script>
+<script src="js/game/world.js"></script>
+<script src="js/game/save.js"></script>
+
+<!-- 介面 -->
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/windows.js"></script>
+<script src="js/ui/scenes.js"></script>
+<script src="js/ui/debug.js"></script>
+
+<script src="js/main.js"></script>
+</body>
+</html>

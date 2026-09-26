@@ -1,0 +1,60 @@
+// 任務資料。type：kill 打倒、collect 收集、boss 討伐。
+G.data.quests = {
+  q1: {
+    name: '森林的清潔工',
+    npc: 'hedgehog',
+    req: { lv: 1 },
+    type: 'kill',
+    target: 'dewsnail',
+    count: 10,
+    reward: { exp: 60, gold: 80 },
+    lines: {
+      offer: '露珠蝸把小徑的草都啃光了……幫婆婆趕走 10 隻好嗎？牠們就在營地左邊。',
+      progress: '露珠蝸還在啃草呢，慢慢來，別累著了。',
+      done: '哎呀，小徑乾淨多了！這些金葉拿去買果子吃吧。',
+    },
+  },
+  q2: {
+    name: '傘菇的孢子',
+    npc: 'hedgehog',
+    req: { lv: 3, quest: 'q1' },
+    type: 'collect',
+    item: 'spore',
+    count: 8,
+    reward: { exp: 160, potions: { hp: 5 } },
+    lines: {
+      offer: '婆婆要煮孢子湯。往右邊的蘑菇林地走，打倒小傘菇或斑點菇，帶 8 包孢子粉回來。',
+      progress: '孢子粉還不夠喔，蘑菇林地裡多的是傘菇。',
+      done: '好香的孢子粉！這些紅漿果給你，打架時記得吃。',
+    },
+  },
+  q3: {
+    name: '不安分的草精',
+    npc: 'hedgehog',
+    req: { lv: 6, quest: 'q2' },
+    type: 'kill',
+    target: 'sproutling',
+    count: 15,
+    reward: { exp: 420, gold: 200, equip: { base: 'claw2', rarity: 'rare' } },
+    lines: {
+      offer: '嫩芽精最近會拿藤鞭打路過的動物。牠們住在木漏日深谷和古樹根洞，教訓 15 隻吧。',
+      progress: '嫩芽精的藤鞭很痛吧？小心點。',
+      done: '森林安靜多了。這副石爪套是我年輕時用的，送你。',
+    },
+  },
+  q4: {
+    name: '森林的女王',
+    npc: 'hedgehog',
+    req: { lv: 8 },
+    type: 'boss',
+    target: 'queenShroom',
+    count: 1,
+    main: true,
+    reward: { exp: 900, gold: 300 },
+    lines: {
+      offer: '你想回天上？……古樹根洞的盡頭住著菇菇女王，她守著一片會發光的星楓葉。打倒她，也許你就能往上走了。',
+      progress: '女王的殿堂在古樹根洞的最右邊。她跳起來的時候，記得跟著跳。',
+      done: '真的是星楓葉……它認得你呢。往上的路，就交給你自己了。',
+    },
+  },
+};

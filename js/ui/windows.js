@@ -1,0 +1,596 @@
+// DOM 視窗：背包、技能、任務、商店、對話、選單、改鍵、死亡、M1 結尾。
+// 視窗開著的時候遊戲會暫停（單人遊戲，比較友善）。
+(function () {
+  'use strict';
+  const U = G.util;
+  const esc = U.esc;
+
+  const root = () => document.getElementById('ui');
+
+  const UI = (G.ui = {
+    stack: [],
+    els: {},
+    selected: null, // 背包中選取的物品 uid
+    keyWait: null,
+    keyMsg: '',
+    confirmReset: false,
+    dialogue: null,
+
+    blocking() {
+      return this.stack.length > 0;
+    },
+    isOpen(name) {
+      return this.stack.indexOf(name) >= 0;
+    },
+    top() {
+      return this.stack[this.stack.length - 1];
+    },
+
+    open(name, arg) {
+      if (this.isOpen(name)) {
+        this.render(name);
+        return;
+      }
+      // 背包、技能、任務、商店互斥，只留一個
+      const panels = ['inventory', 'skills', 'quests', 'shop'];
+      if (panels.indexOf(name) >= 0) panels.forEach((p) => this.isOpen(p) && this.close(p));
+      this.stack.push(name);
+      const el = document.createElement('div');
+      el.className = 'win win-' + name;
+      el.addEventListener('click', (e) => this.onClick(name, e));
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      root().appendChild(el);
+      this.els[name] = el;
+      if (name === 'dialogue') this.dialogue = arg;
+      if (name === 'inventory' || name === 'shop') this.selected = null;
+      this.render(name);
+      G.input.clearAll();
+      G.audio.play('ui');
+    },
+
+    close(name) {
+      name = name || this.top();
+      if (!name) return;
+      const i = this.stack.indexOf(name);
+      if (i >= 0) this.stack.splice(i, 1);
+      const el = this.els[name];
+      if (el) el.remove();
+      delete this.els[name];
+      if (name === 'keys') {
+        this.keyWait = null;
+        G.input.capture = null;
+      }
+      if (name === 'menu') this.confirmReset = false;
+      G.input.clearAll();
+    },
+
+    closeAll() {
+      while (this.stack.length) this.close(this.top());
+    },
+
+    toggle(name) {
+      if (this.isOpen(name)) this.close(name);
+      else if (!this.blocking() || ['inventory', 'skills', 'quests'].indexOf(this.top()) >= 0) this.open(name);
+    },
+
+    refresh() {
+      this.stack.forEach((n) => this.render(n));
+    },
+
+    render(name) {
+      const el = this.els[name];
+      if (!el) return;
+      const fn = this['r_' + name];
+      el.innerHTML = fn ? fn.call(this) : '';
+    },
+
+    // 每幀從主迴圈呼叫：處理 Esc 與開關視窗的按鍵
+    handleKeys() {
+      const I = G.input;
+      if (this.keyWait) return;
+      if (I.escPressed) {
+        if (this.blocking()) {
+          const t = this.top();
+          if (t !== 'death') this.close(t);
+        } else this.open('menu');
+        return;
+      }
+      if (this.isOpen('death') || this.isOpen('m1end') || this.isOpen('menu') || this.isOpen('keys')) return;
+      if (I.wasPressed('inventory')) this.toggle('inventory');
+      else if (I.wasPressed('skills')) this.toggle('skills');
+      else if (I.wasPressed('quests')) this.toggle('quests');
+      else if (this.isOpen('dialogue') && (I.wasPressed('up') || I.wasPressed('jump'))) this.close('dialogue');
+    },
+
+    frame(title, body, extraClass) {
+      return '<div class="panel ' + (extraClass || '') + '"><div class="title">' + title + '<button class="x" data-act="close">✕</button></div><div class="body">' + body + '</div></div>';
+    },
+
+    onClick(name, e) {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      const act = btn.getAttribute('data-act');
+      const arg = btn.getAttribute('data-arg');
+      G.audio.play('ui');
+      if (act === 'close') {
+        this.close(name);
+        return;
+      }
+      const fn = this['a_' + act];
+      const res = fn ? fn.call(this, arg, name, btn) : null;
+      if (res !== 'keep' && this.els[name]) this.render(name);
+    },
+
+    // ───────── 物品描述 ─────────
+    itemHTML(it, compare) {
+      const D = G.data.items;
+      const R = D.rarity[it.rarity];
+      const st = G.loot.totalStats(it);
+      let h = '<div class="item-name" style="color:' + R.text + '">' + esc(it.name) + '</div>';
+      h += '<div class="item-meta">' + R.name + ' · ' + D.slots[it.slot] + ' · 需要 Lv.' + it.req + '</div>';
+      h += '<ul class="stats">';
+      for (const k in it.stats) h += '<li>' + G.loot.fmtStat(k, it.stats[k]) + '</li>';
+      if (it.sub) h += '<li class="sub">' + G.loot.fmtStat(it.sub.stat, it.sub.value) + '</li>';
+      if (it.special) h += '<li class="special">★ ' + D.specials[it.special].name + '：' + D.specials[it.special].desc + '</li>';
+      h += '</ul>';
+      if (compare !== undefined) {
+        const cur = compare ? G.loot.totalStats(compare) : {};
+        const keys = {};
+        Object.keys(st).concat(Object.keys(cur)).forEach((k) => (keys[k] = 1));
+        let diff = '';
+        for (const k in keys) {
+          const dv = (st[k] || 0) - (cur[k] || 0);
+          if (Math.abs(dv) < 1e-6) continue;
+          const txt = k === 'crit' ? (dv * 100).toFixed(1) + '%' : String(dv);
+          diff += '<span class="' + (dv > 0 ? 'up' : 'down') + '">' + D.statNames[k] + ' ' + (dv > 0 ? '+' : '') + txt + '</span>';
+        }
+        if (diff) h += '<div class="diff">和目前裝備比較：' + diff + '</div>';
+      }
+      return h;
+    },
+
+    isUpgrade(it) {
+      const cur = G.player.equip[it.slot];
+      return G.data.items.score(G.loot.totalStats(it)) > (cur ? G.data.items.score(G.loot.totalStats(cur)) : 0) + 0.01;
+    },
+
+    itemCell(it, act, extra) {
+      const R = G.data.items.rarity[it.rarity];
+      const sel = this.selected === it.uid ? ' sel' : '';
+      const up = act === 'select' && this.isUpgrade(it) && G.player.level >= it.req ? '<span class="uparrow">▲</span>' : '';
+      const low = G.player.level < it.req ? ' low' : '';
+      return '<button class="cell' + sel + low + '" style="border-color:' + R.color + '" data-act="' + act + '" data-arg="' + it.uid + '" title="' + esc(it.name) + '"><img src="' + G.art.iconURL(it.slot) + '" alt="">' + up + (extra || '') + '</button>';
+    },
+
+    // ───────── 背包 ─────────
+    r_inventory() {
+      const P = G.player;
+      const D = G.data.items;
+      let eq = '<div class="equip">';
+      for (const slot in D.slots) {
+        const it = P.equip[slot];
+        eq += '<div class="eqslot"><div class="lbl">' + D.slots[slot] + '</div>';
+        eq += it ? this.itemCell(it, 'selectEq') + '<div class="eqname" style="color:' + D.rarity[it.rarity].text + '">' + esc(it.name) + '</div>' : '<div class="cell empty"></div><div class="eqname dim">（空）</div>';
+        eq += '</div>';
+      }
+      eq += '</div>';
+      const stats =
+        '<div class="charstats"><div>攻擊 <b>' + Math.round(P.atk) + '</b></div><div>HP <b>' + P.maxHp + '</b></div><div>MP <b>' + P.maxMp + '</b></div><div>防禦 <b>' + Math.round(P.def) + '</b></div><div>爆擊 <b>' + (P.crit * 100).toFixed(1) + '%</b></div></div>';
+      let grid = '<div class="grid">';
+      for (let i = 0; i < G.data.balance.bagSize; i++) {
+        const it = P.bag[i];
+        grid += it ? this.itemCell(it, 'select') : '<div class="cell empty"></div>';
+      }
+      grid += '</div>';
+      const misc =
+        '<div class="misc"><span><img src="' + G.art.iconURL('gold') + '">' + P.gold + ' 金葉</span><span><img src="' + G.art.iconURL('hpPot') + '">' + P.potions.hp + '</span><span><img src="' + G.art.iconURL('mpPot') + '">' + P.potions.mp + '</span>' +
+        (P.questItems.spore ? '<span><img src="' + G.art.iconURL('spore') + '">' + P.questItems.spore + '</span>' : '') +
+        (G.world.flags.starleaf1 ? '<span><img src="' + G.art.iconURL('starleaf') + '">星楓葉</span>' : '') +
+        '</div>';
+      let detail = '<div class="detail dim">點一下物品查看詳細資料。<br>▲ 表示比身上的更好。</div>';
+      const sel = this.findItem(this.selected);
+      if (sel) {
+        const equipped = sel.where === 'equip';
+        detail = '<div class="detail">' + this.itemHTML(sel.item, equipped ? undefined : P.equip[sel.item.slot] || null) + '<div class="btns">';
+        if (equipped) detail += '<button data-act="unequip" data-arg="' + sel.item.uid + '">卸下</button>';
+        else {
+          detail += P.level >= sel.item.req ? '<button class="primary" data-act="equip" data-arg="' + sel.item.uid + '">裝備</button>' : '<span class="warn">等級不足</span>';
+          detail += '<button data-act="discard" data-arg="' + sel.item.uid + '">丟掉</button>';
+        }
+        detail += '</div></div>';
+      }
+      return this.frame('背包（' + P.bag.length + '/' + G.data.balance.bagSize + '）', '<div class="inv"><div class="left">' + eq + stats + '</div><div class="right">' + grid + misc + detail + '</div></div>');
+    },
+
+    findItem(uid) {
+      if (!uid) return null;
+      const P = G.player;
+      for (const s in P.equip) if (P.equip[s] && P.equip[s].uid === uid) return { item: P.equip[s], where: 'equip' };
+      const it = P.bag.find((b) => b.uid === uid);
+      return it ? { item: it, where: 'bag' } : null;
+    },
+
+    a_select(uid) {
+      this.selected = this.selected === uid ? null : uid;
+    },
+    a_selectEq(uid) {
+      this.selected = uid;
+    },
+    a_equip(uid) {
+      const P = G.player;
+      const i = P.bag.findIndex((b) => b.uid === uid);
+      if (i < 0) return;
+      const it = P.bag[i];
+      if (P.level < it.req) return;
+      const old = P.equip[it.slot];
+      P.equip[it.slot] = it;
+      P.bag.splice(i, 1);
+      if (old) P.bag.splice(i, 0, old);
+      P.recalc();
+      this.selected = it.uid;
+      G.save.write();
+    },
+    a_unequip(uid) {
+      const P = G.player;
+      if (P.bag.length >= G.data.balance.bagSize) {
+        G.hud.toast('背包已滿', '#ff9a9a');
+        return;
+      }
+      for (const s in P.equip) {
+        if (P.equip[s] && P.equip[s].uid === uid) {
+          P.bag.push(P.equip[s]);
+          P.equip[s] = null;
+        }
+      }
+      P.recalc();
+      G.save.write();
+    },
+    a_discard(uid, name, btn) {
+      if (!btn.classList.contains('confirm')) {
+        btn.textContent = '確定丟掉？';
+        btn.classList.add('confirm');
+        btn.setAttribute('data-act', 'discardYes');
+        return 'keep';
+      }
+    },
+    a_discardYes(uid) {
+      const P = G.player;
+      P.bag = P.bag.filter((b) => b.uid !== uid);
+      this.selected = null;
+      G.save.write();
+    },
+
+    // ───────── 技能 ─────────
+    r_skills() {
+      const P = G.player;
+      const I = G.input;
+      let h = '<div class="sp">剩餘技能點：<b>' + P.sp + '</b></div>';
+      if (this.keyWait && this.keyWait.type === 'skillslot') h += '<div class="notice">請按下技能欄按鍵（' + G.data.keys.skillSlots.map((a) => I.label(a)).join(' ') + '），按 Esc 取消</div>';
+      h += '<div class="skill basic"><img src="' + G.art.iconURL('pounce') + '" class="hide"><div class="info"><div class="nm">爪擊 <span class="dim">普通攻擊 · ' + I.label('attack') + '</span></div><div class="ds">用前爪攻擊前方 1 隻敵人。</div></div></div>';
+      for (const id in G.data.skills) {
+        const S = G.data.skills[id];
+        if (S.form !== P.form && S.form !== 'base') continue;
+        const lv = P.skills[id] || 0;
+        const slot = P.hotbar.indexOf(id);
+        h += '<div class="skill"><img src="' + G.art.iconURL(S.icon) + '"><div class="info">';
+        h += '<div class="nm">' + S.name + ' <span class="lv">Lv.' + lv + ' / ' + S.maxLv + '</span>' + (slot >= 0 ? ' <span class="key">[' + I.label(G.data.keys.skillSlots[slot]) + ']</span>' : '') + '</div>';
+        h += '<div class="ds">' + (lv > 0 ? S.desc(lv) + '（MP ' + S.mp(lv) + '）' : '尚未學會') + '</div>';
+        if (lv < S.maxLv) h += '<div class="ds next">下一級：' + S.desc(lv + 1) + '（MP ' + S.mp(lv + 1) + '）</div>';
+        h += '</div><div class="btns">';
+        h += '<button class="primary" data-act="learn" data-arg="' + id + '"' + (P.sp > 0 && lv < S.maxLv ? '' : ' disabled') + '>＋</button>';
+        h += '<button data-act="bind" data-arg="' + id + '">設定按鍵</button>';
+        h += '</div></div>';
+      }
+      h += '<div class="hotbar">技能欄：';
+      G.data.keys.skillSlots.forEach((a, i) => {
+        const id = P.hotbar[i];
+        h += '<button class="hb" data-act="unbind" data-arg="' + i + '" title="點一下清除">' + '<span class="k">' + I.label(a) + '</span>' + (id ? '<img src="' + G.art.iconURL(G.data.skills[id].icon) + '">' : '') + '</button>';
+      });
+      h += '</div>';
+      return this.frame('技能', h, 'skills');
+    },
+    a_learn(id) {
+      const P = G.player;
+      const S = G.data.skills[id];
+      if (P.sp <= 0 || (P.skills[id] || 0) >= S.maxLv) return;
+      P.skills[id] = (P.skills[id] || 0) + 1;
+      P.sp--;
+      if (P.hotbar.indexOf(id) < 0) {
+        const free = P.hotbar.indexOf(null);
+        if (free >= 0) P.hotbar[free] = id;
+      }
+      G.audio.play('quest');
+      G.save.write();
+    },
+    a_bind(id) {
+      this.keyWait = { type: 'skillslot', id };
+      G.input.capture = (code) => {
+        const slots = G.data.keys.skillSlots;
+        const action = G.input.codeToAction[code];
+        const i = slots.indexOf(action);
+        this.keyWait = null;
+        if (code !== 'Escape' && i >= 0) {
+          const P = G.player;
+          const old = P.hotbar.indexOf(id);
+          if (old >= 0) P.hotbar[old] = null;
+          P.hotbar[i] = id;
+          G.save.write();
+        }
+        this.render('skills');
+      };
+    },
+    a_unbind(i) {
+      G.player.hotbar[+i] = null;
+    },
+
+    // ───────── 任務 ─────────
+    r_quests() {
+      const Q = G.quests;
+      let h = '';
+      let any = false;
+      for (const id in G.data.quests) {
+        const q = G.data.quests[id];
+        const st = Q.state[id];
+        let status;
+        if (st === 'done') status = '<span class="done">已完成</span>';
+        else if (st === 'ready') status = '<span class="ready">可回報</span>';
+        else if (st === 'active') status = '<span class="active">進行中</span>';
+        else if (Q.available(id)) status = '<span class="avail">可接取（' + G.data.npcs[q.npc].name + '）</span>';
+        else continue;
+        any = true;
+        h += '<div class="quest"><div class="nm">' + (q.main ? '★ ' : '') + q.name + ' ' + status + '</div>';
+        if (st === 'active' || st === 'ready') h += '<div class="ds">' + Q.goalText(id) + '</div>';
+        const r = q.reward;
+        const rw = [];
+        if (r.exp) rw.push('經驗 ' + r.exp);
+        if (r.gold) rw.push('金葉 ' + r.gold);
+        if (r.potions) for (const k in r.potions) rw.push(G.data.items.potions[k].name + ' ×' + r.potions[k]);
+        if (r.equip) rw.push(G.data.items.rarity[r.equip.rarity].name + ' ' + G.data.items.bases[r.equip.base].name);
+        h += '<div class="ds dim">獎勵：' + rw.join('、') + '</div></div>';
+      }
+      if (!any) h = '<div class="dim">目前沒有任務。到營地找頭上有「!」的 NPC 聊聊吧。</div>';
+      return this.frame('任務', h, 'quests');
+    },
+
+    // ───────── 對話 ─────────
+    openDialogue(npc) {
+      this.dialogue = { npc, page: 'main', quest: null };
+      this.open('dialogue', this.dialogue);
+    },
+    r_dialogue() {
+      const d = this.dialogue;
+      const npc = d.npc;
+      const def = npc.def;
+      const Q = G.quests;
+      let text = '';
+      let btns = '';
+      if (d.page === 'offer') {
+        const q = G.data.quests[d.quest];
+        text = q.lines.offer;
+        btns = '<button class="primary" data-act="acceptQ" data-arg="' + d.quest + '">接受</button><button data-act="dlgBack">再想想</button>';
+      } else if (d.page === 'say') {
+        text = d.text;
+        btns = '<button data-act="dlgBack">好</button>';
+      } else {
+        text = d.greet || (d.greet = U.pick(def.lines));
+        if (def.role === 'quest') {
+          Q.forNpc(npc.id).forEach((id) => {
+            const q = G.data.quests[id];
+            const st = Q.state[id];
+            if (st === 'ready') btns += '<button class="primary" data-act="turnIn" data-arg="' + id + '">回報「' + q.name + '」</button>';
+            else if (st === 'active') btns += '<button data-act="progQ" data-arg="' + id + '">「' + q.name + '」進行中</button>';
+            else if (Q.available(id)) btns += '<button class="primary" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
+          });
+        }
+        if (def.role === 'shop') btns += '<button class="primary" data-act="openShop">交易</button>';
+        if (def.role === 'travel') btns += '<button disabled>苔光小徑（目前所在）</button>';
+        btns += '<button data-act="close">再見</button>';
+      }
+      return '<div class="dlg"><div class="who"><canvas class="portrait" data-npc="' + npc.id + '" width="120" height="120"></canvas><div class="nm">' + def.name + '</div></div><div class="say">' + esc(text) + '</div><div class="btns">' + btns + '</div></div>';
+    },
+    a_offerQ(id) {
+      this.dialogue.page = 'offer';
+      this.dialogue.quest = id;
+    },
+    a_acceptQ(id) {
+      G.quests.accept(id);
+      this.dialogue.page = 'main';
+      this.dialogue.greet = '謝謝你呀。';
+    },
+    a_progQ(id) {
+      this.dialogue.page = 'say';
+      this.dialogue.text = G.data.quests[id].lines.progress + '\n（' + G.quests.goalText(id) + '）';
+    },
+    a_turnIn(id) {
+      if (G.quests.turnIn(id)) {
+        this.dialogue.page = 'say';
+        this.dialogue.text = G.data.quests[id].lines.done;
+      }
+    },
+    a_dlgBack() {
+      this.dialogue.page = 'main';
+    },
+    a_openShop() {
+      const shop = this.dialogue.npc.def.shop;
+      this.close('dialogue');
+      this.shopId = shop;
+      this.open('shop');
+    },
+
+    // ───────── 商店 ─────────
+    r_shop() {
+      const P = G.player;
+      const D = G.data.items;
+      const goods = D.shops[this.shopId || 'owl'] || [];
+      let buy = '<h3>購買</h3>';
+      goods.forEach((g, i) => {
+        if (g.type === 'potion') {
+          const p = D.potions[g.id];
+          buy += '<div class="good"><img src="' + G.art.iconURL(g.id === 'hp' ? 'hpPot' : 'mpPot') + '"><div class="info"><div class="nm">' + p.name + '</div><div class="ds">' + p.desc + ' · ' + p.price + ' 金葉 · 持有 ' + P.potions[g.id] + '</div></div>' +
+            '<button data-act="buy" data-arg="' + i + ':1"' + (P.gold >= p.price ? '' : ' disabled') + '>買 1</button><button data-act="buy" data-arg="' + i + ':10"' + (P.gold >= p.price * 10 ? '' : ' disabled') + '>買 10</button></div>';
+        } else {
+          const base = D.bases[g.base];
+          const R = D.rarity[g.rarity];
+          const stats = Object.keys(g.fixed).map((k) => G.loot.fmtStat(k, g.fixed[k])).join('、');
+          buy += '<div class="good"><img src="' + G.art.iconURL(base.slot) + '"><div class="info"><div class="nm" style="color:' + R.text + '">' + R.name + ' ' + base.name + '</div><div class="ds">' + stats + ' · 需要 Lv.' + base.req + ' · ' + g.price + ' 金葉</div></div>' +
+            '<button data-act="buy" data-arg="' + i + ':1"' + (P.gold >= g.price ? '' : ' disabled') + '>購買</button></div>';
+        }
+      });
+      let sell = '<h3>賣出裝備 <button class="small" data-act="sellCommon">賣出全部普通裝備</button></h3><div class="sellgrid">';
+      if (!P.bag.length) sell += '<div class="dim">背包裡沒有裝備。</div>';
+      P.bag.forEach((it) => {
+        sell += '<div class="sellrow">' + this.itemCell(it, 'noop') + '<span style="color:' + D.rarity[it.rarity].text + '">' + esc(it.name) + '</span><button data-act="sell" data-arg="' + it.uid + '">' + G.data.items.sellPrice(it) + ' 金葉</button></div>';
+      });
+      sell += '</div>';
+      return this.frame('貓頭鷹的小舖　<span class="gold"><img src="' + G.art.iconURL('gold') + '">' + P.gold + '</span>', '<div class="shop"><div class="col">' + buy + '</div><div class="col">' + sell + '</div></div>', 'shop');
+    },
+    a_buy(arg) {
+      const P = G.player;
+      const D = G.data.items;
+      const [i, n] = arg.split(':').map(Number);
+      const g = D.shops[this.shopId || 'owl'][i];
+      if (g.type === 'potion') {
+        const cost = D.potions[g.id].price * n;
+        if (P.gold < cost) return;
+        P.gold -= cost;
+        P.potions[g.id] += n;
+      } else {
+        if (P.gold < g.price) return;
+        if (P.bag.length >= G.data.balance.bagSize) {
+          G.hud.toast('背包已滿', '#ff9a9a');
+          return;
+        }
+        P.gold -= g.price;
+        P.bag.push(G.loot.makeEquip(g.base, g.rarity, g.fixed));
+      }
+      G.audio.play('coin');
+      G.save.write();
+    },
+    a_sell(uid) {
+      const P = G.player;
+      const it = P.bag.find((b) => b.uid === uid);
+      if (!it) return;
+      P.gold += G.data.items.sellPrice(it);
+      P.bag = P.bag.filter((b) => b.uid !== uid);
+      G.audio.play('coin');
+      G.save.write();
+    },
+    a_sellCommon() {
+      const P = G.player;
+      let sum = 0;
+      P.bag = P.bag.filter((it) => {
+        if (it.rarity !== 'common') return true;
+        sum += G.data.items.sellPrice(it);
+        return false;
+      });
+      if (sum) {
+        P.gold += sum;
+        G.hud.toast('賣出普通裝備，獲得 ' + sum + ' 金葉', '#ffd84a');
+        G.audio.play('coin');
+        G.save.write();
+      }
+    },
+    a_noop() {},
+
+    // ───────── 選單 ─────────
+    r_menu() {
+      const on = G.audio.enabled;
+      return this.frame(
+        '選單',
+        '<div class="menu">' +
+          '<button class="primary" data-act="close">繼續遊戲</button>' +
+          '<button data-act="openKeys">按鍵設定</button>' +
+          '<button data-act="toggleSound">音效：' + (on ? '開' : '關') + '</button>' +
+          '<button data-act="toTitle">存檔並回到標題</button>' +
+          '<button class="danger" data-act="resetGame">' + (this.confirmReset ? '再按一次：刪除存檔並重新開始' : '重新開始') + '</button>' +
+          '<div class="dim small">遊玩時間 ' + U.fmtTime(G.player.playTime) + '</div>' +
+          '</div>',
+        'menu'
+      );
+    },
+    a_openKeys() {
+      this.open('keys');
+    },
+    a_toggleSound() {
+      G.audio.setEnabled(!G.audio.enabled);
+    },
+    a_toTitle() {
+      G.save.write();
+      this.closeAll();
+      G.scenes.toTitle();
+    },
+    a_resetGame() {
+      if (!this.confirmReset) {
+        this.confirmReset = true;
+        return;
+      }
+      this.closeAll();
+      G.save.clear();
+      G.scenes.newGame();
+    },
+
+    // ───────── 改鍵 ─────────
+    r_keys() {
+      const I = G.input;
+      let h = '<div class="keys">';
+      G.data.keys.actions.forEach(([a, label]) => {
+        const waiting = this.keyWait && this.keyWait.type === 'rebind' && this.keyWait.action === a;
+        h += '<div class="krow"><span>' + label + '</span><button class="' + (waiting ? 'waiting' : '') + '" data-act="rebind" data-arg="' + a + '">' + (waiting ? '請按新按鍵…' : esc(I.label(a))) + '</button></div>';
+      });
+      h += '<div class="krow"><span>選單／關閉視窗</span><button disabled>Esc（固定）</button></div>';
+      h += '</div><div class="notice">' + esc(this.keyMsg || '點一下按鈕，再按下想要的按鍵。和其他動作重複時會自動互換。') + '</div>';
+      h += '<div class="btns"><button data-act="resetKeys">恢復預設</button><button class="primary" data-act="close">完成</button></div>';
+      return this.frame('按鍵設定', h, 'keycfg');
+    },
+    a_rebind(action) {
+      this.keyWait = { type: 'rebind', action };
+      this.keyMsg = '請按下新的按鍵（Esc 取消）';
+      G.input.capture = (code) => {
+        this.keyWait = null;
+        if (code === 'Escape') {
+          this.keyMsg = '已取消';
+        } else {
+          const r = G.input.setBinding(action, code);
+          if (!r.ok) this.keyMsg = r.reason;
+          else if (r.swappedWith) {
+            const lbl = G.data.keys.actions.find((x) => x[0] === r.swappedWith)[1];
+            this.keyMsg = '已設定。原本使用這個按鍵的「' + lbl + '」改成 ' + G.input.label(r.swappedWith);
+          } else this.keyMsg = '已設定';
+        }
+        this.render('keys');
+      };
+    },
+    a_resetKeys() {
+      G.input.resetDefaults();
+      this.keyMsg = '已恢復預設按鍵';
+    },
+
+    // ───────── 死亡 ─────────
+    r_death() {
+      return '<div class="panel death"><div class="body"><div class="big">小鬃倒下了……</div><div class="dim">沒有任何損失。會在營地醒來，HP 與 MP 全滿。</div><button class="primary" data-act="revive">在營地復活</button></div></div>';
+    },
+    a_revive() {
+      this.close('death');
+      G.world.respawnPlayer();
+    },
+
+    // ───────── M1 結尾 ─────────
+    r_m1end() {
+      const s = G.data.story.m1End;
+      return '<div class="panel ending"><div class="body"><img class="leaf" src="' + G.art.iconURL('starleaf') + '"><div class="big">' + s.title + '</div><div class="txt">' + esc(s.text).replace(/\n/g, '<br>') + '</div><div class="dim">遊玩時間 ' + U.fmtTime(G.player.playTime) + ' · Lv.' + G.player.level + '</div><button class="primary" data-act="close">繼續冒險</button></div></div>';
+    },
+  });
+
+  // 對話頭像：開視窗後把 NPC 畫進小 canvas
+  const obs = new MutationObserver(() => {
+    document.querySelectorAll('canvas.portrait:not([data-done])').forEach((c) => {
+      c.setAttribute('data-done', '1');
+      const ctx = c.getContext('2d');
+      const npc = G.data.npcs[c.getAttribute('data-npc')];
+      ctx.translate(60, 100);
+      ctx.scale(1.3, 1.3);
+      G.art.drawNpc(ctx, { def: npc, x: 0, y: 0 }, 0, null, true);
+    });
+  });
+  window.addEventListener('DOMContentLoaded', () => obs.observe(document.getElementById('ui'), { childList: true, subtree: true }));
+})();
