@@ -26,13 +26,13 @@
     mobs: [
       { m: 'dewsnail', p: 0, n: 2, x1: 400, x2: 800 },
       { m: 'spotshroom', p: 0, n: 2, x1: 800, x2: 1200 },
-      { m: 'sandcrab', p: 0, n: 2, x1: 1200, x2: 1600 },
-      { m: 'lanternjelly', p: 0, n: 2, x1: 1600, x2: 2000 },
-      { m: 'rockling', p: 0, n: 2, x1: 2000, x2: 2400 },
-      { m: 'mandrill', p: 0, n: 2, x1: 2400, x2: 2900 },
+      { m: 'postcrab', p: 0, n: 2, x1: 1200, x2: 1600 },
+      { m: 'kiteray', p: 0, n: 2, x1: 1600, x2: 2000 },
+      { m: 'weightbeetle', p: 0, n: 2, x1: 2000, x2: 2400 },
+      { m: 'mapvulture', p: 0, n: 2, x1: 2400, x2: 2900 },
       { m: 'woodsnail', p: 1, n: 2 },
-      { m: 'coralcrab', p: 2, n: 2 },
-      { m: 'fireiguana', p: 3, n: 3 },
+      { m: 'stampstar', p: 2, n: 2 },
+      { m: 'potgoat', p: 3, n: 3 },
     ],
   };
 
@@ -185,7 +185,7 @@
   function fakeMonster(art, stage, t) {
     return {
       def: { art, stage, name: '' }, x: 0, y: 0, dir: 1, t, w: 60, h: 60, scale: 1,
-      onGround: true, vy: 0, vx: 0, hurtT: 0, hurtFlash: 0, dead: false, deadT: 0, state: 'walk', stateT: 1, blink: false,
+      onGround: true, vy: 0, vx: 0, hurtT: 0, hurtFlash: 0, dead: false, deadT: 0, state: 'walk', stateT: 1, blink: false, fx: {},
     };
   }
 
@@ -289,8 +289,8 @@
       title('怪物', 670);
       const chapters = [
         { no: '第一章　苔光森林', ids: ['dewsnail', 'mosssnail', 'woodsnail', 'capshroom', 'spotshroom', 'lampshroom', 'seedling', 'sproutling', 'flowerling'] },
-        { no: '第二章　潮風海岬', ids: ['sandcrab', 'shellcrab', 'coralcrab', 'bubblejelly', 'lanternjelly', 'moonjelly', 'gullchick', 'wavegull', 'albatross'] },
-        { no: '第三章　赤岩峽谷', ids: ['flamelizard', 'moltenlizard', 'fireiguana', 'pebble', 'rockling', 'springstatue', 'springmonkey', 'redmonkey', 'mandrill'] },
+        { no: '第二章　潮風海岬', ids: ['postcrab', 'bulbjelly', 'umbrellagull', 'alarmurchin', 'kiteray', 'blockcoral', 'stampstar', 'accordioneel', 'musicturtle'] },
+        { no: '第三章　赤岩峽谷', ids: ['matchlizard', 'angerrock', 'magnetdillo', 'candlesnake', 'weightbeetle', 'bellowsbat', 'potgoat', 'moodchameleon', 'mapvulture'] },
       ];
       chapters.forEach((c, r) => {
         const y0 = 720 + r * 230;

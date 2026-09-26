@@ -679,13 +679,20 @@
   const DRAW = (A.MONSTER_DRAW = { snail, mushroom, sprite, queen });
 
   A.drawMonster = function (ctx, m) {
-    const fn = A.MONSTER_DRAW[m.def.art];
+    let fn = A.MONSTER_DRAW[m.def.art];
+    // 新怪物的美術還沒載入：先借用舊怪物的外觀
+    if (!fn && m.def.fallback && A.MONSTER_DRAW[m.def.fallback[0]]) {
+      fn = A.MONSTER_DRAW[m.def.fallback[0]];
+      m = Object.assign(Object.create(m), { def: Object.assign({}, m.def, { art: m.def.fallback[0], stage: m.def.fallback[1] }) });
+    }
     if (!fn) return;
     ctx.save();
     ctx.translate(m.x, m.y);
     const sc = m.scale || 1;
-    if (!m.def.boss) A.groundShadow(ctx, 0, 0, (m.w * 0.55) * sc);
+    if (!m.def.boss) A.groundShadow(ctx, 0, 0, (m.w * 0.55) * sc * (m.hover ? Math.max(0.4, 1 - m.hover / 300) : 1));
     else A.groundShadow(ctx, 0, 0, 90);
+    // 飛行怪：影子留在地上，身體往上畫
+    if (m.hover) ctx.translate(0, -m.hover);
     if (m.elite) {
       const g = ctx.createRadialGradient(0, -m.h * 0.5 * sc, 5, 0, -m.h * 0.5 * sc, m.h * sc);
       const pulse = 0.35 + Math.sin(m.t * 4) * 0.12;

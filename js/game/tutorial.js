@@ -182,12 +182,14 @@
     },
 
     // 會跳的大箭頭，尖端在 (x, y)；dir：down / up / left / right
+    // 世界裡的目標（怪、藤蔓、NPC）用一個小的會跳箭頭；介面上的東西改用發光外框（box）
     arrow(ctx, x, y, dir) {
-      const b = Math.abs(Math.sin(G.time * 5)) * 14;
+      const b = Math.abs(Math.sin(G.time * 5)) * 8;
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate({ down: 0, up: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 }[dir || 'down']);
       ctx.translate(0, -b);
+      ctx.scale(0.55, 0.55);
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(-30, -34);
@@ -210,7 +212,22 @@
       ctx.restore();
     },
 
-    // 這一步的箭頭要指哪裡（畫面座標）
+    // 介面元素的發光外框：一圈會呼吸的金光
+    box(ctx, x, y, w, h) {
+      const k = 0.5 + 0.5 * Math.sin(G.time * 5);
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,216,58,0.95)';
+      ctx.shadowBlur = 10 + k * 10;
+      ctx.strokeStyle = 'rgba(255,216,58,' + (0.7 + 0.3 * k).toFixed(3) + ')';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x - 4, y - 4, w + 8, h + 8, 10);
+      else ctx.rect(x - 4, y - 4, w + 8, h + 8);
+      ctx.stroke();
+      ctx.restore();
+    },
+
+    // 這一步要指哪裡（畫面座標）：[x, y, 方向] 是箭頭，{ box: [x, y, w, h] } 是發光外框
     target(s) {
       const P = G.player;
       const cam = G.cam;
@@ -223,9 +240,8 @@
       const sx0 = G.W - 8 - (nSlots + 2) * 52 - 8;
       switch (s.id) {
         case 'move':
-          return [[sx(P.x) - 60, sy(P.y) - 40, 'left'], [sx(P.x) + 60, sy(P.y) - 40, 'right']];
         case 'jump':
-          return [[sx(P.x), sy(P.y) - 110, 'up']];
+          return [];
         case 'attack': {
           let best = null;
           for (const m of G.world.monsters) {
@@ -247,27 +263,24 @@
           return [[sx(P.x), sy(P.y) + 40, 'down']];
         }
         case 'openSkills':
-          return [[8 + 50 + 22, 98, 'up']];
+          return [];
         case 'infoHp':
-          return [[182, barY + 18, 'down']];
+          return [{ box: [72, barY + 22, 220, 14] }];
         case 'infoMp':
-          return [[182, barY + 34, 'down']];
+          return [{ box: [72, barY + 37, 220, 12] }];
         case 'infoExp':
-          return [[G.W / 2, Hh - 12, 'down']];
+          return [{ box: [0, Hh - 9, G.W, 9] }];
         case 'mpPot':
-          return [[sx0 + (nSlots + 1) * 52 + 24, barY - 4, 'down']];
-        case 'infoRegen': {
-          const camp = map.camp;
-          return camp ? [[sx((camp.x1 + camp.x2) / 2), sy(map.platforms[0][2]) - 60, 'down']] : [];
-        }
+          return G.touch && G.touch.on ? [] : [{ box: [sx0 + (nSlots + 1) * 52, barY + 5, 48, 44] }];
+        case 'infoRegen':
         case 'accept':
           return [];
         case 'infoTracker':
-          return [[G.W - 160, 110, 'up']];
+          return [{ box: [G.W - 300, 8, 292, 64] }];
         case 'useSkill':
-          return G.ui.blocking() ? [] : [[sx0 + slotOf('roar') * 52 + 24, barY - 4, 'down']];
+          return G.ui.blocking() || (G.touch && G.touch.on) ? [] : [{ box: [sx0 + slotOf('roar') * 52, barY + 5, 48, 44] }];
         case 'potion':
-          return [[sx0 + nSlots * 52 + 24, barY - 4, 'down']];
+          return G.touch && G.touch.on ? [] : [{ box: [sx0 + nSlots * 52, barY + 5, 48, 44] }];
         case 'talk': {
           const n = G.world.npcs.find((k) => k.id === 'hedgehog');
           return n ? [[sx(n.x), sy(n.y) - 110, 'down']] : [];
@@ -307,7 +320,7 @@
       }
       const s = this.current();
       if (!s) return;
-      this.target(s).forEach(([x, y, d]) => this.arrow(ctx, x, y, d));
+      this.target(s).forEach((t) => (t.box ? this.box(ctx, t.box[0], t.box[1], t.box[2], t.box[3]) : this.arrow(ctx, t[0], t[1], t[2])));
       const keys = s.info ? [] : s.keys();
       ctx.font = 'bold 22px ' + G.art.FONT;
       const keysW = keys.reduce((a, k) => a + Math.max(40, ctx.measureText(L(k)).width + 18) + 8, 0);

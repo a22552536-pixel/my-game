@@ -122,7 +122,8 @@
       } else if (d.equip && Math.random() < d.equip) {
         this.spawn('equip', x, y, { item: this.randomEquip(m.level, 'normal') });
       }
-      if (d.potion && Math.random() < d.potion * (m.elite || m.V ? 3 : 1)) this.spawn('potion', x, y, { potion: this.rollPotion() });
+      // 藥水：只有精英、變種怪會掉（一般怪不掉）
+      if ((m.elite || m.V) && Math.random() < 0.05) this.spawn('potion', x, y, { potion: this.rollPotion() });
       // 材料：身上有對應的收集任務時更容易掉
       (d.mats || []).forEach(([id, chance]) => {
         const c = G.quests.collectActive(id) ? Math.max(chance, 0.6) : chance;
@@ -235,6 +236,7 @@
             G.audio.play('error');
             return false;
           }
+          dr.item.isNew = true;
           P.bag.push(dr.item);
           const R = I.rarity[dr.item.rarity];
           G.hud.toast('獲得 ' + R.name + '「' + dr.item.name + '」', R.color);

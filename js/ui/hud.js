@@ -228,7 +228,8 @@
       this.toasts.forEach((t, i) => {
         const a = t.t < 0.2 ? t.t / 0.2 : t.t > t.life - 0.5 ? (t.life - t.t) / 0.5 : 1;
         ctx.globalAlpha = Math.max(0, a);
-        const y = 150 + i * 30;
+        // 教學面板開著時，提示往下移，不要疊在一起
+        const y = (G.tutorial && G.tutorial.current() ? 206 : 150) + i * 30;
         ctx.font = 'bold 16px ' + A.FONT;
         const w = ctx.measureText(t.text).width + 28;
         this.panel(ctx, W / 2 - w / 2, y - 13, w, 26, 13, 'rgba(25,15,8,0.72)');

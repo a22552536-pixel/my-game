@@ -70,11 +70,14 @@
     this.squash = 0;
     this.abil = {};
     (d.abilities || []).forEach((a) => (this.abil[a] = true));
+    this.fx = {};
+    if (G.mobAbilHooks) G.mobAbilHooks.init(this);
   }
 
   Monster.prototype.hitbox = function () {
     const s = this.scale;
-    return { x: this.x - (this.w * s) / 2, y: this.y - this.h * s, w: this.w * s, h: this.h * s };
+    const hv = this.hover || 0;
+    return { x: this.x - (this.w * s) / 2, y: this.y - this.h * s - hv, w: this.w * s, h: this.h * s };
   };
 
   Monster.prototype.nextStack = function () {
@@ -101,6 +104,8 @@
 
   Monster.prototype.takeDamage = function (dmg, dir, knock, crit) {
     if (this.dead) return 0;
+    // 能力造成的無敵（例如燈泡水母熄燈的瞬間）
+    if (G.mobAbilHooks && G.mobAbilHooks.invuln(this)) return 0;
     if (this.shellT > 0) dmg = Math.max(1, Math.round(dmg * 0.3));
     this.hp -= dmg;
     this.hurtFlash = 0.1;
@@ -111,6 +116,7 @@
       this.die();
       return dmg;
     }
+    if (G.mobAbilHooks) G.mobAbilHooks.onHurt(this, dmg, dir);
     // 古木蝸：被打有機率縮進殼裡
     if (this.abil.shell && this.shellT <= 0 && Math.random() < 0.35) {
       this.shellT = 1.6;
@@ -142,6 +148,7 @@
     this.vx = 0;
     G.audio.play('die');
     G.fx.burst(this.x, this.y - this.h * 0.5 * this.scale, ['#fff', '#fff6c8', '#ffe39a'], 14, 260);
+    if (G.mobAbilHooks) G.mobAbilHooks.onDie(this);
     G.world.onMonsterKilled(this);
   };
 
@@ -204,11 +211,16 @@
     if ((d.behavior === 'aggressive' || (this.V && this.V.aggressive)) && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < (d.sight || 300)) {
       this.aggroT = Math.max(this.aggroT, 2);
     }
+    if (this.moodAggro && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < 320) this.aggroT = Math.max(this.aggroT, 2);
     const aggro = this.aggroT > 0 && P.alive();
     const [minX, maxX] = this.bounds();
     const speed = d.speed * (this.V ? this.V.speed : 1) * (this.slowT > 0 ? 0.5 : 1);
+    // 新怪物的能力：回傳 true 時這一幀由能力自己控制移動
+    const custom = this.hurtT <= 0 && G.mobAbilHooks ? G.mobAbilHooks.update(this, dt, P, aggro) : false;
 
-    if (this.shellT > 0) {
+    if (custom) {
+      // 能力自己控制
+    } else if (this.shellT > 0) {
       this.shellT -= dt;
       this.vx = 0;
     } else if (this.hurtT > 0) {
@@ -327,6 +339,7 @@
             kind: pr.kind, x: sx, y: sy,
             vx: Math.cos(a) * pr.speed, vy: Math.sin(a) * pr.speed,
             r: 10, dmg: this.atk, life: 2.2, t: 0, seed: Math.random() * 6, owner: 'monster',
+            homing: pr.homing, wave: pr.wave, slow: pr.slow, grav: pr.grav, baseY: sy,
           });
         }
         G.audio.play('spore');

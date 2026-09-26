@@ -53,8 +53,8 @@ G.data.balance = {
   // ── 怪物 ──
   // 第二章（Lv11）開始，怪物的血量、攻擊跟著等級加速成長：
   // 一轉之後有範圍技、裝備與任務經驗也讓玩家變強得快，原本的曲線到第二章會顯得太軟。
-  monsterHp: (lv) => Math.round(12 * Math.pow(lv, 1.15) * (1 + 0.045 * Math.min(10, Math.max(0, lv - 10)) + 0.012 * Math.max(0, lv - 20))),
-  monsterAtk: (lv) => Math.round(4 + lv * 2.2 + 1.1 * Math.min(10, Math.max(0, lv - 10)) + 0.5 * Math.max(0, lv - 20)),
+  monsterHp: (lv) => Math.round(10.8 * Math.pow(lv, 1.15) * (1 + 0.025 * Math.min(10, Math.max(0, lv - 10)) + 0.008 * Math.max(0, lv - 20))),
+  monsterAtk: (lv) => Math.round(3 + lv * 1.75),
   monsterDef: (lv) => Math.round(lv * 0.8),
   // 打怪經驗：等級越高每隻給越多（任務、Boss 的經驗在 progression.js 依章節等級帶重新分配）
   monsterExp: (lv) => Math.max(1, Math.round(lv * (0.6 + 0.045 * lv))),
@@ -82,8 +82,8 @@ G.data.balance = {
   bagSize: 30,
 
   // ── 自然回復 ──
-  hpRegen: { every: 5, pct: 0.02 },
-  mpRegen: { every: 2, pct: 0.02 },
+  hpRegen: { every: 5, pct: 0.03 },
+  mpRegen: { every: 2, pct: 0.02 * 1.5 },
 
   // ── 其他 ──
   autosaveInterval: 30,

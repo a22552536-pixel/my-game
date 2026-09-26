@@ -30,8 +30,8 @@
       const d = this.data();
       const forms = Object.keys(G.data.forms);
       const mobs = ['dewsnail', 'mosssnail', 'woodsnail', 'capshroom', 'spotshroom', 'lampshroom', 'seedling', 'sproutling', 'flowerling',
-        'sandcrab', 'shellcrab', 'coralcrab', 'bubblejelly', 'lanternjelly', 'moonjelly', 'gullchick', 'wavegull', 'albatross',
-        'flamelizard', 'moltenlizard', 'fireiguana', 'pebble', 'rockling', 'springstatue', 'springmonkey', 'redmonkey', 'mandrill',
+        'postcrab', 'bulbjelly', 'umbrellagull', 'alarmurchin', 'kiteray', 'blockcoral', 'stampstar', 'accordioneel', 'musicturtle',
+        'matchlizard', 'angerrock', 'magnetdillo', 'candlesnake', 'weightbeetle', 'bellowsbat', 'potgoat', 'moodchameleon', 'mapvulture',
         'queenShroom', 'hermitCrab', 'lavaTortoise'];
       return {
         forms: forms.filter((id) => d.forms[id]).length,

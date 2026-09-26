@@ -52,6 +52,8 @@
       if (name === 'keys' && G.hudIcons) G.hudIcons.refresh();
       name = name || this.top();
       if (!name) return;
+      // 看過背包之後，新裝備的 NEW 標記就消失
+      if (name === 'inventory' && G.player) G.player.bag.forEach((it) => delete it.isNew);
       const i = this.stack.indexOf(name);
       if (i >= 0) this.stack.splice(i, 1);
       const el = this.els[name];
@@ -137,7 +139,7 @@
       const R = D.rarity[it.rarity];
       const st = G.loot.totalStats(it);
       let h = '<div class="item-name" style="color:' + R.text + '">' + esc(it.name) + (it.plus ? ' <span class="plus">+' + it.plus + '</span>' : '') + '</div>';
-      h += '<div class="item-meta">' + (it.unique ? '獨特 · ' : '') + R.name + ' · ' + D.slots[it.slot] + ' · 需要 Lv.' + it.req + '</div>';
+      h += '<div class="item-meta">' + (it.unique ? '獨特 · ' : '') + R.name + ' · ' + D.slots[it.slot] + (it.isNew ? ' · <span class="newtag">NEW</span>' : '') + '</div>';
       h += '<ul class="stats">';
       const en = G.loot.enhanced(it);
       for (const k in en) h += '<li>' + G.loot.fmtStat(k, en[k]) + '</li>';
@@ -168,8 +170,8 @@
     itemCell(it, act, extra) {
       const R = G.data.items.rarity[it.rarity];
       const sel = this.selected === it.uid ? ' sel' : '';
-      const up = act === 'select' && this.isUpgrade(it) && G.player.level >= it.req ? '<span class="uparrow">▲</span>' : '';
-      const low = G.player.level < it.req ? ' low' : '';
+      const up = act === 'select' && this.isUpgrade(it) ? '<span class="uparrow">▲</span>' : '';
+      const low = it.isNew ? ' newitem' : '';
       return '<button class="cell' + sel + low + '" style="border-color:' + R.color + '" data-act="' + act + '" data-arg="' + it.uid + '" title="' + esc(it.name) + '"><img src="' + G.art.iconURL(it.slot, it.tint) + '" alt="">' + up + (extra || '') + '</button>';
     },
 
@@ -224,7 +226,7 @@
         } else detail += '<span class="dim">已強化到 +' + B.enhanceMax + '</span>';
         if (equipped) detail += '<button data-act="unequip" data-arg="' + sel.item.uid + '">卸下</button>';
         else {
-          detail += P.level >= sel.item.req ? '<button class="primary" data-act="equip" data-arg="' + sel.item.uid + '">裝備</button>' : '<span class="warn">等級不足</span>';
+          detail += '<button class="primary" data-act="equip" data-arg="' + sel.item.uid + '">裝備</button>';
           detail += '<button data-act="discard" data-arg="' + sel.item.uid + '">丟掉</button>';
         }
         detail += '</div></div>';
@@ -274,7 +276,6 @@
       const i = P.bag.findIndex((b) => b.uid === uid);
       if (i < 0) return;
       const it = P.bag[i];
-      if (P.level < it.req) return;
       const old = P.equip[it.slot];
       P.equip[it.slot] = it;
       P.bag.splice(i, 1);
@@ -549,7 +550,7 @@
           const base = D.bases[g.base];
           const R = D.rarity[g.rarity];
           const stats = Object.keys(g.fixed).map((k) => G.loot.fmtStat(k, g.fixed[k])).join('、');
-          buy += '<div class="good"><img src="' + G.art.iconURL(base.slot, base.tint) + '"><div class="info"><div class="nm" style="color:' + R.text + '">' + R.name + ' ' + base.name + '</div><div class="ds">' + stats + ' · 需要 Lv.' + base.req + ' · ' + g.price + ' 金葉</div></div>' +
+          buy += '<div class="good"><img src="' + G.art.iconURL(base.slot, base.tint) + '"><div class="info"><div class="nm" style="color:' + R.text + '">' + R.name + ' ' + base.name + '</div><div class="ds">' + stats + ' · ' + g.price + ' 金葉</div></div>' +
             '<button data-act="buy" data-arg="' + i + ':1"' + (P.gold >= g.price ? '' : ' disabled') + '>購買</button></div>';
         }
       });
@@ -602,7 +603,9 @@
           return;
         }
         P.gold -= g.price;
-        P.bag.push(G.loot.makeEquip(g.base, g.rarity, g.fixed));
+        const bought = G.loot.makeEquip(g.base, g.rarity, g.fixed);
+        bought.isNew = true;
+        P.bag.push(bought);
       }
       G.audio.play('coin');
       G.save.write();
@@ -690,6 +693,7 @@
         G.audio.play('potion');
       } else {
         const it = g.unique ? G.loot.makeUnique(G.util.pick(G.loot.uniquesOf(g.unique))) : G.loot.randomEquip(P.level, g.equip);
+        it.isNew = true;
         P.bag.push(it);
         G.hud.toast('換到「' + it.name + '」', D.rarity[it.rarity].color);
         G.audio.play(it.rarity === 'legendary' ? 'legendary' : it.rarity === 'epic' ? 'epic' : 'rare');

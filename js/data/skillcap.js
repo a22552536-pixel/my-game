@@ -8,6 +8,8 @@
   'use strict';
   const K = G.data.skills;
   const OLD_MAX = 10;
+  // 刪掉沒特色、跟其他技能重疊的技能（每轉 13 點會自動分給剩下的技能；舊存檔退點）
+  ['boulderRoll', 'maneSweep', 'flameBolt', 'featherThrow', 'shadowStep', 'bladeRain'].forEach((id) => delete K[id]);
   const caps = { pounce: 5, roar: 5, meidou: 7, chibaku: 6 };
   const byForm = {};
   for (const id in K) {

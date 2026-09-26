@@ -97,6 +97,7 @@
       if (r.potions) for (const k in r.potions) P.potions[k] = (P.potions[k] || 0) + r.potions[k];
       if (r.equip) {
         const it = G.loot.makeEquip(r.equip.base, r.equip.rarity);
+        it.isNew = true;
         P.bag.push(it);
         G.hud.toast('獲得「' + it.name + '」', G.data.items.rarity[it.rarity].color);
       }

@@ -45,6 +45,7 @@
       G.fx.reset();
       G.skillExec.reset();
       G.skillExec.resetZones();
+      if (G.mobAbil) G.mobAbil.reset();
       G.music.forMap(map);
 
       this.npcs = (map.npcs || []).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: map.platforms[n.p][2] }));
@@ -307,6 +308,7 @@
 
       this.updateProjectiles(dt);
       this.updateZones(dt);
+      if (G.mobAbil) G.mobAbil.tick(dt);
 
       for (let i = this.respawns.length - 1; i >= 0; i--) {
         const r = this.respawns[i];
@@ -389,8 +391,20 @@
         const p = this.projectiles[i];
         p.t += dt;
         if (p.grav) p.vy += p.grav * dt;
+        // 怪物投射物：會拐彎追人（信封）、上下飄（音符）
+        if (p.owner === 'monster' && p.homing && P.alive()) {
+          const a = Math.atan2(P.y - 30 - p.y, P.x - p.x);
+          const sp = Math.hypot(p.vx, p.vy);
+          const cur = Math.atan2(p.vy, p.vx);
+          let da = a - cur;
+          da = Math.atan2(Math.sin(da), Math.cos(da));
+          const na = cur + U.clamp(da, -p.homing * dt, p.homing * dt);
+          p.vx = Math.cos(na) * sp;
+          p.vy = Math.sin(na) * sp;
+        }
         p.x += p.vx * dt;
         p.y += p.vy * dt;
+        if (p.owner === 'monster' && p.wave) p.y += Math.cos(p.t * 8 + (p.seed || 0)) * p.wave * 8 * dt;
         let remove = p.t > p.life || p.x < -50 || p.x > this.map.w + 50;
         // 純特效的投射物（落下的巨錘、流星、冰片）：只會移動，不會打到誰
         if (p.owner === 'fx') {
@@ -462,6 +476,8 @@
           if (hit) {
             if (P.hurt(p.dmg, p.x - p.vx * 0.01)) {
               G.fx.burst(p.x, p.y, ['#fff', '#ffe0a0'], 8, 180);
+              if (p.slow) P.slowT = Math.max(P.slowT || 0, p.slow);
+              if (p.push) P.x += p.push * 0.25;
             }
             if (p.kind === 'wave' || p.kind === 'tide') p.hitDone = true;
             else remove = true;
@@ -480,6 +496,7 @@
           this.zones.splice(i, 1);
           continue;
         }
+        if (z.visual) continue;
         if (P.alive() && Math.abs(P.x - z.x) < z.r && Math.abs(P.y - z.y) < 70) {
           if (!z.noSlow) P.slowT = 0.2;
           z.tick -= dt;

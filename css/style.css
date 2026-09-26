@@ -384,3 +384,6 @@ body.touch-mode #game { touch-action: none; }
 /* ══════════ 觸控操作 end ══════════ */
 .item-name .plus { color: #ff9a2a; }
 .old-save { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); background: rgba(40,20,10,0.85); color: #ffe9a0; padding: 8px 16px; border-radius: 10px; font-size: 14px; }
+.newtag { color: #ff5a3a; font-weight: bold; }
+.cell.newitem, .newitem { box-shadow: 0 0 0 2px #ff8a3a inset; }
+#hud-icons .badge { min-width: 16px; }

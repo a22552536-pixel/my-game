@@ -120,10 +120,15 @@
       };
       G.codex.note('forms', P.form);
       set('skills', P.sp > 0 ? String(P.sp) : '');
+      // 教學「點技能圖示」那一步：讓圖示本身發光
+      const ts = G.tutorial && G.tutorial.current();
+      const sb = this.el.querySelector('[data-win="skills"]');
+      if (sb) sb.classList.toggle('tut-glow', !!(ts && ts.id === 'openSkills' && !G.ui.isOpen('skills')));
       set('forms', G.evolve.canEvolve() ? '↑' : '');
       const ready = Object.keys(G.quests.state).filter((id) => G.quests.state[id] === 'ready').length;
       set('quests', ready ? String(ready) : '');
-      set('inventory', P.bag.some((it) => G.ui.isUpgrade && G.ui.isUpgrade(it) && P.level >= it.req) ? '▲' : '');
+      // 有新裝備：NEW（打開背包再關上就消失）；有比身上好的：▲
+      set('inventory', P.bag.some((it) => it.isNew) ? 'NEW' : P.bag.some((it) => G.ui.isUpgrade && G.ui.isUpgrade(it)) ? '▲' : '');
     },
 
     // 改鍵之後更新提示文字

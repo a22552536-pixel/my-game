@@ -21,12 +21,48 @@
   for (let l = 1; l <= 60; l++) cum[l] = cum[l - 1] + B.expToNext(l);
   const bandNeed = (r) => cum[B.bands[r][1] - 1] - cum[Math.max(0, B.bands[r][0] - 2)];
 
+  // ── 第二、三章換成新怪物（js/data/mobs23.js）：地圖、委託、材料、交換、對話裡的舊名字一起換掉 ──
+  const MR = D.mobRemap || {};
+  const TR = D.matRemap || {};
+  const nameSwap = [];
+  for (const o in MR) if (D.monsters[o] && D.monsters[MR[o]]) nameSwap.push([D.monsters[o].name, D.monsters[MR[o]].name]);
+  for (const o in TR) if (D.items.materials[o] && D.newMaterials[TR[o]]) nameSwap.push([D.items.materials[o].name, D.newMaterials[TR[o]].name]);
+  nameSwap.sort((a, b) => b[0].length - a[0].length);
+  const swapText = (s) => nameSwap.reduce((acc, [a, b]) => acc.split(a).join(b), s);
+  const deepSwap = (o, depth) => {
+    if (!o || depth > 6) return;
+    for (const k in o) {
+      if (typeof o[k] === 'string') o[k] = swapText(o[k]);
+      else if (typeof o[k] === 'object') deepSwap(o[k], depth + 1);
+    }
+  };
+  for (const mid in D.maps) (D.maps[mid].mobs || []).concat(D.maps[mid].elites || []).forEach((g) => {
+    if (MR[g.m]) g.m = MR[g.m];
+  });
+  for (const qid in D.quests) {
+    const q = D.quests[qid];
+    if (MR[q.target]) q.target = MR[q.target];
+    if (TR[q.item]) q.item = TR[q.item];
+    deepSwap(q, 0);
+  }
+  deepSwap(D.npcs, 0);
+  if (D.story) deepSwap(D.story.regions, 0);
+  for (const o in TR) delete D.items.materials[o];
+  Object.assign(D.items.materials, D.newMaterials || {});
+  (D.items.trades || []).forEach((t) => {
+    const need = {};
+    for (const k in t.need) need[TR[k] || k] = t.need[k];
+    t.need = need;
+  });
+  for (const o in MR) delete D.monsters[o];
+
   // ── 怪物等級 ──
   for (const id in D.monsters) {
     const d = D.monsters[id];
     if (d.boss) continue;
-    if (d.lv >= 11 && d.lv <= 30) d.lv = remap(d.lv);
-    if (d.drops && d.drops.potion) d.drops.potion *= 0.25;
+    if (!d.band && d.lv >= 11 && d.lv <= 30) d.lv = remap(d.lv);
+    // 一般怪不掉藥水（精英、變種怪才有機會）→ 藥水要去商店買
+    if (d.drops && d.drops.potion) d.drops.potion = 0;
     if (d.drops && d.drops.equip) d.drops.equip = 0.004;
   }
   // Boss：等級對齊章節尾，血量、攻擊跟著等級放大
@@ -96,6 +132,11 @@
     return Math.max(0.1, 1 - (pl - band[1]) * 0.2);
   };
 
+  // ── 材料交換不再換藥水：改換力量橡實／硬殼果（戰鬥增益），藥水只在商店買 ──
+  (D.items.trades || []).forEach((t) => {
+    if (t.give && t.give.potion && /^(hp|mp)/.test(t.give.potion)) t.give.potion = /^hp/.test(t.give.potion) ? 'nut' : 'acorn';
+  });
+
   // ── 商店的裝備：每個營地／補給站都賣當章的三件（爪套、鬃飾、護符），平常的裝備從這裡來 ──
   const shopTiers = { owl: [2], gull: [3], pelican: [4], capybara: [5], armadillo: [6] };
   const shopOf = (id) => (id === 'owl' ? D.items.shops.owl : D.items.moreShops[id]);
@@ -118,6 +159,13 @@
   B.enhanceMax = 5;
   B.enhancePct = 0.08;
   B.enhanceCost = (item) => 10 * (item.tier || 1) * ((item.plus || 0) + 1);
+
+  // ── MP 消耗大幅降低：不要因為沒魔而卡住手感 ──
+  for (const id in D.skills) {
+    const S = D.skills[id];
+    const mp = S.mp;
+    if (typeof mp === 'function') S.mp = (lv) => Math.max(1, Math.round(mp(lv) * 0.4));
+  }
 
   // ── 沒有冷卻時間 ──
   for (const id in D.skills) {
