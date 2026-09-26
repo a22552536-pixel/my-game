@@ -8,8 +8,6 @@
     bodyShade: '#e0913a',
     mane: '#d9722a',
     maneShade: '#b95a1e',
-    maneLight: '#ef9540',
-    paw: '#ffe9c2',
     cream: '#ffe6b0',
     ear: '#ffb3a3',
     tuft: '#e8452b',
@@ -17,30 +15,8 @@
     nose: '#5a2f22',
   };
 
-  function leg(ctx, x, y, lift, fill, shade, big) {
-    const w = big ? 11 : 10;
-    const top = y - 15 - lift;
-    A.shape(ctx, (c) => A.roundRect(c, x - w / 2, top, w, 15, 5), fill, shade, { cel: [2.5, 0], lw: 2.5, hl: false });
-    // 腳掌：淺色的前端與兩道趾縫
-    ctx.save();
-    ctx.beginPath();
-    A.roundRect(ctx, x - w / 2, top, w, 15, 5);
-    ctx.clip();
-    ctx.fillStyle = A.c(fill === COL.body ? COL.paw : '#ecd2a6');
-    ctx.fillRect(x - w / 2, y - 5 - lift, w, 6);
-    ctx.restore();
-    ctx.strokeStyle = A.outline();
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    A.roundRect(ctx, x - w / 2, top, w, 15, 5);
-    ctx.stroke();
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(x - 1.2, y - lift - 0.5);
-    ctx.lineTo(x - 1.2, y - lift - 3.5);
-    ctx.moveTo(x + 2, y - lift - 0.5);
-    ctx.lineTo(x + 2, y - lift - 3.5);
-    ctx.stroke();
+  function leg(ctx, x, y, lift, fill, shade) {
+    A.shape(ctx, (c) => A.roundRect(c, x - 5, y - 15 - lift, 10, 15, 5), fill, shade, { shadeY: y - 5 - lift, lw: 2.5 });
   }
 
   function maneRing(ctx, cx, cy, r, bumps, wob) {
@@ -66,63 +42,11 @@
     );
   }
 
-  // 鬃毛內層（較亮），讓鬃毛有前後層次
-  function maneInner(ctx, cx, cy, r, bumps) {
-    A.shape(
-      ctx,
-      (c) => {
-        for (let i = 0; i <= bumps; i++) {
-          const a = (i / bumps) * Math.PI * 2 + 0.2;
-          const x = cx + Math.cos(a) * r;
-          const y = cy + Math.sin(a) * r;
-          if (i === 0) c.moveTo(x, y);
-          else {
-            const am = ((i - 0.5) / bumps) * Math.PI * 2 + 0.2;
-            c.quadraticCurveTo(cx + Math.cos(am) * (r + 6), cy + Math.sin(am) * (r + 6), x, y);
-          }
-        }
-        c.closePath();
-      },
-      COL.maneLight,
-      null,
-      { hl: false, lw: 1.6 }
-    );
-  }
-
   function tuft(ctx, x, y, s, rot) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rot || 0);
-    A.shape(ctx, (c) => A.mapleLeafPath(c, 0, 0, s), COL.tuft, COL.tuftShade, { cel: [1.5, 1.5], lw: 2.2, hl: [-s * 0.3, -s * 0.35, s * 0.2, s * 0.12] });
-    ctx.strokeStyle = A.c(COL.tuftShade);
-    ctx.lineWidth = 1.1;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(0, s * 0.75);
-    ctx.lineTo(0, -s * 0.55);
-    ctx.moveTo(0, -s * 0.05);
-    ctx.lineTo(-s * 0.5, -s * 0.28);
-    ctx.moveTo(0, -s * 0.05);
-    ctx.lineTo(s * 0.5, -s * 0.28);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function tailTuft(ctx, x, y, rot) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    const tuftPath = (c) => {
-      c.moveTo(-5, 5);
-      c.quadraticCurveTo(-10, -2, -5, -5);
-      c.quadraticCurveTo(-4, -11, 0, -10);
-      c.quadraticCurveTo(4, -12, 5, -5);
-      c.quadraticCurveTo(10, -1, 5, 5);
-      c.quadraticCurveTo(0, 8, -5, 5);
-      c.closePath();
-    };
-    A.shape(ctx, tuftPath, COL.mane, COL.maneShade, { cel: [2, 2], lw: 2.4, hl: false });
-    A.ellipse(ctx, -1, -1, 3, 4, COL.maneLight, null, { noStroke: true, hl: false });
+    A.shape(ctx, (c) => A.mapleLeafPath(c, 0, 0, s), COL.tuft, COL.tuftShade, { shadeY: s * 0.3, lw: 2.2 });
     ctx.restore();
   }
 
@@ -200,7 +124,7 @@
     ctx.strokeStyle = A.c(COL.body);
     ctx.lineWidth = 3.5;
     ctx.stroke();
-    tailTuft(ctx, -35 + sw * 0.3, -41 + bob - tailUp, 0.2 + sw * 0.04);
+    A.ellipse(ctx, -35 + sw * 0.3, -41 + bob - tailUp, 6, 7, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
 
     // 身體
     A.ellipse(ctx, -1 + lean * 0.3, -20 + bob, 21, 14, COL.body, COL.bodyShade, { cel: [3, 3] });
@@ -208,7 +132,7 @@
 
     // 近側的腳
     leg(ctx, -7 + off[2], 0, lift[2], COL.body, COL.bodyShade);
-    leg(ctx, 13 + off[3], 0, lift[3], COL.body, COL.bodyShade, true);
+    leg(ctx, 13 + off[3], 0, lift[3], COL.body, COL.bodyShade);
 
     // 伸出的前爪（攻擊）
     if (pawOut > 0) {
@@ -229,61 +153,45 @@
     const hx = 9 + lean;
     const hy = -45 + bob;
     maneRing(ctx, hx - 4, hy - 1, 23, 12, 0);
-    maneInner(ctx, hx - 5, hy - 1, 17.5, 10);
     // 耳朵
-    A.ellipse(ctx, hx - 10, hy - 20 + earTwitch, 6.5, 6.5, COL.mane, COL.maneShade, { lw: 2.5, hl: false, cel: [1.5, 1.5] });
-    A.ellipse(ctx, hx - 10, hy - 19.5 + earTwitch, 3.2, 3.2, COL.ear, null, { noStroke: true, hl: false });
-    A.ellipse(ctx, hx + 8, hy - 21, 6.5, 6.5, COL.mane, COL.maneShade, { lw: 2.5, hl: false, cel: [1.5, 1.5] });
-    A.ellipse(ctx, hx + 8, hy - 20.5, 3.2, 3.2, COL.ear, null, { noStroke: true, hl: false });
+    A.ellipse(ctx, hx - 10, hy - 20 + earTwitch, 6.5, 6.5, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
+    A.ellipse(ctx, hx - 10, hy - 20 + earTwitch, 3, 3, COL.ear, null, { noStroke: true, hl: false });
+    A.ellipse(ctx, hx + 8, hy - 21, 6.5, 6.5, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
+    A.ellipse(ctx, hx + 8, hy - 21, 3, 3, COL.ear, null, { noStroke: true, hl: false });
     A.ellipse(ctx, hx, hy, 19, 17.5, COL.body, COL.bodyShade, { cel: [3, 3.5] });
     // 楓葉鬃毛
     tuft(ctx, hx - 1, hy - 20, 9, -0.15);
-    // 嘴邊：兩團貓咪式的口鼻
-    A.shape(ctx, (c) => c.ellipse(hx + 12, hy + 7, 9, 6.5, 0, 0, Math.PI * 2), COL.cream, '#f0d29a', { lw: 2, hl: false, cel: [1.5, 2] });
-    ctx.fillStyle = A.c('#c89a6a');
-    [[hx + 7.5, hy + 7], [hx + 9.5, hy + 9.5]].forEach(([x, y]) => {
-      ctx.beginPath();
-      ctx.arc(x, y, 0.9, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    // 鼻子
-    A.shape(ctx, (c) => {
-      c.moveTo(hx + 13, hy + 2);
-      c.quadraticCurveTo(hx + 16, hy + 0.6, hx + 19, hy + 2);
-      c.quadraticCurveTo(hx + 17.5, hy + 5.2, hx + 16, hy + 5.2);
-      c.quadraticCurveTo(hx + 14.5, hy + 5.2, hx + 13, hy + 2);
-      c.closePath();
-    }, COL.nose, null, { lw: 1.4, hl: [hx + 15, hy + 2.2, 1.3, 0.7] });
+    // 嘴邊
+    A.ellipse(ctx, hx + 11, hy + 7, 9, 6.5, COL.cream, null, { lw: 2, hl: false });
+    ctx.fillStyle = A.c(COL.nose);
+    ctx.beginPath();
+    ctx.ellipse(hx + 16, hy + 3, 3.2, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
     // 嘴
     ctx.strokeStyle = A.outline();
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     if (mouth === 'smile') {
       ctx.beginPath();
-      ctx.moveTo(hx + 16, hy + 5.2);
-      ctx.lineTo(hx + 16, hy + 7.2);
-      ctx.moveTo(hx + 12.8, hy + 7.6);
-      ctx.quadraticCurveTo(hx + 14.4, hy + 9.8, hx + 16, hy + 7.2);
-      ctx.quadraticCurveTo(hx + 17.6, hy + 9.8, hx + 19.2, hy + 7.6);
+      ctx.moveTo(hx + 16, hy + 5.5);
+      ctx.quadraticCurveTo(hx + 14, hy + 10, hx + 11, hy + 8);
       ctx.stroke();
     } else {
       const big = mouth === 'roar' ? 6 : mouth === 'open' ? 4 : 2.5;
-      A.shape(ctx, (c) => c.ellipse(hx + 15, hy + 10, big * 0.9, big, 0, 0, Math.PI * 2), '#8a2424', null, { lw: 1.8, hl: false });
-      if (big > 3) {
-        ctx.fillStyle = A.c('#f07a7a');
-        ctx.beginPath();
-        ctx.ellipse(hx + 15, hy + 10 + big * 0.45, big * 0.55, big * 0.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.fillStyle = A.c('#7a2323');
+      ctx.beginPath();
+      ctx.ellipse(hx + 13, hy + 10, big * 0.9, big, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
       if (mouth === 'roar') {
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.moveTo(hx + 12, hy + 6.5);
-        ctx.lineTo(hx + 13.3, hy + 9.5);
-        ctx.lineTo(hx + 14.3, hy + 6);
-        ctx.moveTo(hx + 15.9, hy + 6);
-        ctx.lineTo(hx + 16.9, hy + 9.5);
-        ctx.lineTo(hx + 18.1, hy + 6.5);
+        ctx.moveTo(hx + 9.5, hy + 6.5);
+        ctx.lineTo(hx + 11, hy + 9.5);
+        ctx.lineTo(hx + 12, hy + 6);
+        ctx.moveTo(hx + 14, hy + 6);
+        ctx.lineTo(hx + 15, hy + 9.5);
+        ctx.lineTo(hx + 16.5, hy + 6.5);
         ctx.fill();
       }
     }
@@ -309,22 +217,19 @@
     ctx.strokeStyle = A.c(COL.body);
     ctx.lineWidth = 3.5;
     ctx.stroke();
-    tailTuft(ctx, 18, -28, 0.3);
-    // 後腳踩著繩子
-    leg(ctx, -7, 0 - a * 3, 0, COL.body, COL.bodyShade);
-    leg(ctx, 7, 0 + a * 3, 0, COL.body, COL.bodyShade);
-    A.ellipse(ctx, 0, -21, 15, 14, COL.body, COL.bodyShade, { cel: [3, 3], hl: false });
+    A.ellipse(ctx, 18, -28, 6, 7, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
+    // 後腳踩著繩子，左右交替
+    leg(ctx, -8, 0 - a * 3, 0, COL.body, COL.bodyShade);
+    leg(ctx, 8, 0 + a * 3, 0, COL.body, COL.bodyShade);
+    A.ellipse(ctx, 0, -20, 16, 15, COL.body, COL.bodyShade, { cel: [3, 3] });
     // 鬃毛（背面看整圈）
-    maneRing(ctx, 0, -46, 21, 14, 0);
-    maneInner(ctx, 0, -46, 14, 10);
-    A.ellipse(ctx, -12, -64, 6, 6, COL.mane, COL.maneShade, { lw: 2.5, hl: false, cel: [1.5, 1.5] });
-    A.ellipse(ctx, 12, -64, 6, 6, COL.mane, COL.maneShade, { lw: 2.5, hl: false, cel: [1.5, 1.5] });
-    tuft(ctx, 0, -66, 8, 0);
-    // 前爪輪流往上抓
-    [[-8, -76 + a * 5], [8, -76 - a * 5]].forEach(([x, y]) => {
-      A.ellipse(ctx, x, y, 5.5, 6, COL.body, COL.bodyShade, { lw: 2.5, hl: false, cel: [1.5, 1.5] });
-      A.ellipse(ctx, x, y - 2.5, 3.8, 2.6, COL.paw, null, { noStroke: true, hl: false });
-    });
+    maneRing(ctx, 0, -46, 22, 14, 0);
+    A.ellipse(ctx, -12, -65, 6.5, 6.5, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
+    A.ellipse(ctx, 12, -65, 6.5, 6.5, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
+    tuft(ctx, 0, -67, 8, 0);
+    // 前爪輪流往頭頂上方抓
+    A.ellipse(ctx, -8, -77 + a * 5, 6, 6, COL.body, COL.bodyShade, { lw: 2.5, hl: false });
+    A.ellipse(ctx, 8, -77 - a * 5, 6, 6, COL.body, COL.bodyShade, { lw: 2.5, hl: false });
   }
 
   // st：{ state, t, p, moving }
