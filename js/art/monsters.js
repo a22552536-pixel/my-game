@@ -3,7 +3,6 @@
 (function () {
   'use strict';
   const A = G.art;
-  const U = G.util;
 
   function faceEyes(ctx, x, y, gap, rx, ry, m) {
     const kind = m.dead ? 'x' : m.hurtT > 0 ? 'hurt' : m.angry ? 'angry' : m.blink ? 'closed' : 'normal';
@@ -162,131 +161,82 @@
   }
 
   // ── 菇系：小傘菇 → 斑點菇 → 提燈菇 ──
-  // 立體上色版本：徑向漸層、光澤、同色系描邊、閃亮大眼。
   function mushroom(ctx, m) {
     const s = m.def.stage;
     const t = m.t;
     let sy = 1;
-    if (!m.onGround) sy = m.vy < 0 ? 1.12 : 0.96;
-    else if (m.landT > 0) sy = 0.8 + (1 - m.landT / 0.15) * 0.2;
-    if (m.attackT > 0 && m.attackPhase === 'wind') sy = 0.86;
-    const walk = m.onGround && Math.abs(m.vx || 0) > 5;
-    const step = walk ? Math.sin(t * 12) : 0;
+    if (!m.onGround) sy = m.vy < 0 ? 1.1 : 0.97;
+    else if (m.landT > 0) sy = 0.82 + (1 - m.landT / 0.15) * 0.18;
+    if (m.attackT > 0 && m.attackPhase === 'wind') sy = 0.88;
     ctx.save();
     ctx.scale(1 / Math.sqrt(sy), sy);
 
-    const K = [1, 1.15, 1.25][s - 1];
-    const stemCol = s === 3 ? '#e4ebff' : '#fff0d4';
-    const capCol = ['#f7a23c', '#ea4e3c', '#b8ec52'][s - 1];
-    const gillCol = s === 3 ? '#9fc6a0' : '#e8c79a';
-    const hw = 16 * K; // 身體半寬
-    const bh = 32 * K; // 身體高度
-    const bodyTop = -bh - 4;
+    const capR = [22, 27, 28][s - 1];
+    const stemW = [26, 30, 30][s - 1];
+    const stemH = [24, 28, 32][s - 1];
+    const stem = s === 3 ? ['#e3e8ff', '#bcc6ee'] : ['#fff0d6', '#e8cfa6'];
 
     if (s === 3) {
-      const glow = 0.55 + Math.sin(t * 3) * 0.2;
-      const gr = ctx.createRadialGradient(0, bodyTop - 10, 4, 0, bodyTop - 10, 80);
-      gr.addColorStop(0, 'rgba(210,255,120,' + (0.6 * glow).toFixed(3) + ')');
-      gr.addColorStop(1, 'rgba(210,255,120,0)');
-      ctx.fillStyle = gr;
+      // 提燈菇的光暈
+      const glow = 0.5 + Math.sin(t * 3) * 0.2;
+      const g = ctx.createRadialGradient(0, -stemH - 8, 4, 0, -stemH - 8, 70);
+      g.addColorStop(0, 'rgba(220,255,140,' + (0.55 * glow).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(220,255,140,0)');
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(0, bodyTop - 10, 80, 0, Math.PI * 2);
+      ctx.arc(0, -stemH - 8, 70, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 腳（走路時交替）
-    const foot = (fx, lift) => {
-      A.vol(ctx, (c) => c.ellipse(fx, -4 - lift, 8 * K, 5 * K, 0, 0, Math.PI * 2), U.mix(stemCol, '#c8a878', 0.25), [fx - 8 * K, -9 * K - lift, 16 * K, 10 * K], { lw: 2.2, bounce: false });
-    };
-    foot(-8 * K, Math.max(0, step) * 4);
-    foot(8 * K, Math.max(0, -step) * 4);
-
-    // 身體（莖）：上窄下寬的豆形
-    const body = (c) => {
-      c.moveTo(-hw * 0.8, bodyTop + 4);
-      c.bezierCurveTo(-hw * 1.15, bodyTop + bh * 0.45, -hw * 1.2, -4, -hw * 0.55, -3);
-      c.quadraticCurveTo(0, 1, hw * 0.55, -3);
-      c.bezierCurveTo(hw * 1.2, -4, hw * 1.15, bodyTop + bh * 0.45, hw * 0.8, bodyTop + 4);
-      c.quadraticCurveTo(0, bodyTop - 2, -hw * 0.8, bodyTop + 4);
-      c.closePath();
-    };
-    A.vol(ctx, body, stemCol, [-hw * 1.2, bodyTop, hw * 2.4, bh + 4], { gloss: [-hw * 0.45, bodyTop + bh * 0.35, hw * 0.28, bh * 0.2, -0.2], lo: 0.22 });
-
-    // 臉
-    const kind = m.dead ? 'x' : m.hurtT > 0 ? 'hurt' : m.angry || m.attackT > 0 ? 'angry' : m.blink ? 'closed' : 'normal';
-    const ey = bodyTop + bh * 0.5;
-    A.eyeShine(ctx, -2 * K, ey, 4.2 * K, 5.8 * K, kind, 1);
-    A.eyeShine(ctx, 9 * K, ey - 0.5, 3.9 * K, 5.5 * K, kind, 1);
-    A.blush(ctx, -8 * K, ey + 7 * K, 4 * K);
-    A.blush(ctx, 15 * K, ey + 6 * K, 3 * K);
-    ctx.strokeStyle = A.c('#5a2a1a');
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    if (m.hurtT > 0 || m.attackT > 0) {
-      ctx.fillStyle = A.c('#8a2a22');
-      ctx.beginPath();
-      ctx.ellipse(4 * K, ey + 9 * K, 3 * K, 3.6 * K, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(1 * K, ey + 8 * K);
-      ctx.quadraticCurveTo(4 * K, ey + 11 * K, 7 * K, ey + 8 * K);
-      ctx.stroke();
-    }
+    // 腳
+    A.ellipse(ctx, -8, -3, 6, 4, stem[0], stem[1], { lw: 2.2, hl: false });
+    A.ellipse(ctx, 8, -3, 6, 4, stem[0], stem[1], { lw: 2.2, hl: false });
+    // 莖（身體）
+    A.shape(ctx, (c) => A.roundRect(c, -stemW / 2, -stemH - 4, stemW, stemH, 10), stem[0], stem[1], { shadeY: -10 });
+    faceEyes(ctx, -2, -stemH + 8, 9, 3.2, 4.4, m);
+    smallMouth(ctx, 4, -stemH + 17, m.attackT > 0 || m.hurtT > 0);
+    A.blush(ctx, -7, -stemH + 15, 3.5);
 
     // 傘蓋
-    const R = [25, 30, 31][s - 1];
-    const cy = bodyTop - 3 + Math.sin(t * 5) * 1.2;
-    const tilt = walk ? step * 0.04 : 0;
-    ctx.save();
-    ctx.translate(0, cy);
-    ctx.rotate(tilt);
-    // 菌褶（傘蓋下緣）
-    A.vol(ctx, (c) => c.ellipse(0, 1, R * 0.92, R * 0.22, 0, 0, Math.PI * 2), gillCol, [-R, -R * 0.2, R * 2, R * 0.45], { lw: 2.2, bounce: false, hi: 0.2 });
-    ctx.strokeStyle = A.c(U.mix(gillCol, '#5a3a20', 0.4));
-    ctx.lineWidth = 1.2;
-    for (let i = -4; i <= 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * R * 0.16, -2);
-      ctx.lineTo(i * R * 0.19, R * 0.16);
-      ctx.stroke();
-    }
-    const dome = (c) => {
-      c.moveTo(-R - 5, 0);
-      c.bezierCurveTo(-R - 6, -R * 1.35, R + 6, -R * 1.35, R + 5, 0);
-      c.bezierCurveTo(R * 0.6, 6, -R * 0.6, 6, -R - 5, 0);
-      c.closePath();
-    };
-    A.vol(ctx, dome, capCol, [-R - 6, -R * 1.05, R * 2 + 12, R * 1.1], { gloss: [-R * 0.42, -R * 0.66, R * 0.36, R * 0.16, -0.45], lo: 0.34, lx: 0.3, ly: 0.2 });
-    // 斑點
-    const spots = s === 1
-      ? [[-11, -12, 5.5], [10, -17, 6.5], [1, -26, 4.5], [20, -6, 3.5]]
-      : s === 2
-        ? [[-15, -10, 7], [11, -19, 8], [-3, -29, 5.5], [23, -6, 4.5], [-24, -3, 3.5]]
-        : [[-12, -14, 4], [9, -21, 4.5], [0, -30, 3.5], [20, -9, 3]];
-    spots.forEach(([dx, dy, r]) => {
-      const col = s === 1 ? '#ffd79a' : s === 2 ? '#fff8f0' : '#f6ffd0';
-      A.vol(ctx, (c) => c.ellipse(dx, dy, r, r * 0.78, 0, 0, Math.PI * 2), col, [dx - r, dy - r, r * 2, r * 2], { lw: s === 2 ? 1.6 : 0.01, noStroke: s !== 2, hi: 0.5, lo: 0.12, bounce: false });
-    });
-    if (s === 3) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 6; i++) {
-        const a = t * 1.4 + i * 1.1;
-        const px = Math.cos(a) * R * 0.55;
-        const py = -R * 0.5 + Math.sin(a * 1.3) * R * 0.2;
-        const g2 = ctx.createRadialGradient(px, py, 0, px, py, 6);
-        g2.addColorStop(0, 'rgba(255,255,220,0.9)');
-        g2.addColorStop(1, 'rgba(255,255,220,0)');
-        ctx.fillStyle = g2;
+    const cy = -stemH - 2;
+    const caps = [
+      ['#f28c38', '#d46a1f'],
+      ['#e04a3a', '#b8322a'],
+      ['#c8f06a', '#8fc23e'],
+    ];
+    const bob = Math.sin(t * 5) * 1;
+    A.shape(
+      ctx,
+      (c) => {
+        c.moveTo(-capR - 4, cy + bob);
+        c.bezierCurveTo(-capR - 2, cy - capR * 1.25 + bob, capR + 2, cy - capR * 1.25 + bob, capR + 4, cy + bob);
+        c.quadraticCurveTo(0, cy + 7 + bob, -capR - 4, cy + bob);
+        c.closePath();
+      },
+      caps[s - 1][0],
+      caps[s - 1][1],
+      { shadeY: cy - 5 + bob, hl: [-capR * 0.4, cy - capR * 0.7 + bob, capR * 0.3, capR * 0.14] }
+    );
+    if (s === 1) {
+      ctx.fillStyle = A.c('#ffd59a');
+      [[-8, -10], [9, -13], [0, -18]].forEach(([dx, dy]) => {
         ctx.beginPath();
-        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.ellipse(dx, cy + dy + bob, 3, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    } else if (s === 2) {
+      [[-14, -9, 5], [10, -14, 6], [-2, -22, 4.5], [19, -5, 3.5]].forEach(([dx, dy, r]) => {
+        A.ellipse(ctx, dx, cy + dy + bob, r, r * 0.8, '#fff8ee', null, { lw: 1.8, hl: false });
+      });
+    } else {
+      ctx.fillStyle = 'rgba(255,255,220,0.9)';
+      for (let i = 0; i < 5; i++) {
+        const a = t * 1.5 + i * 1.3;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * 14, cy - 14 + Math.sin(a * 1.3) * 6 + bob, 2.2, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.restore();
     }
-    ctx.restore();
     ctx.restore();
   }
 
