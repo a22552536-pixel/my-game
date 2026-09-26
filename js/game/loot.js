@@ -123,7 +123,8 @@
       this.spawn('equip', b.x + 30, b.y - 120, { item: this.randomEquip(10, 'boss') });
       this.spawn('potion', b.x, b.y - 120, { potion: 'hpL', count: 3 });
       if (Math.random() < 0.35) this.spawn('equip', b.x, b.y - 130, { item: this.makeUnique(U.pick(Object.keys(D().uniques))) });
-      this.spawn('starleaf', b.x, b.y - 140, {});
+      const ch = G.world.map.region;
+      if (!G.story.hasLeaf(ch)) this.spawn('starleaf', b.x, b.y - 140, { chapter: ch });
       this.spawn('quest', b.x + 50, b.y - 120, { qitem: 'queencap' });
     },
 
@@ -211,8 +212,7 @@
           G.audio.play('pickup');
           return true;
         case 'starleaf':
-          G.world.flags.starleaf1 = true;
-          G.hud.toast('獲得 星楓葉！', '#ffe066');
+          G.story.gainLeaf(dr.chapter || 1);
           G.fx.pillar(P.x, P.y, 'rgba(255,230,120,0.95)', 1.6, 110);
           G.audio.play('victory');
           G.save.write();

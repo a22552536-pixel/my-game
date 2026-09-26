@@ -28,13 +28,28 @@
     },
     regionCard(region) {
       const r = G.data.story.regions[region];
-      if (r) this.region = { name: r.name, sub: r.sub, t: 0, life: 4 };
+      if (r) this.region = { no: r.no, name: r.name, sub: r.sub, t: 0, life: 4.5 };
+      if (r && r.hook) setTimeout(() => this.story(r.hook), 4200);
     },
     bossBanner(name) {
       this.banner = { text: name, t: 0, life: 2.6 };
     },
     story(text) {
-      this.storyLine = { text, t: 0, life: 6 };
+      if (text) this.storyLine = { text, t: 0, life: Math.max(6, text.length * 0.12) };
+    },
+    // 依寬度斷行（中文逐字）
+    wrap(ctx, text, maxW) {
+      const out = [];
+      let line = '';
+      for (const ch of text) {
+        if (ctx.measureText(line + ch).width > maxW && line) {
+          out.push(line);
+          line = '';
+        }
+        line += ch;
+      }
+      if (line) out.push(line);
+      return out;
     },
     saveIcon() {
       this.saveT = 1.2;
@@ -221,6 +236,7 @@
         g2.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = g2;
         ctx.fillRect(0, 240, W, 120);
+        if (r.no) this.text(ctx, r.no, W / 2, 238, 20, '#ffe9a0', 'center');
         this.text(ctx, r.name, W / 2, 285, 46, '#fff6d8', 'center');
         this.text(ctx, r.sub, W / 2, 330, 18, '#e8f0c8', 'center');
         ctx.globalAlpha = 1;
@@ -243,10 +259,12 @@
         const s = this.storyLine;
         const a = s.t < 0.6 ? s.t / 0.6 : s.t > s.life - 0.8 ? (s.life - s.t) / 0.8 : 1;
         ctx.globalAlpha = Math.max(0, a);
-        ctx.font = 'bold 20px ' + A.FONT;
-        const w = Math.min(W - 80, ctx.measureText(s.text).width + 60);
-        this.panel(ctx, W / 2 - w / 2, 440, w, 50, 14, 'rgba(20,12,30,0.75)');
-        this.text(ctx, s.text, W / 2, 466, 18, '#fff3d0', 'center', false);
+        ctx.font = 'bold 18px ' + A.FONT;
+        const lines = this.wrap(ctx, s.text, 760);
+        const w = Math.min(W - 80, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 60);
+        const h = 24 + lines.length * 28;
+        this.panel(ctx, W / 2 - w / 2, 490 - h, w, h, 14, 'rgba(20,12,30,0.75)');
+        lines.forEach((l, i) => this.text(ctx, l, W / 2, 490 - h + 26 + i * 28, 18, '#fff3d0', 'center', false));
         ctx.globalAlpha = 1;
       }
 

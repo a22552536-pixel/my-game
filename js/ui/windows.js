@@ -184,7 +184,7 @@
       grid += '</div>';
       const misc =
         '<div class="misc"><span><img src="' + G.art.iconURL('gold') + '">' + P.gold + ' 金葉</span>' +
-        (G.world.flags.starleaf1 ? '<span><img src="' + G.art.iconURL('starleaf') + '">星楓葉</span>' : '') +
+        '<span class="leaves" title="每片星楓葉：HP、攻擊永久 +4%">星楓葉 ' + G.story.count() + '/5 ' + [1, 2, 3, 4, 5].map((ch) => { const d = G.story.leafDef(ch); return G.story.hasLeaf(ch) ? '<img title="' + d.name + '（' + d.power + '）" src="' + G.art.iconURL('starleaf', d.color) + '">' : '<i title="？？？"></i>'; }).join('') + '</span>' +
         '</div>';
       const cons = Object.keys(D.potions).filter((k) => (P.potions[k] || 0) > 0);
       const consHTML = '<div class="cons"><div class="lbl">消耗品（點一下使用）</div>' + (cons.length ? cons.map((k) => '<button class="usebtn" data-act="useItem" data-arg="' + k + '" title="' + D.potions[k].name + '：' + D.potions[k].desc + '"><img src="' + G.art.iconURL(D.potions[k].icon) + '"><span>' + P.potions[k] + '</span></button>').join('') : '<span class="dim">沒有消耗品</span>') + '</div>';
@@ -736,7 +736,7 @@
     // ───────── M1 結尾 ─────────
     r_m1end() {
       const s = G.data.story.m1End;
-      return '<div class="panel ending"><div class="body"><img class="leaf" src="' + G.art.iconURL('starleaf') + '"><div class="big">' + s.title + '</div><div class="txt">' + esc(s.text).replace(/\n/g, '<br>') + '</div><div class="dim">遊玩時間 ' + U.fmtTime(G.player.playTime) + ' · Lv.' + G.player.level + '</div><button class="primary" data-act="close">繼續冒險</button></div></div>';
+      return '<div class="panel ending"><div class="body"><img class="leaf" src="' + G.art.iconURL('starleaf', G.story.leafDef(1).color) + '"><div class="big">' + s.title + '</div><div class="txt">' + esc(s.text).replace(/\n/g, '<br>') + '</div><div class="dim">遊玩時間 ' + U.fmtTime(G.player.playTime) + ' · Lv.' + G.player.level + '</div><button class="primary" data-act="close">繼續冒險</button></div></div>';
     },
   });
 

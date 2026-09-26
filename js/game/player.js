@@ -77,6 +77,9 @@
         crit += st.crit || 0;
         if (it.special) this.specials[it.special] = true;
       }
+      const lm = G.story ? G.story.mult() : 1;
+      hp *= lm;
+      atk *= lm;
       this.maxHp = Math.round(hp);
       this.maxMp = Math.round(mp);
       if (this.buffs && this.buffs.atk) atk *= 1 + this.buffs.atk.v;
