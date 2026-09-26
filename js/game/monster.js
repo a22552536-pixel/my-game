@@ -72,9 +72,18 @@
   };
 
   Monster.prototype.bounds = function () {
-    const p = G.world.map.platforms[this.plat];
+    const map = G.world.map;
+    const p = map.platforms[this.plat];
     const hw = this.halfW;
-    return [p[0] + hw, p[1] - hw];
+    let lo = p[0] + hw;
+    let hi = p[1] - hw;
+    // 有指定活動範圍的怪（例如營地附近）不會走出範圍
+    const g = this.spawn && this.spawn.group != null ? map.mobs[this.spawn.group] : null;
+    if (g && g.p === this.plat) {
+      if (g.x1 != null) lo = Math.max(lo, g.x1);
+      if (g.x2 != null) hi = Math.min(hi, g.x2);
+    }
+    return [lo, hi];
   };
 
   Monster.prototype.takeDamage = function (dmg, dir, knock, crit) {

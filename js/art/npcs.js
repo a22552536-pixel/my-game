@@ -7,7 +7,7 @@
     const bob = Math.sin(t * 2) * 1.2;
     // 背包
     A.shape(ctx, (c) => A.roundRect(c, -30, -48 + bob, 20, 28, 5), '#b5763c', '#8f5a2a', { shadeY: -30 + bob });
-    A.ellipse(ctx, 0, -32 + bob, 24, 30, '#9c6b45', '#7d5233');
+    A.ellipse(ctx, 0, -32 + bob, 24, 30, '#9c6b45', '#7d5233', { cel: [4, 4] });
     A.ellipse(ctx, 0, -26 + bob, 15, 20, '#f0dcb8', '#dcc298', { hl: false });
     ctx.strokeStyle = A.c('#c9a877');
     ctx.lineWidth = 1.5;
@@ -51,7 +51,7 @@
       '#5d4232',
       { shadeY: -20 + bob }
     );
-    A.ellipse(ctx, 4, -24 + bob, 20, 22, '#e8c9a4', '#d4b089');
+    A.ellipse(ctx, 4, -24 + bob, 20, 22, '#e8c9a4', '#d4b089', { cel: [3, 3] });
     // 圍巾
     A.shape(ctx, (c) => A.roundRect(c, -12, -22 + bob, 30, 8, 4), '#d94f4f', '#b33a3a', { shadeY: -17 + bob, lw: 2.2 });
     A.shape(ctx, (c) => A.roundRect(c, -8, -18 + bob, 8, 16, 3), '#d94f4f', '#b33a3a', { shadeY: -8 + bob, lw: 2.2 });
@@ -106,7 +106,7 @@
       { shadeY: -10 }
     );
     ctx.restore();
-    A.ellipse(ctx, 4, -20 + bob, 13, 16, '#e39a4c', '#c67c33');
+    A.ellipse(ctx, 4, -20 + bob, 13, 16, '#e39a4c', '#c67c33', { cel: [3, 3] });
     A.ellipse(ctx, 7, -16 + bob, 7, 10, '#fff0d6', null, { hl: false, lw: 2 });
     // 郵差包
     ctx.strokeStyle = A.c('#6b4a2e');
@@ -116,7 +116,7 @@
     ctx.lineTo(14, -10 + bob);
     ctx.stroke();
     A.shape(ctx, (c) => A.roundRect(c, 8, -14 + bob, 14, 11, 3), '#8a5a34', '#6b4428', { shadeY: -8 + bob, lw: 2 });
-    A.ellipse(ctx, 6, -42 + bob, 13, 12, '#e39a4c', '#c67c33');
+    A.ellipse(ctx, 6, -42 + bob, 13, 12, '#e39a4c', '#c67c33', { cel: [3, 3] });
     A.ellipse(ctx, -1, -54 + bob, 4, 6, '#e39a4c', null, { lw: 2, hl: false });
     A.ellipse(ctx, 11, -55 + bob, 4, 6, '#e39a4c', null, { lw: 2, hl: false });
     A.eye(ctx, 6, -43 + bob, 2.8, 3.6, 'normal', 1);

@@ -38,7 +38,7 @@
       },
       COL.mane,
       COL.maneShade,
-      { shadeY: cy + r * 0.45 }
+      { cel: [4, 4] }
     );
   }
 
@@ -123,7 +123,7 @@
     A.ellipse(ctx, -35 + sw * 0.3, -41 + bob - tailUp, 6, 7, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
 
     // 身體
-    A.ellipse(ctx, -1 + lean * 0.3, -20 + bob, 21, 14, COL.body, COL.bodyShade, { shadeAt: 0.2 });
+    A.ellipse(ctx, -1 + lean * 0.3, -20 + bob, 21, 14, COL.body, COL.bodyShade, { cel: [3, 3] });
     A.ellipse(ctx, 6 + lean * 0.3, -15 + bob, 10, 7, COL.cream, null, { noStroke: true, hl: false });
 
     // 近側的腳
@@ -154,7 +154,7 @@
     A.ellipse(ctx, hx - 10, hy - 20, 3, 3, COL.ear, null, { noStroke: true, hl: false });
     A.ellipse(ctx, hx + 8, hy - 21, 6.5, 6.5, COL.mane, COL.maneShade, { lw: 2.5, hl: false });
     A.ellipse(ctx, hx + 8, hy - 21, 3, 3, COL.ear, null, { noStroke: true, hl: false });
-    A.ellipse(ctx, hx, hy, 19, 17.5, COL.body, COL.bodyShade, { shadeAt: 0.55 });
+    A.ellipse(ctx, hx, hy, 19, 17.5, COL.body, COL.bodyShade, { cel: [3, 3.5] });
     // 楓葉鬃毛
     tuft(ctx, hx - 1, hy - 20, 9, -0.15);
     // 嘴邊
@@ -181,8 +181,8 @@
       ctx.stroke();
     }
     // 眼睛
-    A.eye(ctx, hx + 2, hy - 3, 3.6, 5, eyeKind, 1);
-    A.eye(ctx, hx + 12, hy - 4, 3.3, 4.8, eyeKind, 1);
+    A.eye(ctx, hx + 2, hy - 3, 3.9, 5.4, eyeKind, 1);
+    A.eye(ctx, hx + 12, hy - 4, 3.6, 5.2, eyeKind, 1);
     A.blush(ctx, hx - 5, hy + 6, 4.5);
 
     ctx.restore();
