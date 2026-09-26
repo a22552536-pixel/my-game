@@ -209,7 +209,7 @@
         const bw = 560;
         const bx = (W - bw) / 2;
         this.panel(ctx, bx - 10, 50, bw + 20, 44, 10);
-        this.text(ctx, 'Lv.' + boss.level + ' ' + boss.def.name + (boss.enraged ? '（狂暴）' : ''), W / 2, 62, 14, boss.enraged ? '#ff8a8a' : '#ffe9b0', 'center');
+        this.text(ctx, 'Lv.' + boss.level + ' ' + (boss.recall ? '回憶・' : '') + boss.def.name + (boss.enraged ? '（狂暴）' : ''), W / 2, 62, 14, boss.enraged ? '#ff8a8a' : '#ffe9b0', 'center');
         this.bar(ctx, bx, 72, bw, 16, boss.hp / boss.maxHp, '#ff7ac0', '#b02a7a', Math.ceil(boss.hp) + ' / ' + boss.maxHp);
       }
 

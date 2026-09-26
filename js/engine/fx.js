@@ -130,31 +130,26 @@
       this.rings.push({ x, y, color, r: 4, maxR: maxR || 80, t: 0, life: life || 0.4, w: width || 4 });
     },
 
-    // 黑閃：從命中點向外迸出紅邊的黑色閃電，畫面瞬間轉暗、邊緣泛紅
+    // 黑閃：跟裝備「雷擊」同一種黃白色閃電，但只在命中點附近迸出幾道短的
     blackFlash(x, y, dir) {
-      const n = 7;
+      const n = 4;
       for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + U.rand(-0.3, 0.3);
-        const len = U.rand(70, 170);
+        const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.75 + U.rand(-0.25, 0.25) + (dir > 0 ? 0.25 : -0.25);
+        const len = U.rand(45, 85);
         const pts = [[x, y]];
-        let px = x;
-        let py = y;
-        const seg = 6;
+        const seg = 4;
         for (let k = 1; k <= seg; k++) {
           const d = (len * k) / seg;
-          const jitter = (k < seg ? U.rand(-16, 16) : 0);
-          px = x + Math.cos(a) * d - Math.sin(a) * jitter;
-          py = y + Math.sin(a) * d + Math.cos(a) * jitter;
-          pts.push([px, py]);
+          const jitter = k < seg ? U.rand(-10, 10) : 0;
+          pts.push([x + Math.cos(a) * d - Math.sin(a) * jitter, y + Math.sin(a) * d + Math.cos(a) * jitter]);
         }
-        this.blackBolts.push({ pts, t: 0, life: U.rand(0.22, 0.34), w: U.rand(5, 9) });
+        this.bolts.push({ pts, t: 0, life: U.rand(0.16, 0.24), w: 4 });
       }
-      this.darkFlash = 0.16;
-      this.impacts.push({ x, y, size: 90, color: '#ff2a3a', t: 0, life: 0.2, rot: Math.random() * Math.PI, dark: true });
-      for (let i = 0; i < 16; i++) {
+      this.rings.push({ x, y, color: 'rgba(255,246,168,0.9)', r: 6, maxR: 46, t: 0, life: 0.18, w: 3 });
+      for (let i = 0; i < 10; i++) {
         this.particles.push({
-          x, y, vx: U.rand(-420, 420), vy: U.rand(-420, 260), life: U.rand(0.25, 0.5), t: 0,
-          size: U.rand(2, 5), color: U.pick(['#ff2a3a', '#1a0006', '#ff6a6a']), grav: 500, shape: 'square', drag: 1.5,
+          x, y, vx: U.rand(-320, 320), vy: U.rand(-360, 120), life: U.rand(0.2, 0.4), t: 0,
+          size: U.rand(2, 4), color: U.pick(['#fff6a8', '#ffffff', '#ffe066']), grav: 400, shape: 'square', drag: 2,
         });
       }
     },
@@ -443,12 +438,13 @@
       for (const b of this.bolts) {
         ctx.globalAlpha = 1 - b.t / b.life;
         ctx.strokeStyle = '#fff6a8';
-        ctx.lineWidth = 6;
+        ctx.lineWidth = b.w || 6;
+        ctx.lineJoin = 'round';
         ctx.beginPath();
         b.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
         ctx.stroke();
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = Math.max(1.5, (b.w || 6) / 3);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -558,13 +554,13 @@
         ctx.fillStyle = g;
         ctx.fillText(n.value, n.x, y);
         if (n.kind === 'crit' && k < 0.8) {
-          // 黑閃：黑字紅邊，蓋在傷害數字上方
+          // 黑閃：跟閃電同色的黃字，蓋在傷害數字上方
           const pop2 = k < 0.1 ? 1.5 - k * 5 : 1;
-          ctx.font = '900 ' + Math.round(28 * pop2) + 'px ' + G.art.FONT;
-          ctx.lineWidth = 7;
-          ctx.strokeStyle = '#ff1a30';
+          ctx.font = '900 ' + Math.round(17 * pop2) + 'px ' + G.art.FONT;
+          ctx.lineWidth = 4.5;
+          ctx.strokeStyle = '#5a2e00';
           ctx.strokeText('黑閃！', n.x, y - size - 4);
-          ctx.fillStyle = '#0a0004';
+          ctx.fillStyle = '#fff27a';
           ctx.fillText('黑閃！', n.x, y - size - 4);
         }
       }

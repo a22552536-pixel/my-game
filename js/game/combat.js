@@ -8,7 +8,7 @@
       const b = G.data.balance;
       const isCrit = Math.random() < crit;
       let d = atk * mult * U.rand(b.dmgVariance[0], b.dmgVariance[1]);
-      if (isCrit) d *= b.critMult;
+      if (isCrit) d *= b.critMult + G.story.critBonus();
       d -= targetDef * b.defFactor;
       return { dmg: Math.max(1, Math.round(d)), crit: isCrit };
     },
@@ -61,7 +61,7 @@
       G.fx.kick(dir * (r.crit ? 7 : opts.heavy ? 5 : 3), r.crit ? -2 : 0);
       m.squash = 1;
       if (r.crit) {
-        // 黑閃：紅邊的黑色閃電
+        // 黑閃：命中點迸出幾道短閃電
         G.fx.blackFlash(cx, cy, dir);
         if (P.specials.focus) P.mp = Math.min(P.maxMp, P.mp + 3);
         G.fx.addHitstop(0.13);

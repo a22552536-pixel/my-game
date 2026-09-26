@@ -21,6 +21,13 @@
     this.atk = d.atk;
     this.armor = d.def;
     this.exp = d.exp;
+    // 回憶：打倒過之後再進來，是一場更強的「回憶」
+    this.recall = !!G.world.flags[this.id + 'Defeated'];
+    if (this.recall) {
+      this.maxHp = this.hp = Math.round(d.hp * 1.6);
+      this.atk = Math.round(d.atk * 1.3);
+      this.exp = Math.round(d.exp * 0.5);
+    }
     this.x = x;
     this.y = map.platforms[0][2];
     this.vx = 0;
@@ -44,7 +51,8 @@
     this.squash = 0;
     this.blink = false;
     G.audio.play('bossWarn');
-    G.hud.bossBanner(d.name);
+    G.hud.bossBanner(this.recall ? '回憶・' + d.name : d.name);
+    if (this.recall) G.hud.story(G.data.story.recall[this.id] || '');
   }
 
   Queen.prototype.hitbox = function () {

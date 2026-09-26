@@ -340,7 +340,81 @@
     ctx.restore();
   };
 
-  const NPC_DRAW = { owl, hedgehog, squirrel, frog, fawn, mole };
+  // 龜爺爺：坐著的老烏龜，白眉白鬍子，背著長青苔的殼
+  function turtle(ctx, t) {
+    const bob = Math.sin(t * 1.2) * 0.8;
+    A.ellipse(ctx, -16, -2, 8, 4, '#8fbf6a', null, { lw: 2, hl: false });
+    A.ellipse(ctx, 12, -2, 8, 4, '#8fbf6a', null, { lw: 2, hl: false });
+    A.shape(ctx, (c) => { c.moveTo(-30, -6); c.quadraticCurveTo(-30, -44 + bob, 0, -46 + bob); c.quadraticCurveTo(26, -44 + bob, 24, -6); c.closePath(); }, '#6a8f4a', '#4e6e34', { cel: [4, 3] });
+    ctx.strokeStyle = A.c('#3e5a28');
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-14, -8); ctx.lineTo(-10, -26 + bob); ctx.lineTo(4, -30 + bob); ctx.lineTo(10, -10);
+    ctx.moveTo(-10, -26 + bob); ctx.lineTo(-22, -24 + bob);
+    ctx.moveTo(4, -30 + bob); ctx.lineTo(14, -24 + bob);
+    ctx.stroke();
+    A.ellipse(ctx, -8, -40 + bob, 7, 3, '#8fcf5a', null, { noStroke: true, hl: false });
+    A.shape(ctx, (c) => A.roundRect(c, -30, -10, 56, 8, 4), '#d8c48a', '#b8a46a', { lw: 2, hl: false });
+    // 頭
+    A.ellipse(ctx, 26, -30 + bob, 12, 11, '#9fcf7a', '#7aaa5a', { cel: [2, 2] });
+    A.shape(ctx, (c) => { c.moveTo(22, -22 + bob); c.quadraticCurveTo(28, -8 + bob, 34, -22 + bob); c.closePath(); }, '#ffffff', '#dcdcdc', { lw: 1.8, hl: false });
+    ctx.strokeStyle = A.c('#ffffff');
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(22, -38 + bob); ctx.lineTo(30, -37 + bob);
+    ctx.stroke();
+    A.eye(ctx, 28, -32 + bob, 2.2, 1.2, Math.sin(t * 0.6) > 0.9 ? 'closed' : 'normal', 1);
+    A.blush(ctx, 32, -27 + bob, 2.5);
+  }
+
+  // 小栗：刺蝟婆婆的孫子，頭上戴著橡實帽，一直蹦蹦跳跳
+  function hedgekid(ctx, t) {
+    const bob = -Math.abs(Math.sin(t * 4)) * 5;
+    A.shape(ctx, (c) => {
+      for (let i = 0; i <= 12; i++) {
+        const a = Math.PI * 0.6 + (i / 12) * Math.PI * 1.4;
+        const r = i % 2 ? 15 : 21;
+        const x = -3 + Math.cos(a) * r;
+        const y = -18 + bob + Math.sin(a) * r * 0.9;
+        i ? c.lineTo(x, y) : c.moveTo(x, y);
+      }
+      c.closePath();
+    }, '#8a6a52', '#6a4e3c', { shadeY: -12 + bob });
+    A.ellipse(ctx, 3, -15 + bob, 13, 14, '#f0d4b0', '#dcb890', { cel: [2, 2] });
+    A.shape(ctx, (c) => { c.moveTo(-8, -26 + bob); c.quadraticCurveTo(2, -40 + bob, 12, -26 + bob); c.closePath(); }, '#8a5a30', '#6a4220', { lw: 2, hl: false });
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(2, -33 + bob); ctx.lineTo(4, -38 + bob); ctx.stroke();
+    A.eye(ctx, 6, -19 + bob, 2.4, 2.8, 'normal', 1);
+    A.eye(ctx, 12, -19 + bob, 2.2, 2.6, 'normal', 1);
+    ctx.fillStyle = A.c('#3a2418');
+    ctx.beginPath(); ctx.arc(16, -15 + bob, 2, 0, Math.PI * 2); ctx.fill();
+    A.blush(ctx, 8, -13 + bob, 2.2);
+    A.ellipse(ctx, -2, -1, 4, 2.4, '#f0d4b0', null, { lw: 2, hl: false });
+    A.ellipse(ctx, 8, -1, 4, 2.4, '#f0d4b0', null, { lw: 2, hl: false });
+  }
+
+  // 菇菇：服侍女王的小蘑菇侍女，粉紅傘蓋、胸前別著一朵花
+  function mushgirl(ctx, t) {
+    const sway = Math.sin(t * 2) * 0.05;
+    ctx.save();
+    ctx.rotate(sway);
+    A.ellipse(ctx, 0, -12, 11, 13, '#fff4e4', '#e8d8c0', { cel: [2, 2] });
+    A.shape(ctx, (c) => { c.moveTo(-22, -24); c.quadraticCurveTo(-22, -52, 0, -52); c.quadraticCurveTo(22, -52, 22, -24); c.quadraticCurveTo(0, -18, -22, -24); c.closePath(); }, '#ff9fc4', '#e27aa2', { cel: [3, 3] });
+    A.ellipse(ctx, -9, -40, 4, 3, '#fff6fa', null, { noStroke: true, hl: false });
+    A.ellipse(ctx, 8, -44, 3, 2.4, '#fff6fa', null, { noStroke: true, hl: false });
+    A.ellipse(ctx, 12, -33, 2.6, 2, '#fff6fa', null, { noStroke: true, hl: false });
+    const blink = Math.sin(t * 0.8) > 0.96;
+    A.eye(ctx, -4, -14, 2.6, 3.4, blink ? 'closed' : 'normal', 1);
+    A.eye(ctx, 5, -14, 2.6, 3.4, blink ? 'closed' : 'normal', 1);
+    A.blush(ctx, -7, -9, 2.4);
+    A.blush(ctx, 8, -9, 2.4);
+    for (let i = 0; i < 5; i++) A.ellipse(ctx, -6 + Math.cos(i * 1.256) * 3, -2 + Math.sin(i * 1.256) * 3, 2.2, 2.2, '#ffe14a', null, { lw: 1.2, hl: false });
+    A.ellipse(ctx, -6, -2, 1.6, 1.6, '#ff8a3a', null, { noStroke: true, hl: false });
+    ctx.restore();
+  }
+
+  const NPC_DRAW = { owl, hedgehog, squirrel, frog, fawn, mole, turtle, hedgekid, mushgirl };
 
   A.drawNpc = function (ctx, npc, t, marker, noTag) {
     ctx.save();

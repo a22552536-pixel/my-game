@@ -490,6 +490,26 @@
     ctx.restore();
   }
 
+  // 星楓葉：每拿到一片，額頭楓葉旁多一片發光的小葉子；五片圍成一圈就是星楓之冠
+  const CROWN = [[-9, 3, -0.9], [9, 3, 0.9], [-15, 9, -1.4], [15, 9, 1.4], [0, -8, 0]];
+  function leafCrown(ctx, x, y, colors, t) {
+    colors.forEach((col, i) => {
+      if (!col) return;
+      const [dx, dy, rot] = CROWN[i];
+      ctx.save();
+      ctx.translate(x + dx, y + dy + Math.sin(t * 2 + i) * 0.8);
+      ctx.rotate(rot);
+      ctx.globalAlpha *= 0.45 + Math.sin(t * 3 + i) * 0.1;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha /= 0.45 + Math.sin(t * 3 + i) * 0.1;
+      A.shape(ctx, (c) => A.mapleLeafPath(c, 0, 0, 4.5), col, null, { lw: 1.6, hl: false });
+      ctx.restore();
+    });
+  }
+
   function drawTail(ctx, L, x, y, rot, t) {
     ctx.save();
     ctx.translate(x, y);
@@ -694,6 +714,7 @@
     A.ellipse(ctx, hx, hy, 19, 17.5, P.body, P.bodyShade, { cel: [3, 3.5] });
     // 楓葉鬃毛
     mapleTuft(ctx, hx - 1, hy - 20, 9, -0.15, L);
+    if (L.leaves) leafCrown(ctx, hx - 1, hy - 20, L.leaves, st.t || 0);
     // 光環
     if (L.halo) {
       ctx.save();
@@ -815,7 +836,8 @@
 
   // st：{ state, t, p, moving, form }
   A.drawLion = function (ctx, x, y, dir, st) {
-    const L = lookOf(st.form || 'base');
+    let L = lookOf(st.form || 'base');
+    if (st.leaves && st.leaves.length) L = Object.assign({}, L, { leaves: st.leaves });
     ctx.save();
     ctx.translate(x, y);
     if (st.state === 'dead') {

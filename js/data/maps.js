@@ -24,19 +24,22 @@ G.data.maps = {
     ],
     start: { x: 180, p: 0 },
     npcs: [
+      { id: 'turtle', x: 860, p: 0 },
       { id: 'owl', x: 1060, p: 0 },
       { id: 'hedgehog', x: 1230, p: 0 },
-      { id: 'squirrel', x: 1400, p: 0 },
+      { id: 'hedgekid', x: 1310, p: 0 },
+      { id: 'squirrel', x: 1450, p: 0 },
+      { id: 'mushgirl', x: 1640, p: 0 },
     ],
-    camp: { x1: 980, x2: 1480 },
+    camp: { x1: 800, x2: 1700 },
     signs: [
-      { x: 920, p: 0, text: '苔光營地　營火旁邊休息，HP 和 MP 回得比較快。' },
+      { x: 740, p: 0, text: '苔光營地　營火旁邊休息，HP 和 MP 回得比較快。' },
       { x: 2380, p: 0, text: '→ 蘑菇林地　小心會跳的蘑菇。' },
     ],
     mobs: [
-      { m: 'dewsnail', p: 0, n: 4, x1: 420, x2: 900 },
+      { m: 'dewsnail', p: 0, n: 4, x1: 380, x2: 700 },
       { m: 'dewsnail', p: 1, n: 2 },
-      { m: 'dewsnail', p: 0, n: 2, x1: 1700, x2: 2350 },
+      { m: 'dewsnail', p: 0, n: 2, x1: 1820, x2: 2350 },
     ],
   },
 

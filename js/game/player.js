@@ -157,11 +157,11 @@
       this.mpRegenT = (this.mpRegenT || 0) + dt;
       if (this.regenT >= b.hpRegen.every) {
         this.regenT = 0;
-        this.hp = Math.min(this.maxHp, this.hp + Math.max(1, Math.round(this.maxHp * b.hpRegen.pct)));
+        this.hp = Math.min(this.maxHp, this.hp + Math.max(1, Math.round(this.maxHp * b.hpRegen.pct * G.story.hpRegenMult())));
       }
       if (this.mpRegenT >= b.mpRegen.every) {
         this.mpRegenT = 0;
-        this.mp = Math.min(this.maxMp, this.mp + Math.max(1, Math.round(this.maxMp * b.mpRegen.pct)));
+        this.mp = Math.min(this.maxMp, this.mp + Math.max(1, Math.round(this.maxMp * b.mpRegen.pct * G.story.mpRegenMult())));
       }
 
       const canControl = this.hurtT <= 0 && !G.ui.blocking();
@@ -579,6 +579,7 @@
       const rock = this.passive('rockSkin');
       if (rock) dmg = Math.max(1, Math.round(dmg * (1 - rock.reduce)));
       if (this.buffs && this.buffs.guard) dmg = Math.max(1, Math.round(dmg * (1 - this.buffs.guard.v)));
+      if (G.story.guard()) dmg = Math.max(1, Math.round(dmg * (1 - G.story.guard())));
       const shield = this.passive('manaShield');
       if (shield && this.mp > 0) {
         const take = Math.min(Math.floor(this.mp), Math.round(dmg * shield.absorb));
@@ -652,6 +653,7 @@
         moving: state === 'climb' && (I.isDown('up') || I.isDown('down')),
         form: this.form,
         onGround: this.onGround,
+        leaves: G.story.crownColors(),
       });
       ctx.globalAlpha = 1;
       if (!this.dead) G.art.nameTag(ctx, this.x, this.y + 14, '小獅子', '#fff');

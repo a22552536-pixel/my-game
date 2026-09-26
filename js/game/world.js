@@ -203,7 +203,7 @@
       this.zones.length = 0;
       const first = !this.flags[b.id + 'Defeated'];
       this.flags[b.id + 'Defeated'] = true;
-      G.hud.story(G.data.story.bossDefeated[b.id] || '');
+      G.hud.story(b.recall ? G.data.story.recallEnd : G.data.story.bossDefeated[b.id] || '');
       G.music.play(G.music.songFor({ region: this.map.region }));
       G.save.write();
       if (first) {

@@ -38,18 +38,18 @@ G.data.monsters = {
     drops: { gold: [7, 15], equip: 0.04, potion: 0.05, mats: [['vine', 0.38]] },
   },
   woodsnail: {
-    name: '古木蝸', lv: 9, art: 'snail', stage: 3, behavior: 'passive', abilities: ['shell'],
+    name: '古木蝸', lv: 8, art: 'snail', stage: 3, behavior: 'passive', abilities: ['shell'],
     speed: 34, w: 62, h: 50, hpMul: 1.45, atkMul: 1.05,
     drops: { gold: [9, 18], equip: 0.045, potion: 0.05, mats: [['bark', 0.38]] },
   },
   lampshroom: {
-    name: '提燈菇', lv: 10, art: 'mushroom', stage: 3, behavior: 'aggressive', abilities: ['ranged'],
+    name: '提燈菇', lv: 9, art: 'mushroom', stage: 3, behavior: 'aggressive', abilities: ['ranged'],
     speed: 45, w: 54, h: 66, hpMul: 1.1, atkMul: 1.05, sight: 420,
     projectile: { kind: 'spore', speed: 300, cd: 2.6, range: 420 },
     drops: { gold: [10, 20], equip: 0.045, potion: 0.06, mats: [['wick', 0.38]] },
   },
   flowerling: {
-    name: '花冠精', lv: 11, art: 'sprite', stage: 3, behavior: 'aggressive', abilities: ['ranged'],
+    name: '花冠精', lv: 10, art: 'sprite', stage: 3, behavior: 'aggressive', abilities: ['ranged'],
     speed: 55, w: 48, h: 66, hpMul: 1.15, atkMul: 1.05, sight: 440,
     projectile: { kind: 'petal', speed: 380, cd: 2.2, range: 440, count: 3 },
     drops: { gold: [11, 22], equip: 0.045, potion: 0.06, mats: [['petal', 0.38]] },
@@ -57,7 +57,7 @@ G.data.monsters = {
 
   // ── Boss ──
   queenShroom: {
-    name: '菇菇女王', lv: 14, art: 'queen', boss: true,
+    name: '菇菇女王', lv: 12, art: 'queen', boss: true,
     w: 150, h: 190, hp: 3000, atk: 46, def: 10, exp: 900, speed: 70,
     drops: { gold: [250, 350] },
   },

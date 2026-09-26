@@ -100,7 +100,7 @@
         G.art.drawLion(ctx, 0, 0, P.dir, { state: 'idle', t: 0, p: 0, onGround: false, form: showNew ? a.to : a.from });
         G.art.mode = null;
       } else {
-        G.art.drawLion(ctx, 0, 0, P.dir, { state: t < 3 ? 'roar' : 'idle', t, p: Math.min(1, (t - 2.3) / 0.7), onGround: false, form: a.to });
+        G.art.drawLion(ctx, 0, 0, P.dir, { state: t < 3 ? 'roar' : 'idle', t, p: Math.min(1, (t - 2.3) / 0.7), onGround: false, form: a.to, leaves: G.story.crownColors() });
       }
       ctx.restore();
 

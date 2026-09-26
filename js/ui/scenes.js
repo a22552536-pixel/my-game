@@ -12,6 +12,7 @@
 
     toTitle() {
       G.scene = 'title';
+      this.titleSave = null;
       this.titleT = 0;
       G.ui.closeAll();
       G.hud.reset();
@@ -259,16 +260,65 @@
       ctx.fillRect(0, G.H - 140, G.W, 14);
       ctx.fillStyle = '#9a6a42';
       ctx.fillRect(0, G.H - 128, G.W, 128);
+      // 星楓樹：存檔裡拿到幾片葉子，樹上就亮幾盞
+      const save = this.titleSave || (this.titleSave = G.save.peek() || {});
+      const got = (save.world && save.world.flags && save.world.flags.leaves) || {};
+      if (save.world && save.world.flags && save.world.flags.starleaf1) got[1] = true;
+      this.drawStarTree(ctx, G.W - 190, G.H - 140, got, this.titleT);
+      const leaves = [1, 2, 3, 4, 5].map((ch) => (got[ch] ? G.data.story.chapters[ch].leaf.color : null));
       ctx.save();
       ctx.translate(G.W / 2 - 250, G.H - 140);
       ctx.scale(2, 2);
-      A.drawLion(ctx, 0, 0, 1, { state: 'walk', t: this.titleT, p: 0, onGround: true });
+      A.drawLion(ctx, 0, 0, 1, { state: 'walk', t: this.titleT, p: 0, onGround: true, form: (save.player && save.player.form) || 'base', leaves });
       ctx.restore();
       [['snail', 1, 380, 1.6], ['mushroom', 1, 520, 1.6], ['sprite', 2, 250, 1.5]].forEach(([art, stage, dx, sc], i) => {
         const m = { def: { art, stage, name: '' }, x: G.W / 2 + dx, y: G.H - 140, dir: -1, t: this.titleT + i, w: 40, h: 40, scale: sc, onGround: true, vy: 0, hurtT: 0, hurtFlash: 0, dead: false, deadT: 0 };
         A.drawMonster(ctx, m);
       });
       A.drawAtmosphere(ctx, map, cam, this.titleT);
+    },
+
+    drawStarTree(ctx, x, y, got, t) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = A.c('#6b4a30');
+      ctx.beginPath();
+      ctx.moveTo(-18, 0);
+      ctx.quadraticCurveTo(-8, -120, -40, -210);
+      ctx.lineTo(-26, -214);
+      ctx.quadraticCurveTo(4, -150, 8, -200);
+      ctx.lineTo(20, -196);
+      ctx.quadraticCurveTo(14, -110, 22, 0);
+      ctx.closePath();
+      ctx.fill();
+      const n = Object.keys(got).length;
+      const green = n >= 5 ? '#ffb8d8' : '#5f9a52';
+      A.shape(ctx, (c) => {
+        [[-70, -230, 60], [0, -270, 70], [70, -226, 58], [-30, -200, 54], [40, -190, 50]].forEach(([cx, cy, r]) => { c.moveTo(cx + r, cy); c.arc(cx, cy, r, 0, Math.PI * 2); });
+      }, green, n >= 5 ? '#e890b8' : '#4a7e40', { noStroke: true, hl: false });
+      const spots = [[-70, -240], [60, -236], [-20, -290], [30, -200], [0, -250]];
+      [1, 2, 3, 4, 5].forEach((ch, i) => {
+        const [lx, ly] = spots[i];
+        const on = got[ch];
+        const col = G.data.story.chapters[ch].leaf.color;
+        if (on) {
+          const g = ctx.createRadialGradient(lx, ly, 2, lx, ly, 34);
+          g.addColorStop(0, 'rgba(255,255,230,0.9)');
+          g.addColorStop(1, 'rgba(255,255,200,0)');
+          ctx.fillStyle = g;
+          ctx.globalAlpha = 0.7 + Math.sin(t * 2 + i) * 0.2;
+          ctx.beginPath();
+          ctx.arc(lx, ly, 34, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.save();
+        ctx.translate(lx, ly + Math.sin(t * 1.5 + i) * 2);
+        ctx.globalAlpha = on ? 1 : 0.35;
+        A.shape(ctx, (c) => A.mapleLeafPath(c, 0, 0, 13), on ? col : '#3e5a36', null, { lw: 2, hl: false });
+        ctx.restore();
+      });
+      ctx.restore();
     },
   });
 
