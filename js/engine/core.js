@@ -64,6 +64,11 @@
     _rgbCache: {},
     hexToRgb(hex) {
       if (this._rgbCache[hex]) return this._rgbCache[hex];
+      if (hex[0] === 'r') {
+        const m = hex.match(/[\d.]+/g).map(Number);
+        this._rgbCache[hex] = [m[0], m[1], m[2]];
+        return this._rgbCache[hex];
+      }
       let h = hex.replace('#', '');
       if (h.length === 3) h = h.split('').map((c) => c + c).join('');
       const n = parseInt(h, 16);
@@ -72,7 +77,7 @@
       return rgb;
     },
     mix(hexA, hexB, t) {
-      if (typeof hexA !== 'string' || hexA[0] !== '#') return hexA;
+      if (typeof hexA !== 'string' || (hexA[0] !== '#' && hexA.slice(0, 4) !== 'rgb(')) return hexA;
       const a = this.hexToRgb(hexA);
       const b = this.hexToRgb(hexB);
       const r = Math.round(a[0] + (b[0] - a[0]) * t);

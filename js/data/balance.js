@@ -31,7 +31,7 @@ G.data.balance = {
     const c = this.forms[form] || this.forms.base;
     return {
       maxHp: Math.round((50 + 16 * lv) * c.hp),
-      maxMp: Math.round((20 + 7 * lv) * c.mp),
+      maxMp: Math.round((30 + 9 * lv) * c.mp),
       atk: (5 + 2 * lv) * c.atk,
       def: lv * 0.5,
       crit: c.crit,
@@ -61,6 +61,10 @@ G.data.balance = {
   dropLifetime: 120,
   potionCooldown: 0.5,
   bagSize: 30,
+
+  // ── 自然回復 ──
+  hpRegen: { every: 5, pct: 0.02 },
+  mpRegen: { every: 2, pct: 0.02 },
 
   // ── 其他 ──
   autosaveInterval: 30,

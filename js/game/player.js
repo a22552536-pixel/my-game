@@ -124,6 +124,7 @@
       if (this.potCd > 0) this.potCd -= dt;
       if (this.landT > 0) this.landT -= dt;
       if (this.slowT > 0) this.slowT -= dt;
+      if (this.glowT > 0) this.glowT -= dt;
 
       if (this.dead) {
         this.deadT += dt;
@@ -132,12 +133,17 @@
         return;
       }
 
-      // 緩慢自然回復
+      // 自然回復：HP 慢、MP 快
+      const b = B();
       this.regenT += dt;
-      if (this.regenT >= 5) {
+      this.mpRegenT = (this.mpRegenT || 0) + dt;
+      if (this.regenT >= b.hpRegen.every) {
         this.regenT = 0;
-        this.hp = Math.min(this.maxHp, this.hp + Math.max(1, Math.round(this.maxHp * 0.02)));
-        this.mp = Math.min(this.maxMp, this.mp + Math.max(1, Math.round(this.maxMp * 0.03)));
+        this.hp = Math.min(this.maxHp, this.hp + Math.max(1, Math.round(this.maxHp * b.hpRegen.pct)));
+      }
+      if (this.mpRegenT >= b.mpRegen.every) {
+        this.mpRegenT = 0;
+        this.mp = Math.min(this.maxMp, this.mp + Math.max(1, Math.round(this.maxMp * b.mpRegen.pct)));
       }
 
       const canControl = this.hurtT <= 0 && !G.ui.blocking();
@@ -317,13 +323,17 @@
       }
       this.mp -= cost;
       if (S.type === 'dash') {
-        this.action = { type: 'dash', id, lv, t: 0, dur: S.dashTime, hits: [] };
+        this.action = { type: 'dash', id, lv, t: 0, dur: S.dashTime, hits: [], ghostT: 0 };
+        this.glowT = 0.35;
+        if (this.onGround) G.fx.dust(this.x, this.y, this.dir, 10);
         this.vx = this.dir * S.dashSpeed;
         this.vy = Math.min(this.vy, 0) * 0.3;
         G.audio.play('skill');
         G.fx.burst(this.x, this.y - 10, ['#fff3c0', '#ffd27a'], 8, 160, { angle: this.dir > 0 ? Math.PI : 0, spread: 0.6 });
       } else if (S.type === 'area') {
         this.action = { type: 'roar', id, lv, t: 0, dur: S.castTime, hitAt: S.hitAt, done: false };
+        this.glowT = 0.5;
+        G.fx.sparkle(this.x, this.y - 40, '#fff0b0', 8, 26);
         G.audio.play('roar');
       }
     },
@@ -336,7 +346,8 @@
           a.done = true;
           const BA = G.data.basicAttack;
           const box = this.frontBox(BA.range.w, BA.range.h);
-          G.fx.slash(this.x + this.dir * 34, this.y - 30, this.dir, 30, '#fff8e0', 'claw');
+          G.fx.slash(this.x + this.dir * 34, this.y - 30, this.dir, 34, '#fff8e0', 'claw');
+          G.fx.slash(this.x + this.dir * 38, this.y - 30, this.dir, 26, 'rgba(255,214,120,0.9)', 'claw');
           G.combat.playerHit(box, BA.targets, BA.mult, { knock: BA.knock, heavy: false });
         }
       } else if (a.type === 'roar') {
@@ -344,20 +355,41 @@
           a.done = true;
           const S = G.data.skills[a.id];
           const box = this.frontBox(S.range.w, S.range.h);
-          for (let i = 0; i < 3; i++) {
-            G.fx.rings.push({ x: this.x + this.dir * 30, y: this.y - 36, color: 'rgba(255,240,180,0.9)', r: 10, maxR: 90 + i * 40, t: -i * 0.06, life: 0.35, w: 5 - i });
+          const mx = this.x + this.dir * 26;
+          const my = this.y - 38;
+          for (let i = 0; i < 3; i++) G.fx.wave(mx, my, this.dir, S.range.w * (0.75 + i * 0.25), '255,236,170', i * 0.07);
+          G.fx.impact(mx, my, 60, '#fff0b0');
+          // 被吼飛的葉子與塵土
+          for (let i = 0; i < 14; i++) {
+            G.fx.particles.push({
+              x: mx + U.rand(0, 40) * this.dir, y: my + U.rand(-40, 40),
+              vx: this.dir * U.rand(250, 650), vy: U.rand(-120, 80),
+              life: U.rand(0.35, 0.7), t: 0, size: U.rand(3, 6),
+              color: U.pick(['#9fd66a', '#c8e89a', '#fff3c0']), grav: 150, shape: 'square', drag: 2.5,
+            });
           }
-          G.fx.shake(3, 0.15);
+          G.fx.shake(5, 0.2);
+          G.fx.kick(this.dir * 6, 0);
           G.combat.playerHit(box, S.targets, S.mult(a.lv), { knock: S.knock, heavy: true });
         }
       } else if (a.type === 'dash') {
         const S = G.data.skills[a.id];
         this.vx = this.dir * S.dashSpeed * (1 - (a.t / a.dur) * 0.4);
         this.vy = 0;
-        if (Math.random() < 0.6) G.fx.burst(this.x - this.dir * 20, this.y - 20, ['#fff3c0', '#ffe39a'], 1, 60, { life: 0.3, grav: 0 });
+        a.ghostT -= dt;
+        if (a.ghostT <= 0) {
+          a.ghostT = 0.035;
+          G.fx.ghost(this.x, this.y, this.dir, { state: 'dash', t: this.t, p: 0 }, '#ffd98a');
+        }
+        // 速度線
+        G.fx.streak(this.x - this.dir * U.rand(30, 70), this.y - U.rand(10, 55), this.dir > 0 ? 0 : Math.PI, U.rand(50, 90), 'rgba(255,245,210,0.9)', 2);
         const box = { x: this.x - 26, y: this.y - this.h, w: 52, h: this.h };
         G.combat.playerDashHit(box, a, S.targets, S.mult(a.lv));
-        if (a.t >= a.dur) this.vx = this.dir * 120;
+        if (a.t >= a.dur) {
+          this.vx = this.dir * 120;
+          G.fx.ring(this.x + this.dir * 20, this.y - 28, 'rgba(255,240,190,0.9)', 46, 0.2, 3);
+          if (this.onGround) G.fx.dust(this.x, this.y, -this.dir, 6);
+        }
       }
       if (a.t >= a.dur) this.action = null;
     },
@@ -446,6 +478,17 @@
       else if (!this.onGround) state = this.vy < 0 ? 'jump' : 'fall';
       else if (Math.abs(this.vx) > 20) state = 'walk';
 
+      if (this.glowT > 0) {
+        // 施放技能時身上的光
+        const k = this.glowT;
+        const g = ctx.createRadialGradient(this.x, this.y - 34, 4, this.x, this.y - 34, 70);
+        g.addColorStop(0, 'rgba(255,240,170,' + Math.min(0.7, k * 1.6).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,240,170,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 34, 70, 0, Math.PI * 2);
+        ctx.fill();
+      }
       if (this.invT > 0 && !this.dead && Math.floor(this.invT * 12) % 2 === 0) ctx.globalAlpha = 0.45;
       G.art.drawLion(ctx, this.x, this.y, this.dir, {
         state,

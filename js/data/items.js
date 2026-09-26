@@ -67,8 +67,8 @@ G.data.items = {
   },
 
   potions: {
-    hp: { name: '紅漿果', desc: '回復 150 HP', heal: 150, price: 20 },
-    mp: { name: '藍花蜜', desc: '回復 80 MP', heal: 80, price: 25 },
+    hp: { name: '紅漿果', desc: '回復 150 HP', heal: 150, price: 12 },
+    mp: { name: '藍花蜜', desc: '回復 80 MP', heal: 80, price: 15 },
   },
 
   questItems: {

@@ -54,6 +54,7 @@
     this.stackN = 0;
     this.stackT = 0;
     this.touchCd = 0;
+    this.squash = 0;
     this.abil = {};
     (d.abilities || []).forEach((a) => (this.abil[a] = true));
   }
@@ -135,6 +136,7 @@
     if (this.hpShowT > 0) this.hpShowT -= dt;
     if (this.landT > 0) this.landT -= dt;
     if (this.touchCd > 0) this.touchCd -= dt;
+    if (this.squash > 0) this.squash = Math.max(0, this.squash - dt * 7);
     this.blink = Math.sin(this.t * 1.7 + this.x) > 0.985;
 
     if (this.dead) {

@@ -11,6 +11,12 @@
     slashes: [],
     rings: [],
     bolts: [],
+    impacts: [],
+    streaks: [],
+    ghosts: [],
+    waves: [],
+    kickX: 0,
+    kickY: 0,
     hitstop: 0,
     shakeMag: 0,
     shakeT: 0,
@@ -27,6 +33,11 @@
       this.slashes.length = 0;
       this.rings.length = 0;
       this.bolts.length = 0;
+      this.impacts.length = 0;
+      this.streaks.length = 0;
+      this.ghosts.length = 0;
+      this.waves.length = 0;
+      this.kickX = this.kickY = 0;
       this.hitstop = 0;
       this.shakeT = 0;
       this.flash = 0;
@@ -115,6 +126,45 @@
       this.rings.push({ x, y, color, r: 4, maxR: maxR || 80, t: 0, life: life || 0.4, w: width || 4 });
     },
 
+    // 命中瞬間的星形爆光
+    impact(x, y, size, color) {
+      this.impacts.push({ x, y, size: size || 40, color: color || '#ffffff', t: 0, life: 0.16, rot: Math.random() * Math.PI });
+    },
+
+    // 劃過目標的白色光痕
+    streak(x, y, angle, len, color, width) {
+      this.streaks.push({ x, y, a: angle, len: len || 90, color: color || '#ffffff', w: width || 6, t: 0, life: 0.14 });
+    },
+
+    // 殘影（飛撲時留下的獅子影子）
+    ghost(x, y, dir, st, color) {
+      this.ghosts.push({ x, y, dir, st: Object.assign({}, st), color: color || '#ffd98a', t: 0, life: 0.28 });
+    },
+
+    // 扇形聲波
+    wave(x, y, dir, reach, color, delay) {
+      this.waves.push({ x, y, dir, reach: reach || 180, color: color || '255,236,170', t: -(delay || 0), life: 0.32 });
+    },
+
+    // 朝某個方向的鏡頭推力
+    kick(dx, dy) {
+      this.kickX += dx;
+      this.kickY += dy;
+    },
+
+    // 塵土
+    dust(x, y, dir, n) {
+      for (let i = 0; i < (n || 8); i++) {
+        this.particles.push({
+          x: x + U.rand(-8, 8), y: y - 2,
+          vx: -dir * U.rand(40, 200), vy: U.rand(-140, -30),
+          life: U.rand(0.3, 0.55), t: 0, size: U.rand(4, 8),
+          color: U.pick(['rgba(230,215,180,0.9)', 'rgba(205,185,150,0.9)']),
+          grav: 200, shape: 'circle', drag: 3,
+        });
+      }
+    },
+
     bolt(x, yTop, yBottom) {
       const pts = [];
       let cx = x;
@@ -164,9 +214,59 @@
         r.r = 4 + (r.maxR - 4) * Math.max(0, Math.min(1, r.t / r.life));
       });
       step(this.bolts);
+      step(this.impacts);
+      step(this.streaks);
+      step(this.ghosts);
+      for (let i = this.waves.length - 1; i >= 0; i--) {
+        const w = this.waves[i];
+        w.t += dt;
+        if (w.t >= w.life) this.waves.splice(i, 1);
+      }
+      const k = Math.pow(0.0005, dt);
+      this.kickX *= k;
+      this.kickY *= k;
+    },
+
+    drawGhosts(ctx) {
+      for (const g of this.ghosts) {
+        const k = g.t / g.life;
+        ctx.globalAlpha = 0.45 * (1 - k);
+        G.art.mode = 'tint';
+        G.art.modeColor = g.color;
+        G.art.drawLion(ctx, g.x, g.y, g.dir, g.st);
+        G.art.mode = null;
+      }
+      ctx.globalAlpha = 1;
     },
 
     drawWorld(ctx) {
+      // 聲波
+      for (const w of this.waves) {
+        if (w.t < 0) continue;
+        const k = w.t / w.life;
+        const r = 30 + w.reach * Math.sqrt(k);
+        ctx.save();
+        ctx.translate(w.x, w.y);
+        ctx.scale(w.dir, 1);
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(0, 0, r * 0.55, 0, 0, r);
+        g.addColorStop(0, 'rgba(' + w.color + ',0)');
+        g.addColorStop(0.8, 'rgba(' + w.color + ',' + (0.55 * (1 - k)).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + w.color + ',0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, -0.75, 0.75);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,' + (0.8 * (1 - k)).toFixed(3) + ')';
+        ctx.lineWidth = 4 * (1 - k) + 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.92, -0.6, 0.6);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // 光柱
       for (const p of this.pillars) {
         const k = p.t / p.life;
@@ -209,6 +309,48 @@
         ctx.restore();
       }
       ctx.globalAlpha = 1;
+
+      // 命中光痕與星形爆光
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const s of this.streaks) {
+        const k = s.t / s.life;
+        const len = s.len * (0.4 + k * 0.8);
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.a);
+        ctx.globalAlpha = 1 - k;
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.moveTo(-len / 2, 0);
+        ctx.quadraticCurveTo(0, -s.w * (1 - k), len / 2, 0);
+        ctx.quadraticCurveTo(0, s.w * (1 - k), -len / 2, 0);
+        ctx.fill();
+        ctx.restore();
+      }
+      for (const im of this.impacts) {
+        const k = im.t / im.life;
+        const r = im.size * (0.5 + k * 0.8);
+        ctx.save();
+        ctx.translate(im.x, im.y);
+        ctx.rotate(im.rot);
+        ctx.globalAlpha = 1 - k;
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+        g.addColorStop(0, '#ffffff');
+        g.addColorStop(0.35, im.color);
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        const n = 8;
+        for (let i = 0; i <= n * 2; i++) {
+          const a = (i / (n * 2)) * Math.PI * 2;
+          const rr = i % 2 ? r * 0.28 : r * (i % 4 ? 0.75 : 1);
+          i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(rr, 0);
+        }
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
 
       for (const r of this.rings) {
         if (r.t < 0) continue;

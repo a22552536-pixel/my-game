@@ -349,7 +349,7 @@
       G.art.drawBackground(ctx, map, cam, t);
 
       ctx.save();
-      ctx.translate(-Math.round(cam.x + G.fx.shakeX), -Math.round(cam.y + G.fx.shakeY));
+      ctx.translate(-Math.round(cam.x + G.fx.shakeX + G.fx.kickX), -Math.round(cam.y + G.fx.shakeY + G.fx.kickY));
 
       map.ropes.forEach((r) => G.art.drawRope(ctx, r, t));
       G.art.drawPlatforms(ctx, map, cam);
@@ -361,6 +361,7 @@
       G.loot.draw(ctx, t);
       this.monsters.forEach((m) => m.draw(ctx));
       if (this.boss) this.boss.draw(ctx);
+      G.fx.drawGhosts(ctx);
       G.player.draw(ctx);
       this.projectiles.forEach((p) => G.art.drawProjectile(ctx, p, t));
       G.fx.drawWorld(ctx);

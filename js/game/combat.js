@@ -55,6 +55,11 @@
       const cy = m.y - m.h * (m.scale || 1) * 0.5;
       G.fx.burst(cx, cy, r.crit ? ['#fff', '#ffd27a', '#ff8a3a'] : ['#fff', '#fff3c0'], r.crit ? 12 : 7, r.crit ? 320 : 220, { life: 0.35 });
       G.fx.ring(cx, cy, 'rgba(255,255,255,0.8)', r.crit ? 50 : 34, 0.18, 3);
+      G.fx.impact(cx + U.rand(-8, 8), cy + U.rand(-8, 8), r.crit ? 78 : opts.heavy ? 58 : 44, r.crit ? '#ffc23a' : opts.heavy ? '#ffe08a' : '#fff3c8');
+      G.fx.streak(cx, cy, dir > 0 ? U.rand(-0.7, -0.3) : Math.PI + U.rand(0.3, 0.7), r.crit ? 130 : 95, r.crit ? '#ffe7a0' : '#ffffff', r.crit ? 9 : 6);
+      if (r.crit) G.fx.burst(cx, cy, ['#ffe066', '#ffffff'], 6, 380, { shape: 'star', size: 5, life: 0.4, grav: 300 });
+      G.fx.kick(dir * (r.crit ? 7 : opts.heavy ? 5 : 3), r.crit ? -2 : 0);
+      m.squash = 1;
       if (r.crit) {
         G.fx.addHitstop(b.hitstop.heavy);
         G.fx.shake(b.shake.crit[0], b.shake.crit[1]);
