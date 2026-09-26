@@ -166,6 +166,12 @@
       return this.deadT >= 0.5;
     }
 
+    // 燃燒、冰凍
+    if (G.skillExec.status(this, dt)) {
+      G.physics.step(this, dt, G.world.map);
+      return false;
+    }
+    if (this.dead) return false;
     // 暈眩：不能動也不能攻擊
     if (this.stunT > 0) {
       this.stunT -= dt;
@@ -336,6 +342,7 @@
 
   Monster.prototype.draw = function (ctx) {
     G.art.drawMonster(ctx, this);
+    if (!this.dead && G.art.drawStatus) G.art.drawStatus(ctx, this, this.t);
     if (this.dead) return;
     const top = this.y - this.h * this.scale - 12;
     if (this.hpShowT > 0 || this.elite) {

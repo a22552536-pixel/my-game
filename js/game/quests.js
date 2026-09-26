@@ -23,6 +23,28 @@
       return true;
     },
 
+    // 任務屬於哪一章：看發任務的 NPC 最早出現在哪張地圖
+    chapterOf(id) {
+      const npc = this.def(id).npc;
+      for (const mid of G.data.mapOrder) {
+        const m = G.data.maps[mid];
+        if ((m.npcs || []).some((n) => n.id === npc)) return m.region;
+      }
+      return 1;
+    },
+
+    // 這一章的委託（不含主線）完成了幾個
+    chapterProgress(region) {
+      let total = 0;
+      let done = 0;
+      for (const id in G.data.quests) {
+        if (this.def(id).main || this.chapterOf(id) !== region) continue;
+        total++;
+        if (this.state[id] === 'done') done++;
+      }
+      return { done, total };
+    },
+
     forNpc(npcId) {
       const out = [];
       for (const id in G.data.quests) if (this.def(id).npc === npcId) out.push(id);

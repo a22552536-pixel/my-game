@@ -57,6 +57,13 @@
       A.ellipse(ctx, 0, 13, 12, 3.5, '#c89a5a', null, { lw: 2, hl: false });
       G.hud.text(ctx, '!', 0, 1, 18, '#e0503a', 'center', false);
     }),
+    // 圖鑑：翻開的書＋星星
+    codex: () => draw((ctx) => {
+      A.shape(ctx, (c) => { c.moveTo(0, -9); c.quadraticCurveTo(-8, -14, -16, -11); c.lineTo(-16, 12); c.quadraticCurveTo(-8, 9, 0, 14); c.closePath(); }, '#6fa0e0', '#4a78c0', { lw: 2, hl: false });
+      A.shape(ctx, (c) => { c.moveTo(0, -9); c.quadraticCurveTo(8, -14, 16, -11); c.lineTo(16, 12); c.quadraticCurveTo(8, 9, 0, 14); c.closePath(); }, '#fff3d0', '#e8d4a0', { lw: 2, hl: false });
+      A.ellipse(ctx, -8, 0, 4, 5, '#1d1330', null, { lw: 1, hl: false });
+      G.hud.text(ctx, '★', 8, 2, 13, '#e0a020', 'center', false);
+    }),
   };
 
   const LIST = [
@@ -65,6 +72,7 @@
     ['forms', '形態'],
     ['worldmap', '地圖'],
     ['quests', '任務'],
+    ['codex', '圖鑑'],
   ];
 
   const H = (G.hudIcons = {
@@ -110,6 +118,7 @@
         b.textContent = txt || '';
         b.classList.toggle('hide', !txt);
       };
+      G.codex.note('forms', P.form);
       set('skills', P.sp > 0 ? String(P.sp) : '');
       set('forms', G.evolve.canEvolve() ? '↑' : '');
       const ready = Object.keys(G.quests.state).filter((id) => G.quests.state[id] === 'ready').length;

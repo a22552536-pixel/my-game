@@ -196,7 +196,8 @@
         const w = 290;
         const h = 22 + tr.length * 40;
         this.panel(ctx, W - w - 8, 8, w, h, 10);
-        this.text(ctx, '任務', W - w + 4, 22, 13, '#ffe9b0');
+        const pr = G.world.map ? G.quests.chapterProgress(G.world.map.region) : null;
+        this.text(ctx, '任務' + (pr && pr.total ? '　本章委託 ' + pr.done + ' / ' + pr.total + (pr.done >= pr.total ? '（Boss 房已開放）' : '') : ''), W - w + 4, 22, 13, '#ffe9b0');
         tr.forEach((q, i) => {
           const y = 44 + i * 40;
           this.text(ctx, q.name, W - w + 4, y, 13, q.ready ? '#7dff7a' : '#ffffff');
@@ -256,7 +257,7 @@
       }
 
       // ── 故事文字 ──
-      if (this.storyLine && !G.story.cer) {
+      if (this.storyLine && !G.story.cer && !G.cut.active()) {
         const s = this.storyLine;
         const a = s.t < 0.6 ? s.t / 0.6 : s.t > s.life - 0.8 ? (s.life - s.t) / 0.8 : 1;
         ctx.globalAlpha = Math.max(0, a);

@@ -91,6 +91,7 @@
     if (this.touchCd > 0) this.touchCd -= dt;
     if (this.squash > 0) this.squash = Math.max(0, this.squash - dt * 7);
     this.blink = Math.sin(this.t * 1.3) > 0.985;
+    if (!this.dead) G.skillExec.status(this, dt);
 
     if (this.dead) {
       this.deadT += dt;

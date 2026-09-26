@@ -20,6 +20,7 @@ G.data.keys = {
     ['quests', '任務'],
     ['forms', '切換形態'],
     ['worldmap', '世界地圖'],
+    ['codex', '圖鑑'],
   ],
   defaults: {
     left: 'ArrowLeft',
@@ -41,6 +42,7 @@ G.data.keys = {
     quests: 'KeyJ',
     forms: 'KeyV',
     worldmap: 'KeyM',
+    codex: 'KeyB',
   },
   skillSlots: ['skill1', 'skill2', 'skill3', 'skill4', 'skill5', 'skill6'],
   // Esc 保留給選單；其餘會和瀏覽器功能衝突

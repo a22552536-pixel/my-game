@@ -170,8 +170,31 @@
   G.gallery = {
     W: GW,
     H: GH,
-    draw(ctx, t) {
+    // known：null＝全部顯示（試玩模式）；{ forms, mobs }＝圖鑑，沒遇過的畫成黑色剪影
+    draw(ctx, t, known) {
       const F = G.data.forms;
+      const hid = (kind, id) => !!known && !known[kind][id];
+      // 沒遇過的：先畫到離屏畫布，再整個塗成深色，得到乾淨的剪影
+      const sil = (hidden, bx, by, bw, bh, fn) => {
+        if (!hidden) return fn(ctx);
+        const oc = G.gallery.off || (G.gallery.off = document.createElement('canvas'));
+        if (oc.width < bw || oc.height < bh) {
+          oc.width = Math.max(oc.width, bw);
+          oc.height = Math.max(oc.height, bh);
+        }
+        const o = oc.getContext('2d');
+        o.setTransform(1, 0, 0, 1, 0, 0);
+        o.globalCompositeOperation = 'source-over';
+        o.clearRect(0, 0, oc.width, oc.height);
+        o.setTransform(1, 0, 0, 1, -bx, -by);
+        fn(o);
+        o.setTransform(1, 0, 0, 1, 0, 0);
+        o.globalCompositeOperation = 'source-in';
+        o.fillStyle = '#2a2140';
+        o.fillRect(0, 0, bw, bh);
+        o.globalCompositeOperation = 'source-over';
+        ctx.drawImage(oc, 0, 0, bw, bh, bx, by, bw, bh);
+      };
       const M = G.data.monsters;
       ctx.save();
       const bg = ctx.createLinearGradient(0, 0, 0, GH);
@@ -195,12 +218,14 @@
       // 進化形態
       title('小獅子的進化（一轉 Lv10 → 四轉 Lv40）', 50);
       card(40, 100, 250, 330, '#d8b070');
-      ctx.save();
-      ctx.translate(165, 360);
-      ctx.scale(2, 2);
-      A.drawLion(ctx, 0, 0, 1, { state: 'idle', t, p: 0, onGround: true, form: 'base' });
-      ctx.restore();
-      label('小獅子', 165, 392, '#6a3a0a', 22);
+      sil(hid('forms', 'base'), 40, 100, 250, 290, (c) => {
+        c.save();
+        c.translate(165, 360);
+        c.scale(2, 2);
+        A.drawLion(c, 0, 0, 1, { state: 'idle', t, p: 0, onGround: true, form: 'base' });
+        c.restore();
+      });
+      label(hid('forms', 'base') ? '？？？' : '小獅子', 165, 392, '#6a3a0a', 22);
       label('基本型', 165, 416, '#8a735c', 15);
       ['might', 'magic', 'agile'].forEach((line, r) => {
         const y0 = 100 + r * 175;
@@ -209,12 +234,15 @@
           const id = line + k;
           const x = 330 + (k - 1) * 360;
           card(x, y0 + 34, 340, 134, LINE_COLOR[line]);
-          ctx.save();
-          ctx.translate(x + 90, y0 + 150);
-          ctx.scale(1.25, 1.25);
-          A.drawLion(ctx, 0, 0, 1, { state: 'idle', t: t + k, p: 0, onGround: true, form: id });
-          ctx.restore();
-          G.hud.text(ctx, F[id].name, x + 190, y0 + 80, 22, '#4a2e1f', 'left', false);
+          const fs = 1.25 * Math.min(1, 1.02 / (F[id].scale || 1));
+          sil(hid('forms', id), x, y0 + 10, 190, 165, (c) => {
+            c.save();
+            c.translate(x + 90, y0 + 156);
+            c.scale(fs, fs);
+            A.drawLion(c, 0, 0, 1, { state: 'idle', t: t + k, p: 0, onGround: true, form: id });
+            c.restore();
+          });
+          G.hud.text(ctx, hid('forms', id) ? '？？？' : F[id].name, x + 190, y0 + 80, 22, '#4a2e1f', 'left', false);
           G.hud.text(ctx, k + '轉 · Lv' + k * 10, x + 190, y0 + 108, 15, '#8a735c', 'left', false);
         }
       });
@@ -236,14 +264,16 @@
           const m = fakeMonster(d.art, d.stage, t + i * 0.7);
           m.w = d.w;
           m.h = d.h;
-          ctx.save();
-          ctx.translate(x + 90, y0 + 170);
           const sc = Math.min(1.7, 110 / Math.max(d.h, d.w * 0.8));
-          ctx.scale(sc, sc);
-          A.drawMonster(ctx, m);
-          ctx.restore();
-          label(d.name, x + 90, y0 + 190, '#4a2e1f', 17);
-          label('Lv.' + d.lv, x + 90, y0 + 208, '#8a735c', 13);
+          sil(hid('mobs', id), x, y0 + 32, 180, 150, (c) => {
+            c.save();
+            c.translate(x + 90, y0 + 170);
+            c.scale(sc, sc);
+            A.drawMonster(c, m);
+            c.restore();
+          });
+          label(hid('mobs', id) ? '？？？' : d.name, x + 90, y0 + 190, '#4a2e1f', 17);
+          label(hid('mobs', id) ? '還沒打倒過' : 'Lv.' + d.lv, x + 90, y0 + 208, '#8a735c', 13);
         });
       });
 
@@ -259,12 +289,14 @@
         m.def.boss = true;
         m.isBoss = true;
         m.state = 'walk';
-        ctx.save();
-        ctx.translate(x + 160, 1670);
-        ctx.scale(0.78, 0.78);
-        A.drawMonster(ctx, m);
-        ctx.restore();
-        G.hud.text(ctx, d.name, x + 360, 1560, 26, '#8a2020', 'left', false);
+        sil(hid('mobs', id), x, 1440, 360, 250, (c) => {
+          c.save();
+          c.translate(x + 160, 1670);
+          c.scale(0.78, 0.78);
+          A.drawMonster(c, m);
+          c.restore();
+        });
+        G.hud.text(ctx, hid('mobs', id) ? '？？？' : d.name, x + 360, 1560, 26, '#8a2020', 'left', false);
         G.hud.text(ctx, '第' + '一二三'[ch - 1] + '章 Boss', x + 360, 1596, 16, '#8a735c', 'left', false);
         G.hud.text(ctx, 'Lv.' + d.lv, x + 360, 1620, 16, '#8a735c', 'left', false);
       });
@@ -284,7 +316,7 @@
       const tick = () => {
         if (!c.isConnected) return;
         t += 1 / 60;
-        G.gallery.draw(ctx, t);
+        G.gallery.draw(ctx, t, c.classList.contains('codex-canvas') ? G.codex.known() : null);
         requestAnimationFrame(tick);
       };
       tick();

@@ -123,7 +123,10 @@
         G.fx.text(this.x, this.y - 120, 'LEVEL UP!', '#ffe14a', 34, 1.8);
         G.audio.play('levelup');
         G.hud.toast('等級提升到 Lv.' + this.level + '！獲得 ' + ups + ' 點技能點（點左上角的「技能」圖示分配）', '#ffe14a');
-        if (G.evolve.canEvolve()) G.hud.toast('力量滿出來了……可以進化了！回營地找長輩（刺蝟婆婆、海豹爺爺、老猴子）', '#ffb0f0');
+        if (G.evolve.canEvolve()) {
+          G.hud.toast('胸口有什麼在發燙……好像聽見了自己的聲音', '#ffb0f0');
+          G.cut.pendingVoice = true;
+        }
         G.save.write();
       }
     },

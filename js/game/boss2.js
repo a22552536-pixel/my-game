@@ -48,6 +48,7 @@
     },
     tickCommon(dt) {
       this.t += dt;
+      if (!this.dead) G.skillExec.status(this, dt);
       if (this.hurtFlash > 0) this.hurtFlash -= dt;
       if (this.stackT > 0) this.stackT -= dt;
       if (this.touchCd > 0) this.touchCd -= dt;

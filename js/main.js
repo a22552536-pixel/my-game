@@ -33,6 +33,12 @@
     G.hudIcons.update(dt);
     G.demo.update();
     if (G.scene === 'play') {
+      G.cut.tick();
+      if (G.cut.update(dt)) {
+        G.fx.update(dt);
+        G.hud.update(dt);
+        return;
+      }
       if (G.story.updateCeremony(dt)) {
         G.fx.update(dt);
         G.hud.update(dt);
@@ -64,6 +70,7 @@
       G.tutorial.draw(ctx);
       G.evolve.draw(ctx);
       G.story.drawCeremony(ctx);
+      G.cut.draw(ctx);
       G.fx.drawScreen(ctx);
       if (G.world.fade > 0) {
         ctx.fillStyle = 'rgba(0,0,0,' + G.world.fade + ')';

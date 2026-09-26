@@ -32,7 +32,7 @@
         return;
       }
       // 背包、技能、任務、商店互斥，只留一個
-      const panels = ['inventory', 'skills', 'quests', 'shop', 'forms', 'worldmap'];
+      const panels = ['inventory', 'skills', 'quests', 'shop', 'forms', 'worldmap', 'codex'];
       if (panels.indexOf(name) >= 0) panels.forEach((p) => this.isOpen(p) && this.close(p));
       this.stack.push(name);
       const el = document.createElement('div');
@@ -71,7 +71,7 @@
 
     toggle(name) {
       if (this.isOpen(name)) this.close(name);
-      else if (!this.blocking() || ['inventory', 'skills', 'quests', 'forms', 'worldmap'].indexOf(this.top()) >= 0) this.open(name);
+      else if (!this.blocking() || ['inventory', 'skills', 'quests', 'forms', 'worldmap', 'codex'].indexOf(this.top()) >= 0) this.open(name);
     },
 
     refresh() {
@@ -113,6 +113,7 @@
       else if (I.wasPressed('quests')) this.toggle('quests');
       else if (I.wasPressed('forms')) this.toggle('forms');
       else if (I.wasPressed('worldmap')) this.toggle('worldmap');
+      else if (I.wasPressed('codex')) this.toggle('codex');
       else if (this.isOpen('dialogue') && (I.wasPressed('up') || I.wasPressed('jump'))) this.close('dialogue');
     },
 
@@ -447,11 +448,6 @@
             else if (st === 'active') btns += '<button data-act="progQ" data-arg="' + id + '">「' + q.name + '」進行中</button>';
             else if (Q.available(id)) btns += '<button class="primary' + (tutAccept ? ' tut-glow' : '') + '" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
           });
-        }
-        // 各營地的長輩可以幫忙進化：每 10 級一次，不用先打 Boss
-        const nt = G.evolve.nextTier();
-        if (def.evolver && nt <= 4 && (G.evolve.canEvolve() || G.player.level >= nt * 10 - 3)) {
-          btns += G.evolve.canEvolve() ? '<button class="primary evolve-btn" data-act="openEvolve">✦ ' + ['一', '二', '三', '四'][nt - 1] + '轉進化</button>' : '<button disabled>進化（' + G.evolve.missing() + '）</button>';
         }
         if (def.role === 'shop') btns += '<button class="primary" data-act="openShop">交易</button>';
         if (def.role === 'travel') {
@@ -797,13 +793,14 @@
       const P = G.player;
       const FS = G.formSwitch;
       const opts = FS.options(P);
+      const voice = G.evolve.canEvolve() ? '<div class="evo-voice"><button class="primary evolve-btn" data-act="hearVoice">✦ 聆聽內心的聲音（' + ['一', '二', '三', '四'][G.evolve.nextTier() - 1] + '轉進化）</button></div>' : '';
       let h;
       if (!opts.length) {
-        h = '<div class="evo-intro">Lv10 第一次進化之後，就可以在三種形態之間自由切換。<br>每種形態有自己的技能頁：技能等級、技能點、技能欄都分開保存，升級拿到的技能點三頁都會加。</div>';
+        h = voice + '<div class="evo-intro">Lv10 第一次進化之後，就可以在三種形態之間自由切換。<br>每種形態有自己的技能頁：技能等級、技能點、技能欄都分開保存，升級拿到的技能點三頁都會加。</div>';
         return this.frame('切換形態', h, 'evolve');
       }
       const why = FS.canSwitch(P);
-      h = '<div class="evo-intro">三種形態隨時可以切換（冷卻 ' + FS.COOLDOWN + ' 秒）。每種形態有自己的技能頁，升級拿到的技能點三頁都會加。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
+      h = voice + '<div class="evo-intro">三種形態隨時可以切換（冷卻 ' + FS.COOLDOWN + ' 秒）。每種形態有自己的技能頁，升級拿到的技能點三頁都會加。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
       opts.forEach((id) => {
         const f = G.data.forms[id];
         const line = G.data.lines[f.line];
@@ -818,6 +815,10 @@
       });
       h += '</div>';
       return this.frame('切換形態', h, 'evolve');
+    },
+    a_hearVoice() {
+      this.closeAll();
+      G.cut.startVoice(G.evolve.nextTier());
     },
     a_switchForm(id) {
       if (G.formSwitch.switchTo(G.player, id)) this.close('forms');

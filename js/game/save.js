@@ -49,6 +49,21 @@
         questItems: d.questItems || {}, playTime: d.playTime || 0,
       });
       P.pages = d.pages || null;
+      // 技能改版：已經不存在的技能退回技能點，技能欄清掉
+      const clean = (pg) => {
+        for (const id in pg.skills) {
+          if (!G.data.skills[id]) {
+            pg.sp += pg.skills[id] || 0;
+            delete pg.skills[id];
+          }
+        }
+        pg.hotbar = (pg.hotbar || []).map((id) => (id && G.data.skills[id] ? id : null));
+      };
+      const cur = { skills: P.skills, sp: P.sp, hotbar: P.hotbar };
+      clean(cur);
+      P.sp = cur.sp;
+      P.hotbar = cur.hotbar;
+      if (P.pages) for (const l in P.pages) clean(P.pages[l]);
       G.formSwitch.ensurePages(P); // 舊存檔：一轉之後補上三條路線的技能頁
       P.recalc();
       P.hp = Math.min(P.maxHp, d.hp || P.maxHp);

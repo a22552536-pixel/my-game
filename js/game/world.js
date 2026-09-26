@@ -44,6 +44,7 @@
       this.boss = null;
       G.fx.reset();
       G.skillExec.reset();
+      G.skillExec.resetZones();
       G.music.forMap(map);
 
       this.npcs = (map.npcs || []).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: map.platforms[n.p][2] }));
@@ -146,6 +147,16 @@
       if (!P.onGround) return false;
       for (const p of this.map.portals || []) {
         if (Math.abs(P.x - p.x) < 36 && P.plat === p.p) {
+          // Boss 房：這一章的委託全部完成才開（已經打倒過就可以直接進去挑戰回憶）
+          const dest = G.data.maps[p.to];
+          if (dest && dest.type === 'boss' && !this.flags[dest.boss.m + 'Defeated'] && !(G.demo && G.demo.active)) {
+            const pr = G.quests.chapterProgress(dest.region);
+            if (pr.done < pr.total) {
+              G.hud.toast('封印還沒解開：完成這一章所有 NPC 的委託（' + pr.done + ' / ' + pr.total + '）', '#ffd84a');
+              G.audio.play('error');
+              return true;
+            }
+          }
           if (p.req && !this.flags[p.req]) {
             G.hud.toast(p.reqText || '這條路還沒開', '#ffd84a');
             G.audio.play('error');
@@ -196,6 +207,7 @@
 
     // ── 事件 ──
     onMonsterKilled(m) {
+      G.codex.note('mobs', m.id);
       const hb = G.player.passive('hundredBattles');
       if (hb && G.player.alive()) {
         G.player.hp = Math.min(G.player.maxHp, G.player.hp + Math.max(1, Math.round(G.player.maxHp * hb.heal)));
@@ -210,6 +222,7 @@
     },
 
     onBossKilled(b) {
+      G.codex.note('mobs', b.id);
       G.player.gainExp(b.exp);
       G.quests.onKill(b.id);
       G.loot.dropFromBoss(b);
@@ -220,27 +233,27 @@
       this.zones.length = 0;
       const first = !this.flags[b.id + 'Defeated'];
       this.flags[b.id + 'Defeated'] = true;
-      G.hud.story(b.recall ? G.data.story.recallEnd : G.data.story.bossDefeated[b.id] || '');
+      if (!first || b.recall || !G.data.story.bossWords[b.id]) G.hud.story(b.recall ? G.data.story.recallEnd : G.data.story.bossDefeated[b.id] || '');
       G.music.play(G.music.songFor({ region: this.map.region }));
       G.save.write();
       if (first) {
         const region = this.map.region;
-        if (!G.story.hasLeaf(region)) {
-          // 葉子掉下來之後自動開始儀式；章末卡片等儀式結束再出現
-          G.story.pendingEnd = region;
-          setTimeout(() => {
-            if (G.scene !== 'play' || G.story.cer || G.story.hasLeaf(region)) return;
+        // Boss 倒下後先說出來龍去脈，再開始拿葉子的儀式（在這之前內心的聲音先等著）
+        G.cut.pendingTalk = true;
+        setTimeout(() => {
+          G.cut.pendingTalk = false;
+          if (G.scene !== 'play') return;
+          if (G.cut.startBossTalk(b, region)) return;
+          if (!G.story.hasLeaf(region)) {
+            G.story.pendingEnd = region;
             const i = this.drops.findIndex((d) => d.kind === 'starleaf');
             if (i >= 0) this.drops.splice(i, 1);
             G.story.gainLeaf(region);
-          }, 3200);
-        } else {
-          setTimeout(() => {
-            if (G.scene !== 'play') return;
+          } else {
             G.ui.endChapter = region;
-            G.ui.open(G.evolve.canEvolve() ? 'evolve' : 'm1end');
-          }, 6500);
-        }
+            G.ui.open('m1end');
+          }
+        }, 1800);
       }
     },
 
@@ -379,7 +392,16 @@
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         let remove = p.t > p.life || p.x < -50 || p.x > this.map.w + 50;
+        // 純特效的投射物（落下的巨錘、流星、冰片）：只會移動，不會打到誰
+        if (p.owner === 'fx') {
+          if (p.t > p.life) this.projectiles.splice(i, 1);
+          continue;
+        }
         if (p.owner === 'player') {
+          if (p.custom) {
+            if (G.skillExec.updateShot(p, dt) || p.t > p.life) this.projectiles.splice(i, 1);
+            continue;
+          }
           if (p.boomerang) {
             if (G.skillExec.updateBoomerang(p, dt) || p.t > p.life) this.projectiles.splice(i, 1);
             continue;
@@ -505,7 +527,16 @@
       });
       G.art.drawPlatforms(ctx, map, cam);
       G.art.drawProps(ctx, map, cam, t);
-      (map.portals || []).forEach((p) => G.art.drawPortal(ctx, p.x, map.platforms[p.p][2], t, G.data.maps[p.to] && G.data.maps[p.to].name));
+      (map.portals || []).forEach((p) => {
+        const dest = G.data.maps[p.to];
+        let label = dest && dest.name;
+        if (dest && dest.type === 'boss' && !this.flags[dest.boss.m + 'Defeated']) {
+          const pr = G.quests.chapterProgress(dest.region);
+          if (pr.done < pr.total) label += '（封印 ' + pr.done + '/' + pr.total + '）';
+        }
+        if (p.req && !this.flags[p.req]) label += '（未開放）';
+        G.art.drawPortal(ctx, p.x, map.platforms[p.p][2], t, label);
+      });
       if (map.camp) {
         G.art.drawCampHouses(ctx, map.camp.x1, map.camp.x2, map.platforms[0][2], t, map.region);
         this.drawCamp(ctx, map, t);
@@ -518,7 +549,10 @@
       this.zones.forEach((z) => G.art.drawZone(ctx, z, t));
       G.loot.draw(ctx, t);
       this.monsters.forEach((m) => m.draw(ctx));
-      if (this.boss) this.boss.draw(ctx);
+      if (this.boss) {
+        this.boss.draw(ctx);
+        if (!this.boss.dead && G.art.drawStatus) G.art.drawStatus(ctx, this.boss, this.boss.t);
+      }
       G.fx.drawGhosts(ctx);
       G.player.draw(ctx);
       this.projectiles.forEach((p) => G.art.drawProjectile(ctx, p, t));

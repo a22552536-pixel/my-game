@@ -291,8 +291,8 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 #hud-icons button .badge { position: absolute; right: -6px; top: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e84a3a; color: #fff; font-size: 11px; font-weight: bold; line-height: 18px; border: 2px solid #fff3d0; }
 #hud-icons button .badge.hide { display: none; }
 /* 從左上角圖示打開的視窗往下放，不要被圖示列蓋住 */
-.win-inventory, .win-skills, .win-quests, .win-shop, .win-forms, .win-worldmap { align-items: flex-start; padding-top: 100px; box-sizing: border-box; }
-.win-inventory .panel, .win-skills .panel, .win-quests .panel, .win-shop .panel, .win-forms .panel, .win-worldmap .panel { max-height: 610px; }
+.win-inventory, .win-skills, .win-quests, .win-shop, .win-forms, .win-worldmap, .win-codex { align-items: flex-start; padding-top: 100px; box-sizing: border-box; }
+.win-inventory .panel, .win-skills .panel, .win-quests .panel, .win-shop .panel, .win-forms .panel, .win-worldmap .panel, .win-codex .panel { max-height: 610px; }
 .panel.skills .body { max-height: 530px; }
 .panel.worldmap { width: 900px; }
 .wm canvas { width: 860px; height: 502px; }
@@ -314,3 +314,8 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .gallery-wrap { max-height: 560px; overflow-y: auto; }
 .gallery-canvas { width: 1120px; height: auto; display: block; border-radius: 10px; }
 .win-gallery { z-index: 40; }
+.evo-voice { text-align: center; margin: 4px 0 10px; }
+.evo-voice button { font-size: 17px; padding: 10px 22px; }
+.codex-sum { margin: 0 0 10px; color: #6a3a0a; font-size: 16px; }
+.codex-sum span { color: #8a735c; font-size: 13px; margin-left: 8px; }
+.win-codex .gallery-wrap { max-height: 470px; }

@@ -69,14 +69,15 @@
         this.cer = null;
         G.audio.play('ui');
         G.hud.toast('星楓葉 ' + this.count() + '/5　葉子的力量：' + this.leafDef(c.ch).gift, '#ffe066');
-        // 儀式結束後才出現章末卡片（或進化）
+        // 儀式結束後才出現章末卡片；能進化的話，關掉卡片後會聽到內心的聲音
+        if (G.evolve.canEvolve()) G.cut.pendingVoice = true;
         if (this.pendingEnd) {
           const r = this.pendingEnd;
           this.pendingEnd = null;
           setTimeout(() => {
             if (G.scene !== 'play') return;
             G.ui.endChapter = r;
-            G.ui.open(G.evolve.canEvolve() ? 'evolve' : 'm1end');
+            G.ui.open('m1end');
           }, 800);
         }
       }
