@@ -119,6 +119,23 @@
       }
     },
 
+    // 放開被黑洞吸住的怪：把懸浮高度換回真正的位置，讓牠們自然落回平台
+    releaseSucked(u) {
+      (u.sucked || []).forEach((m) => {
+        if (!m.sucked) return;
+        m.sucked = false;
+        const lift = (m.hover || 0) - (m.baseHover || 0);
+        m.hover = m.baseHover || 0;
+        if (m.dead) return;
+        m.y -= lift;
+        m.onGround = false;
+        const map = G.world.map;
+        const p = G.physics.platformBelow(map, m.x, m.y - 2);
+        m.plat = p >= 0 ? p : 0;
+      });
+      u.sucked = [];
+    },
+
     tickMeidou(u, dt) {
       const S = u.S;
       const R = S.radius;
@@ -153,12 +170,27 @@
         u.r = R * (1 - Math.pow(1 - Math.min(1, u.pt / 0.28), 3));
         G.fx.iaiDim = Math.max(G.fx.iaiDim, 0.3);
         G.fx.shake(1.5, 0.05);
-        inside().forEach((m) => {
-          if (!m.isBoss) {
-            m.x += (u.x - m.x) * Math.min(1, dt * 3.5);
-            m.vx = 0;
-            m.stunT = Math.max(m.stunT || 0, 0.3);
+        // 黑洞引力：圓外約 2.3 倍半徑內的怪也會被捲進來，越近越快，吸離地面懸在圓心附近
+        const pullR = R * 2.3;
+        G.combat.targets().filter((m) => !m.isBoss && !m.dead && U.dist(m.x, midY(m), u.x, u.y) < pullR).slice(0, S.targets * 2).forEach((m) => {
+          if (!m.sucked) {
+            m.sucked = true;
+            m.baseHover = m.hover || 0;
+            u.sucked = u.sucked || [];
+            u.sucked.push(m);
           }
+          const d = U.dist(m.x, midY(m), u.x, u.y);
+          const k = Math.min(1, dt * (d < R ? 4.5 : 2 + 3 * (1 - d / pullR)));
+          // 不全部擠在同一點：各自停在圓心附近的一個小軌道上
+          const idx = u.sucked.indexOf(m);
+          const orb = Math.min(R * 0.55, 18 + idx * 9);
+          const a = u.spin * 2 + idx * 2.4;
+          const tx = u.x + Math.cos(a) * orb;
+          const ty = u.y + Math.sin(a) * orb * 0.6;
+          m.x += (tx - m.x) * k;
+          const hv = m.y - m.h * (m.scale || 1) * 0.5 - ty;
+          m.hover = (m.hover || 0) + (hv - (m.hover || 0)) * k;
+          m.stunT = Math.max(m.stunT || 0, 0.3);
         });
         u.tickT -= dt;
         if (u.tickT <= 0 && u.pt > 0.25) {
@@ -191,8 +223,10 @@
           G.fx.ring(u.x, u.y, 'rgba(255,255,255,0.95)', R * 1.6, 0.45, 8);
           G.fx.ring(u.x, u.y, 'rgba(150,110,255,0.85)', R * 2.2, 0.6, 5);
           G.fx.burst(u.x, u.y, ['#ffffff', '#c8b0ff', '#8fb0ff'], 40, 620);
+          this.releaseSucked(u);
           inside().forEach((m) => G.combat.hitMonster(m, S.closeMult(u.lv), { knock: 480, heavy: true, sound: 'double' }));
         }
+        if (u.pt >= 0.5) this.releaseSucked(u);
         return u.pt >= 0.5;
       }
       return true;

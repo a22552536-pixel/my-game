@@ -217,6 +217,12 @@
     const aggro = this.aggroT > 0 && P.alive();
     const [minX, maxX] = this.bounds();
     const speed = d.speed * (this.V ? this.V.speed : 1) * (this.slowT > 0 ? 0.5 : 1) * (this.hasteT > 0 ? 1.6 : 1);
+    // 被冥道殘月破的黑洞吸住：不動、不受重力，位置由技能控制
+    if (this.sucked) {
+      this.vx = 0;
+      this.vy = 0;
+      return false;
+    }
     // 新怪物的能力：回傳 true 時這一幀由能力自己控制移動
     const custom = this.hurtT <= 0 && G.mobAbilHooks ? G.mobAbilHooks.update(this, dt, P, aggro) : false;
 
