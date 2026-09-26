@@ -56,7 +56,10 @@ G.data.balance = {
   monsterHp: (lv) => Math.round(12 * Math.pow(lv, 1.15) * (1 + 0.045 * Math.min(10, Math.max(0, lv - 10)) + 0.012 * Math.max(0, lv - 20))),
   monsterAtk: (lv) => Math.round(4 + lv * 2.2 + 1.1 * Math.min(10, Math.max(0, lv - 10)) + 0.5 * Math.max(0, lv - 20)),
   monsterDef: (lv) => Math.round(lv * 0.8),
-  monsterExp: (lv) => 3 * lv,
+  // 經驗值倍率：任務、打怪、Boss 的經驗一起乘上這個數。
+  // 1.0 時光靠任務就能到每章的設計等級，再加上打怪會多出一倍，第二章就到 25～30 級（怪只有 11～20 級）。
+  expScale: 0.5,
+  monsterExp: (lv) => Math.max(1, Math.round(3 * lv * 0.5)),
   respawnTime: 7,
   aggroTime: 8,
   eliteHpMult: 5,

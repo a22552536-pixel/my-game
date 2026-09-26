@@ -74,11 +74,12 @@
         if (this.pendingEnd) {
           const r = this.pendingEnd;
           this.pendingEnd = null;
+          // 發任務的 NPC 走進來總結這一章，之後才是章末卡片（在那之前內心的聲音先等著）
+          G.cut.pendingTalk = true;
           setTimeout(() => {
             if (G.scene !== 'play') return;
-            G.ui.endChapter = r;
-            G.ui.open('m1end');
-          }, 800);
+            G.cut.startEpilogue(r);
+          }, 700);
         }
       }
       this.clicked = false;

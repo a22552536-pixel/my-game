@@ -12,7 +12,7 @@
     clicked: false,
 
     active() {
-      return !!(this.talk || this.voice);
+      return !!(this.talk || this.voice || this.epi);
     },
 
     pressed() {
@@ -50,9 +50,53 @@
       }
     },
 
-    // 測試用：直接跳過遺言
+    // ── Boss 之後：發任務的 NPC 自己走進 Boss 房，總結這一章 ──
+    startEpilogue(region) {
+      this.pendingTalk = false;
+      const openEnd = () => {
+        G.ui.endChapter = region;
+        G.ui.open('m1end');
+      };
+      const ch = G.data.story.chapters[region];
+      const boss = ch && ch.boss;
+      const Q = G.data.quests;
+      const qid = Object.keys(Q).find((id) => Q[id].type === 'boss' && Q[id].target === boss && Q[id].lines && Q[id].lines.epilogue);
+      if (!qid || G.quests.state[qid] === 'done') {
+        openEnd();
+        return;
+      }
+      const q = Q[qid];
+      const P = G.player;
+      const map = G.world.map;
+      const left = map.platforms && map.platforms[0] ? map.platforms[0][0] + 40 : 40;
+      const tx = P.x - 120 > left ? P.x - 120 : P.x + 120;
+      const dir = tx < P.x ? 1 : -1;
+      G.ui.closeAll();
+      P.dir = -dir;
+      this.epi = { qid, region, openEnd, npc: G.data.npcs[q.npc], lines: q.lines.epilogue, i: 0, t: 0, shown: 0, x: tx - dir * 420, tx, y: P.y, dir, walking: true };
+    },
+
+    endEpilogue() {
+      const e = this.epi;
+      this.epi = null;
+      // 任務直接在這裡完成（沒接過也算），發獎勵
+      if (G.quests.state[e.qid] !== 'done') {
+        G.quests.state[e.qid] = 'ready';
+        G.quests.turnIn(e.qid);
+      }
+      this.pendingTalk = true;
+      setTimeout(() => {
+        this.pendingTalk = false;
+        if (G.scene === 'play') e.openEnd();
+      }, 600);
+    },
+
+    // 測試用：直接跳過遺言、NPC 收尾
     skipTalk() {
       if (this.talk) this.endTalk();
+    },
+    skipEpilogue() {
+      if (this.epi) this.endEpilogue();
     },
 
     // ── 內心的聲音 ──
@@ -93,6 +137,32 @@
         }
         return true;
       }
+      if (this.epi) {
+        const e = this.epi;
+        e.t += dt;
+        if (e.walking) {
+          const step = 260 * dt;
+          if (Math.abs(e.tx - e.x) <= step) {
+            e.x = e.tx;
+            e.walking = false;
+            e.t = 0;
+            G.audio.play('ui');
+          } else e.x += Math.sign(e.tx - e.x) * step;
+          this.clicked = false;
+          return true;
+        }
+        const line = e.lines[e.i];
+        e.shown = Math.min(line.length, e.shown + dt * 26);
+        if (e.t > 0.4 && this.pressed()) {
+          if (e.shown < line.length) e.shown = line.length;
+          else if (e.i < e.lines.length - 1) {
+            e.i++;
+            e.shown = 0;
+            G.audio.play('ui');
+          } else this.endEpilogue();
+        }
+        return true;
+      }
       if (this.voice) {
         const v = this.voice;
         v.t += dt;
@@ -114,6 +184,7 @@
     },
 
     draw(ctx) {
+      if (this.epi) this.drawEpilogue(ctx);
       if (this.talk) this.drawTalk(ctx);
       if (this.voice) this.drawVoice(ctx);
     },
@@ -166,6 +237,57 @@
       G.hud.text(ctx, (tk.i + 1) + ' / ' + tk.lines.length, x0 + w - 24, y0 + h - 22, 13, '#8a735c', 'right', false);
       if (tk.shown >= tk.lines[tk.i].length) {
         ctx.globalAlpha = 0.5 + Math.sin(tk.t * 5) * 0.5;
+        G.hud.text(ctx, '▼ 按 ' + G.input.label('jump') + ' 或點一下', x0 + w - 90, y0 + h - 22, 13, '#a4581a', 'right', false);
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    },
+
+    drawEpilogue(ctx) {
+      const e = this.epi;
+      const W = G.W;
+      const H = G.H;
+      ctx.save();
+      // NPC 走進來（畫在世界位置上）
+      const sx = e.x - G.cam.x;
+      const sy = e.y - G.cam.y + (e.walking ? -Math.abs(Math.sin(e.t * 10)) * 4 : 0);
+      ctx.save();
+      ctx.translate(sx, sy);
+      if (e.dir < 0) ctx.scale(-1, 1);
+      A.drawNpc(ctx, { def: e.npc, x: 0, y: 0 }, G.time, null, true);
+      ctx.restore();
+      A.nameTag(ctx, sx, sy + 14, e.npc.name, '#ffe9a8');
+      if (e.walking) {
+        ctx.restore();
+        return;
+      }
+      ctx.fillStyle = 'rgba(10,6,20,' + Math.min(0.35, e.t).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+      const x0 = 150;
+      const y0 = H - 250;
+      const w = W - 300;
+      const h = 170;
+      G.hud.panel(ctx, x0, y0, w, h, 18, 'rgba(255,248,231,0.97)');
+      ctx.strokeStyle = '#6a9a4a';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x0 + 4, y0 + 4, w - 8, h - 8);
+      G.hud.panel(ctx, x0 + 18, y0 + 16, 138, 138, 12, 'rgba(232,240,214,1)');
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0 + 18, y0 + 16, 138, 138);
+      ctx.clip();
+      ctx.translate(x0 + 87, y0 + 140);
+      ctx.scale(1.3, 1.3);
+      A.drawNpc(ctx, { def: e.npc, x: 0, y: 0 }, G.time, null, true);
+      ctx.restore();
+      G.hud.text(ctx, e.npc.name, x0 + 87, y0 + 168, 15, '#3a5a2a', 'center', false);
+      const line = e.lines[e.i].slice(0, Math.floor(e.shown));
+      ctx.font = 'bold 20px ' + A.FONT;
+      const rows = G.hud.wrap(ctx, line, w - 230);
+      rows.forEach((r, i) => G.hud.text(ctx, r, x0 + 180, y0 + 40 + i * 32, 20, '#4a2e1f', 'left', false));
+      G.hud.text(ctx, (e.i + 1) + ' / ' + e.lines.length, x0 + w - 24, y0 + h - 22, 13, '#8a735c', 'right', false);
+      if (e.shown >= e.lines[e.i].length) {
+        ctx.globalAlpha = 0.5 + Math.sin(e.t * 5) * 0.5;
         G.hud.text(ctx, '▼ 按 ' + G.input.label('jump') + ' 或點一下', x0 + w - 90, y0 + h - 22, 13, '#a4581a', 'right', false);
         ctx.globalAlpha = 1;
       }

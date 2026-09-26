@@ -56,6 +56,10 @@
           if (!G.data.skills[id]) {
             pg.sp += pg.skills[id] || 0;
             delete pg.skills[id];
+          } else if ((pg.skills[id] || 0) > G.data.skills[id].maxLv) {
+            // 技能等級上限調低了：多出來的點數退回（飛撲的第 1 級是送的，不退）
+            pg.sp += pg.skills[id] - G.data.skills[id].maxLv;
+            pg.skills[id] = G.data.skills[id].maxLv;
           }
         }
         pg.hotbar = (pg.hotbar || []).map((id) => (id && G.data.skills[id] ? id : null));

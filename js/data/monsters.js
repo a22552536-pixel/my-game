@@ -170,3 +170,12 @@ G.data.monsters = {
     drops: { gold: [250, 350] },
   },
 };
+
+// Boss 的經驗值也套用經驗值倍率（見 balance.expScale）
+(function () {
+  const k = G.data.balance.expScale;
+  for (const id in G.data.monsters) {
+    const d = G.data.monsters[id];
+    if (d.boss && d.exp) d.exp = Math.round(d.exp * k);
+  }
+})();
