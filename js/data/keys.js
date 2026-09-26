@@ -18,6 +18,8 @@ G.data.keys = {
     ['inventory', '背包'],
     ['skills', '技能'],
     ['quests', '任務'],
+    ['forms', '切換形態'],
+    ['worldmap', '世界地圖'],
   ],
   defaults: {
     left: 'ArrowLeft',
@@ -37,6 +39,8 @@ G.data.keys = {
     inventory: 'KeyI',
     skills: 'KeyK',
     quests: 'KeyJ',
+    forms: 'KeyV',
+    worldmap: 'KeyM',
   },
   skillSlots: ['skill1', 'skill2', 'skill3', 'skill4', 'skill5', 'skill6'],
   // Esc 保留給選單；其餘會和瀏覽器功能衝突

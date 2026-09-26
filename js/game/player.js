@@ -36,6 +36,8 @@
       this.skills = {};
       for (const id in G.data.skills) if (G.data.skills[id].form === 'base') this.skills[id] = 0;
       this.skills.pounce = 1;
+      this.pages = null;
+      this.formCd = 0;
       this.hotbar = ['pounce', 'roar', null, null, null, null];
       this.equip = { claw: G.loot.makeEquip('claw1', 'common', { atk: 4 }), mane: null, charm: null };
       this.bag = [];
@@ -108,7 +110,7 @@
       while (this.exp >= this.expNeed() && this.level < B().levelCap) {
         this.exp -= this.expNeed();
         this.level++;
-        this.sp++;
+        G.formSwitch.addSP(this, 1);
         ups++;
       }
       if (ups > 0) {
@@ -120,7 +122,7 @@
         G.fx.ring(this.x, this.y - 30, '#fff3a0', 120, 0.5, 5);
         G.fx.text(this.x, this.y - 120, 'LEVEL UP!', '#ffe14a', 34, 1.8);
         G.audio.play('levelup');
-        G.hud.toast('等級提升到 Lv.' + this.level + '！獲得 ' + ups + ' 點技能點（按 ' + I.label('skills') + ' 分配）', '#ffe14a');
+        G.hud.toast('等級提升到 Lv.' + this.level + '！獲得 ' + ups + ' 點技能點（點左上角的「技能」圖示分配）', '#ffe14a');
         if (G.evolve.canEvolve()) G.hud.toast('力量滿出來了……可以進化了！回營地找長輩（刺蝟婆婆、海豹爺爺、老猴子）', '#ffb0f0');
         G.save.write();
       }
@@ -219,7 +221,7 @@
         if (I.wasPressed(slots[i])) {
           const id = this.hotbar[i];
           if (id) this.useSkill(id);
-          else G.hud.toast('技能欄 ' + (i + 1) + ' 是空的。按 ' + I.label('skills') + ' 打開技能視窗設定', '#ddd');
+          else G.hud.toast('技能欄 ' + (i + 1) + ' 是空的。點左上角的「技能」圖示來設定', '#ddd');
           return;
         }
       }
@@ -350,7 +352,7 @@
         return;
       }
       if (lv <= 0) {
-        G.hud.toast(S.name + ' 還沒學會。按 ' + I.label('skills') + ' 用技能點學習', '#ddd');
+        G.hud.toast(S.name + ' 還沒學會。點左上角的「技能」圖示學習', '#ddd');
         G.audio.play('error');
         return;
       }

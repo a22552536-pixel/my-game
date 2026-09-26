@@ -15,6 +15,7 @@
 
     write() {
       if (G.scene !== 'play' || !G.world.map) return false;
+      if (G.demo && G.demo.active) return false; // 試玩模式不存檔
       const P = G.player;
       const data = {
         v: VERSION,
@@ -24,7 +25,7 @@
           hp: Math.max(1, Math.round(P.hp)), mp: Math.round(P.mp),
           gold: P.gold, skills: P.skills, hotbar: P.hotbar,
           equip: P.equip, bag: P.bag, potions: P.potions, buffs: P.buffs,
-          questItems: P.questItems, playTime: P.playTime,
+          questItems: P.questItems, playTime: P.playTime, pages: P.pages || null,
         },
         pos: P.dead ? null : { map: G.world.mapId, x: Math.round(P.x), y: Math.round(P.y) },
         lastCamp: G.data.camps[G.world.map.region] || '1-1',
@@ -47,6 +48,8 @@
         equip: d.equip || P.equip, bag: d.bag || [], potions: d.potions || { hp: 0, mp: 0 }, buffs: d.buffs || {},
         questItems: d.questItems || {}, playTime: d.playTime || 0,
       });
+      P.pages = d.pages || null;
+      G.formSwitch.ensurePages(P); // 舊存檔：一轉之後補上三條路線的技能頁
       P.recalc();
       P.hp = Math.min(P.maxHp, d.hp || P.maxHp);
       P.mp = Math.min(P.maxMp, d.mp || P.maxMp);

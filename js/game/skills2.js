@@ -27,6 +27,7 @@
       }
       if (P.cds) for (const id in P.cds) if (P.cds[id] > 0) P.cds[id] -= dt;
       if (P.unyCd > 0) P.unyCd -= dt;
+      if (P.formCd > 0) P.formCd -= dt;
     },
 
     reset() {

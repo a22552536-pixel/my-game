@@ -137,7 +137,7 @@
       // 金葉
       A.drawIcon(ctx, 'gold', 312, barY + 18, 0.6);
       this.text(ctx, String(P.gold), 326, barY + 18, 14, '#ffe07a');
-      if (P.sp > 0) this.text(ctx, 'SP ' + P.sp + '（' + I.label('skills') + '）', 304, barY + 40, 13, '#9fffb0');
+      if (P.sp > 0) this.text(ctx, 'SP ' + P.sp, 304, barY + 40, 13, '#9fffb0');
 
       // ── 技能欄 ──
       const slots = G.data.keys.skillSlots;
@@ -182,9 +182,9 @@
         let bx = 14;
         for (const k in P.buffs) {
           const b = P.buffs[k];
-          this.panel(ctx, bx - 4, 48, 70, 30, 8);
-          A.drawIcon(ctx, b.icon, bx + 10, 63, 0.6);
-          this.text(ctx, Math.ceil(b.t) + 's', bx + 26, 63, 13, '#fff');
+          this.panel(ctx, bx - 4, 100, 70, 30, 8);
+          A.drawIcon(ctx, b.icon, bx + 10, 115, 0.6);
+          this.text(ctx, Math.ceil(b.t) + 's', bx + 26, 115, 13, '#fff');
           bx += 76;
         }
       }
@@ -196,7 +196,7 @@
         const w = 290;
         const h = 22 + tr.length * 40;
         this.panel(ctx, W - w - 8, 8, w, h, 10);
-        this.text(ctx, '任務（' + I.label('quests') + '）', W - w + 4, 22, 13, '#ffe9b0');
+        this.text(ctx, '任務', W - w + 4, 22, 13, '#ffe9b0');
         tr.forEach((q, i) => {
           const y = 44 + i * 40;
           this.text(ctx, q.name, W - w + 4, y, 13, q.ready ? '#7dff7a' : '#ffffff');
@@ -256,7 +256,7 @@
       }
 
       // ── 故事文字 ──
-      if (this.storyLine) {
+      if (this.storyLine && !G.story.cer) {
         const s = this.storyLine;
         const a = s.t < 0.6 ? s.t / 0.6 : s.t > s.life - 0.8 ? (s.life - s.t) / 0.8 : 1;
         ctx.globalAlpha = Math.max(0, a);

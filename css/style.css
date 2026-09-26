@@ -274,3 +274,43 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .slotpick .sp.on { background: #ffd35a; border-color: #b8801a; color: #4a2e1f; box-shadow: 0 0 0 2px rgba(255,211,90,0.5); }
 .slotpick .sp i { position: absolute; right: -4px; top: -7px; font-style: normal; font-size: 10px; background: #8a5a30; color: #fff; border-radius: 6px; padding: 0 3px; }
 .panel.skills .body { max-height: 560px; }
+.panel.worldmap { width: 1000px; max-height: 700px; }
+.wm { position: relative; }
+.wm canvas { width: 960px; height: 560px; border-radius: 12px; border: 3px solid #8b5a2b; display: block; }
+.wm-info { position: absolute; left: 12px; top: 12px; max-width: 360px; background: rgba(255, 248, 231, 0.93); border: 2px solid #8b5a2b; border-radius: 10px; padding: 6px 10px; font-size: 13px; pointer-events: none; }
+.wm-info b { font-size: 15px; }
+.wm-legend { display: flex; gap: 6px; align-items: center; font-size: 12px; margin-top: 6px; color: #6a4a2a; }
+.wm-legend .c { display: inline-flex; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #4a2e1f; align-items: center; justify-content: center; font-size: 10px; margin-left: 8px; }
+.wm-legend .camp { background: #ffd35a; } .wm-legend .hunt { background: #8fd06a; } .wm-legend .boss { background: #e84a4a; } .wm-legend .done { background: #b88aff; } .wm-legend .unk { background: #b8b0a0; }
+#hud-icons { position: absolute; left: 8px; top: 48px; display: flex; gap: 6px; z-index: 30; }
+#hud-icons button { position: relative; width: 44px; height: 44px; padding: 0; border-radius: 10px; background: rgba(40, 24, 12, 0.72); border: 2px solid #c8a060; box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+#hud-icons button:hover { background: rgba(90, 56, 24, 0.85); transform: translateY(-1px); }
+#hud-icons button img { width: 38px; height: 38px; display: block; margin: 1px auto 0; }
+#hud-icons button .tip { display: none; position: absolute; left: 50%; top: 48px; transform: translateX(-50%); white-space: nowrap; background: rgba(30, 18, 8, 0.9); color: #ffe9b0; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+#hud-icons button:hover .tip { display: block; }
+#hud-icons button .badge { position: absolute; right: -6px; top: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e84a3a; color: #fff; font-size: 11px; font-weight: bold; line-height: 18px; border: 2px solid #fff3d0; }
+#hud-icons button .badge.hide { display: none; }
+/* 從左上角圖示打開的視窗往下放，不要被圖示列蓋住 */
+.win-inventory, .win-skills, .win-quests, .win-shop, .win-forms, .win-worldmap { align-items: flex-start; padding-top: 100px; box-sizing: border-box; }
+.win-inventory .panel, .win-skills .panel, .win-quests .panel, .win-shop .panel, .win-forms .panel, .win-worldmap .panel { max-height: 610px; }
+.panel.skills .body { max-height: 530px; }
+.panel.worldmap { width: 900px; }
+.wm canvas { width: 860px; height: 502px; }
+#demo-panel { position: absolute; right: 8px; top: 90px; width: 250px; max-height: 540px; overflow-y: auto; background: rgba(30, 18, 8, 0.82); border: 2px solid #c8a060; border-radius: 12px; padding: 8px; color: #ffe9b0; z-index: 25; font-size: 13px; }
+#demo-panel .dp-title { font-size: 16px; font-weight: bold; color: #ffe14a; margin-bottom: 4px; }
+#demo-panel .dp-lbl { font-size: 12px; color: #d8c8a0; margin: 6px 0 3px; }
+#demo-panel .dp-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+#demo-panel .dp-forms button { font-size: 12px; padding: 3px 4px; background: #fff3d8; border-width: 2px; }
+#demo-panel .dp-forms button small { margin-left: 3px; color: #8a735c; font-size: 10px; }
+#demo-panel .dp-forms button.on { background: #ffd35a; box-shadow: 0 0 0 2px #fff; }
+#demo-panel .dp-skills { display: flex; flex-direction: column; gap: 3px; }
+#demo-panel .dp-skills button { display: flex; align-items: center; gap: 6px; padding: 2px 6px; font-size: 13px; text-align: left; background: #fff3d8; }
+#demo-panel .dp-skills button img { width: 26px; height: 26px; background: #3a2a1e; border-radius: 5px; }
+#demo-panel .dp-skills button span { flex: 1; }
+#demo-panel .dp-skills button em { font-style: normal; font-size: 11px; background: #8a5a30; color: #fff; border-radius: 5px; padding: 0 5px; }
+#demo-panel .dp-row { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+#demo-panel .dp-row button { font-size: 12px; padding: 4px; }
+.panel.gallery { width: 1180px; }
+.gallery-wrap { max-height: 560px; overflow-y: auto; }
+.gallery-canvas { width: 1120px; height: auto; display: block; border-radius: 10px; }
+.win-gallery { z-index: 40; }

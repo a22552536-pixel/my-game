@@ -220,9 +220,6 @@
           return true;
         case 'starleaf':
           G.story.gainLeaf(dr.chapter || 1);
-          G.fx.pillar(P.x, P.y, 'rgba(255,230,120,0.95)', 1.6, 110);
-          G.audio.play('victory');
-          G.save.write();
           return true;
         case 'equip': {
           if (P.bag.length >= G.data.balance.bagSize) {

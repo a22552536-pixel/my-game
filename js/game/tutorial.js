@@ -7,16 +7,24 @@
   const slotOf = (id) => Math.max(0, G.player.hotbar.indexOf(id));
   const slotKey = (id) => G.data.keys.skillSlots[slotOf(id)];
 
+  // info：說明步驟，看完按跳躍鍵繼續；sub：第二行的補充說明
   const STEPS = [
     { id: 'move', keys: () => ['left', 'right'], text: '左右走路' },
     { id: 'jump', keys: () => ['jump'], text: '跳躍' },
     { id: 'attack', keys: () => ['attack'], text: '攻擊露珠蝸' },
     { id: 'climb', keys: () => ['up'], text: '跳上平台，站到發光的藤蔓前往上爬' },
-    { id: 'openSkills', keys: () => ['skills'], text: '打開技能視窗' },
-    { id: 'learn', keys: () => [], text: '按「＋」學會「小吼」（送你 1 點技能點）' },
-    { id: 'useSkill', keys: () => [slotKey('roar')], text: '放出小吼（先按 Esc 關掉視窗）' },
-    { id: 'potion', keys: () => ['hpPot'], text: '受傷了！吃一顆紅漿果回血' },
-    { id: 'talk', keys: () => ['up'], text: '走到刺蝟婆婆旁邊，和她說話' },
+    { id: 'infoHp', info: true, keys: () => ['jump'], text: '紅色的是 HP（生命）', sub: '被怪物打到會減少，歸零就會倒下（倒下沒有懲罰，會在營地醒來）' },
+    { id: 'infoMp', info: true, keys: () => ['jump'], text: '藍色的是 MP（魔力）', sub: '放技能會用掉 MP，不夠的時候技能放不出來' },
+    { id: 'infoExp', info: true, keys: () => ['jump'], text: '最下面黃色的是 EXP（經驗）', sub: '打怪、完成任務會增加；集滿就升級，HP、MP 全滿，還會拿到技能點' },
+    { id: 'openSkills', keys: () => ['skills'], text: '點左上角的「技能」圖示（或按鍵）' },
+    { id: 'learn', keys: () => [], text: '按「＋」學會「小吼」', sub: '送你 1 點技能點。每升一級都會再拿到 1 點' },
+    { id: 'useSkill', keys: () => [slotKey('roar')], text: '放出小吼（先按 Esc 關掉視窗）', sub: '注意看，放完之後 MP 會變少' },
+    { id: 'potion', keys: () => ['hpPot'], text: '受傷了！吃一顆紅漿果補 HP' },
+    { id: 'mpPot', keys: () => ['mpPot'], text: 'MP 快用完了！喝一瓶藍花蜜補 MP' },
+    { id: 'infoRegen', info: true, keys: () => ['jump'], text: 'HP、MP 也會慢慢自己回復', sub: '站在營地的營火旁邊回得更快；紅漿果、藍花蜜可以在貓頭鷹的商店買' },
+    { id: 'talk', keys: () => ['up'], text: '頭上有「！」的 NPC 有任務。走到刺蝟婆婆旁邊按鍵說話' },
+    { id: 'accept', keys: () => [], text: '點發光的任務名稱，再按「接受」', sub: '「！」＝有新任務，「？」＝任務完成，可以回報' },
+    { id: 'infoTracker', info: true, keys: () => ['jump'], text: '接下的任務會顯示在右上角', sub: '照著上面寫的去做，完成後回來找 NPC 回報，就能拿到經驗和獎勵' },
   ];
 
   const T = (G.tutorial = {
@@ -52,6 +60,13 @@
       const s = this.current();
       if (!s) return;
       const P = G.player;
+      this.stepT = 0;
+      if (s.id === 'mpPot') {
+        P.mp = Math.max(1, Math.round(P.maxMp * 0.25));
+        P.potions.mp = Math.max(1, P.potions.mp || 0);
+        this.mpPots0 = P.potions.mp;
+      }
+      if (s.id === 'accept' && G.ui.isOpen('dialogue')) G.ui.render('dialogue');
       if (s.id === 'learn' && P.sp <= 0 && !(P.skills.roar > 0)) P.sp = 1;
       if (s.id === 'potion') {
         P.hp = Math.max(1, Math.round(P.maxHp * 0.45));
@@ -97,6 +112,13 @@
       if (!s) return;
       const P = G.player;
       const I = G.input;
+      this.stepT = (this.stepT || 0) + dt;
+      // 說明步驟：看一下之後按跳躍鍵繼續
+      if (s.info) {
+        if (this.stepT > 0.6 && I.wasPressed('jump')) this.on(s.id);
+        this.lastX = P.x;
+        return;
+      }
       switch (s.id) {
         case 'move':
           this.moved += Math.abs(P.x - this.lastX);
@@ -122,6 +144,12 @@
           break;
         case 'potion':
           if ((P.potions.hp || 0) < this.potions0) this.on('potion');
+          break;
+        case 'mpPot':
+          if ((P.potions.mp || 0) < this.mpPots0) this.on('mpPot');
+          break;
+        case 'accept':
+          if (G.quests.state.q1) this.on('accept');
           break;
       }
       this.lastX = P.x;
@@ -203,6 +231,24 @@
           const r = map.ropes && map.ropes[0];
           return r ? [[sx(r[0]), sy(r[2]) - 44, 'down']] : [];
         }
+        case 'openSkills':
+          return [[8 + 50 + 22, 98, 'up']];
+        case 'infoHp':
+          return [[182, barY + 18, 'down']];
+        case 'infoMp':
+          return [[182, barY + 34, 'down']];
+        case 'infoExp':
+          return [[G.W / 2, Hh - 12, 'down']];
+        case 'mpPot':
+          return [[sx0 + (nSlots + 1) * 52 + 24, barY - 4, 'down']];
+        case 'infoRegen': {
+          const camp = map.camp;
+          return camp ? [[sx((camp.x1 + camp.x2) / 2), sy(map.platforms[0][2]) - 60, 'down']] : [];
+        }
+        case 'accept':
+          return [];
+        case 'infoTracker':
+          return [[G.W - 160, 110, 'up']];
         case 'useSkill':
           return G.ui.blocking() ? [] : [[sx0 + slotOf('roar') * 52 + 24, barY - 4, 'down']];
         case 'potion':
@@ -247,19 +293,22 @@
       const s = this.current();
       if (!s) return;
       this.target(s).forEach(([x, y, d]) => this.arrow(ctx, x, y, d));
-      const keys = s.keys();
+      const keys = s.info ? [] : s.keys();
       ctx.font = 'bold 22px ' + G.art.FONT;
       const keysW = keys.reduce((a, k) => a + Math.max(40, ctx.measureText(L(k)).width + 18) + 8, 0);
-      ctx.font = 'bold 22px ' + G.art.FONT;
       const tw = ctx.measureText(s.text).width;
-      const w = keysW + tw + 70;
+      ctx.font = 'bold 15px ' + G.art.FONT;
+      const subW = s.sub ? ctx.measureText(s.sub).width : 0;
+      const contW = s.info ? 150 : 0;
+      const w = Math.max(keysW + tw + contW + 70, subW + 60);
+      const h = 86 + (s.sub ? 28 : 0);
       const x0 = W / 2 - w / 2;
       const bob = Math.sin(G.time * 3) * 2;
-      G.hud.panel(ctx, x0, 60 + bob, w, 86, 16, 'rgba(30,20,12,0.85)');
-      ctx.strokeStyle = '#ffd83a';
+      G.hud.panel(ctx, x0, 60 + bob, w, h, 16, 'rgba(30,20,12,0.85)');
+      ctx.strokeStyle = s.info ? '#8fd8ff' : '#ffd83a';
       ctx.lineWidth = 3;
-      ctx.strokeRect(x0 + 4, 64 + bob, w - 8, 78);
-      G.hud.text(ctx, '操作教學 ' + (this.idx + 1) + ' / ' + STEPS.length + '（必做）', W / 2, 80 + bob, 14, '#ffe9a0', 'center', false);
+      ctx.strokeRect(x0 + 4, 64 + bob, w - 8, h - 8);
+      G.hud.text(ctx, (s.info ? '說明 ' : '操作教學 ') + (this.idx + 1) + ' / ' + STEPS.length + '（必做）', W / 2, 80 + bob, 14, s.info ? '#bfe8ff' : '#ffe9a0', 'center', false);
       let x = x0 + 30;
       keys.forEach((k) => (x += this.keycap(ctx, L(k), x, 116 + bob, true) + 8));
       ctx.font = 'bold 22px ' + G.art.FONT;
@@ -267,6 +316,20 @@
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(s.text, x + 8, 116 + bob);
+      if (s.info) {
+        // 「按 [C] 繼續」
+        let cx = x + 8 + tw + 24;
+        ctx.font = 'bold 16px ' + G.art.FONT;
+        ctx.fillStyle = '#bfe8ff';
+        ctx.fillText('按', cx, 116 + bob);
+        cx += 22;
+        cx += this.keycap(ctx, L('jump'), cx, 116 + bob) + 6;
+        ctx.font = 'bold 16px ' + G.art.FONT;
+        ctx.fillStyle = '#bfe8ff';
+        ctx.textAlign = 'left';
+        ctx.fillText('繼續', cx, 116 + bob);
+      }
+      if (s.sub) G.hud.text(ctx, s.sub, W / 2, 148 + bob, 15, '#e8dcc0', 'center', false);
       if (this.doneT > 0) {
         ctx.globalAlpha = Math.min(1, this.doneT * 2);
         G.hud.text(ctx, '✔', x0 + w - 22, 84 + bob, 28, '#7dff7a', 'center');

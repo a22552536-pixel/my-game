@@ -224,11 +224,23 @@
       G.music.play(G.music.songFor({ region: this.map.region }));
       G.save.write();
       if (first) {
-        setTimeout(() => {
-          if (G.scene !== 'play') return;
-          G.ui.endChapter = this.map.region;
-          G.ui.open(G.evolve.canEvolve() ? 'evolve' : 'm1end');
-        }, 6500);
+        const region = this.map.region;
+        if (!G.story.hasLeaf(region)) {
+          // 葉子掉下來之後自動開始儀式；章末卡片等儀式結束再出現
+          G.story.pendingEnd = region;
+          setTimeout(() => {
+            if (G.scene !== 'play' || G.story.cer || G.story.hasLeaf(region)) return;
+            const i = this.drops.findIndex((d) => d.kind === 'starleaf');
+            if (i >= 0) this.drops.splice(i, 1);
+            G.story.gainLeaf(region);
+          }, 3200);
+        } else {
+          setTimeout(() => {
+            if (G.scene !== 'play') return;
+            G.ui.endChapter = region;
+            G.ui.open(G.evolve.canEvolve() ? 'evolve' : 'm1end');
+          }, 6500);
+        }
       }
     },
 

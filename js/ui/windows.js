@@ -32,7 +32,7 @@
         return;
       }
       // 背包、技能、任務、商店互斥，只留一個
-      const panels = ['inventory', 'skills', 'quests', 'shop'];
+      const panels = ['inventory', 'skills', 'quests', 'shop', 'forms', 'worldmap'];
       if (panels.indexOf(name) >= 0) panels.forEach((p) => this.isOpen(p) && this.close(p));
       this.stack.push(name);
       const el = document.createElement('div');
@@ -49,6 +49,7 @@
     },
 
     close(name) {
+      if (name === 'keys' && G.hudIcons) G.hudIcons.refresh();
       name = name || this.top();
       if (!name) return;
       const i = this.stack.indexOf(name);
@@ -70,7 +71,7 @@
 
     toggle(name) {
       if (this.isOpen(name)) this.close(name);
-      else if (!this.blocking() || ['inventory', 'skills', 'quests'].indexOf(this.top()) >= 0) this.open(name);
+      else if (!this.blocking() || ['inventory', 'skills', 'quests', 'forms', 'worldmap'].indexOf(this.top()) >= 0) this.open(name);
     },
 
     refresh() {
@@ -110,6 +111,8 @@
       if (I.wasPressed('inventory')) this.toggle('inventory');
       else if (I.wasPressed('skills')) this.toggle('skills');
       else if (I.wasPressed('quests')) this.toggle('quests');
+      else if (I.wasPressed('forms')) this.toggle('forms');
+      else if (I.wasPressed('worldmap')) this.toggle('worldmap');
       else if (this.isOpen('dialogue') && (I.wasPressed('up') || I.wasPressed('jump'))) this.close('dialogue');
     },
 
@@ -334,6 +337,7 @@
       if (P.sp <= 0 || (P.skills[id] || 0) >= S.maxLv) return;
       P.skills[id] = (P.skills[id] || 0) + 1;
       P.sp--;
+      G.formSwitch.sync(P);
       if (S.type !== 'passive' && P.hotbar.indexOf(id) < 0) {
         const free = P.hotbar.indexOf(null);
         if (free >= 0) P.hotbar[free] = id;
@@ -419,6 +423,8 @@
     },
     r_dialogue() {
       const d = this.dialogue;
+      const tc = G.tutorial.current();
+      const tutAccept = tc && (tc.id === 'accept' || tc.id === 'talk');
       const npc = d.npc;
       const def = npc.def;
       const Q = G.quests;
@@ -427,7 +433,7 @@
       if (d.page === 'offer') {
         const q = G.data.quests[d.quest];
         text = q.lines.offer;
-        btns = '<button class="primary" data-act="acceptQ" data-arg="' + d.quest + '">接受</button><button data-act="dlgBack">再想想</button>';
+        btns = '<button class="primary' + (tutAccept ? ' tut-glow' : '') + '" data-act="acceptQ" data-arg="' + d.quest + '">接受</button><button data-act="dlgBack">再想想</button>';
       } else if (d.page === 'say') {
         text = d.text;
         btns = '<button data-act="dlgBack">好</button>';
@@ -439,12 +445,12 @@
             const st = Q.state[id];
             if (st === 'ready') btns += '<button class="primary" data-act="turnIn" data-arg="' + id + '">回報「' + q.name + '」</button>';
             else if (st === 'active') btns += '<button data-act="progQ" data-arg="' + id + '">「' + q.name + '」進行中</button>';
-            else if (Q.available(id)) btns += '<button class="primary" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
+            else if (Q.available(id)) btns += '<button class="primary' + (tutAccept ? ' tut-glow' : '') + '" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
           });
         }
         // 各營地的長輩可以幫忙進化：每 10 級一次，不用先打 Boss
         const nt = G.evolve.nextTier();
-        if (def.evolver && nt <= 4) {
+        if (def.evolver && nt <= 4 && (G.evolve.canEvolve() || G.player.level >= nt * 10 - 3)) {
           btns += G.evolve.canEvolve() ? '<button class="primary evolve-btn" data-act="openEvolve">✦ ' + ['一', '二', '三', '四'][nt - 1] + '轉進化</button>' : '<button disabled>進化（' + G.evolve.missing() + '）</button>';
         }
         if (def.role === 'shop') btns += '<button class="primary" data-act="openShop">交易</button>';
@@ -779,6 +785,43 @@
       const id = this.evolvePick;
       this.evolvePick = null;
       if (id && G.evolve.canEvolve()) G.evolve.start(id);
+    },
+
+    // ───────── 世界地圖 ─────────
+    r_worldmap() {
+      return this.frame('世界地圖　星楓大陸', '<div class="wm"><canvas class="worldmap-canvas" width="' + G.worldMap.W + '" height="' + G.worldMap.H + '"></canvas><div class="wm-info"></div><div class="wm-legend"><span class="c camp">⌂</span>營地<span class="c hunt"></span>狩獵場<span class="c boss">★</span>Boss<span class="c done">★</span>已打倒<span class="c unk">?</span>還沒去過</div></div>', 'worldmap');
+    },
+
+    // ───────── 形態切換 ─────────
+    r_forms() {
+      const P = G.player;
+      const FS = G.formSwitch;
+      const opts = FS.options(P);
+      let h;
+      if (!opts.length) {
+        h = '<div class="evo-intro">Lv10 第一次進化之後，就可以在三種形態之間自由切換。<br>每種形態有自己的技能頁：技能等級、技能點、技能欄都分開保存，升級拿到的技能點三頁都會加。</div>';
+        return this.frame('切換形態', h, 'evolve');
+      }
+      const why = FS.canSwitch(P);
+      h = '<div class="evo-intro">三種形態隨時可以切換（冷卻 ' + FS.COOLDOWN + ' 秒）。每種形態有自己的技能頁，升級拿到的技能點三頁都會加。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
+      opts.forEach((id) => {
+        const f = G.data.forms[id];
+        const line = G.data.lines[f.line];
+        const cur = id === P.form;
+        const page = P.pages && P.pages[f.line];
+        const learned = page ? Object.keys(page.skills).filter((k) => page.skills[k] > 0 && G.data.skills[k] && G.data.skills[k].form !== 'base').length : 0;
+        h += '<div class="evo-card' + (cur ? ' picked' : '') + '"><canvas class="evo-preview" data-form="' + id + '" width="220" height="170"></canvas>' +
+          '<div class="evo-name">' + f.name + '</div><div class="evo-line">' + line.name + '路線 · ' + line.role + '</div>' +
+          '<div class="evo-style">' + line.desc + '</div>' +
+          '<div class="evo-desc">已學技能 ' + learned + ' 個 · 剩餘技能點 ' + (page ? page.sp : P.sp) + '</div>' +
+          (cur ? '<button disabled>目前的形態</button>' : '<button class="primary" data-act="switchForm" data-arg="' + id + '">切換成' + f.name + '</button>') + '</div>';
+      });
+      h += '</div>';
+      return this.frame('切換形態', h, 'evolve');
+    },
+    a_switchForm(id) {
+      if (G.formSwitch.switchTo(G.player, id)) this.close('forms');
+      return 'keep';
     },
 
     // ───────── 死亡 ─────────

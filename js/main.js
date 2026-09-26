@@ -30,7 +30,14 @@
 
   function update(dt) {
     G.time += dt;
+    G.hudIcons.update(dt);
+    G.demo.update();
     if (G.scene === 'play') {
+      if (G.story.updateCeremony(dt)) {
+        G.fx.update(dt);
+        G.hud.update(dt);
+        return;
+      }
       if (G.evolve.update(dt)) {
         G.fx.update(dt);
         G.hud.update(dt);
@@ -56,6 +63,7 @@
       G.hud.draw(ctx);
       G.tutorial.draw(ctx);
       G.evolve.draw(ctx);
+      G.story.drawCeremony(ctx);
       G.fx.drawScreen(ctx);
       if (G.world.fade > 0) {
         ctx.fillStyle = 'rgba(0,0,0,' + G.world.fade + ')';
@@ -108,5 +116,7 @@
   });
 
   G.scenes.toTitle();
+  // 網址加上 ?demo=1 直接進試玩模式
+  if (/[?&]demo=1/.test(location.search)) G.demo.start();
   requestAnimationFrame(frame);
 })();

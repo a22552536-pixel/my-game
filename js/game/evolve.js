@@ -52,7 +52,8 @@
       if (!a.switched && a.t >= 2.3) {
         a.switched = true;
         P.form = a.to;
-        P.sp += 3;
+        G.formSwitch.ensurePages(P);
+        G.formSwitch.addSP(P, 3);
         P.recalc();
         P.hp = P.maxHp;
         P.mp = P.maxMp;
@@ -63,7 +64,7 @@
       }
       if (a.t >= 4.2) {
         this.anim = null;
-        G.hud.toast('進化成「' + G.data.forms[P.form].name + '」！獲得 3 點技能點，按 ' + G.input.label('skills') + ' 學新技能', '#ffe14a');
+        G.hud.toast('進化成「' + G.data.forms[P.form].name + '」！獲得 3 點技能點，點左上角的「技能」圖示學新技能；也可以用「形態」圖示切換路線', '#ffe14a');
         G.save.write();
       }
       return true;
