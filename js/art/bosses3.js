@@ -2805,7 +2805,7 @@
         return;
       }
       const col = P2 ? '225,190,255' : '255,220,130';
-      // 平常閉著眼（沉睡的石像），只有預警與出招時睜開；睜開的眼沒有眼白，整顆是發光的金色／星光虹膜
+      // 平常閉著眼（沉睡的石像），只有預警與出招時睜開；睜開的眼沒有眼珠，整顆是發光的眼白（邊緣帶一點金／星光紫）
       if (openK <= 0.02) {
         glow(ctx, x, y + 2 * s, 16 * s, col, 0.28);
         ctx.lineCap = 'round';
@@ -2832,22 +2832,17 @@
         };
         const rg = (hex, al) => 'rgba(' + U.hexToRgb(A.c(hex)).join(',') + ',' + al + ')';
         const ig = ctx.createRadialGradient(x + 1 * s, y, 0.5 * s, x + 1 * s, y, 12 * s);
-        ig.addColorStop(0, rg(P2 ? '#fbeeff' : '#fff2b0', 1));
-        ig.addColorStop(0.3, rg(P2 ? '#b77aff' : '#ffc43a', 1));
-        ig.addColorStop(0.75, rg(P2 ? '#7a30e8' : '#f09a14', 1));
-        ig.addColorStop(1, rg(P2 ? '#4a1e9a' : '#a85a06', 1));
-        sh(ctx, eyeP, m.hurtFlash > 0.05 ? '#ffffff' : P2 ? '#b07aff' : '#ffb42a', null, { lw: 2.6, hl: false, noStroke: true });
+        ig.addColorStop(0, rg('#ffffff', 1));
+        ig.addColorStop(0.55, rg(P2 ? '#fbf4ff' : '#fffbea', 1));
+        ig.addColorStop(0.85, rg(P2 ? '#e2c8ff' : '#ffe9a8', 1));
+        ig.addColorStop(1, rg(P2 ? '#b98cff' : '#ffc860', 1));
+        sh(ctx, eyeP, m.hurtFlash > 0.05 ? '#ffffff' : P2 ? '#eadcff' : '#fff4c8', null, { lw: 2.6, hl: false, noStroke: true });
         if (!(m.hurtFlash > 0.05)) {
           ctx.beginPath();
           eyeP(ctx);
           ctx.fillStyle = ig;
           ctx.fill();
         }
-        ctx.fillStyle = A.c(P2 ? '#2a0a5a' : '#5a2400');
-        ctx.beginPath();
-        ctx.ellipse(x + 2 * s, y, 1.8 * s, 5.5 * s * hs, 0, 0, TAU);
-        ctx.fill();
-        sparkle(ctx, x - 3.5 * s, y - 2 * s * hs, 2.6 * s, A.c(P2 ? '#fbeeff' : '#fff8d8'));
         ctx.beginPath();
         eyeP(ctx);
         ctx.strokeStyle = A.outline();

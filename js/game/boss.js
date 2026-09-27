@@ -22,11 +22,12 @@
     const d = G.data.monsters[id];
     const map = G.world.map;
     Object.assign(b, {
-      id, def: d, isBoss: true, scale: 1, S: d.sizeK || 1, w: d.w, h: d.h, halfW: d.w / 2, level: d.lv,
+      id, def: d, isBoss: true, scale: 1, S: d.sizeK || 1, A: d.atkK || d.sizeK || 1, w: d.w, h: d.h, halfW: d.w / 2, level: d.lv,
       maxHp: d.hp, hp: d.hp, atk: d.atk, armor: d.def, exp: d.exp,
       x, y: map.platforms[0][2], vx: 0, vy: 0, dir: -1, onGround: true, plat: 0, ignorePlat: -1, ignoreT: 0,
       t: 0, state: 'intro', stateT: 1.6, stateT0: 1.6, enraged: false, phase: 1, p2k: 0, hurtFlash: 0, dead: false, deadT: 0,
       // S：體型倍率（bosses.js 的 sizeK）。跟身體大小有關的固定距離都要乘上它。
+      // A：攻擊範圍的倍率（bosses.js 的 atkK）。預警圈、落地判定、岩漿池這類攻擊範圍乘它。
       stackN: 0, stackT: 0, touchCd: 0, squash: 0, blink: false,
       hz: [], threats: [], fightT: 0, fury: false, lastAtk: 'touch', air: null, airT: 0, lastPick: '', pickT: {},
     });

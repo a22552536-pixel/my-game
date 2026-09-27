@@ -289,7 +289,7 @@
   const SUM_CAST = 1.4; // Boss 施法姿勢的長度
   const SUM_HP = { frostSpirit: 0.4, timeItself: 0.3 }; // 該章野外魔王正常最大血量的幾成
   const SUM_FROST_AT = 0.65; // 霜靈：血量 ≤ 65% 時（第一階段中段）召喚一次
-  const SUM_TIME = { first: 14, cap: [1, 2], cd: [22, 16] }; // 時間：開打 14 秒後才會召喚；同時存在上限、冷卻（第一／第二階段）
+  const SUM_TIME = { first: 14, cap: [4, 4], cd: [15, 15] }; // 時間：開打 14 秒後才會召喚；同時存在上限 4 隻、每 15 秒召喚一次（第一／第二階段）
   const Sum = (Kit.fbSummon = {
     list(b) {
       return G.world.monsters.filter((m) => m.summoner === b && !m.dead);
@@ -1222,14 +1222,15 @@
       case 'echo':
         this.vx = 0;
         if (this.stateT <= 0) {
-          const n = this.phase === 2 ? 2 : 1;
+          // 一次喚出好幾個殘影，每個晚 0.9 秒出現、各出一招（第一階段 2 個、第二階段 3 個）
+          const n = this.phase === 2 ? 3 : 2;
           const pool = ECHOES.filter((id) => G.data.monsters[id] && G.art.MONSTER_DRAW[G.data.monsters[id].art] && id !== this.lastEcho);
           for (let i = 0; i < n && pool.length; i++) {
             const id = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
             this.lastEcho = id;
-            const side = i === 0 ? (P.x < map.w / 2 ? 1 : -1) : -(P.x < map.w / 2 ? 1 : -1);
+            const side = (i % 2 === 0 ? 1 : -1) * (P.x < map.w / 2 ? 1 : -1);
             const ex = U.clamp(P.x + side * U.rand(320, 460), 160, map.w - 160);
-            this.echoes.push({ id, x: ex, dir: U.sign(P.x - ex) || 1, t: 0, did: false, life: 3.0 + (id === 'hermitCrab' ? 0.8 : 0) });
+            this.echoes.push({ id, x: ex, dir: U.sign(P.x - ex) || 1, t: -i * 0.9, did: false, life: 3.0 + (id === 'hermitCrab' ? 0.8 : 0) });
           }
           G.audio.play('quest');
           this.setState('recover', 1.0 * this.cd());
@@ -1265,12 +1266,11 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { sweep: 22, stab: 22, stop: 16, rewind: 14, echo: 14 }
-        : { sweep: 16, stab: 18, stop: 14, rewind: 12, echo: 14, clockwork: 16 };
-      pick = this.pick(table, { clockwork: 18, stop: 14, rewind: 12, echo: 12 });
+        ? { sweep: 20, stab: 20, stop: 16, rewind: 14, echo: 22 }
+        : { sweep: 14, stab: 16, stop: 14, rewind: 12, echo: 24, clockwork: 16 };
+      pick = this.pick(table, { clockwork: 18, stop: 14, rewind: 12, echo: 7 });
     } else this.pickT[pick] = this.fightT;
-    // 召喚野外魔王：不限次數、不限時間；同時存在最多 1 隻（第一階段）／2 隻（第二階段），
-    // 冷卻從上一次召喚或上一隻召喚物倒下開始算
+    // 召喚野外魔王：不限次數、不限時間；同時存在最多 4 隻，每 15 秒一次
     if (pick !== 'clockwork' && this.sumReady()) {
       const first = !this.sumSaid || this.sumSaid !== this.phase;
       this.sumSaid = this.phase;
@@ -1315,7 +1315,8 @@
   TimeItself.prototype.sumReady = function () {
     const i = this.phase === 2 ? 1 : 0;
     if (this.fightT < SUM_TIME.first || Sum.count(this) >= SUM_TIME.cap[i]) return false;
-    const last = Math.max(this.sumCastT == null ? -1e9 : this.sumCastT, this.sumDeadT == null ? -1e9 : this.sumDeadT);
+    // 冷卻從上一次召喚開始算（場上沒滿 4 隻就會一直疊上去）
+    const last = this.sumCastT == null ? -1e9 : this.sumCastT;
     return this.fightT - last >= SUM_TIME.cd[i];
   };
 

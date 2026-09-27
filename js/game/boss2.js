@@ -423,7 +423,7 @@
         }
         break;
       case 'flopAir':
-        if (this.air) this.threats.push({ x1: this.slamX - this.w * 0.55, x2: this.slamX + this.w * 0.55, y: this.groundY(), t: Math.max(0, this.air.T - this.air.t), kind: 'area' });
+        if (this.air) this.threats.push({ x1: this.slamX - this.w * 0.55 * this.A / this.S, x2: this.slamX + this.w * 0.55 * this.A / this.S, y: this.groundY(), t: Math.max(0, this.air.T - this.air.t), kind: 'area' });
         if (this.onGround) {
           this.squash = 1;
           this.landHit(1.4);
@@ -505,7 +505,10 @@
 
   HermitCrab.prototype.landHit = function (mult) {
     const P = G.player;
-    const box = { x: this.x - this.w * 0.6, y: this.y - this.h * 0.5, w: this.w * 1.2, h: this.h * 0.5 + 6 };
+    // 落地的判定跟著攻擊範圍（A），不跟著放大的身體
+    const wa = (this.w * this.A) / this.S;
+    const ha = (this.h * this.A) / this.S;
+    const box = { x: this.x - wa * 0.6, y: this.y - ha * 0.5, w: wa * 1.2, h: ha * 0.5 + 6 };
     if (P.alive() && U.overlap(box, P.hitbox())) this.hit(mult, this.x, 'flopLand');
   };
 
@@ -523,7 +526,7 @@
     const map = G.world.map;
     this.slamX = U.clamp(x, 100 * this.S, map.w - 100 * this.S);
     this.dir = U.sign(this.slamX - this.x) || this.dir;
-    this.addHz({ type: 'mark', style: 'claw', x: this.slamX, y: this.groundY(), r: 100 * this.S, delay: prep, mult: 1.45, src: 'claw', hgt: 140 * this.S, sound: 'slam' });
+    this.addHz({ type: 'mark', style: 'claw', x: this.slamX, y: this.groundY(), r: 100 * this.A, delay: prep, mult: 1.45, src: 'claw', hgt: 140 * this.A, sound: 'slam' });
     this.setState('clawPrep', prep);
   };
 
@@ -588,7 +591,7 @@
       }
       if (this.state === 'flopPrep' || (this.state === 'flopAir' && this.air)) {
         const tx = this.state === 'flopAir' ? this.slamX : G.player.x;
-        Kit.drawTele(ctx, tx, this.groundY(), this.w * 0.6, this.state === 'flopAir' ? 1 : this.prog(), Kit.STY.claw, 0, this.t);
+        Kit.drawTele(ctx, tx, this.groundY(), (this.w * 0.6 * this.A) / this.S, this.state === 'flopAir' ? 1 : this.prog(), Kit.STY.claw, 0, this.t);
       }
       if (this.state === 'shell') {
         const beams = this.phase === 2 ? [this.beamX, this.beam2X] : [this.beamX];
@@ -751,7 +754,7 @@
           G.fx.shake(5, 0.12);
           G.fx.burst(this.x, this.y - 6, ['#ff9a3a', '#5a3a2a', '#ffd35a'], 8, 200, { angle: -Math.PI / 2, spread: 1 });
           G.audio.play('rockHit');
-          if (this.phase === 2) G.world.zones.push({ kind: 'lava', x: this.x, y: this.y, r: 40 * this.S, t: 0, life: 2.2, tick: 0.3, pct: 0.035, noSlow: true });
+          if (this.phase === 2) G.world.zones.push({ kind: 'lava', x: this.x, y: this.y, r: 40 * this.A, t: 0, life: 2.2, tick: 0.3, pct: 0.035, noSlow: true });
         }
         const nx = this.x + this.vx * dt;
         if (nx < this.halfW + 12 || nx > map.w - this.halfW - 12) {
@@ -838,7 +841,7 @@
           const T = 0.85;
           this.slamX = this.leap(P.x + P.vx * 0.3, tp, T, 1);
           this.slamPlat = tp;
-          this.addHz({ type: 'mark', style: 'lava', x: this.slamX, y: map.platforms[tp][2], r: 130 * this.S, delay: T, mult: 1.45, src: 'cannon', hgt: 160 * this.S, sound: 'slam' });
+          this.addHz({ type: 'mark', style: 'lava', x: this.slamX, y: map.platforms[tp][2], r: 130 * this.A, delay: T, mult: 1.45, src: 'cannon', hgt: 160 * this.A, sound: 'slam' });
           this.setState('cannonAir', 3);
           G.audio.play('sweep');
         }
