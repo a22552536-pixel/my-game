@@ -147,8 +147,9 @@
       props: ['barrel', 'crate', 'bollard', 'netPile', 'buoy', 'barrel'],
       hang: 'net',
       fore: { kind: 'beach', colors: ['#8cbf5a', '#b4cf6a'] },
-      ground: { style: 'grass', top: '#8cc75a', topHi: '#b6e07e', body: '#cfae80', shade: '#b8966a', edge: '#6a4a30', deco: 'coastal' },
-      plat: { style: 'planks', top: '#c99a62', topHi: '#e8c48e', body: '#8a6446', shade: '#6e4e36', edge: '#4a3020', deco: 'ropes', tuft: false },
+      // 第四版：濕黑的沙、海水浸過的舊木板（跟暗色風暴海岸一致）
+      ground: { style: 'sand', top: '#4e565a', topHi: '#7e8c92', body: '#343c42', shade: '#282e34', edge: '#101418', deco: 'seaweed', tuft: '#3a6450' },
+      plat: { style: 'planks', top: '#6a6056', topHi: '#8e8478', body: '#3e3832', shade: '#2e2a26', edge: '#141210', deco: 'ropes', tuft: false },
     },
     tidepool: {
       sky: ['#86d4f8', '#d6f3ff', '#fff6dc'],
@@ -172,7 +173,7 @@
       props: ['shell', 'starfish', 'tidePuddle', 'palm', 'driftwood', 'shell', 'tidePuddle'],
       hang: 'seaweed',
       fore: { kind: 'beach', colors: ['#9cc060', '#c8d27a'] },
-      plat: { style: 'sand', top: '#f2cf86', topHi: '#fff0c0', body: '#cf9a5c', shade: '#b27e46', edge: '#7a5028', deco: 'shells', tuft: '#8fb450' },
+      plat: { style: 'rock', top: '#3e4a52', topHi: '#6e8490', body: '#262e36', shade: '#1c232a', edge: '#0a0e12', deco: 'seaweed', tuft: false },
     },
     shipwreck: {
       sky: ['#7e98bf', '#e6c2a4', '#ffd79c'],
@@ -201,8 +202,8 @@
       props: ['barrel', 'driftwood', 'anchor', 'crate', 'plankPile', 'shell'],
       hang: 'net',
       fore: { kind: 'beach', colors: ['#8a9e58', '#aab070'] },
-      ground: { style: 'sand', top: '#dcc494', topHi: '#efdcb4', body: '#b8986a', shade: '#a08258', edge: '#6e5236', deco: 'shells', tuft: '#8a9e58' },
-      plat: { style: 'planks', top: '#9a7656', topHi: '#b8987a', body: '#5e4838', shade: '#4a382c', edge: '#2e2018', deco: 'barnacles', tuft: false },
+      ground: { style: 'sand', top: '#4a5256', topHi: '#78868c', body: '#30383e', shade: '#252b30', edge: '#0e1216', deco: 'seaweed', tuft: '#3a6450' },
+      plat: { style: 'planks', top: '#5e564e', topHi: '#80766a', body: '#36302c', shade: '#2a2522', edge: '#100e0c', deco: 'barnacles', tuft: false },
     },
     reef: {
       sky: ['#5fb8ea', '#b8e4f6', '#f0fbff'],
@@ -226,7 +227,7 @@
       props: ['rockWet', 'coral', 'starfish', 'urchin', 'rockWet', 'coral'],
       hang: 'seaweed',
       fore: { kind: 'weed', colors: ['#3f6e4e', '#5a8a4a'] },
-      plat: { style: 'rock', top: '#6d8288', topHi: '#a2bcc2', body: '#44555c', shade: '#34434a', edge: '#1c2428', deco: 'seaweed', tuft: false },
+      plat: { style: 'rock', top: '#46545c', topHi: '#7a8e98', body: '#2a343c', shade: '#1e262e', edge: '#0a0e12', deco: 'seaweed', tuft: false },
     },
     crabNest: {
       sky: ['#3e3468', '#d0705e', '#ffbe6e'],
@@ -254,8 +255,8 @@
       props: ['shellBig', 'rockWet', 'anchor', 'driftwood', 'shell', 'urchin'],
       hang: 'seaweed',
       fore: { kind: 'weed', colors: ['#4a5a4a', '#6a6a4a'] },
-      ground: { style: 'sand', top: '#d8a47a', topHi: '#f0c49a', body: '#8e6250', shade: '#744e40', edge: '#4a2e26', deco: 'shells', tuft: '#7a7a4a' },
-      plat: { style: 'rock', top: '#b08478', topHi: '#e0b09a', body: '#54404e', shade: '#42323e', edge: '#221820', deco: 'barnacles', tuft: false },
+      ground: { style: 'sand', top: '#484e56', topHi: '#76808c', body: '#2e343c', shade: '#242830', edge: '#0e1014', deco: 'seaweed', tuft: '#3a6450' },
+      plat: { style: 'rock', top: '#424a54', topHi: '#72808e', body: '#282e38', shade: '#1e222a', edge: '#0a0c10', deco: 'barnacles', tuft: false },
     },
 
     // ── 第三章　赤岩峽谷：更高更乾的紅岩與溫泉 ──

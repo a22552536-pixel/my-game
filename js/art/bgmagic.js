@@ -43,6 +43,28 @@
       return s;
     };
   }
+  // 首尾相接的分形雜訊（多層 value noise）：岩稜的鋸齒、侵蝕的起伏
+  function fractal(rnd, sizes, amp) {
+    const oct = sizes.map((sz, i) => {
+      const n = Math.max(1, Math.round(TW / sz));
+      const tab = [];
+      for (let k = 0; k < n; k++) tab.push(rnd() * 2 - 1);
+      return [TW / n, n, tab, amp * Math.pow(0.5, i)];
+    });
+    return (x) => {
+      let v = 0;
+      for (const [sz, n, tab, a] of oct) {
+        const f = x / sz;
+        const i = Math.floor(f);
+        let u = f - i;
+        u = u * u * (3 - 2 * u);
+        const a0 = tab[((i % n) + n) % n];
+        const a1 = tab[(((i + 1) % n) + n) % n];
+        v += (a0 + (a1 - a0) * u) * a;
+      }
+      return v;
+    };
+  }
   function glow(ctx, x, y, r, rgb, a, sy) {
     ctx.save();
     ctx.translate(x, y);
@@ -327,6 +349,15 @@
         ctx.quadraticCurveTo(rx - dir * w * 0.3, by, cx(by), by + 10);
         ctx.closePath();
         ctx.fill();
+        // 根的稜線
+        if (L.barkHi) {
+          ctx.strokeStyle = rgba(L.barkHi, 0.22);
+          ctx.lineWidth = Math.max(1, w * 0.025);
+          ctx.beginPath();
+          ctx.moveTo(cx(by) + dir * hw(by) * 0.25, by - H * 0.08);
+          ctx.quadraticCurveTo(rx - dir * 6, by - 10, rx + dir * w * 0.42, ry + 18);
+          ctx.stroke();
+        }
       }
     }
     // 樹幹本體：亮面→本色→暗面
@@ -358,6 +389,29 @@
           y === top ? ctx.moveTo(xx, y) : ctx.lineTo(xx, y);
         }
         ctx.stroke();
+        // 溝旁邊被光擦亮的樹皮稜
+        if (L.barkHi) {
+          ctx.save();
+          ctx.strokeStyle = rgba(L.barkHi, (off * side > 0 ? 0.3 : 0.1) * (L.barkHiA || 1));
+          ctx.lineWidth = Math.max(1, w * 0.018);
+          ctx.translate(side * Math.max(2, w * 0.03), 0);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+      // 一片片樹皮之間的橫向裂紋
+      if (L.barkHi) {
+        ctx.strokeStyle = L.bark;
+        ctx.lineWidth = Math.max(1, w * 0.02);
+        for (let k = 0; k < H / 26; k++) {
+          const y = top + r() * H * 0.92;
+          const off = (r() - 0.5) * 1.5;
+          const xx = cx(y) + off * hw(y);
+          ctx.beginPath();
+          ctx.moveTo(xx - w * 0.07, y);
+          ctx.quadraticCurveTo(xx, y + 3, xx + w * 0.07, y - 1);
+          ctx.stroke();
+        }
       }
     }
     // 苔蘚：亮面上一片片的綠
@@ -376,9 +430,19 @@
       for (let k = 0; k < L.knots; k++) {
         const y = top + H * (0.3 + r() * 0.5);
         const xx = cx(y) + (r() - 0.5) * hw(y) * 0.8;
+        // 節瘤：一圈圈年輪般的隆起，中間是暗洞
+        if (L.barkHi) {
+          ctx.strokeStyle = rgba(L.barkHi, 0.16);
+          ctx.lineWidth = Math.max(1, w * 0.014);
+          for (let q = 2; q >= 1; q--) {
+            ctx.beginPath();
+            ctx.ellipse(xx + q * 1.5, y - q * 2, w * 0.05 + q * w * 0.028, w * 0.1 + q * w * 0.05, (r() - 0.5) * 0.3, 0, PI2);
+            ctx.stroke();
+          }
+        }
         ctx.fillStyle = L.dark || 'rgba(0,0,0,0.4)';
         ctx.beginPath();
-        ctx.ellipse(xx, y, w * 0.09, w * 0.18, 0, 0, PI2);
+        ctx.ellipse(xx, y, w * 0.05, w * 0.1, 0, 0, PI2);
         ctx.fill();
       }
     }
@@ -579,6 +643,90 @@
       if (L.slit) band(ctx, h * L.slit[0], h * L.slit[1], h * L.slit[2], L.slit[3], L.slit[4]);
       if (L.haze) hazeOver(ctx, h, L.haze, L.hazeA[0], L.hazeA[1]);
     },
+    // 翻騰的深藍海面：由遠到近一排排浪，越近越高越寬；浪頭有白色浪花，浪背拖著泡沫，遠處被風暴的霧吞掉
+    mgSea(ctx, L, rnd, h) {
+      const Y0 = h * L.y0;
+      const Y1 = h * L.y1;
+      const n = L.rows;
+      for (let k = 0; k < n; k++) {
+        const u = (k + 1) / n;
+        const y = Y0 + (Y1 - Y0) * Math.pow(k / n, 1.5) + 2;
+        const A = (L.amp[0] + (L.amp[1] - L.amp[0]) * u * u) * (0.8 + rnd() * 0.4);
+        const m = Math.max(2, Math.round(L.waves[0] + (L.waves[1] - L.waves[0]) * u));
+        const p1 = rnd() * PI2;
+        const p2 = rnd() * PI2;
+        const m2 = m * 2 + 1;
+        const crest = (x) => {
+          const v = 0.5 + 0.5 * Math.sin((x / TW) * PI2 * m + p1 + Math.sin((x / TW) * PI2 * 3 + p2) * 0.8);
+          return y - A * Math.pow(v, 2.4) - A * 0.15 * Math.sin((x / TW) * PI2 * m2 + p2);
+        };
+        const g = ctx.createLinearGradient(0, y - A, 0, y + A * 2 + 30);
+        g.addColorStop(0, L.face);
+        g.addColorStop(0.35, L.body);
+        g.addColorStop(1, L.deep);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        for (let x = 0; x <= TW; x += 8) ctx.lineTo(x, crest(x));
+        ctx.lineTo(TW, h);
+        ctx.closePath();
+        ctx.fill();
+        // 浪面上被天光照亮的一道
+        ctx.strokeStyle = rgba(L.litRgb, 0.18 + u * 0.2);
+        ctx.lineWidth = 1 + u * 2;
+        ctx.beginPath();
+        for (let x = 0; x <= TW; x += 8) x ? ctx.lineTo(x, crest(x) + 3 + u * 4) : ctx.moveTo(x, crest(x) + 3 + u * 4);
+        ctx.stroke();
+        // 浪頭的白花與往後拖的泡沫
+        const step = TW / m;
+        for (let q = 0; q < m; q++) {
+          const cx = ((q + 0.25) / m) * TW - (p1 / PI2) * step;
+          let best = cx;
+          let by = 1e9;
+          for (let dx = -step * 0.5; dx <= step * 0.5; dx += step / 16) {
+            const yy = crest(cx + dx);
+            if (yy < by) {
+              by = yy;
+              best = cx + dx;
+            }
+          }
+          const fw = step * (0.18 + rnd() * 0.22);
+          const fx0 = ((best % TW) + TW) % TW;
+          wrap2(fx0, fw * 2, (xx) => {
+            ctx.fillStyle = rgba(L.foam, 0.55 + u * 0.35);
+            for (let j = 0; j < 5 + u * 8; j++) {
+              const ox = (rnd() - 0.5) * fw * 2;
+              const oy = crest(xx + ox) - by;
+              ctx.beginPath();
+              ctx.ellipse(xx + ox, by + oy + rnd() * 3, (2 + rnd() * 6) * (0.5 + u), (1 + rnd() * 2.5) * (0.5 + u), 0, 0, PI2);
+              ctx.fill();
+            }
+            // 浪背的泡沫紋
+            ctx.strokeStyle = rgba(L.foam, 0.18 + u * 0.2);
+            ctx.lineWidth = 0.8 + u;
+            for (let j = 0; j < 3; j++) {
+              const sx = xx + (rnd() - 0.3) * fw * 2;
+              const sy = by + A * (0.3 + rnd() * 0.6);
+              ctx.beginPath();
+              ctx.moveTo(sx, sy);
+              ctx.quadraticCurveTo(sx + fw * 0.5, sy + 4, sx + fw * (1 + rnd()), sy + 2 + rnd() * 6);
+              ctx.stroke();
+            }
+            // 風把浪頭吹成的水霧
+            if (u > 0.4) glow(ctx, xx + fw * 0.4, by - A * 0.2, fw * 1.4, L.foam, 0.12 + u * 0.1, 0.45);
+          });
+        }
+        // 大氣透視：越遠越融進霧裡
+        if (L.mist) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'source-atop';
+          ctx.fillStyle = rgba(L.mist, (1 - u) * L.mistA);
+          ctx.fillRect(0, y - A - 10, TW, h);
+          ctx.restore();
+        }
+      }
+      if (L.glint) band(ctx, h * L.glint[0], h * L.glint[1], h * L.glint[2], L.glint[3], L.glint[4]);
+    },
     // 退得很遠的潮水：遠方一線暗海，底下是整片露出來的海床（水窪、沙紋、發光的海底生物）
     mgSeabed(ctx, L, rnd, h) {
       const hz = h * L.horizon;
@@ -666,6 +814,7 @@
     },
     // 黑色玄武岩：一根根六角柱擠在一起的海蝕柱與斷崖
     mgBasalt(ctx, L, rnd, h) {
+      L._surfs = L.surf ? [] : null;
       for (const it of L.items) {
         const [fx, fb, wdt, hgt, opt] = it;
         const x = TW * fx;
@@ -708,7 +857,7 @@
       wrap2(x, 200 * s, (xx) => {
         basalt(ctx, xx, b, 150 * s, L.rockH * s, L, U.seeded(77));
         const top = b - L.rockH * s;
-        const th = 120 * s;
+        const th = (L.towerH || 120) * s;
         ctx.fillStyle = L.tower;
         ctx.beginPath();
         ctx.moveTo(xx - 14 * s, top + 4);
@@ -723,8 +872,34 @@
         ctx.lineTo(xx - 4 * s, top - th);
         ctx.lineTo(xx - 6 * s, top + 4);
         ctx.fill();
+        // 塔身的暗色橫帶與小窗
+        if (L.stripe) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(xx - 14 * s, top + 4);
+          ctx.lineTo(xx - 9 * s, top - th);
+          ctx.lineTo(xx + 9 * s, top - th);
+          ctx.lineTo(xx + 14 * s, top + 4);
+          ctx.clip();
+          ctx.fillStyle = L.stripe;
+          for (let k = 0; k < 3; k++) ctx.fillRect(xx - 20 * s, top - th * (0.22 + k * 0.3), 40 * s, th * 0.12);
+          ctx.restore();
+          ctx.fillStyle = rgba(L.lampRgb, 0.55);
+          for (let k = 0; k < 3; k++) ctx.fillRect(xx - 1.5 * s, top - th * (0.1 + k * 0.3) - 6 * s, 3 * s, 5 * s);
+        }
         ctx.fillStyle = L.tower;
         ctx.fillRect(xx - 13 * s, top - th - 4 * s, 26 * s, 5 * s);
+        // 迴廊欄杆
+        ctx.strokeStyle = L.rail || L.tower;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(xx - 14 * s, top - th - 9 * s);
+        ctx.lineTo(xx + 14 * s, top - th - 9 * s);
+        for (let k = -3; k <= 3; k++) {
+          ctx.moveTo(xx + k * 4.5 * s, top - th - 9 * s);
+          ctx.lineTo(xx + k * 4.5 * s, top - th - 4 * s);
+        }
+        ctx.stroke();
         ctx.fillRect(xx - 10 * s, top - th - 22 * s, 20 * s, 4 * s);
         ctx.beginPath();
         ctx.moveTo(xx - 11 * s, top - th - 22 * s);
@@ -734,6 +909,11 @@
         glow(ctx, xx, top - th - 12 * s, 60 * s, L.lampRgb, 0.55);
         ctx.fillStyle = L.lamp;
         ctx.fillRect(xx - 6 * s, top - th - 18 * s, 12 * s, 13 * s);
+        // 燈室的窗框
+        ctx.fillStyle = L.tower;
+        ctx.fillRect(xx - 1 * s, top - th - 18 * s, 2 * s, 13 * s);
+        ctx.fillRect(xx - 6.5 * s, top - th - 18 * s, 1.5 * s, 13 * s);
+        ctx.fillRect(xx + 5 * s, top - th - 18 * s, 1.5 * s, 13 * s);
         // 窗
         ctx.fillStyle = rgba(L.lampRgb, 0.7);
         ctx.fillRect(xx - 2 * s, top - th * 0.55, 3 * s, 5 * s);
@@ -803,6 +983,27 @@
       ctx.beginPath();
       ctx.ellipse(rx, b + 2, 6 + r() * 14, 4 + r() * 6, 0, Math.PI, PI2);
       ctx.fill();
+    }
+    // 浪打在岩腳：一圈白色的碎浪、往上炸開的浪花（位置記下來給動畫用）
+    if (L.surf) {
+      const sb = b - (L.surfY || 0);
+      glow(ctx, x, sb - hgt * 0.12, w * 0.8, L.surf, 0.35, 0.5);
+      for (let k = 0; k < 14; k++) {
+        const fx = x - w * 0.65 + r() * w * 1.3;
+        ctx.fillStyle = rgba(L.surf, 0.5 + r() * 0.4);
+        ctx.beginPath();
+        ctx.ellipse(fx, sb - r() * 10, 6 + r() * w * 0.12, 3 + r() * 5, 0, 0, PI2);
+        ctx.fill();
+      }
+      const side = r() < 0.5 ? -1 : 1;
+      glow(ctx, x + side * w * 0.3, sb - hgt * 0.35, Math.max(30, hgt * 0.35), L.surf, 0.3, 1.4);
+      ctx.fillStyle = rgba(L.surf, 0.8);
+      for (let k = 0; k < 26; k++) {
+        const a = -Math.PI / 2 + (r() - 0.5) * 1.6;
+        const d = r() * hgt * 0.6;
+        ctx.fillRect(x + side * w * 0.3 + Math.cos(a) * d * 0.6, sb - 10 + Math.sin(a) * d, 1.5 + r() * 2, 1.5 + r() * 2);
+      }
+      if (L._surfs) L._surfs.push([x, sb, w, hgt]);
     }
   }
   function pillar(ctx, x, b, s, kind, tilt, L, r) {
@@ -983,15 +1184,8 @@
       const w1 = wave(rnd, [[2, L.amp * 0.5], [5, L.amp * 0.3], [11, L.amp * 0.12], [23, L.amp * 0.05]]);
       const towers = [];
       for (let k = 0; k < (L.towers || 0); k++) towers.push([rnd() * TW, rr(rnd, [40, 110]), rr(rnd, L.towerH || [80, 200])]);
-      const js = Math.floor(rnd() * 1000);
       const J = L.jag == null ? 10 : L.jag;
-      const jag = (x) => {
-        const i = Math.floor(x / 18);
-        const f = x / 18 - i;
-        const a = hash(((i % 89) + 89) % 89 + js);
-        const b = hash((((i + 1) % 89) + 89) % 89 + js);
-        return (a + (b - a) * (f < 0.7 ? 0 : (f - 0.7) / 0.3) - 0.5) * J;
-      };
+      const jag = fractal(rnd, [160, 64, 28, 12, 6], J);
       const yAt = (x) => {
         let y = base + w1(x) + jag(x);
         for (const [tx, tw, th] of towers) {
@@ -1024,18 +1218,47 @@
       ctx.beginPath();
       path(ctx);
       ctx.clip();
-      // 岩層橫紋（跟著一個緩緩的傾斜）
+      // 岩層：一層層往外突的岩棚（上緣亮、下方一道陰影），跟著緩緩的傾斜與起伏
       const tilt = (rnd() - 0.5) * 0.08;
-      for (let y = base - L.amp - 220; y < h; y += 10 + rnd() * 26) {
+      for (let y = base - L.amp - 240; y < h; y += 12 + rnd() * 26) {
         const a = 0.08 + rnd() * 0.14;
-        ctx.fillStyle = rnd() < 0.5 ? rgba(L.strata, a) : 'rgba(0,0,0,' + (a * 1.2).toFixed(3) + ')';
-        const th = 2 + rnd() * 7;
+        const th = 3 + rnd() * 9;
         const ph = rnd() * 6;
+        const wob = fractal(rnd, [300, 90, 30], 6);
+        const ly = (x) => y + x * tilt + Math.sin(x * 0.004 + ph) * 8 + wob(x);
+        ctx.fillStyle = 'rgba(0,0,0,' + (a * 1.4).toFixed(3) + ')';
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        for (let x = 0; x <= TW; x += 40) ctx.lineTo(x, y + x * tilt + Math.sin(x * 0.004 + ph) * 8);
-        for (let x = TW; x >= 0; x -= 40) ctx.lineTo(x, y + th + x * tilt + Math.sin(x * 0.004 + ph) * 8);
+        ctx.moveTo(0, ly(0));
+        for (let x = 0; x <= TW; x += 20) ctx.lineTo(x, ly(x));
+        for (let x = TW; x >= 0; x -= 20) ctx.lineTo(x, ly(x) + th);
         ctx.fill();
+        if (rnd() < 0.6) {
+          ctx.strokeStyle = rgba(L.strata, a * 1.3);
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          for (let x = 0; x <= TW; x += 20) x ? ctx.lineTo(x, ly(x) - 1) : ctx.moveTo(x, ly(x) - 1);
+          ctx.stroke();
+        }
+      }
+      // 侵蝕的溝：從稜線往下、越來越窄的暗色 V 字，一側被光擦亮
+      for (let k = 0; k < (L.gullies == null ? 18 : L.gullies); k++) {
+        const x = rnd() * TW;
+        const y0 = yAt(x) + 2;
+        const len = 50 + rnd() * 200;
+        const gw = 6 + rnd() * 18;
+        const bend = (rnd() - 0.5) * 30;
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.moveTo(x - gw, y0);
+        ctx.quadraticCurveTo(x + bend * 0.5, y0 + len * 0.5, x + bend, y0 + len);
+        ctx.quadraticCurveTo(x + bend * 0.5 + gw * 0.3, y0 + len * 0.5, x + gw, y0);
+        ctx.fill();
+        ctx.strokeStyle = rgba(L.strata, 0.14);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + gw, y0);
+        ctx.quadraticCurveTo(x + bend * 0.5 + gw * 0.3, y0 + len * 0.5, x + bend, y0 + len);
+        ctx.stroke();
       }
       // 直向的裂縫
       ctx.strokeStyle = 'rgba(0,0,0,0.35)';
@@ -1112,6 +1335,10 @@
         });
       }
     },
+    // 火山放在循環寬度的中段（不跨接縫）
+    mgVolcano(ctx, L, rnd, h) {
+      volcano(ctx, L, rnd, h);
+    },
     // 遠方谷底的熔岩河：彎彎曲曲的一條亮帶，表面浮著暗色的冷殼
     mgLavaRiver(ctx, L, rnd, h) {
       const y = h * L.y;
@@ -1186,6 +1413,135 @@
     ctx.beginPath();
     ctx.ellipse(x, y1, w * 2.2, w * 0.35, 0, 0, PI2);
     ctx.fill();
+    // 落點濺起的熔岩滴與一圈亮光
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, x, y1 - w * 0.5, w * 3, '255,200,90', 0.5, 0.6);
+    ctx.restore();
+    ctx.fillStyle = '#ffc860';
+    for (let k = 0; k < 12; k++) {
+      const a = -Math.PI / 2 + ((k / 11) - 0.5) * 2.4;
+      const d = w * (1.2 + ((k * 7) % 5) * 0.5);
+      ctx.beginPath();
+      ctx.arc(x + Math.sin(a) * d * 1.3, y1 - Math.cos(a) * d * 0.9, 0.8 + (k % 3) * 0.7, 0, PI2);
+      ctx.fill();
+    }
+  }
+  // 真正的火山：凹弧的山腹、鋸齒的火口、火口裡的紅光、從下面被照亮的煙柱、沿山腹流下的熔岩溝
+  function volcano(ctx, L, rnd, h) {
+    const x = TW * L.x;
+    const b = h * L.base;
+    const top = h * L.top;
+    const w = L.w;
+    const cw = L.cw || w * 0.16;
+    const rim = fractal(rnd, [40, 16, 8], 7);
+    const flank = fractal(rnd, [120, 50, 20, 8], 8);
+    const px = (u, side) => {
+      // u: 0 在火口、1 在山腳；凹弧的山腹
+      const k = Math.pow(u, 1.8);
+      return x + side * (cw + (w - cw) * k) + flank(x + side * 400 + u * 300) * u;
+    };
+    const py = (u) => top + (b - top) * u;
+    // 煙柱（在山後面先畫）：底下被火口照成橘紅，越高越暗越散
+    for (let k = 0; k < 44; k++) {
+      const u = k / 43;
+      const cx = x + Math.sin(u * 4 + 1) * 20 * u + u * u * L.drift;
+      const cy = top - 10 - u * L.smokeH;
+      const r = (26 + u * 120) * (0.8 + rnd() * 0.4);
+      glow(ctx, cx + (rnd() - 0.5) * 30 * u, cy, r, L.smoke, 0.6 * (1 - u * 0.5), 0.8);
+      if (u < 0.55) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-atop';
+        glow(ctx, cx, cy + r * 0.4, r * 0.9, L.glowRgb, 0.5 * (1 - u / 0.55), 0.6);
+        ctx.restore();
+      }
+    }
+    // 山體
+    const path = (c) => {
+      c.moveTo(px(1, -1) - 40, b + 30);
+      for (let u = 1; u >= 0; u -= 0.04) c.lineTo(px(u, -1), py(u));
+      for (let xx = x - cw; xx <= x + cw; xx += 6) c.lineTo(xx, top + rim(xx) - 4 - Math.abs(Math.sin((xx - x) * 0.05)) * 5);
+      for (let u = 0; u <= 1.001; u += 0.04) c.lineTo(px(u, 1), py(u));
+      c.lineTo(px(1, 1) + 40, b + 30);
+      c.closePath();
+    };
+    const g = ctx.createLinearGradient(0, top, 0, b);
+    g.addColorStop(0, L.colTop);
+    g.addColorStop(1, L.col);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    path(ctx);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    path(ctx);
+    ctx.clip();
+    // 山腹上從火口放射下來的稜與溝
+    for (let k = 0; k < 34; k++) {
+      const side = k % 2 ? 1 : -1;
+      const s0 = rnd();
+      const u0 = 0.05 + rnd() * 0.2;
+      ctx.strokeStyle = k % 3 ? 'rgba(0,0,0,0.3)' : rgba(L.strata, 0.14);
+      ctx.lineWidth = 1 + rnd() * 2.5;
+      ctx.beginPath();
+      for (let u = u0; u <= 1; u += 0.05) {
+        const xx = x + side * (cw * (0.3 + s0) + (w - cw) * Math.pow(u, 1.8) * s0) + flank(u * 500 + k * 40) * 0.5;
+        u === u0 ? ctx.moveTo(xx, py(u)) : ctx.lineTo(xx, py(u));
+      }
+      ctx.stroke();
+    }
+    // 山腳被熔岩照紅
+    const ug = ctx.createLinearGradient(0, b - (b - top) * 0.5, 0, b);
+    ug.addColorStop(0, rgba(L.glowRgb, 0));
+    ug.addColorStop(1, rgba(L.glowRgb, 0.3));
+    ctx.fillStyle = ug;
+    ctx.fillRect(x - w - 60, b - (b - top) * 0.5, w * 2 + 120, (b - top) * 0.6);
+    ctx.restore();
+    // 火口：裡面的熔岩湖與往上噴的紅光
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, x, top - 8, cw * 3, L.glowRgb, 0.55, 0.7);
+    ctx.restore();
+    const cg = ctx.createLinearGradient(0, top - 10, 0, top + 6);
+    cg.addColorStop(0, '#fff0a0');
+    cg.addColorStop(1, '#ff6a1a');
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.ellipse(x, top - 2, cw * 0.85, 7, 0, 0, PI2);
+    ctx.fill();
+    ctx.strokeStyle = rgba('255,170,80', 0.8);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let xx = x - cw; xx <= x + cw; xx += 6) xx === x - cw ? ctx.moveTo(xx, top + rim(xx) - 3) : ctx.lineTo(xx, top + rim(xx) - 3 - Math.abs(Math.sin((xx - x) * 0.05)) * 5);
+    ctx.stroke();
+    // 熔岩溝：從火口邊緣沿山腹蜿蜒流下，一路分岔（點記在 L._chans 給流動的亮光用）
+    L._chans = [];
+    for (const [side, s0, len, wig] of L.chans) {
+      const pts = [];
+      for (let u = 0.02; u <= len; u += 0.025) {
+        const xx = x + side * (cw * 0.6 + (w - cw) * Math.pow(u, 1.8) * s0) + Math.sin(u * 14 + s0 * 9) * wig * u;
+        pts.push([xx, py(u) - 2]);
+      }
+      L._chans.push(pts);
+      const stroke = (lw, c) => {
+        ctx.strokeStyle = c;
+        ctx.lineWidth = lw;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+        ctx.stroke();
+      };
+      stroke(14, rgba(L.glowRgb, 0.12));
+      stroke(7, rgba(L.glowRgb, 0.3));
+      stroke(3.2, '#ff8a2a');
+      stroke(1.2, '#ffe08a');
+      // 末端的熔岩池
+      const e = pts[pts.length - 1];
+      glow(ctx, e[0], e[1], 40, L.glowRgb, 0.45, 0.4);
+    }
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
   }
 
   // ── 第四章：雪山裡的松林 ──
@@ -1692,6 +2048,267 @@
     },
   };
 
+  // ── 終章：「時間如流水，空間如風」 ──
+  const GOLD = '232,196,110';
+  // 光之河：空中蜿蜒的光帶，細細的金線沿著流（河上漂的數字與齒輪交給動畫）
+  function streamY(S, x) {
+    return S.y + Math.sin((x / TW) * PI2 * S.f + S.p) * S.amp + Math.sin((x / TW) * PI2 * (S.f * 2 + 1) + S.p2) * S.amp * 0.3;
+  }
+  Object.assign(LAYER, {
+    mgStreams(ctx, L, rnd, h) {
+      L._streams = [];
+      for (const [y0, amp, f, speed] of L.items) {
+        const S = { y: h * y0, amp, f, p: rnd() * PI2, p2: rnd() * PI2, speed };
+        L._streams.push(S);
+        const line = (off, lw, c) => {
+          ctx.strokeStyle = c;
+          ctx.lineWidth = lw;
+          ctx.beginPath();
+          for (let x = 0; x <= TW; x += 8) x ? ctx.lineTo(x, streamY(S, x) + off) : ctx.moveTo(x, streamY(S, x) + off);
+          ctx.stroke();
+        };
+        line(0, 34, rgba(L.glowRgb, 0.05));
+        line(0, 16, rgba(L.glowRgb, 0.08));
+        line(-6, 0.8, rgba(GOLD, 0.35));
+        line(0, 1.2, rgba(GOLD, 0.6));
+        line(5, 0.7, rgba(GOLD, 0.3));
+        line(10, 0.5, rgba(L.glowRgb, 0.25));
+        ctx.fillStyle = rgba('255,240,210', 0.8);
+        for (let k = 0; k < 60; k++) {
+          const x = rnd() * TW;
+          ctx.fillRect(x, streamY(S, x) + (rnd() - 0.5) * 16, 1.2, 1.2);
+        }
+      }
+    },
+    // 星空的綢帶：像風吹過的絲，寬窄起伏、在折起來的地方變細，裡面是星空，兩邊一條細金線
+    mgSilk(ctx, L, rnd, h) {
+      for (const [y0, amp, f, wid] of L.items) {
+        const p = rnd() * PI2;
+        const q = rnd() * PI2;
+        const top = (x) => h * y0 + Math.sin((x / TW) * PI2 * f + p) * amp;
+        const wd = (x) => wid * (0.12 + 0.88 * Math.abs(Math.sin((x / TW) * PI2 * (f + 1) * 0.5 + q)));
+        const path = (c) => {
+          c.moveTo(0, top(0));
+          for (let x = 0; x <= TW; x += 8) c.lineTo(x, top(x));
+          for (let x = TW; x >= 0; x -= 8) c.lineTo(x, top(x) + wd(x));
+          c.closePath();
+        };
+        ctx.save();
+        ctx.beginPath();
+        path(ctx);
+        ctx.clip();
+        const g = ctx.createLinearGradient(0, h * y0 - amp, 0, h * y0 + amp + wid);
+        g.addColorStop(0, 'rgba(40,30,100,0.55)');
+        g.addColorStop(1, 'rgba(90,60,160,0.42)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, h * y0 - amp - 10, TW, amp * 2 + wid + 20);
+        ctx.fillStyle = '#ffffff';
+        for (let k = 0; k < 260; k++) {
+          const x = rnd() * TW;
+          ctx.globalAlpha = 0.3 + rnd() * 0.7;
+          const r0 = rnd() < 0.06 ? 1.8 : 0.8;
+          ctx.fillRect(x, top(x) + rnd() * wd(x), r0, r0);
+        }
+        ctx.globalAlpha = 1;
+        // 絲的光澤：幾條順著布紋的細線
+        for (let k = 1; k <= 3; k++) {
+          ctx.strokeStyle = rgba('220,200,255', 0.12);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (let x = 0; x <= TW; x += 10) x ? ctx.lineTo(x, top(x) + wd(x) * k / 4) : ctx.moveTo(x, top(x) + wd(x) * k / 4);
+          ctx.stroke();
+        }
+        ctx.restore();
+        ctx.strokeStyle = rgba(GOLD, 0.65);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let x = 0; x <= TW; x += 8) x ? ctx.lineTo(x, top(x)) : ctx.moveTo(x, top(x));
+        ctx.stroke();
+        ctx.strokeStyle = rgba(GOLD, 0.4);
+        ctx.beginPath();
+        for (let x = 0; x <= TW; x += 8) x ? ctx.lineTo(x, top(x) + wd(x)) : ctx.moveTo(x, top(x) + wd(x));
+        ctx.stroke();
+      }
+    },
+    // 橫躺的沙漏：沙子不往下掉，從瓶頸橫著流出去，在空中拉成一條細細的沙河
+    mgSandglass(ctx, L, rnd, h) {
+      const x = TW * L.x;
+      const y = h * L.y;
+      const s = L.s;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(L.rot);
+      glow(ctx, 0, 0, 110 * s, '255,220,160', 0.12);
+      // 玻璃
+      const bulb = (dir) => {
+        ctx.beginPath();
+        ctx.moveTo(0, -4 * s);
+        ctx.bezierCurveTo(dir * 40 * s, -8 * s, dir * 62 * s, -40 * s, dir * 70 * s, -34 * s);
+        ctx.lineTo(dir * 70 * s, 34 * s);
+        ctx.bezierCurveTo(dir * 62 * s, 40 * s, dir * 40 * s, 8 * s, 0, 4 * s);
+        ctx.closePath();
+      };
+      for (const dir of [-1, 1]) {
+        bulb(dir);
+        ctx.fillStyle = 'rgba(200,210,255,0.12)';
+        ctx.fill();
+        ctx.strokeStyle = rgba('230,235,255', 0.5);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      // 剩下的沙
+      ctx.fillStyle = '#e8c27a';
+      ctx.beginPath();
+      ctx.moveTo(-68 * s, 34 * s);
+      ctx.lineTo(-68 * s, 6 * s);
+      ctx.quadraticCurveTo(-40 * s, 14 * s, -20 * s, 12 * s);
+      ctx.lineTo(-10 * s, 34 * s);
+      ctx.fill();
+      // 金框：兩端的圓盤與三根細柱
+      ctx.strokeStyle = rgba(GOLD, 0.9);
+      ctx.lineWidth = 2;
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(dir * 74 * s, -44 * s);
+        ctx.lineTo(dir * 74 * s, 44 * s);
+        ctx.stroke();
+      }
+      ctx.lineWidth = 1;
+      for (const yy of [-44, 0, 44]) {
+        ctx.beginPath();
+        ctx.moveTo(-74 * s, yy * s);
+        ctx.lineTo(74 * s, yy * s);
+        ctx.stroke();
+      }
+      ctx.restore();
+      // 從瓶頸橫著流出去的沙河（世界座標，記下來給動畫用）
+      const nx = x + Math.sin(L.rot) * 4 * s;
+      const ny = y;
+      const pts = [];
+      for (let k = 0; k <= 40; k++) {
+        const u = k / 40;
+        pts.push([nx + u * L.len, ny + Math.sin(u * 5 + 1) * 26 * u - u * u * 40]);
+      }
+      L._sand = pts;
+      ctx.fillStyle = 'rgba(240,210,140,0.7)';
+      for (let k = 0; k < 220; k++) {
+        const u = Math.pow(rnd(), 0.8);
+        const pt = pts[Math.floor(u * 40)];
+        const spread = 2 + u * 22;
+        ctx.globalAlpha = 0.8 * (1 - u * 0.8);
+        ctx.fillRect(pt[0] + (rnd() - 0.5) * 8, pt[1] + (rnd() - 0.5) * spread, 1.3, 1.3);
+      }
+      ctx.globalAlpha = 1;
+    },
+  });
+  // 動畫用的小貼圖：羅馬數字、小齒輪、鐘錶的指針、被風吹走的建築碎片
+  const ROMANS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  function glyphSprites() {
+    if (sprites.glyphs) return sprites.glyphs;
+    const out = ROMANS.map((t) => {
+      const c = newCanvas(34, 20);
+      const x = c.getContext('2d');
+      x.font = '14px Georgia, serif';
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillStyle = 'rgba(' + GOLD + ',0.95)';
+      x.fillText(t, 17, 10);
+      return c;
+    });
+    for (const [r, teeth] of [[8, 8], [6, 6]]) {
+      const S = r * 2 + 6;
+      const c = newCanvas(S, S);
+      const x = c.getContext('2d');
+      x.translate(S / 2, S / 2);
+      x.strokeStyle = 'rgba(' + GOLD + ',0.9)';
+      x.lineWidth = 1.2;
+      x.beginPath();
+      for (let k = 0; k < teeth * 2; k++) {
+        const a = (k / (teeth * 2)) * PI2;
+        const rr0 = k % 2 ? r : r + 2.5;
+        k ? x.lineTo(Math.cos(a) * rr0, Math.sin(a) * rr0) : x.moveTo(Math.cos(a) * rr0, Math.sin(a) * rr0);
+      }
+      x.closePath();
+      x.stroke();
+      x.beginPath();
+      x.arc(0, 0, r * 0.35, 0, PI2);
+      x.stroke();
+      out.push(c);
+    }
+    sprites.glyphs = out;
+    return out;
+  }
+  function handSprite(kind) {
+    const key = 'hand' + kind;
+    if (sprites[key]) return sprites[key];
+    const c = newCanvas(64, 16);
+    const x = c.getContext('2d');
+    x.translate(6, 8);
+    x.strokeStyle = 'rgba(' + GOLD + ',0.95)';
+    x.fillStyle = 'rgba(' + GOLD + ',0.95)';
+    x.lineWidth = 1.2;
+    // 尾巴的小圓、細桿、中段的鏤空菱形、尖端
+    x.beginPath();
+    x.arc(0, 0, 3, 0, PI2);
+    x.stroke();
+    x.beginPath();
+    x.moveTo(3, 0);
+    x.lineTo(kind ? 50 : 40, 0);
+    x.stroke();
+    x.beginPath();
+    x.moveTo(16, 0);
+    x.lineTo(22, -4);
+    x.lineTo(28, 0);
+    x.lineTo(22, 4);
+    x.closePath();
+    x.stroke();
+    x.beginPath();
+    x.moveTo(kind ? 56 : 46, 0);
+    x.lineTo(kind ? 48 : 38, -3);
+    x.lineTo(kind ? 48 : 38, 3);
+    x.closePath();
+    x.fill();
+    sprites[key] = c;
+    return c;
+  }
+  function fragSprites() {
+    if (sprites.frags) return sprites.frags;
+    const L = { lit: '#bdb2dc', mid: '#7c70a8', dark: '#3e3470', goldRgb: GOLD };
+    const out = [];
+    const mk = (w, hh, fn) => {
+      const c = newCanvas(w, hh);
+      const x = c.getContext('2d');
+      x.translate(w / 2, hh / 2);
+      fn(x);
+      out.push(c);
+    };
+    mk(40, 40, (x) => isoBox(x, 0, 10, 14, 14, 14, L, true));
+    mk(40, 40, (x) => {
+      // 一塊拱石
+      x.fillStyle = L.lit;
+      x.beginPath();
+      x.arc(0, 18, 26, Math.PI * 1.3, Math.PI * 1.55);
+      x.arc(0, 18, 14, Math.PI * 1.55, Math.PI * 1.3, true);
+      x.closePath();
+      x.fill();
+      x.strokeStyle = 'rgba(' + GOLD + ',0.8)';
+      x.lineWidth = 1;
+      x.stroke();
+    });
+    mk(40, 40, (x) => {
+      // 一截柱身
+      x.fillStyle = L.mid;
+      x.fillRect(-7, -12, 14, 24);
+      x.fillStyle = L.lit;
+      x.fillRect(-7, -12, 4, 24);
+      x.strokeStyle = 'rgba(' + GOLD + ',0.8)';
+      x.lineWidth = 1;
+      x.strokeRect(-7, -12, 14, 24);
+    });
+    sprites.frags = out;
+    return out;
+  }
+
   // ════════════════════════════════════════════════════════════
   // 動畫：插在背景層之間的「假層」
   // 每個主題的 fx 清單：{ after: 在第幾層之後, f: 視差, kind, ... }
@@ -1945,8 +2562,8 @@
       ctx.globalAlpha = d.a * (0.55 + 0.45 * (1 - toward));
       ctx.drawImage(beamSprite(rgb), 0, -32);
       ctx.restore();
-      const fr = 40 + toward * toward * 160;
-      ctx.globalAlpha = 0.5 + toward * 0.5;
+      const fr = 26 + toward * toward * 90;
+      ctx.globalAlpha = 0.45 + toward * 0.45;
       ctx.drawImage(glowSprite(rgb), x - fr, y - fr, fr * 2, fr * 2);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
@@ -2048,8 +2665,8 @@
       const bot = Math.min(img.height, G.H * d.y1 - y0);
       const sh = d.strip || 6;
       ctx.globalAlpha = d.a;
-      for (let y = top; y < bot; y += sh) {
-        const dx = Math.sin(t * 3.1 + y * 0.09) * d.amp + Math.sin(t * 1.7 + y * 0.031) * d.amp * 0.5;
+      for (let y = top; y < bot; y += sh * (d.gap || 1)) {
+        const dx = Math.sin(t * (d.spd || 3.1) + y * (d.k || 0.09)) * d.amp + Math.sin(t * (d.spd || 3.1) * 0.55 + y * 0.031) * d.amp * 0.5;
         ctx.drawImage(img, 0, y, TW, sh, dx, y0 + y, TW, sh);
       }
       ctx.globalAlpha = 1;
@@ -2093,6 +2710,135 @@
     ctx.globalCompositeOperation = 'source-over';
   };
 
+  // 浪打在岩腳炸開的浪花：每塊礁岩輪流噴起幾團白霧與水珠
+  FX.surf = function (ctx, d, t, sx) {
+    const img = glowSprite(agedRgb('235,245,255', cur));
+    ctx.fillStyle = 'rgba(240,248,255,0.85)';
+    for (const src of d.srcs) {
+      const list = src._surfs;
+      if (!list) continue;
+      for (let i = 0; i < list.length; i++) {
+        const [x, b, w, hgt] = list[i];
+        if (sx + x + w < 0 || sx + x - w > G.W) continue;
+        for (let k = 0; k < 2; k++) {
+          const ph = (t * (d.speed || 0.45) + k * 0.5 + i * 0.29 + x * 0.0007) % 1;
+          if (ph > 0.7) continue;
+          const u = ph / 0.7;
+          const e = Math.sin(u * Math.PI);
+          const px = x + (k ? 0.25 : -0.2) * w;
+          const py = b - Math.sin(u * Math.PI * 0.5) * hgt * (d.rise || 0.55);
+          const r = Math.min(70, w * (0.15 + u * 0.3));
+          ctx.globalAlpha = 0.45 * e;
+          ctx.drawImage(img, px - r, py - r * 0.8, r * 2, r * 1.6);
+          ctx.globalAlpha = 0.9 * e;
+          for (let q = 0; q < 6; q++) {
+            const a = (q / 5 - 0.5) * 1.8;
+            const dd = u * hgt * 0.5;
+            ctx.fillRect(px + Math.sin(a) * dd * 0.8, b - Math.cos(a) * dd + u * u * hgt * 0.35, 2, 2);
+          }
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  // 熔岩溝裡往下流的亮點
+  FX.chan = function (ctx, d, t, sx) {
+    const chans = d.src._chans;
+    if (!chans) return;
+    const img = glowSprite(agedRgb('255,210,120', cur));
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,245,200,0.9)';
+    for (let c = 0; c < chans.length; c++) {
+      const pts = chans[c];
+      const n = pts.length;
+      for (let k = 0; k < 4; k++) {
+        const ph = (t * 0.07 + k / 4 + c * 0.31) % 1;
+        const p = pts[Math.floor(ph * (n - 1))];
+        if (sx + p[0] < -20 || sx + p[0] > G.W + 20) continue;
+        ctx.globalAlpha = 0.7 * Math.sin(ph * Math.PI);
+        ctx.drawImage(img, p[0] - 9, p[1] - 9, 18, 18);
+        ctx.fillRect(p[0] - 1, p[1] - 1, 2, 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  Object.assign(FX, {
+    // 光之河上順流漂的羅馬數字與小齒輪
+    glyphs(ctx, d, t, sx) {
+      const list = d.src._streams;
+      if (!list) return;
+      const G2 = glyphSprites();
+      for (let s = 0; s < list.length; s++) {
+        const S = list[s];
+        const n = d.n;
+        for (let k = 0; k < n; k++) {
+          const u = (t * S.speed + k / n + s * 0.13) % 1;
+          const x = u * TW;
+          if (sx + x < -30 || sx + x > G.W + 30) continue;
+          const img = G2[(k * 5 + s * 3) % G2.length];
+          const y = streamY(S, x) + Math.sin(t * 1.3 + k * 2.1) * 5 - img.height / 2;
+          ctx.globalAlpha = 0.85 * Math.min(1, Math.sin(u * Math.PI) * 3);
+          ctx.drawImage(img, x - img.width / 2, y);
+        }
+      }
+      ctx.globalAlpha = 1;
+    },
+    // 像魚一樣游的鐘錶指針：沿著緩緩起伏的路線前進，身體跟著擺
+    fish: Object.assign(function (ctx, d, t, sx) {
+      for (const q of d.pts) {
+        const sp = 18 + q.v * 22;
+        const x = wrapN(q.x + t * sp, TW);
+        if (sx + x < -60 || sx + x > G.W + 60) continue;
+        const y = G.H * (d.y0 + (d.y1 - d.y0) * q.s) + Math.sin(t * 0.7 + q.p) * 22;
+        const vy = Math.cos(t * 0.7 + q.p) * 22 * 0.7;
+        const ang = Math.atan2(vy, sp) + Math.sin(t * 3 + q.p) * 0.12;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        ctx.globalAlpha = 0.8;
+        const img = handSprite(q.v > 0.5 ? 1 : 0);
+        ctx.drawImage(img, -32, -8);
+        ctx.restore();
+      }
+    }, { init(d) { pool(d, d.n, U.seeded(d.seed || 41)); } }),
+    // 橫流的沙
+    sand(ctx, d, t, sx) {
+      const pts = d.src._sand;
+      if (!pts) return;
+      ctx.fillStyle = 'rgba(250,225,160,0.9)';
+      const n = pts.length - 1;
+      for (let k = 0; k < 26; k++) {
+        const u = (t * 0.12 + k / 26) % 1;
+        const p = pts[Math.floor(u * n)];
+        if (sx + p[0] < -10 || sx + p[0] > G.W + 10) continue;
+        ctx.globalAlpha = 1 - u * 0.85;
+        ctx.fillRect(p[0] + Math.sin(k * 7.1) * 3, p[1] + Math.sin(k * 3.3 + t) * (2 + u * 12), 1.6, 1.6);
+      }
+      ctx.globalAlpha = 1;
+    },
+    // 被「空間的風」吹走的建築碎片：慢慢翻滾著橫越
+    blown: Object.assign(function (ctx, d, t, sx) {
+      const F = fragSprites();
+      for (let i = 0; i < d.pts.length; i++) {
+        const q = d.pts[i];
+        const x = wrapN(q.x + t * (26 + q.v * 30), TW);
+        if (sx + x < -40 || sx + x > G.W + 40) continue;
+        const y = G.H * (d.y0 + (d.y1 - d.y0) * q.s) + Math.sin(t * 0.5 + q.p) * 30;
+        const img = F[i % F.length];
+        const sc = 0.6 + q.v * 0.6;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(t * (0.3 + q.v * 0.5) + q.p);
+        ctx.globalAlpha = 0.75;
+        ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc);
+        ctx.restore();
+      }
+    }, { init(d) { pool(d, d.n, U.seeded(d.seed || 43)); } }),
+  });
+
   // ════════════════════════════════════════════════════════════
   // 第一章　古老的魔法森林
   // ════════════════════════════════════════════════════════════
@@ -2103,7 +2849,7 @@
       far: '#2f6c60', farHaze: '130,210,190',
       mid: '#1b4740', midLit: '#3a6f5a', midDark: '#0f2e29',
       near: '#0e2621', nearLit: '#35553c', nearDark: '#07130f',
-      front: '#040b09', frontLit: '#243a2c',
+      front: '#18201a', frontLit: '#3a4832', frontDark: '#0b110d', frontMoss: '70,110,70', barkHi: '150,170,120',
       canopy: '#0a1d18', canopy2: '#0e2620', canopyRim: '170,230,170',
       moss: '130,190,120', mossRgb: '90,140,105', leafRgb: '70,130,95',
       shroom: '110,240,220', shroom2: '190,255,150', shroomCap: '#1e4a52', stem: '#2e5a5a',
@@ -2127,17 +2873,17 @@
         { type: 'mgTrunks', n: 24, w: [14, 40], base: 0.74, color: P.far, lit: P.far, dark: P.far, lean: 0.3, roots: false, haze: P.farHaze, hazeA: [0.35, 0.72], fog: [0.45, 0.72, 0.95, P.mist, 0.55] },
       ].concat(P.farExtra || []).concat([
         { type: 'mgShrooms', items: P.shrooms || [[0.08, 0.76, 0.55, P.shroom], [0.36, 0.78, 0.35, P.shroom2], [0.62, 0.77, 0.7, P.shroom], [0.9, 0.78, 0.4, P.shroom2]], cap: P.shroomCap, stem: P.stem, haze: P.farHaze, hazeA: [0.18, 0.3] },
-        { type: 'mgTrunks', n: 11, w: [36, 84], base: 0.82, color: P.mid, lit: P.midLit, dark: P.midDark, bark: 'rgba(0,20,15,0.25)', rim: P.mist, rimA: 0.35, side: -1, moss: P.moss, limbs: 1, haze: P.farHaze, hazeA: [0.28, 0.42], fog: [0.62, 0.84, 1, P.mist, 0.45] },
+        { type: 'mgTrunks', n: 11, w: [36, 84], base: 0.82, color: P.mid, lit: P.midLit, dark: P.midDark, bark: 'rgba(0,20,15,0.3)', barkHi: P.barkHi, barkHiA: 0.6, knots: 1, rim: P.mist, rimA: 0.35, side: -1, moss: P.moss, limbs: 1, haze: P.farHaze, hazeA: [0.28, 0.42], fog: [0.62, 0.84, 1, P.mist, 0.45] },
       ]).concat(P.midExtra || []).concat([
         { type: 'mgRays', rays, rgb: P.gold },
       ]) },
       // 林冠（幾乎蓋住天空）與中景的古木：亮面有金色邊光與苔蘚，腳下沉進陰影
       { type: 'stack', f: 0.1, extendTop: true, of: [
         { type: 'mgCanopy', base: cb, amp: 46, color: P.canopy, color2: P.canopy2, rim: P.canopyRim, holes, rayRgb: P.gold, vines: 30, vineLen: [60, 280], vine: '#12302a', leaf: '#1d4a3a', moss: 9, mossLen: [60, 150], mossRgb: P.mossRgb, clumps: 110, leafRgb: P.leafRgb },
-        { type: 'mgTrunks', n: 6, w: [80, 150], base: 0.93, color: P.near, lit: P.nearLit, dark: P.nearDark, bark: 'rgba(0,0,0,0.28)', rim: P.gold, rimA: 0.45, side: 1, moss: P.moss, knots: 2, limbs: 1, vines: 2, vine: '#10251f', leaf: '#1d3e30', haze: P.mist, hazeA: [0.1, 0.22], fog: [0.72, 0.9, 1, P.mist, 0.28], shadow: [0.8, 1, '3,10,8', 0.55] },
+        { type: 'mgTrunks', n: 6, w: [80, 150], base: 0.93, color: P.near, lit: P.nearLit, dark: P.nearDark, bark: 'rgba(0,0,0,0.34)', barkHi: P.barkHi, rim: P.gold, rimA: 0.45, side: 1, moss: P.moss, knots: 2, limbs: 1, vines: 2, vine: '#10251f', leaf: '#1d3e30', haze: P.mist, hazeA: [0.1, 0.22], fog: [0.72, 0.9, 1, P.mist, 0.28], shadow: [0.8, 1, '3,10,8', 0.55] },
       ] },
       // 近景：幾乎全黑的巨大樹幹剪影
-      { type: 'mgTrunks', f: 0.28, extendTop: true, n: 3, w: [150, 230], jit: 0.5, base: 1.04, color: P.front, lit: P.frontLit, dark: P.front, rim: P.gold, rimA: 0.22, side: 1, knots: 1, limbs: 0, vines: 3, vine: '#07140f', leaf: '#0f2219' },
+      { type: 'mgTrunks', f: 0.28, extendTop: true, n: 3, w: [150, 230], jit: 0.5, base: 1.04, color: P.front, lit: P.frontLit, dark: P.frontDark, bark: 'rgba(0,0,0,0.4)', barkHi: P.barkHi, barkHiA: 0.7, rim: P.gold, rimA: 0.32, side: 1, moss: P.frontMoss, knots: 2, limbs: 0, vines: 3, vine: '#0e1c14', leaf: '#1a3024' },
     ];
     return {
       sky: [P.skyTop, P.skyMid, P.skyLow],
@@ -2148,6 +2894,7 @@
       ],
       beams: 0,
       motes: P.motes || 'rgba(190,255,215,0.85)',
+      fgSpores: P.fgRgb || '200,255,215',
       mg: true,
     };
   }
@@ -2179,9 +2926,9 @@
   // 女王的殿堂：暮紫的林子，巨木之間透出城堡與發光巨菇
   apply('queenHall', forest({
     skyTop: '#0b0612', skyMid: '#201228', skyLow: '#4e2a4c', mist: '170,105,170', gold: '255,190,220', farHaze: '130,85,135',
-    far: '#4a3050', mid: '#2e1c38', midLit: '#4e3458', midDark: '#1c1024', near: '#1a0f20', nearLit: '#402a44', nearDark: '#0c0610', front: '#07030a', frontLit: '#2a1a2c',
+    far: '#4a3050', mid: '#2e1c38', midLit: '#4e3458', midDark: '#1c1024', near: '#1a0f20', nearLit: '#402a44', nearDark: '#0c0610', front: '#1c1320', frontLit: '#3e2c40', frontDark: '#0e0810', frontMoss: '110,80,120', barkHi: '180,140,180',
     canopy: '#120a16', canopy2: '#1a1020', canopyRim: '230,170,220', moss: '170,120,170', mossRgb: '140,100,150', leafRgb: '120,80,130',
-    shroom: '255,170,220', shroom2: '210,170,255', shroomCap: '#3a2244', stem: '#4a3450', motes: 'rgba(255,190,230,0.9)',
+    shroom: '255,170,220', shroom2: '210,170,255', shroomCap: '#3a2244', stem: '#4a3450', motes: 'rgba(255,190,230,0.9)', fgRgb: '255,205,235',
     holes: [[0.5, 0.04, 120]], canopyBase: 0.16,
     farExtra: [{ type: 'landmarks', wall: '#3e2a4a', wallShade: '#32203e', roof: '#5a2e56', roofShade: '#4a2446', flag: '#c8a04a', frame: '#1e1024', dark: '#180c1e', win: '255,200,230', winC: '#ffd8ea',
       items: [['castle', 0.5, 0.74, 1.15]], haze: '150,100,150', hazeA: [0.4, 0.45], rim: { c: 'rgba(255,190,220,0.6)', dx: 0, dy: 3 } }],
@@ -2192,57 +2939,67 @@
   // ════════════════════════════════════════════════════════════
   function coast(o) {
     const P = Object.assign({
-      sky: ['#0b1118', '#1f2c36', '#46545a'],
-      cloud: ['#2a3640', '#34424c', '#3e4c54', '#48555c'], cloudLit: '#5c6a72', cloudUnder: '#1a232a',
-      mist: '150,172,180', haze: '96,118,128',
-      bio: ['90,240,220', '120,200,255', '150,255,190'],
-      rock: '#1c2328', rockLit: '#2a343a', rockDark: '#12171b', rockTop: '#3a464c', wet: '170,210,220',
+      sky: ['#1a2638', '#3a5068', '#7890a4'],
+      cloud: ['#2c3a4e', '#38485e', '#44566c', '#50647a'], cloudLit: '#7a90a6', cloudUnder: '#223044',
+      mist: '150,175,198', haze: '96,122,146',
+      rock: '#14191e', rockLit: '#262e36', rockDark: '#0c1014', rockTop: '#3a4650', wet: '170,210,230',
       lamp: '#fff4c8', lampRgb: '255,236,170',
-      horizon: 0.52, lightning: 6.5, stackItems: null, lighthouse: [0.74, 0.54, 0.55],
+      horizon: 0.46, lightning: 8, lighthouse: [0.66, 0.74, 0.95],
+      breakX: 0.3,
     }, o);
     const hz = P.horizon;
+    const surf = '235,245,255';
+    const far = { type: 'mgBasalt', items: P.farStacks || [[0.1, hz + 0.05, 70, 170], [0.16, hz + 0.05, 40, 100], [0.46, hz + 0.06, 50, 80], [0.88, hz + 0.05, 80, 210]], rock: '#344454', rockLit: '#40526a', rockDark: '#2e3c4c', rockTop: '#56687a', col: 10, surf, surfY: 0, haze: P.haze, hazeA: [0.35, 0.3] };
+    const mid = { type: 'mgBasalt', items: P.stacks || [[0.04, 0.8, 190, 360], [0.4, 0.82, 120, 200], [0.95, 0.8, 220, 420, { col: 20 }]], rock: P.rock, rockLit: P.rockLit, rockDark: P.rockDark, rockTop: P.rockTop, wet: P.wet, col: 17, surf, haze: P.haze, hazeA: [0.1, 0.16] };
+    const near = { type: 'mgBasalt', f: 0.18, items: P.nearStacks || [[0.02, 1.0, 300, 560, { col: 24 }], [0.62, 1.0, 160, 280, { col: 22 }]], rock: '#0e1216', rockLit: '#1c242c', rockDark: '#080a0c', rockTop: '#2c3842', wet: '150,190,210', surf, surfY: 40 };
+    const L1 = P.lighthouse;
+    const lamp = { x: L1[0], y: L1[1] - (230 + 190 + 12) * L1[2] / G.H };
     const layers = [
-      // 遠景：一層層壓低的暴風雲、遠方的海、退潮後露出的海床、海蝕柱、燈塔、沉在海床上的古老石柱
+      // 遠景：風暴的天（雲縫裡透下幾道冷光）、一直翻到天邊的深藍海、遠方的玄武岩柱
       { type: 'stack', f: 0.012, of: [
-        { type: 'mgSky', glows: [[0.5, hz, 1000, '140,165,175', 0.35, 0.3], [0.7, 0.2, 380, '180,200,210', 0.14, 0.7]] },
-        { type: 'mgStorm', y0: 0.02, y1: 0.36, rows: 4, r: [70, 130], step: 95, cols: P.cloud, lit: P.cloudLit, under: P.cloudUnder, slit: [hz - 0.12, hz - 0.03, hz, '160,185,190', 0.28] },
-        { type: 'mgSeabed', horizon: hz, sea: ['#27353c', '#1c282e'], glint: '190,210,215', bed: ['#3a474c', '#2a3438', '#161d20'], ripple: '120,145,150', pool: '#3c4c54', rock: '#1e262a', bio: P.bio, pools: P.pools || 12, patches: P.patches || 28, mist: P.mist, mistA: 0.55 },
-        { type: 'mgBasalt', items: P.farStacks || [[0.12, hz + 0.01, 60, 150], [0.18, hz + 0.01, 34, 90], [0.44, hz + 0.01, 46, 70], [0.9, hz + 0.01, 70, 190]], rock: '#3a474e', rockLit: '#46545a', rockDark: '#34424a', rockTop: '#56646a', col: 10, haze: P.haze, hazeA: [0.35, 0.35] },
-        { type: 'mgLighthouse', x: P.lighthouse[0], base: P.lighthouse[1], s: P.lighthouse[2], rockH: 140, rock: '#2e3a40', rockLit: '#38454a', rockDark: '#27333a', rockTop: '#46545a', col: 12, tower: '#2a3439', towerLit: '#3e4a50', lamp: P.lamp, lampRgb: P.lampRgb, haze: P.haze, hazeA: [0.22, 0.22] },
-        { type: 'mgPillars', items: P.farPillars || [[0.06, hz + 0.1, 0.45, 'gate', -0.04], [0.3, hz + 0.09, 0.35, 'broken', 0.1], [0.34, hz + 0.1, 0.4, 'whole', -0.05], [0.58, hz + 0.11, 0.5, 'broken', 0.06], [0.84, hz + 0.1, 0.42, 'gate', 0.03]], stone: '#343f44', stoneLit: '#46525a', crust: 'rgba(20,28,32,0.8)', rune: P.bio[0], haze: P.haze, hazeA: [0.3, 0.3] },
-      ] },
-      // 中景：擱淺的沉船、黑色玄武岩柱群、較近的石柱
-      { type: 'stack', f: 0.08, of: [
-        { type: 'mgWreck', items: P.wrecks || [[0.22, hz + 0.2, 0.55, 0.06, false], [0.72, hz + 0.18, 0.4, -0.08, true]], hull: '#161d21', plank: 'rgba(60,76,82,0.6)', hole: '#0a0f12', sail: 'rgba(80,96,100,0.75)', rim: '170,200,210', haze: P.haze, hazeA: [0.22, 0.28] },
-        { type: 'mgBasalt', items: P.stacks || [[0.04, 0.86, 170, 330], [0.5, 0.88, 120, 190], [0.95, 0.86, 200, 400, { col: 20 }]], rock: P.rock, rockLit: P.rockLit, rockDark: P.rockDark, rockTop: P.rockTop, wet: P.wet, col: 17, haze: P.haze, hazeA: [0.1, 0.2], fog: [0.62, 0.8, 1, P.mist, 0.3] },
-        { type: 'mgPillars', items: P.midPillars || [[0.26, 0.88, 0.9, 'broken', 0.08], [0.72, 0.88, 1.0, 'gate', -0.03]], stone: '#222b30', stoneLit: '#303a40', crust: 'rgba(10,14,16,0.8)', rune: P.bio[1], haze: P.haze, hazeA: [0.08, 0.12] },
-      ] },
-      // 近景：畫面邊上幾乎全黑的斷崖，底部沉進陰影
-      { type: 'mgBasalt', f: 0.22, items: P.nearStacks || [[0.02, 1.02, 300, 560, { col: 24 }], [0.62, 1.02, 150, 260, { col: 22 }]], rock: '#0c1013', rockLit: '#161c20', rockDark: '#080a0c', rockTop: '#222a2e', wet: '120,160,170' },
+        { type: 'mgSky', glows: [[P.breakX, 0.22, 420, '220,232,242', 0.35, 0.7], [0.5, hz, 1000, '150,175,198', 0.4, 0.3]] },
+        { type: 'mgStorm', y0: 0.0, y1: 0.3, rows: 4, r: [80, 150], step: 100, cols: P.cloud, lit: P.cloudLit, under: P.cloudUnder, rimRgb: '200,215,230', puffRgb: '140,160,180', slit: [hz - 0.14, hz - 0.03, hz, '190,208,222', 0.35] },
+        { type: 'mgRays', rgb: '220,232,242', rays: [[P.breakX, 0.2, -0.12, 0.7, 20, 110, 0.14], [P.breakX + 0.04, 0.2, -0.05, 0.75, 14, 80, 0.12], [P.breakX + 0.09, 0.22, 0.05, 0.6, 10, 60, 0.1]] },
+        { type: 'mgSea', y0: hz, y1: 0.66, rows: 7, amp: [2, 12], waves: [22, 9], face: '#3574a6', body: '#1a4c80', deep: '#10305a', litRgb: '190,220,245', foam: '240,248,255', mist: P.mist, mistA: 0.42, glint: [hz - 0.01, hz + 0.02, hz + 0.08, '210,228,240', 0.35] },
+        far,
+      ].concat(P.farExtra || []) },
+      // 中景：近處滾來的大浪、浪打在黑色玄武岩柱上、岩上高高的燈塔
+      { type: 'stack', f: 0.06, of: [
+        { type: 'mgSea', y0: 0.58, y1: 1.0, rows: 6, amp: [12, 46], waves: [8, 3], face: '#2c6ea4', body: '#14467a', deep: '#0a2548', litRgb: '170,210,240', foam: '240,248,255', mist: P.mist, mistA: 0.28 },
+      ].concat(P.midExtra || []).concat([
+        mid,
+        { type: 'mgLighthouse', x: L1[0], base: L1[1], s: L1[2], rockH: 230, towerH: 190, rock: '#12171c', rockLit: '#222a32', rockDark: '#0a0d10', rockTop: '#34404a', col: 16, tower: '#4e5862', towerLit: '#8894a0', stripe: 'rgba(24,30,38,0.75)', rail: '#2a3038', lamp: P.lamp, lampRgb: P.lampRgb, surf, wet: P.wet },
+      ]) },
+      // 近景：畫面邊上的黑色斷崖，浪在腳下碎開
+      near,
     ];
     return {
       sky: P.sky,
       layers,
       fx: [
-        { after: 0, f: 0.012, kind: 'lightning', rgb: '200,220,255', y0: 0.08, y1: 0.3, period: P.lightning, seed: P.seed || 1 },
-        { after: 0, f: 0.012, kind: 'beam', x: P.lighthouse[0], y: P.lighthouse[1] - (140 + 120 + 12) * P.lighthouse[2] / G.H, len: 900, a: 0.32, rgb: P.lampRgb, speed: 0.5, w: 1.2 },
-        { after: 0, f: 0.012, kind: 'twinkle', n: 36, rgb: P.bio[0], rgb2: P.bio[1], size: [2, 6], a: 0.9, y0: hz + 0.03, y1: 0.9, pow: 1.3, seed: 21 },
-        { after: 1, f: 0.1, kind: 'mist', n: 3, rgb: P.mist, a: 0.2, speed: 8, size: [220, 320], y0: 0.5, y1: 0.78, seed: 4 },
+        { after: 0, f: 0.012, kind: 'lightning', rgb: '210,225,255', y0: 0.06, y1: 0.26, period: P.lightning, seed: P.seed || 1 },
+        { after: 0, f: 0.012, kind: 'surf', srcs: [far], speed: 0.4, rise: 0.4 },
+        { after: 1, f: 0.06, kind: 'heat', src: 1, y0: 0.62, y1: 0.76, amp: 5, a: 0.55, strip: 8, spd: 1.3, k: 0.035 },
+        { after: 1, f: 0.06, kind: 'beam', x: lamp.x, y: lamp.y, len: 1000, a: 0.36, rgb: P.lampRgb, speed: 0.5, w: 1.3 },
+        { after: 1, f: 0.06, kind: 'surf', srcs: [mid], speed: 0.45 },
+        { after: 2, f: 0.18, kind: 'surf', srcs: [near], speed: 0.38, rise: 0.35 },
       ],
       beams: 0,
       gulls: 0,
-      tint: ['rgba(40,60,90,0.05)', 'rgba(10,20,30,0.12)'],
-      motes: 'rgba(200,235,240,0.7)',
+      tint: ['rgba(60,90,130,0.04)', 'rgba(10,30,50,0.1)'],
+      motes: 'rgba(225,240,250,0.8)',
+      fore: { kind: 'weed', colors: ['#2a4640', '#3a5a4c'] },
       mg: true,
     };
   }
-  // 燈塔的光束位置要跟燈頭一致：燈頭在 base − (岩高 + 塔高 + 12)·s
-  apply('coastCamp', coast({ lighthouse: [0.62, 0.58, 0.8], seed: 2 }));
-  apply('tidepool', coast({ pools: 20, patches: 40, seed: 3, wrecks: [[0.8, 0.7, 0.35, -0.08, true]] }));
-  apply('shipwreck', coast({ seed: 4, wrecks: [[0.3, 0.74, 0.8, 0.07, false], [0.78, 0.7, 0.5, -0.1, true], [0.56, 0.64, 0.28, 0.04, false]], lighthouse: [0.92, 0.53, 0.45] }));
-  apply('reef', coast({ seed: 5, lightning: 5, stacks: [[0.1, 0.86, 200, 380], [0.3, 0.87, 110, 220], [0.55, 0.88, 150, 260], [0.8, 0.86, 220, 420, { col: 20 }]], lighthouse: [0.45, 0.53, 0.45] }));
-  apply('crabNest', coast({ seed: 6, lightning: 4, sky: ['#08090f', '#1c1e2c', '#3c3a48'], cloud: ['#242432', '#2e2e3c', '#383646', '#42404e'], cloudLit: '#5a5668', cloudUnder: '#15151e',
-    midPillars: [[0.18, 0.88, 1.1, 'gate', -0.02], [0.44, 0.88, 0.9, 'whole', 0.04], [0.66, 0.88, 1.0, 'broken', -0.07], [0.88, 0.88, 1.2, 'gate', 0.02]], lighthouse: [0.3, 0.53, 0.4] }));
+  // 燈塔的光束位置跟燈頭一致：燈頭在 base − (岩高 + 塔高 + 12)·s
+  apply('coastCamp', coast({ seed: 2, lighthouse: [0.62, 0.72, 1.0], breakX: 0.22 }));
+  apply('tidepool', coast({ seed: 3, lighthouse: [0.8, 0.74, 0.8], breakX: 0.4, stacks: [[0.06, 0.8, 170, 330], [0.34, 0.82, 110, 190], [0.56, 0.81, 150, 250]] }));
+  apply('shipwreck', coast({ seed: 4, lighthouse: [0.9, 0.74, 0.75], breakX: 0.55,
+    midExtra: [{ type: 'mgWreck', items: [[0.3, 0.8, 0.8, 0.12, false], [0.64, 0.74, 0.45, -0.1, true]], hull: '#141a20', plank: 'rgba(70,90,106,0.6)', hole: '#080c10', sail: 'rgba(110,128,140,0.7)', rim: '190,215,235' }] }));
+  apply('reef', coast({ seed: 5, lightning: 6, lighthouse: [0.46, 0.74, 0.85], breakX: 0.7, stacks: [[0.1, 0.8, 210, 400], [0.28, 0.82, 110, 230], [0.7, 0.82, 150, 270], [0.86, 0.8, 230, 440, { col: 20 }]] }));
+  apply('crabNest', coast({ seed: 6, lightning: 5, sky: ['#141828', '#323a58', '#6a7090'], cloud: ['#2a2e44', '#343850', '#40445c', '#4c5068'], cloudLit: '#727a96', cloudUnder: '#1e2034', lighthouse: [0.28, 0.74, 0.7], breakX: 0.6,
+    midExtra: [{ type: 'mgPillars', items: [[0.18, 0.84, 1.1, 'gate', -0.02], [0.5, 0.86, 0.9, 'whole', 0.04], [0.78, 0.84, 1.0, 'broken', -0.07]], stone: '#262c38', stoneLit: '#38404e', crust: 'rgba(10,14,20,0.8)', rune: '120,200,255' }] }));
 
   // ════════════════════════════════════════════════════════════
   // 第三章　燃燒的峽谷：煙霧暗橘的天、被火光從下方照亮的雲、紅黑岩壁、熔岩河與熔岩瀑布
@@ -2255,16 +3012,19 @@
       midFalls: [],
       river: 0.72, ceil: 0, extraFar: [],
     }, o);
-    const far = { type: 'mgCanyon', top: 0.46, amp: 40, towers: 6, towerH: [80, 200], colTop: '#260b0a', col: '#34100d', colLow: '#4a120e', strata: '255,120,80', glowY: 0.72, glowRgb: P.glowRgb, glowA: 0.4, rim: '255,150,80', rimA: 0.45, falls: P.farFalls, haze: '90,24,16', hazeA: [0.3, 0.12] };
-    const mid = { type: 'mgCanyon', top: 0.56, amp: 50, towers: 4, towerH: [120, 300], colTop: '#100606', col: '#220909', colLow: '#3e0c0a', strata: '255,90,60', glowY: 0.84, glowRgb: '255,70,30', glowA: 0.3, jag: 14, rim: '255,120,60', rimA: 0.4, falls: P.midFalls, towerFalls: P.towerFalls || [9, 12], fallY: 0.86, ceil: P.ceil ? P.ceil * 0.8 : 0, haze: '60,20,12', hazeA: [0.15, 0.05], fog: [0.66, 0.86, 1, '70,16,10', 0.3] };
+    const far = { type: 'mgCanyon', top: P.farTop || 0.46, amp: 40, towers: P.farTowers == null ? 6 : P.farTowers, towerH: [80, 200], colTop: '#260b0a', col: '#34100d', colLow: '#4a120e', strata: '255,120,80', glowY: 0.72, glowRgb: P.glowRgb, glowA: 0.4, rim: '255,150,80', rimA: 0.45, falls: P.farFalls, haze: '90,24,16', hazeA: [0.3, 0.12] };
+    const mid = { type: 'mgCanyon', top: P.midTop || 0.56, amp: 50, towers: P.midTowers || 4, towerH: [120, 300], colTop: '#100606', col: '#220909', colLow: '#3e0c0a', strata: '255,90,60', glowY: 0.84, glowRgb: '255,70,30', glowA: 0.3, jag: 14, rim: '255,120,60', rimA: 0.4, falls: P.midFalls, towerFalls: P.towerFalls || [9, 12], fallY: 0.86, ceil: P.ceil ? P.ceil * 0.8 : 0, haze: '60,20,12', hazeA: [0.15, 0.05], fog: [0.66, 0.86, 1, '70,16,10', 0.3] };
     const layers = [
       // 遠景：濃煙、被火山光從下面照紅的雲底、被煙霧染淡的岩壁與熔岩瀑布、谷底的熔岩河
       { type: 'stack', f: 0.014, of: [
         { type: 'mgSky', glows: [[0.5, 0.8, 1100, P.glowRgb, 0.6, 0.45], [0.2, 0.7, 500, '255,160,60', 0.25, 0.6], [0.78, 0.72, 520, '255,90,30', 0.25, 0.6]] },
         { type: 'mgSmoke', n: 70, y0: -0.05, y1: 0.42, r: [120, 300], smoke: '26,12,10', a: 0.75, lit: '255,110,40', litA: 0.3 },
+        // 最遠的一道稜線：幾乎溶進煙霧裡，只剩被火光擦亮的邊
+        { type: 'mgCanyon', top: P.ridgeTop || 0.4, amp: 50, towers: P.farTowers == null ? 4 : P.farTowers, towerH: [60, 140], jag: 12, gullies: 6, cracks: 6, colTop: '#3a1612', col: '#44180f', colLow: '#5a1c10', strata: '255,140,90', glowY: 0.7, glowRgb: P.glowRgb, glowA: 0.3, rim: '255,160,90', rimA: 0.4, haze: '120,40,24', hazeA: [0.5, 0.35] },
+      ].concat(P.volcano ? [P.volcano] : []).concat([
         far,
         { type: 'mgLavaRiver', y: P.river, th: 10, glowRgb: P.glowRgb, bank: '#1e0b07' },
-      ].concat(P.extraFar) },
+      ]).concat(P.extraFar) },
       // 中景：高聳的岩壁，熔岩從岩塔頂上的缺口流下來，谷底一條較近的熔岩河
       { type: 'stack', f: 0.05, of: [mid, { type: 'mgLavaRiver', y: 0.83, th: 14, glowRgb: P.glowRgb, bank: '#160706' }] },
       // 近景：幾根黑色岩塔，底部被熔岩照紅
@@ -2275,11 +3035,12 @@
       layers,
       fx: [
         { after: 0, f: 0.014, kind: 'flow', src: far },
+      ].concat(P.volcano ? [{ after: 0, f: 0.014, kind: 'chan', src: P.volcano }] : []).concat([
         { after: 1, f: 0.05, kind: 'flow', src: mid },
         { after: 1, f: 0.05, kind: 'heat', src: 1, y0: 0.76, y1: 0.86, amp: 2, a: 0.45, strip: 8 },
         { after: 1, f: 0.08, kind: 'motes', n: 30, rgb: '255,140,50', rgb2: '255,215,120', size: [1.5, 4.5], a: 0.95, speed: 34, y0: 0, y1: 1, seed: 17 },
         { after: 1, f: 0.1, kind: 'fall', n: 30, color: 'rgba(70,58,56,0.8)', size: [1.5, 3.5], a: 0.8, speed: 16, sway: 16, wind: 6, seed: 19 },
-      ],
+      ]),
       beams: 0,
       motes: 'rgba(255,170,90,0.9)',
       tint: ['rgba(255,90,30,0.03)', 'rgba(60,10,5,0.12)'],
@@ -2292,11 +3053,9 @@
   apply('redRift', canyon({ farFalls: [[0.1, 7, 0.46, 0.72], [0.34, 9, 0.42, 0.72], [0.58, 7, 0.46, 0.72], [0.84, 8, 0.44, 0.72]], towerFalls: [11, 14, 10] }));
   apply('steamPass', canyon({ ceil: 0.1, towerFalls: [], farFalls: [[0.3, 6, 0.46, 0.72], [0.62, 7, 0.44, 0.72]], midFalls: [[0.14, 10, 0.3, 0.84], [0.5, 14, 0.28, 0.84], [0.86, 10, 0.34, 0.84]] }));
   apply('lavaBed', canyon({ sky: ['#0a0404', '#2a0c07', '#6a2410'], river: 0.7, dark: 0.16, farFalls: [[0.1, 7, 0.46, 0.7], [0.3, 6, 0.48, 0.7], [0.56, 8, 0.42, 0.7], [0.84, 7, 0.46, 0.7]], midFalls: [[0.2, 12, 0.36, 0.84], [0.5, 15, 0.34, 0.84], [0.8, 12, 0.4, 0.84]] }));
-  apply('volcanoNest', canyon({ sky: ['#140606', '#4a160c', '#b04818'], dark: 0.12,
-    extraFar: [
-      { type: 'landmarks', smoke: '#2a1210', far: '#3a1a16', lit: '#c8502a', glowRgb: '255,120,50', items: [['plume', 0.5, 0.34, 1.1]] },
-      { type: 'volcano', x: 0.5, base: 0.74, top: 0.33, w: 600, color: '#2a100c', shade: '#1e0b08', rim: '#ff7a3a' },
-    ] }));
+  apply('volcanoNest', canyon({ sky: ['#140606', '#4a160c', '#b04818'], towerFalls: [10], farTop: 0.62, ridgeTop: 0.58, farTowers: 2, midTop: 0.64, midTowers: 2,
+    volcano: { type: 'mgVolcano', x: 0.5, base: 0.72, top: 0.2, w: 700, cw: 80, drift: 300, smokeH: 260, smoke: '78,58,54', colTop: '#2a0f0b', col: '#170806', strata: '255,120,70', glowRgb: '255,110,40',
+      chans: [[-1, 0.55, 0.95, 18], [-1, 0.9, 0.8, 26], [1, 0.4, 1.0, 14], [1, 0.8, 0.75, 22], [1, 1.0, 0.9, 30]] } }));
 
   // ════════════════════════════════════════════════════════════
   // 第四章　雪山裡的松林：大小交錯的雪松一層層疊進霧裡，遠山若隱若現，林子深處幾點燈火
@@ -2368,9 +3127,15 @@
       far: [[0.08, 0.36, 0.4, 'cube', 0.1], [0.3, 0.44, 0.45, 'ring', -0.1], [0.55, 0.36, 0.35, 'shard', 0.4], [0.74, 0.46, 0.45, 'stairs', 0], [0.94, 0.3, 0.35, 'arch', 0.2]],
       mid: [[0.16, 0.52, 0.8, 'arch', -0.08], [0.46, 0.5, 0.7, 'stairs', 0, true], [0.7, 0.4, 0.6, 'door', 0.12], [0.9, 0.56, 0.7, 'cube', -0.2]],
       ups: [[0.28, 0.8, 0.28, 16], [0.62, 0.82, 0.34, 12]],
+      // 綢帶：[y, 起伏, 頻率, 寬]；光之河：[y, 起伏, 頻率, 流速]
+      silk: [[0.14, 30, 2, 46], [0.36, 22, 3, 30]], silkBand: [0.1, 0.24],
+      streams: [[0.26, 40, 2, 0.02], [0.5, 26, 3, -0.015]],
+      glass: { x: 0.12, y: 0.42, s: 0.6, rot: -0.35, len: 520 },
       extra: [],
     }, o);
     const S = P.stone;
+    const streams = { type: 'mgStreams', items: P.streams, glowRgb: '200,180,255' };
+    const glass = Object.assign({ type: 'mgSandglass' }, P.glass);
     const up = { type: 'mgUpfalls', items: P.ups, water: '210,225,255', pool: 'rgba(170,190,255,0.5)', glowRgb: '170,190,255', haze: P.haze, hazeA: [0.15, 0.2] };
     const layers = [
       // 虛空：稀疏的星、淡淡的星雲、幾道現實的裂縫
@@ -2381,11 +3146,16 @@
         { type: 'mgRifts', items: P.rifts, core: '#f4f0ff', inner: '#8a7ae0', outer: '#241a5a', nebula: ['160,120,255', '120,200,255', '255,160,220'], edgeRgb: '255,230,170', haloRgb: '150,120,255' },
         // 天上慢慢轉的星盤（外環畫進快取，只有內圈的渾天儀在轉）
         { type: 'mgAstrolabes', items: P.astro, lineRgb: '240,215,150', glowRgb: '200,170,255', alpha: 0.5 },
+        // 星空的綢帶（像風吹過的絲）與空中的光之河：跟天空畫在同一張圖上，不多一張全螢幕的貼圖
+        { type: 'mgSilk', items: P.silk },
+        streams,
       ] },
+      // 遠方漂浮的碎片（被紫色的虛空吞掉一半）
       // 遠方漂浮的碎片（被紫色的虛空吞掉一半）
       { type: 'mgFragments', f: 0.025, items: P.far, lit: S.lit, mid: S.mid, dark: S.dark, goldRgb: S.goldRgb, glowRgb: P.glowRgb, glowA: 0.08, haze: P.haze, hazeA: [0.5, 0.5] },
       // 往上流的瀑布＋中景的拱門、階梯、門框
       { type: 'stack', f: 0.05, of: [up].concat(P.extra).concat([
+        glass,
         { type: 'mgFragments', items: P.mid, lit: S.lit, mid: S.mid, dark: S.dark, goldRgb: S.goldRgb, glowRgb: P.glowRgb, glowA: 0.1, haze: P.haze, hazeA: [0.28, 0.32] },
       ]) },
       // 近景：大塊的暗色碎片，只有金邊
@@ -2395,8 +3165,13 @@
       sky: P.sky,
       layers,
       fx: [
+        { after: 0, f: 0.004, kind: 'heat', src: 0, y0: P.silkBand[0], y1: P.silkBand[1], amp: 3, a: 0.5, strip: 6, gap: 3, spd: 0.9, k: 0.02 },
+        { after: 0, f: 0.004, kind: 'glyphs', src: streams, n: 7 },
+        { after: 1, f: 0.035, kind: 'fish', n: 3, y0: 0.2, y1: 0.55, seed: 41 },
         { after: 2, f: 0.05, kind: 'upfall', src: up, rgb: '230,240,255' },
-        { after: 2, f: 0.08, kind: 'motes', n: 24, rgb: '230,220,255', rgb2: '255,220,150', size: [1.5, 4], a: 0.8, speed: 10, y0: 0, y1: 1, seed: 31 },
+        { after: 2, f: 0.05, kind: 'sand', src: glass },
+        { after: 2, f: 0.09, kind: 'blown', n: 3, y0: 0.15, y1: 0.6, seed: 43 },
+        { after: 2, f: 0.08, kind: 'motes', n: 10, rgb: '230,220,255', rgb2: '255,220,150', size: [1.5, 4], a: 0.8, speed: 10, y0: 0, y1: 1, seed: 31 },
       ],
       beams: 0,
       motes: 'rgba(230,220,255,0.85)',
@@ -2405,12 +3180,12 @@
     };
   }
   apply('templeCourt', temple({
-    extra: [{ type: 'temple', x: 0.44, base: 0.6, s: 0.8, isles: 5, rock: '#3e3468', rockShade: '#30285a', marble: '#b8aed8', marbleShade: '#8a80b4', inner: '#4a4078', gold: '#d8b060', top: '#c8c0e4', glowRgb: '255,210,150', glowA: 0.25 }] }));
+    extra: [{ type: 'temple', x: 0.44, base: 0.6, s: 0.8, isles: 0, rock: '#3e3468', rockShade: '#30285a', marble: '#b8aed8', marbleShade: '#8a80b4', inner: '#4a4078', gold: '#d8b060', top: '#c8c0e4', glowRgb: '255,210,150', glowA: 0.25 }] }));
   apply('timeCorridor', temple({ astro: [[0.25, 0.24, 170, -0.02], [0.72, 0.3, 220, 0.014]],
     extra: [{ type: 'arches', top: 0.12, spring: 0.5, aw: 246, n: 5, marble: '#6c6098', shade: '#4e4478', dark: '#2e2656', gold: '#c8a050', glowRgb: '200,170,255' }] }));
   apply('reverseGarden', temple({ ups: [[0.14, 0.82, 0.2, 18], [0.4, 0.84, 0.3, 14], [0.66, 0.82, 0.16, 20], [0.9, 0.84, 0.32, 12]],
     mid: [[0.26, 0.4, 0.7, 'arch', Math.PI, false], [0.52, 0.46, 0.6, 'stairs', 0, true], [0.8, 0.36, 0.6, 'ring', 0.3]],
-    extra: [{ type: 'floatIsles', flip: true, items: [[0.12, 0.2, 0.6], [0.4, 0.28, 0.45], [0.66, 0.16, 0.6], [0.9, 0.3, 0.4]], rock: '#4a3e78', rockShade: '#3a306a', grass: '#5a6aa0', fall: 'rgba(220,230,255,0.6)', tree: ['#6a5a9a', '#7a6aaa'], trunk: '#3a3060', gold: 'rgba(232,196,110,0.8)', haze: '60,40,110', hazeA: [0.3, 0.3] }] }));
+  }));
   apply('starStair', temple({ sky: ['#030312', '#0e0c30', '#261a50'], dark: 0.1,
     rifts: [[0.14, 0.18, 300, 0.3, 30], [0.5, 0.1, 220, -0.2, 22], [0.78, 0.3, 260, 0.9, 26], [0.36, 0.5, 140, -0.6, 14]],
     far: [[0.1, 0.4, 0.5, 'stairs', 0], [0.34, 0.3, 0.4, 'stairs', 0, true], [0.6, 0.42, 0.5, 'stairs', 0.1], [0.84, 0.34, 0.4, 'cube', 0]],
@@ -2428,4 +3203,237 @@
     ].concat(THEMES.timeThrone.layers.slice(4)),
     fx: [{ after: 2, f: 0.04, kind: 'motes', n: 22, rgb: '230,210,255', rgb2: '255,215,150', size: [1.5, 4], a: 0.8, speed: 9, y0: 0, y1: 1, seed: 37 }],
   });
+
+  // ── 第一章：畫在角色前面、非常稀疏的大顆孢子（柔光、半透明，慢慢飄） ──
+  const fgPts = [];
+  {
+    const r = U.seeded(4242);
+    for (let i = 0; i < 7; i++) fgPts.push({ x: r() * (G.W + 400), y: r() * G.H, p: r() * PI2, v: r(), s: r() });
+  }
+  const baseAtmo = A.drawAtmosphere;
+  A.drawAtmosphere = function (ctx, map, cam, t) {
+    baseAtmo.apply(this, arguments);
+    const th = map && map._theme;
+    if (!th || !th.fgSpores) return;
+    const aged = !!map._aged;
+    const n = aged ? 3 : fgPts.length;
+    const img = glowSprite(aged ? agedRgb(th.fgSpores, { aged, map }) : th.fgSpores);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const span = G.W + 400;
+    for (let i = 0; i < n; i++) {
+      const q = fgPts[i];
+      const x = wrapN(q.x - cam.x * 1.25 + t * (6 + q.v * 8), span) - 200 + Math.sin(t * 0.3 + q.p) * 30;
+      const y = wrapN(q.y - cam.y * 1.1 - t * (5 + q.v * 6), G.H + 200) - 100;
+      const r = 14 + q.s * 16;
+      ctx.globalAlpha = 0.16 + 0.1 * Math.sin(t * 0.8 + q.p * 3);
+      ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+    }
+    ctx.restore();
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // 標題畫面的星楓樹：取代原本平塗的卡通樹。樹幹有樹皮紋、根、苔、邊光；
+  // 樹冠是一層層葉團（背光的深、迎光的亮、上緣一圈金色邊光）。整棵樹畫進快取，
+  // 每格只貼一次圖，再畫五片星楓葉（拿到的會發光，跟存檔進度一致）
+  // ════════════════════════════════════════════════════════════
+  const TREE_LEAVES = [[-120, -360], [104, -352], [-26, -448], [62, -268], [-8, -330]];
+  function starTreeCanvas(bloom) {
+    const key = 'startree:' + (bloom ? 1 : 0);
+    if (sprites[key]) return sprites[key];
+    const W = 560;
+    const H = 560;
+    const c = newCanvas(W, H);
+    const ctx = c.getContext('2d');
+    ctx.translate(W / 2, H - 30);
+    const r = U.seeded(2025);
+    const pal = bloom
+      ? { dark: [52, 22, 40], mid: [120, 58, 90], lit: [220, 140, 176], rim: '255,214,228' }
+      : { dark: [14, 34, 24], mid: [36, 70, 44], lit: [84, 126, 66], rim: '200,220,130' };
+    // 後面一圈淡淡的光（樹是這個世界的時鐘）
+    glow(ctx, 0, -340, 260, bloom ? '255,190,220' : '220,240,170', 0.16, 0.8);
+    // 樹幹與往上分開的三根主枝
+    const trunk = { top: -250, color: '#2e2418', lit: '#5a4630', dark: '#161008', bark: 'rgba(0,0,0,0.4)', barkHi: '190,170,130', rim: '255,220,150', rimA: 0.45, side: -1, moss: '90,130,70', knots: 1, limbs: 0, lean: 0.2 };
+    for (const [ex, ey, w0] of [[-130, -330, 20], [16, -380, 22], [136, -318, 18]]) {
+      ctx.strokeStyle = trunk.color;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = w0;
+      ctx.beginPath();
+      ctx.moveTo(0, -210);
+      ctx.quadraticCurveTo(ex * 0.3, -250, ex, ey);
+      ctx.stroke();
+      ctx.strokeStyle = rgba('255,220,150', 0.3);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-w0 * 0.4, -214);
+      ctx.quadraticCurveTo(ex * 0.3 - w0 * 0.4, -254, ex - w0 * 0.3, ey);
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+    drawTrunk(ctx, 0, 0, 46, trunk, U.seeded(77), 1);
+    // 樹冠：一團團葉簇，由後往前畫；每片小葉的明暗看它在葉團裡的位置（光從左上來）
+    const clusters = [];
+    for (let k = 0; k < 22; k++) {
+      const a = r() * PI2;
+      const d = Math.sqrt(r());
+      clusters.push([Math.cos(a) * 190 * d, -350 + Math.sin(a) * 110 * d, 60 + r() * 50, r()]);
+    }
+    clusters.sort((a, b) => a[3] - b[3]);
+    const mixc = (a, b, t) => 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')';
+    clusters.forEach(([cx, cy, R, depth]) => {
+      const front = 0.35 + depth * 0.65;
+      // 葉團底下的陰影
+      glow(ctx, cx + 10, cy + R * 0.35, R * 1.1, '0,0,0', 0.25, 0.6);
+      for (let i = 0; i < 150; i++) {
+        const a = r() * PI2;
+        const d = Math.sqrt(r()) * R;
+        const x = cx + Math.cos(a) * d;
+        const y = cy + Math.sin(a) * d * 0.8;
+        const lt = Math.max(0, Math.min(1, 0.55 - ((x - cx) * 0.55 + (y - cy) * 0.85) / (R * 1.6)));
+        const t0 = lt * front;
+        ctx.fillStyle = t0 < 0.5 ? mixc(pal.dark, pal.mid, t0 * 2) : mixc(pal.mid, pal.lit, (t0 - 0.5) * 2);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(r() * PI2);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 7 + r() * 5, 3 + r() * 2, 0, 0, PI2);
+        ctx.fill();
+        ctx.restore();
+        // 迎光的葉緣
+        if (t0 > 0.72 && r() < 0.5) {
+          ctx.fillStyle = rgba(pal.rim, 0.55);
+          ctx.beginPath();
+          ctx.ellipse(x - 1, y - 1, 3, 1.4, r() * 3, 0, PI2);
+          ctx.fill();
+        }
+      }
+    });
+    // 從樹冠垂下的幾串葉子
+    for (let k = 0; k < 14; k++) {
+      const x = (r() - 0.5) * 360;
+      const y0 = -300 + r() * 70;
+      const len = 30 + r() * 60;
+      ctx.strokeStyle = mixc(pal.dark, pal.mid, 0.5);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y0);
+      ctx.quadraticCurveTo(x + 6, y0 + len * 0.5, x + 2, y0 + len);
+      ctx.stroke();
+      for (let q = 0; q < 5; q++) {
+        ctx.fillStyle = mixc(pal.dark, pal.lit, 0.3 + r() * 0.3);
+        ctx.beginPath();
+        ctx.ellipse(x + 3, y0 + (len * q) / 5 + 4, 4, 2, 0.6, 0, PI2);
+        ctx.fill();
+      }
+    }
+    sprites[key] = c;
+    return c;
+  }
+  A.drawStarTreeArt = function (ctx, x, y, got, t) {
+    const n = Object.keys(got).length;
+    const img = starTreeCanvas(n >= 5);
+    ctx.drawImage(img, x - img.width / 2, y - img.height + 30);
+    ctx.save();
+    ctx.translate(x, y);
+    [1, 2, 3, 4, 5].forEach((ch, i) => {
+      const [lx, ly] = TREE_LEAVES[i];
+      const on = got[ch];
+      const col = G.data.story.chapters[ch].leaf.color;
+      const yy = ly + Math.sin(t * 1.5 + i) * 2;
+      if (on) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.55 + Math.sin(t * 2 + i) * 0.2;
+        ctx.drawImage(glowSprite('255,245,200'), lx - 34, yy - 34, 68, 68);
+        ctx.restore();
+      }
+      ctx.save();
+      ctx.translate(lx, yy);
+      ctx.rotate(Math.sin(t * 0.8 + i * 2) * 0.12);
+      ctx.globalAlpha = on ? 1 : 0.4;
+      ctx.fillStyle = on ? col : '#1a2a1c';
+      ctx.strokeStyle = on ? 'rgba(255,245,210,0.9)' : 'rgba(150,180,120,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      A.mapleLeafPath(ctx, 0, 0, 11);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+  };
+  // 標題畫面的地面：暗色的林床，上緣一排細草與幾顆石頭（取代原本平塗的綠條與土色塊）
+  A.drawTitleGround = function (ctx) {
+    let c = sprites.titleGround;
+    if (!c) {
+      c = sprites.titleGround = newCanvas(G.W, 160);
+      const x = c.getContext('2d');
+      const r = U.seeded(99);
+      const g = x.createLinearGradient(0, 20, 0, 160);
+      g.addColorStop(0, '#223a26');
+      g.addColorStop(0.3, '#18261a');
+      g.addColorStop(1, '#0c120c');
+      x.fillStyle = g;
+      x.beginPath();
+      x.moveTo(0, 160);
+      for (let k = 0; k <= G.W; k += 16) x.lineTo(k, 20 + Math.sin(k * 0.013) * 3 + r() * 2);
+      x.lineTo(G.W, 160);
+      x.fill();
+      for (let k = 0; k < 40; k++) {
+        const sx = r() * G.W;
+        const sy = 50 + r() * 100;
+        x.fillStyle = 'rgba(80,100,80,' + (0.15 + r() * 0.2).toFixed(2) + ')';
+        x.beginPath();
+        x.ellipse(sx, sy, 6 + r() * 16, 3 + r() * 6, 0, 0, PI2);
+        x.fill();
+      }
+      for (let k = 0; k < 700; k++) {
+        const bx = r() * G.W;
+        const hh = 5 + r() * 14;
+        const lean = (r() - 0.5) * 8;
+        x.strokeStyle = r() < 0.3 ? '#5a8a4a' : r() < 0.6 ? '#3a6038' : '#28482a';
+        x.lineWidth = 1 + r();
+        x.beginPath();
+        x.moveTo(bx, 24);
+        x.quadraticCurveTo(bx + lean * 0.3, 24 - hh * 0.6, bx + lean, 24 - hh);
+        x.stroke();
+      }
+    }
+    ctx.drawImage(c, 0, G.H - 160);
+  };
+
+  // 葉團：一團團由幾百片小葉組成的樹冠（光從左上來，背光深、迎光亮、上緣有淡金邊光）。
+  // 給營地樹屋這類前景建築的樹冠用，取代平塗的綠色雲朵；front=false 是後面較暗的一層
+  A.leafMass = function (ctx, list, front) {
+    const r = U.seeded(list.length * 131 + (front ? 7 : 3));
+    const dark = front ? [34, 66, 38] : [18, 40, 26];
+    const mid = front ? [62, 104, 56] : [36, 70, 42];
+    const lit = front ? [120, 160, 82] : [70, 108, 62];
+    const mixc = (a, b, t) => 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')';
+    for (const [cx, cy, R] of list) {
+      glow(ctx, cx + 6, cy + R * 0.4, R * 1.1, '0,0,0', front ? 0.2 : 0.3, 0.6);
+      const n = Math.round(R * R * 0.09) + 30;
+      for (let i = 0; i < n; i++) {
+        const a = r() * PI2;
+        const d = Math.sqrt(r()) * R;
+        const x = cx + Math.cos(a) * d;
+        const y = cy + Math.sin(a) * d * 0.85;
+        const t0 = Math.max(0, Math.min(1, 0.55 - ((x - cx) * 0.55 + (y - cy) * 0.85) / (R * 1.6)));
+        ctx.fillStyle = t0 < 0.5 ? mixc(dark, mid, t0 * 2) : mixc(mid, lit, (t0 - 0.5) * 2);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(r() * PI2);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5 + r() * 3, 2.2 + r() * 1.2, 0, 0, PI2);
+        ctx.fill();
+        ctx.restore();
+        if (front && t0 > 0.75 && r() < 0.4) {
+          ctx.fillStyle = 'rgba(220,230,150,0.5)';
+          ctx.beginPath();
+          ctx.ellipse(x - 1, y - 1, 2.2, 1, r() * 3, 0, PI2);
+          ctx.fill();
+        }
+      }
+    }
+  };
 })();

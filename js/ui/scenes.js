@@ -5229,10 +5229,13 @@
       if (!map._theme) A.prepareMap(map);
       const cam = { x: this.titleT * 30, y: map.h - G.H };
       A.drawBackground(ctx, map, cam, this.titleT);
-      ctx.fillStyle = '#7bbf4a';
-      ctx.fillRect(0, G.H - 140, G.W, 14);
-      ctx.fillStyle = '#9a6a42';
-      ctx.fillRect(0, G.H - 128, G.W, 128);
+      if (A.drawTitleGround) A.drawTitleGround(ctx);
+      else {
+        ctx.fillStyle = '#7bbf4a';
+        ctx.fillRect(0, G.H - 140, G.W, 14);
+        ctx.fillStyle = '#9a6a42';
+        ctx.fillRect(0, G.H - 128, G.W, 128);
+      }
       // 星楓樹：存檔裡拿到幾片葉子，樹上就亮幾盞
       const save = this.titleSave || (this.titleSave = G.save.peek() || {});
       const got = (save.world && save.world.flags && save.world.flags.leaves) || {};
@@ -5252,6 +5255,8 @@
     },
 
     drawStarTree(ctx, x, y, got, t) {
+      // 寫實版的星楓樹在 js/art/bgmagic.js（背景魔幻化）；關掉那個檔時才用下面的舊畫法
+      if (A.drawStarTreeArt) return A.drawStarTreeArt(ctx, x, y, got, t);
       ctx.save();
       ctx.translate(x, y);
       ctx.fillStyle = A.c('#6b4a30');
