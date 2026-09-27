@@ -997,8 +997,18 @@
       lean = 0.35;
       headA = 0.6;
     }
+    // 特殊攻擊的蓄力（fx.wings 0→1）：雙翼全開高舉、微微顫動，全身燃起火光，準備扇出羽扇
+    const wg = dead ? 0 : amt(fx.wings, 0);
+    if (wg > 0) {
+      wAng = lerp(wAng, -2.12 + Math.sin(t * 22) * 0.05, wg);
+      bend = lerp(bend, 0.04, wg);
+      open = 1;
+      headA = lerp(headA, -0.32, wg);
+      lean = lerp(lean, -0.12, wg);
+      lift = lerp(lift, -3, wg);
+    }
     const shake = hurt ? Math.sin(t * 70) * 1.2 : 0;
-    const heat = clamp(0.35 + (wind ? 0.5 : 0) + rw, 0, 1.3);
+    const heat = clamp(0.35 + (wind ? 0.5 : 0) + rw + wg * 0.9, 0, 1.3);
     ctx.save();
     ctx.translate(shake, 0);
     // 身後的火光、逆轉錶盤
@@ -1177,6 +1187,11 @@
     crescent(ctx, body, 1.8, 1.8, PHX.cream, 0.6);
     crescent(ctx, body, -1.6, -1.2, PHX.orange, 0.7);
     strokeOut(ctx, body, 2.6);
+    // 蓄力時全身竄起的火光
+    if (wg > 0) {
+      glowH(ctx, 3, -46, 30, '#ff8a2a', 0.75 * wg);
+      for (let i = 0; i < 5; i++) flameTongue(ctx, -9 + i * 5, -34 - Math.sin((i / 4) * PI) * 6, 2.6, 16 + Math.sin(t * 13 + i * 1.7) * 5 + Math.sin((i / 4) * PI) * 8, t, i * 2.1, '#ff7a2a', '#fff2a0', wg * 0.8);
+    }
 
     // ── 脖子：S 形，頸圈是一圈金色尖羽 ──
     const neckF = cb(3, -56, 17, -63, 5, -78, 16, -91);
@@ -1546,7 +1561,15 @@
       nod = 0;
     }
     const shake = hurt ? Math.sin(t * 60) * 1.2 : 0;
-    const glowA = wind ? 0.9 : strike ? 0.6 : 0.3 + Math.sin(t * 3) * 0.08;
+    // 特殊攻擊（fx.horn 0→1）：低頭把鏡晶角對準光束的方向，角越來越亮
+    const hk = dead ? 0 : amt((m.fx || {}).horn, 0);
+    if (hk > 0) {
+      headDrop = lerp(headDrop, 1.05, hk);
+      nod *= 1 - hk;
+      bx = lerp(bx, -3, hk);
+      pitch = lerp(pitch, 0.05, hk);
+    }
+    const glowA = (wind ? 0.9 : strike ? 0.6 : 0.3 + Math.sin(t * 3) * 0.08) + hk * 1.2;
     by += 4.5;
     // 身體的變換（以後腿髖部為軸抬起／壓低前半身）
     const PX = -24;
@@ -1934,6 +1957,16 @@
     ctx.stroke();
     // 近側的角
     mirrorAntler(ctx, 1, -17, 1.05, -0.45, t, false, glowA);
+    if (hk > 0) {
+      // 角尖聚起的稜鏡光
+      const ca = Math.cos(-0.45);
+      const sa = Math.sin(-0.45);
+      const tx = 1 + (-12 * ca + 32 * sa) * 1.05;
+      const ty = -17 + (-12 * sa - 32 * ca) * 1.05;
+      glowH(ctx, tx, ty, 10 + hk * 14, '#bff0ff', 0.9 * hk);
+      glowH(ctx, tx, ty, 6 + hk * 5, '#ffffff', hk);
+      sparkle(ctx, tx, ty, 3 + hk * 4 + Math.sin(t * 20) * 0.8, '#ffffff');
+    }
     ctx.restore();
     ctx.restore();
     void copy;
@@ -2167,8 +2200,10 @@
     const dead = !!m.dead;
     const hurt = m.hurtT > 0 && !dead;
     const tick = amt(fx.tick, 0);
+    // 特殊攻擊（fx.hands 0→1）：翅上的星盤快轉、發亮，時針從錶盤裡浮出來
+    const hd = dead ? 0 : amt(fx.hands, 0);
     const kind = eyeKind(m);
-    const wind = ph === 'wind' || tick > 0;
+    const wind = ph === 'wind' || tick > 0 || hd > 0;
     const strike = ph === 'strike';
     // 振翅：前翅先動、後翅慢半拍；下撲時身體往上提。時停施法中翅膀張到最開、慢慢停住
     const w = t * (strike ? 9 : 5.5);
@@ -2187,9 +2222,13 @@
       lift = 0;
     }
     // 指針：平常走、施法時快轉到 12 點然後停
-    const hr = tick > 0 ? lerp(t * 0.5, 0, tick) : t * 0.5;
-    const mn = tick > 0 ? lerp(t * 3, 0, tick) : t * 3;
-    const rot = t * (tick > 0 ? 3 : 0.4);
+    const hr = tick > 0 ? lerp(t * 0.5, 0, tick) : t * (0.5 + hd * 6);
+    const mn = tick > 0 ? lerp(t * 3, 0, tick) : t * (3 + hd * 18);
+    const rot = t * (tick > 0 ? 3 : 0.4 + hd * 5);
+    if (hd > 0 && !(tick > 0)) {
+      foreK = lerp(foreK, 1, hd);
+      hindK = lerp(hindK, 0.95, hd);
+    }
     ctx.save();
     ctx.translate(hurt ? Math.sin(t * 60) * 1.2 : strike ? 5 : 0, lift);
     // 身後的光暈、時停的符文圈
@@ -2216,7 +2255,7 @@
       ctx.scale(side * (far ? 0.84 : 1), far ? 0.94 : 1);
       ctx.rotate(wind ? -0.08 : 0);
       ctx.translate(0, 50);
-      bfWing(ctx, t, tick, far, hr, mn, rot * side, foreK, hindK, Math.cos(w));
+      bfWing(ctx, t, Math.max(tick, hd * 1.3), far, hr, mn, rot * side, foreK, hindK, Math.cos(w));
       ctx.restore();
     };
     wing(-1, true);
@@ -2774,8 +2813,15 @@
       const wind = ph === 'wind';
       const strike = ph === 'strike';
       const und = dead ? 0 : t * (walking(m) ? 5 : 2);
-      const rise = dead ? 0 : strike ? 1.15 : wind ? 0.85 : 1;
-      const lunge = strike ? 10 : wind ? -4 : 0;
+      // 特殊攻擊（fx.bite）：蓄力時高高昂起、往後縮；出手時整個前半身撲出去、嘴張到最大
+      const bt = dead ? 0 : amt(fx.bite, 0);
+      const bLunge = bt > 0 && (strike || ph === 'recover');
+      let rise = dead ? 0 : strike ? 1.15 : wind ? 0.85 : 1;
+      let lunge = strike ? 10 : wind ? -4 : 0;
+      if (bt > 0) {
+        rise = lerp(rise, bLunge ? 0.8 : 1.5, bt);
+        lunge = lerp(lunge, bLunge ? 30 : -12, bt);
+      }
       // 尾巴翹起來捲成一道弧（尾鰭像在打拍子），身體在地上波動，前半身像眼鏡蛇昂起
       const base = [[-74, -34], [-70, -19], [-60, -8], [-46, -8], [-30, -14], [-14, -13], [2, -10], [16, -17], [23, -32 * rise], [27 + lunge * 0.5, -47 * rise], [33 + lunge, -58 * rise]];
       const flick = dead ? 0 : Math.sin(t * 2.6) * 1;
@@ -2795,9 +2841,15 @@
       const e = along(spine, 1, 0);
       ctx.save();
       ctx.translate(e[0] - 2, e[1]);
-      ctx.rotate(dead ? 0.2 : strike ? 0.25 : wind ? -0.25 : -0.05 + Math.sin(t * 2) * 0.07 + Math.sin(t * 3.4) * 0.03);
-      ctx.scale(1.55, 1.55);
-      ouroHead(ctx, t, dead ? 0.4 : strike ? 1 : wind ? 0.7 : 0, kind, wind || strike ? 0.8 : 0.5, false);
+      let hRot = dead ? 0.2 : strike ? 0.25 : wind ? -0.25 : -0.05 + Math.sin(t * 2) * 0.07 + Math.sin(t * 3.4) * 0.03;
+      let hOpen = dead ? 0.4 : strike ? 1 : wind ? 0.7 : 0;
+      if (bt > 0) {
+        hRot = lerp(hRot, bLunge ? 0.32 : -0.45 + Math.sin(t * 18) * 0.03, bt);
+        hOpen = lerp(hOpen, bLunge ? 1.45 : 0.55, bt);
+      }
+      ctx.rotate(hRot);
+      ctx.scale(1.55 + (bLunge ? bt * 0.12 : 0), 1.55 + (bLunge ? bt * 0.12 : 0));
+      ouroHead(ctx, t, hOpen, kind, wind || strike || bt > 0 ? 0.8 + bt * 0.3 : 0.5, false);
       ctx.restore();
     }
     ctx.restore();
@@ -2901,14 +2953,18 @@
     const ph = phase(m);
     const dead = !!m.dead;
     const hurt = m.hurtT > 0;
-    const g = dead ? 0 : amt(fx.gear, 0);
+    // 特殊攻擊：fx.disc 0→1 蓄力（太陽盤發亮、快轉，身體先往後縮再推出去）；fx.discOut 時太陽盤滾出去了，這裡不畫
+    const dk = dead ? 0 : amt(fx.disc, 0);
+    const discOut = !!fx.discOut && !dead;
+    const g = dead ? 0 : Math.max(amt(fx.gear, 0) * 1, 0);
+    const gD = Math.max(g, dk);
     const walk = walking(m) && !dead;
     const wind = ph === 'wind';
     const strike = ph === 'strike';
     const kind = eyeKind(m);
     const cyc = t * 9;
-    const push = strike ? 7 : wind ? -3 : 0;
-    const spin = t * (walk ? 2.2 : 0.4) + g * t * 6;
+    const push = (strike ? 7 : wind ? -3 : 0) + (dk > 0 ? (dk < 0.75 ? -dk * 5 : -3.75 + (dk - 0.75) * 50) : 0);
+    const spin = t * (walk ? 2.2 : 0.4) + g * t * 6 + dk * t * 8;
     ctx.save();
     ctx.translate(hurt ? Math.sin(t * 60) * 1.2 : 0, 0);
     // 加速光環：從太陽盤往外擴散的金圈＋地上的時刻陣
@@ -2958,8 +3014,13 @@
     const dr = 22 + g * 2;
     const dy = -dr - 1;
     // 遠側前腳搭在盤上
-    legC(bx + 22, by - 6, bx + 30 + push * 0.6, by - 14, dx - dr * 0.72, dy - dr * 0.55, true);
-    sunDisc(ctx, dx, dy, dr, spin, g, t);
+    if (discOut) {
+      // 太陽盤推出去了：前腳空著、垂在前面
+      legC(bx + 22, by - 6, bx + 30, by - 10, bx + 38, by + 6, true);
+    } else {
+      legC(bx + 22, by - 6, bx + 30 + push * 0.6, by - 14, dx - dr * 0.72, dy - dr * 0.55, true);
+      sunDisc(ctx, dx, dy, dr, spin, gD, t);
+    }
     // ── 身體 ──
     const tilt = -0.12 + (strike ? 0.08 : 0);
     ctx.save();
@@ -3081,7 +3142,8 @@
     // 近側的腳
     legC(bx - 2, by + 12, bx - 14 + lw(PI), by + 18, bx - 18 + lw(PI), -ll(PI), false);
     legC(bx + 12, by + 12, bx + 16 + lw(PI + 2), by + 20, bx + 22 + lw(PI + 2), -ll(PI + 2), false);
-    legC(bx + 24, by + 2, bx + 34 + push * 0.6, by - 2, dx - dr * 0.85, dy + dr * 0.25, false);
+    if (discOut) legC(bx + 24, by + 2, bx + 34, by + 4, bx + 42, by + 22, false);
+    else legC(bx + 24, by + 2, bx + 34 + push * 0.6, by - 2, dx - dr * 0.85, dy + dr * 0.25, false);
     ctx.restore();
   }
   // ── 虛空鯨（id pouchroo）：在空中游的鯨，身體是星雲（深靛底、洋紅與青色星雲、星點與星座線），
@@ -4096,9 +4158,14 @@
     const dead = !!m.dead;
     const hurt = m.hurtT > 0 && !dead;
     const kind = eyeKind(m);
-    const walk = walking(m) && !ph && !dead;
-    const wind = ph === 'wind';
-    const strike = ph === 'strike';
+    // 特殊攻擊：fx.gallop 0→1 蓄力（人立揚蹄）；fx.charging 衝刺中（全速奔馳）
+    const mfx = m.fx || {};
+    const charging = !!mfx.charging && !dead;
+    const rearK = charging || dead ? 0 : amt(mfx.gallop, 0);
+    const walk = walking(m) && !ph && !dead && !charging;
+    const wind = (ph === 'wind' && !charging) || rearK > 0.05;
+    const strike = ph === 'strike' && !charging;
+    const gg = t * 3.4;
     const g = t * 1.8;
     const G2 = g * TAU * 2;
     let bx = 0;
@@ -4138,6 +4205,18 @@
       wOpen = 0.9;
       wBeat = -0.7;
     }
+    if (rearK > 0 && ph !== 'wind') pitch *= Math.min(1, rearK * 1.3);
+    if (charging) {
+      // 奔馳：身體前後搖、低頭前衝，翅膀往後收成流線
+      const s1 = Math.sin(gg * TAU);
+      bx = 4;
+      by = -Math.abs(Math.sin(gg * TAU + 0.6)) * 3.5 - 1;
+      pitch = s1 * 0.07;
+      headA = 0.22 + Math.sin(gg * TAU + 1) * 0.08;
+      nod = 0;
+      wOpen = 0.4;
+      wBeat = -0.45 + s1 * 0.2;
+    }
     if (hurt) {
       bx -= 2;
       pitch -= 0.05;
@@ -4160,6 +4239,7 @@
     if (walk) wBeat2 = Math.sin(G2 - 2.3) * 0.1;
     if (wind) wBeat2 = Math.sin(t * 11 - 1.4) * 0.6;
     else if (strike) wBeat2 = -0.3;
+    if (charging) wBeat2 = -0.6 + Math.sin(gg * TAU - 0.8) * 0.2;
     if (hurt) wBeat2 = 0.45;
     if (dead) wBeat2 = -1.3;
     const wOpen2 = clamp(wOpen * 0.9 + (wind ? 0.1 : 0), 0, 1);
@@ -4201,6 +4281,10 @@
       } else if (walk) {
         const f = gaitFoot(g + off, 0.6, 7, front ? 7 : 5, x0, front);
         o = { ua: uaR + f.sw * (front ? 0.16 : 0.12), gx: f.gx, gy: gy + f.gy, pa: f.pa };
+      } else if (charging) {
+        // 奔馳（襲步）：兩隻後腳幾乎一起、兩隻前腳幾乎一起，步幅大、抬得高
+        const f = gaitFoot(gg + (front ? 0.5 : 0) + (far ? 0.09 : 0), 0.34, front ? 17 : 14, front ? 13 : 10, x0 + (front ? 5 : -5), front);
+        o = { ua: uaR + f.sw * (front ? 0.42 : 0.32), gx: f.gx, gy: gy + f.gy, pa: f.pa };
       } else if (wind && front) {
         // 前腳在空中交替刨動
         const w = Math.sin(t * 9 + (far ? 1.8 : 0));
@@ -4250,6 +4334,8 @@
     };
     ctx.save();
     ctx.translate(hurt ? Math.sin(t * 60) * 1.2 : 0, 0);
+    // 衝刺時身後拖著星光的速度線
+    if (charging && !lite) speedLines(ctx, -42, -44, 46, 5, 24, t, rgba(P.glow, 0.85));
     // ── 遠側：翅膀、兩條腿 ──
     {
       const r = xf(6, -50);
@@ -4544,7 +4630,7 @@
     }
     ctx.restore();
     // 鬃毛：沿著頸背往後飄的長鬃，一綹綹 S 形波浪（越末端越慢半拍）；先畫外框再蓋填色，融成一整片
-    const ms = walk ? 6 : wind ? 9 : 3;
+    const ms = walk ? 6 : wind || charging ? 9 : 3;
     const locks = [];
     for (let i = 0; i < 6; i++) {
       const s0 = 0.02 + i * 0.18;
@@ -4613,17 +4699,24 @@
       const bands = [[-120, -62], [-62, -44], [-44, -26], [-26, 12]];
       const seed = Math.floor(t * 7);
       // 紅藍色差殘影（淡淡的剪影）＋整隻假身＋兩段錯位的切片
+      // 衝刺中（fx.charging）只留一道往後拖的殘影、少切一段，省下重畫的成本
+      const run = !!fx.charging;
       ctx.save();
       ctx.globalAlpha *= 0.26;
-      ctx.translate(-3, 0);
-      withTint('#ff5ac8', 0.6, () => pegasusBody(ctx, m, PG_SILV, t, true));
-      ctx.translate(6, 0);
-      withTint('#3ae0ff', 0.6, () => pegasusBody(ctx, m, PG_SILV, t, true));
+      if (run) {
+        ctx.translate(-9, 0);
+        withTint('#3ae0ff', 0.6, () => pegasusBody(ctx, m, PG_SILV, t - 0.05, true));
+      } else {
+        ctx.translate(-3, 0);
+        withTint('#ff5ac8', 0.6, () => pegasusBody(ctx, m, PG_SILV, t, true));
+        ctx.translate(6, 0);
+        withTint('#3ae0ff', 0.6, () => pegasusBody(ctx, m, PG_SILV, t, true));
+      }
       ctx.restore();
       ctx.save();
       ctx.globalAlpha *= 0.62;
       pegasusBody(ctx, m, PG_SILV, t);
-      [0, 1].forEach((i) => {
+      (run ? [0] : [0, 1]).forEach((i) => {
         const [y0, y1] = bands[(seed + i * 2) % 4];
         ctx.save();
         ctx.beginPath();
@@ -4847,7 +4940,28 @@
       A.ellipse(ctx, 39, -45, 7.5, 7.5, '#fff6d8', null, { lw: 2.2, hl: false });
       A.eye(ctx, 39, -45, 4, 4, ek, 0);
     }
-    smallMouth(ctx, 51, -34, strike || hurt, 0.8);
+    // 特殊攻擊（fx.spit 0→1）：張嘴，嘴裡聚起一顆越來越亮的星
+    const spt = m.dead ? 0 : amt(fx.spit, 0);
+    smallMouth(ctx, 51, -34, strike || hurt || spt > 0.1, 0.8 + spt * 0.5);
+    if (spt > 0) {
+      const sx = 55;
+      const sy = -34;
+      glowH(ctx, sx, sy, 10 + spt * 16, '#ffe07a', 0.5 + spt * 0.4);
+      glowH(ctx, sx, sy, 5 + spt * 6, '#ffffff', 0.9 * spt);
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(t * 3);
+      A.shape(ctx, (c) => starPath(c, 0, 0, 3 + spt * 5, 1.4 + spt * 2, 5, 0), '#fff6c8', '#ffd05a', { lw: 1.2, hl: false, shadeY: 1 });
+      ctx.restore();
+      // 被吸進嘴裡的星屑
+      for (let i = 0; i < 5; i++) {
+        const q = (t * 1.8 + i / 5) % 1;
+        const a = i * 1.3;
+        const r = (1 - q) * 22;
+        ctx.fillStyle = rgba(i % 2 ? '#fff2b0' : '#a8e8ff', q * spt);
+        ctx.fillRect(sx + Math.cos(a) * r - 1, sy + Math.sin(a) * r - 1, 2, 2);
+      }
+    }
     A.blush(ctx, 36, -32, 3);
     // 灑落的星屑
     for (let i = 0; i < 4; i++) {
