@@ -1479,3 +1479,1609 @@
     iceShard,
   });
 })();
+
+// ═════════ 技能大特效（世界座標）：雷霆審判、升龍爪 ═════════
+// 分兩層畫：back（在怪物、玩家後面；由 loot.draw 前的掛鉤呼叫）、front（在粒子之後、傷害數字之前；由 fx.drawCuts 呼叫）。
+// 每個特效模組登記到 A.skillFx；狀態每幀只推進一次（哪一層先被呼叫就在那一層推進），兩層看到的是同一個狀態。
+// 粒子用預先配置好的物件池，畫的時候不產生新物件；鋸齒雷的點放在各特效自己的 Float32Array 裡。
+(function () {
+  'use strict';
+  const A = G.art;
+  const TAU = Math.PI * 2;
+  const PI = Math.PI;
+  let seed = 918273;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const rr = (a, b) => a + (b - a) * rnd();
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const eOut = (k) => 1 - (1 - k) * (1 - k);
+  const eBack = (k) => {
+    const c = 1.9;
+    return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2);
+  };
+  const mk = (w, h) => {
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w);
+    c.height = Math.ceil(h || w);
+    return c;
+  };
+  function radial(size, stops) {
+    const cv = mk(size);
+    const c = cv.getContext('2d');
+    const g = c.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    stops.forEach((s) => g.addColorStop(s[0], s[1]));
+    c.fillStyle = g;
+    c.fillRect(0, 0, size, size);
+    return cv;
+  }
+  const lite = () => !!G.lowFx;
+  const OUTC = '#4a2e1f'; // 遊戲一貫的深棕描邊
+
+  // ── 共用：粒子池 ──
+  function pool(n) {
+    const a = [];
+    for (let i = 0; i < n; i++) a.push({ on: false, k: 0, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 1, s: 1, rot: 0, vr: 0, g: 0, floor: 1e9, drag: 0, c: 0, b: 0 });
+    return { a, i: 0, n: 0 };
+  }
+  function spawn(P, k, x, y, vx, vy, life, s) {
+    const a = P.a;
+    for (let j = 0; j < a.length; j++) {
+      const q = a[(P.i + j) % a.length];
+      if (q.on) continue;
+      P.i = (P.i + j + 1) % a.length;
+      P.n++;
+      q.on = true;
+      q.k = k;
+      q.x = x;
+      q.y = y;
+      q.vx = vx;
+      q.vy = vy;
+      q.t = 0;
+      q.life = life;
+      q.s = s;
+      q.rot = rr(0, TAU);
+      q.vr = rr(-9, 9);
+      q.g = 0;
+      q.floor = 1e9;
+      q.drag = 0;
+      q.c = 0;
+      q.b = 0;
+      return q;
+    }
+    return null;
+  }
+  function stepPool(P, dt) {
+    if (!P.n) return;
+    for (const q of P.a) {
+      if (!q.on) continue;
+      q.t += dt;
+      if (q.t >= q.life) {
+        q.on = false;
+        P.n--;
+        continue;
+      }
+      if (q.drag) {
+        const d = Math.max(0, 1 - q.drag * dt);
+        q.vx *= d;
+        q.vy *= d;
+      }
+      q.vy += q.g * dt;
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.rot += q.vr * dt;
+      if (q.y > q.floor) {
+        q.y = q.floor;
+        if (q.b++ < 1 && q.vy > 60) {
+          q.vy *= -0.3;
+          q.vx *= 0.55;
+          q.vr *= 0.5;
+        } else {
+          q.vy = 0;
+          q.vx *= 0.8;
+          q.vr = 0;
+        }
+      }
+    }
+  }
+  function clearPool(P) {
+    for (const q of P.a) q.on = false;
+    P.n = 0;
+  }
+
+  // ── 共用：鋸齒雷（寫進 buf，回傳點數） ──
+  function jag(buf, off, x0, y0, x1, y1, n, amp) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L;
+    const ny = dx / L;
+    for (let i = 0; i <= n; i++) {
+      const k = i / n;
+      const o = i === 0 || i === n ? 0 : rr(-amp, amp);
+      buf[off + i * 2] = x0 + dx * k + nx * o;
+      buf[off + i * 2 + 1] = y0 + dy * k + ny * o;
+    }
+    return n + 1;
+  }
+  function pathBuf(ctx, buf, off, cnt) {
+    ctx.beginPath();
+    ctx.moveTo(buf[off], buf[off + 1]);
+    for (let i = 1; i < cnt; i++) ctx.lineTo(buf[off + i * 2], buf[off + i * 2 + 1]);
+  }
+  // 一道電弧：外層藍光＋白芯（呼叫前要先設好 'lighter'）
+  function arc(ctx, buf, off, cnt, w, a, hue) {
+    if (a <= 0.01) return;
+    pathBuf(ctx, buf, off, cnt);
+    ctx.globalAlpha = Math.min(1, a) * 0.4;
+    ctx.strokeStyle = hue || '#6aa8ff';
+    ctx.lineWidth = w * 3.4;
+    ctx.stroke();
+    ctx.globalAlpha = Math.min(1, a);
+    ctx.strokeStyle = '#eef6ff';
+    ctx.lineWidth = w;
+    ctx.stroke();
+  }
+
+  // ── 模組登記 ──
+  const MODS = [];
+  let lastStep = -1;
+  function step() {
+    if (G.time === lastStep) return;
+    const dt = lastStep < 0 ? 0 : clamp(G.time - lastStep, 0, 0.05);
+    lastStep = G.time;
+    for (const m of MODS) m.step(dt);
+  }
+  A.skillFx = {
+    add(m) {
+      MODS.push(m);
+    },
+    back(ctx) {
+      step();
+      for (const m of MODS) {
+        if (!m.live() || !m.back) continue;
+        ctx.save();
+        m.back(ctx);
+        ctx.restore();
+      }
+    },
+    front(ctx) {
+      step();
+      for (const m of MODS) {
+        if (!m.live() || !m.front) continue;
+        ctx.save();
+        m.front(ctx);
+        ctx.restore();
+      }
+    },
+    clear() {
+      MODS.forEach((m) => m.clear());
+    },
+  };
+
+  const GLOW_B = radial(128, [[0, 'rgba(255,255,255,1)'], [0.16, 'rgba(215,236,255,0.9)'], [0.42, 'rgba(120,175,255,0.34)'], [1, 'rgba(60,110,255,0)']]);
+  const GLOW_G = radial(96, [[0, 'rgba(255,240,190,0.9)'], [0.4, 'rgba(255,200,90,0.35)'], [1, 'rgba(255,170,60,0)']]);
+  const GLOW_O = radial(96, [[0, 'rgba(255,250,210,1)'], [0.25, 'rgba(255,200,90,0.7)'], [0.6, 'rgba(255,130,30,0.22)'], [1, 'rgba(255,110,20,0)']]);
+  const SMOKE = radial(64, [[0, 'rgba(58,58,68,0.55)'], [0.6, 'rgba(52,52,62,0.25)'], [1, 'rgba(48,48,58,0)']]);
+  const SCORCH = radial(128, [[0, 'rgba(10,8,14,0.92)'], [0.5, 'rgba(22,16,20,0.66)'], [1, 'rgba(30,24,22,0)']]);
+  // 雷柱的外光：水平方向的漸層條，拉長貼上去
+  const COLG = (() => {
+    const cv = mk(64, 4);
+    const c = cv.getContext('2d');
+    const g = c.createLinearGradient(0, 0, 64, 0);
+    g.addColorStop(0, 'rgba(70,130,255,0)');
+    g.addColorStop(0.3, 'rgba(90,150,255,0.35)');
+    g.addColorStop(0.5, 'rgba(170,210,255,0.85)');
+    g.addColorStop(0.7, 'rgba(90,150,255,0.35)');
+    g.addColorStop(1, 'rgba(70,130,255,0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, 64, 4);
+    return cv;
+  })();
+
+  // ════════════════ 雷霆審判 ════════════════
+  // 施法者背後浮出一圈雷鼓光環（金環＋八面太鼓，鼓面是三道雷勾紋）→ 鼓一面接一面地敲、迸出火花；
+  // 目標頭上翻滾出厚重的雷雲，雲底閃著電；先導雷從雲底一節節探下來 → 巨大的藍白雷柱整根砸下，
+  // 地面炸出焦黑的坑、放射狀裂縫與一圈衝擊波，之後地上還爬著殘電。不做全螢幕閃白，只有局部的光暈。
+
+  // 太鼓（正面、往右下看得到一點鼓身）：預先畫成 3 倍解析度的圖
+  const DS = 3;
+  const DR = 15;
+  const DRUM = (() => {
+    const R = DR * DS;
+    const S = Math.ceil(R * 2.9);
+    const cv = mk(S);
+    const c = cv.getContext('2d');
+    const cx = S / 2 - R * 0.1;
+    const cy = S / 2 - R * 0.1;
+    const bx = cx + R * 0.24;
+    const by = cy + R * 0.26;
+    const lw = 2.2 * DS;
+    c.lineJoin = 'round';
+    c.lineCap = 'butt';
+    // 鼓身（前後兩個圓之間的圓筒）：先描邊、再塗色
+    c.fillStyle = OUTC;
+    c.beginPath();
+    c.arc(bx, by, R + lw / 2, 0, TAU);
+    c.fill();
+    c.strokeStyle = OUTC;
+    c.lineWidth = R * 2 + lw;
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.lineTo(bx, by);
+    c.stroke();
+    c.fillStyle = '#8a3320';
+    c.beginPath();
+    c.arc(bx, by, R, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#8a3320';
+    c.lineWidth = R * 2;
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.lineTo(bx, by);
+    c.stroke();
+    // 鼓身上的金色箍
+    c.strokeStyle = '#e8b448';
+    c.lineWidth = R * 0.16;
+    c.beginPath();
+    c.arc(cx + (bx - cx) * 0.55, cy + (by - cy) * 0.55, R * 0.99, -0.3, 1.9);
+    c.stroke();
+    // 鼓框（紅漆）
+    c.fillStyle = '#d4462c';
+    c.beginPath();
+    c.arc(cx, cy, R, 0, TAU);
+    c.fill();
+    c.strokeStyle = OUTC;
+    c.lineWidth = lw;
+    c.stroke();
+    c.strokeStyle = '#ff9a70';
+    c.lineWidth = R * 0.08;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.arc(cx, cy, R * 0.9, PI * 1.05, PI * 1.55);
+    c.stroke();
+    // 鉚釘
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU;
+      c.beginPath();
+      c.arc(cx + Math.cos(a) * R * 0.86, cy + Math.sin(a) * R * 0.86, R * 0.075, 0, TAU);
+      c.fillStyle = '#ffd97a';
+      c.fill();
+      c.strokeStyle = OUTC;
+      c.lineWidth = DS * 0.7;
+      c.stroke();
+    }
+    // 鼓面
+    const Rs = R * 0.7;
+    c.beginPath();
+    c.arc(cx, cy, Rs, 0, TAU);
+    c.fillStyle = '#f6edd4';
+    c.fill();
+    c.save();
+    c.clip();
+    c.fillStyle = '#e0cfa8';
+    c.beginPath();
+    c.arc(cx + Rs * 0.3, cy + Rs * 0.32, Rs, 0, TAU);
+    c.fill();
+    c.fillStyle = '#f6edd4';
+    c.beginPath();
+    c.arc(cx - Rs * 0.08, cy - Rs * 0.08, Rs * 0.93, 0, TAU);
+    c.fill();
+    c.restore();
+    c.strokeStyle = '#9a7650';
+    c.lineWidth = DS * 0.9;
+    c.beginPath();
+    c.arc(cx, cy, Rs, 0, TAU);
+    c.stroke();
+    // 三道雷勾紋：勾頭＋沿著圓繞出去、尾端折一下的電勾
+    c.fillStyle = '#2d3c8e';
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * TAU - 0.4;
+      const hr = Rs * 0.2;
+      const hd = Rs * 0.36;
+      const hx = cx + Math.cos(a) * hd;
+      const hy = cy + Math.sin(a) * hd;
+      c.beginPath();
+      c.arc(hx, hy, hr, 0, TAU);
+      c.fill();
+      const r1 = hd + hr;
+      c.beginPath();
+      c.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      c.arc(cx, cy, r1, a, a + 1.55);
+      // 尾端的電折
+      const ta = a + 1.55;
+      c.lineTo(cx + Math.cos(ta + 0.22) * r1 * 0.82, cy + Math.sin(ta + 0.22) * r1 * 0.82);
+      c.lineTo(cx + Math.cos(ta + 0.05) * r1 * 0.7, cy + Math.sin(ta + 0.05) * r1 * 0.7);
+      c.quadraticCurveTo(cx + Math.cos(a + 0.8) * hd * 0.72, cy + Math.sin(a + 0.8) * hd * 0.72, cx + Math.cos(a) * (hd - hr), cy + Math.sin(a) * (hd - hr));
+      c.closePath();
+      c.fill();
+    }
+    c.beginPath();
+    c.arc(cx, cy, Rs * 0.1, 0, TAU);
+    c.fillStyle = '#e8b448';
+    c.fill();
+    // 鼓面高光
+    c.strokeStyle = 'rgba(255,255,255,0.8)';
+    c.lineWidth = DS * 1.2;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.arc(cx, cy, Rs * 0.8, PI * 1.1, PI * 1.4);
+    c.stroke();
+    return { c: cv, w: S / DS, ox: (cx / S) * (S / DS), oy: (cy / S) * (S / DS) };
+  })();
+  // 雷雲的雲團：先把所有雲團的深色外框畫一遍，再畫所有雲團本體 → 只有整朵雲的外緣有描邊
+  const PF_OUT = radial(64, [[0, '#17151f'], [0.96, '#17151f'], [1, 'rgba(23,21,31,0)']]);
+  const PF_FILL = (() => {
+    const cv = mk(64);
+    const c = cv.getContext('2d');
+    c.beginPath();
+    c.arc(32, 32, 31, 0, TAU);
+    const g = c.createLinearGradient(0, 2, 0, 62);
+    g.addColorStop(0, '#6e7794');
+    g.addColorStop(0.45, '#434a64');
+    g.addColorStop(1, '#1e2130');
+    c.fillStyle = g;
+    c.fill();
+    const h = c.createRadialGradient(24, 18, 2, 24, 18, 22);
+    h.addColorStop(0, 'rgba(176,186,222,0.4)');
+    h.addColorStop(1, 'rgba(176,186,222,0)');
+    c.fillStyle = h;
+    c.fill();
+    return cv;
+  })();
+
+  const J = [];
+  const JP = pool(170);
+  function hitboxOf(m) {
+    if (m && m.hitbox) return m.hitbox();
+    return { x: (m ? m.x : 0) - 30, y: (m ? m.y : 0) - 80, w: 60, h: 80 };
+  }
+  function placeCloud(e, m, init) {
+    const hb = hitboxOf(m);
+    e.cW = clamp(180 + hb.w * 0.9, 180, 460);
+    const cam = G.cam;
+    let yb = hb.y - 120;
+    yb = Math.max(yb, cam.y + 36 + e.cW * 0.26);
+    yb = Math.min(yb, hb.y - 36);
+    e.cyB = yb;
+    if (init) {
+      e.cx = m.x;
+      e.puffs.length = 0;
+      const n = lite() ? 7 : 12;
+      const W = e.cW;
+      for (let i = 0; i < n; i++) {
+        const k = (i / (n - 1)) * 2 - 1;
+        const r = W * (0.12 + (1 - k * k) * 0.08) * rr(0.9, 1.1);
+        e.puffs.push({ ax: k * W * 0.42 + rr(-5, 5), ay: -r * 0.55 - (1 - k * k) * W * 0.12 - (i % 2 ? W * 0.05 : 0), r, ph: rr(0, TAU), sp: rr(1.1, 2.2) * (rnd() < 0.5 ? -1 : 1), orb: rr(2, 6), d: Math.abs(k) * 0.12 + rr(0, 0.05) });
+      }
+      e.puffs.sort((p, q) => p.ay - q.ay);
+      e.pp = new Float32Array(n * 3);
+    }
+  }
+  function newJudge(P, m, hitAt) {
+    const e = {
+      t: 0, hitAt: hitAt || 0.45, hitT: -1, fz: false, m: m || null, cloud: false, cx: 0, cyB: 0, cW: 200, puffs: [], pp: null,
+      x: 0, gy: 0, top: 0, Wc: 50, sz: 1, Rc: 50, ground: false, span0: 0, span1: 0, depth: 0, hb: null,
+      beatI: -1, regen: 0, lead: 0, flT: 0, flX: 0, flY: 0, flR: 0, flA: 0, flNext: 0.12,
+      col: new Float32Array(3 * 52), cn: 0, br: new Float32Array(2 * 8 * 12), bc: new Int8Array(12), nb: 0,
+      lb: new Float32Array(2 * 12), ln: 0, cb: new Float32Array(2 * 8), ab: new Float32Array(2 * 8 * 10), ac: new Int8Array(10), na: 0, arcT: 0,
+      db: new Float32Array(2 * 7 * 10), dn: 0, drT: 0, cr: null, crN: 0, bowl: new Float32Array(2 * 9), rim: null,
+    };
+    if (m) {
+      e.cloud = true;
+      placeCloud(e, m, true);
+    }
+    return e;
+  }
+  function judgeStrike(e, m) {
+    e.hitT = e.t;
+    const hb = hitboxOf(m);
+    e.hb = hb;
+    if (!e.cloud) {
+      e.cloud = true;
+      placeCloud(e, m, true);
+    } else if (m !== e.m) {
+      placeCloud(e, m, false);
+      e.cx = m.x;
+    }
+    e.m = m;
+    e.x = m.x;
+    e.sz = clamp(hb.w / 70, 1, 2.6);
+    e.Wc = clamp(40 + hb.w * 0.3, 46, 124);
+    e.Rc = 30 + 22 * e.sz;
+    e.top = e.cyB - e.cW * 0.06;
+    const feet = hb.y + hb.h;
+    const map = G.world && G.world.map;
+    e.ground = false;
+    e.gy = feet;
+    if (map && G.physics) {
+      const i = G.physics.platformBelow(map, m.x, feet - 4);
+      if (i >= 0) {
+        const p = map.platforms[i];
+        if (p[2] - feet < 240) {
+          e.ground = true;
+          e.gy = p[2];
+          e.span0 = p[0];
+          e.span1 = p[1];
+          e.depth = i === 0 ? 150 : 20;
+        }
+      }
+    }
+    const x = e.x;
+    const gy = e.gy;
+    const L = lite();
+    if (e.ground) {
+      // 坑：參差的淺碗
+      const Rc = e.Rc;
+      for (let i = 0; i <= 8; i++) {
+        const k = i / 8;
+        e.bowl[i * 2] = x - Rc + 2 * Rc * k + (i && i < 8 ? rr(-3, 3) : 0);
+        e.bowl[i * 2 + 1] = gy + Math.sin(k * PI) * Rc * 0.22 * rr(0.75, 1.1);
+      }
+      // 放射狀裂縫：兩條貼著地表往外跑、其餘斜斜往下劈進地裡
+      const nC = L ? 4 : 8;
+      e.crN = nC;
+      e.cr = new Float32Array(nC * 2 * 7);
+      for (let c = 0; c < nC; c++) {
+        const s = c % 2 ? 1 : -1;
+        const flat = c < 2;
+        const a0 = flat ? rr(0.02, 0.1) : rr(0.25, 1.15);
+        const ang = s > 0 ? a0 : PI - a0;
+        const len = (flat ? rr(90, 150) : rr(40, 100)) * (0.7 + 0.3 * e.sz);
+        let px = x + s * rr(0.3, 0.8) * Rc;
+        let py = gy + (flat ? 2 : rr(3, 8));
+        for (let i = 0; i < 7; i++) {
+          e.cr[(c * 7 + i) * 2] = px;
+          e.cr[(c * 7 + i) * 2 + 1] = py;
+          const d = ang + rr(-0.45, 0.45);
+          px += Math.cos(d) * (len / 6);
+          py = Math.max(gy + 1.5, py + Math.sin(d) * (len / 6));
+        }
+      }
+      // 坑邊翻起來的碎石（描邊的小石塊，貼在地表上）
+      e.rim = [];
+      for (let i = 0; i < (L ? 3 : 6); i++) {
+        const s = i % 2 ? 1 : -1;
+        e.rim.push({ x: x + s * Rc * rr(0.75, 1.25), r: rr(3, 6) * (0.8 + 0.2 * e.sz), rot: rr(0, TAU), c: ['#6a5a52', '#57504e', '#7a6a5a'][i % 3] });
+      }
+    }
+    // 碎石、火花、煙
+    const nR = L ? 5 : 11;
+    for (let i = 0; i < nR; i++) {
+      const q = spawn(JP, 2, x + rr(-0.5, 0.5) * e.Rc, gy - 4, rr(-260, 260), rr(-520, -220), rr(0.8, 1.2), rr(3, 6.5) * (0.8 + 0.2 * e.sz));
+      if (!q) break;
+      q.g = 1500;
+      q.floor = e.ground ? gy - 1 : 1e9;
+      q.c = i % 3;
+    }
+    const nS = L ? 12 : 28;
+    for (let i = 0; i < nS; i++) {
+      const a = -PI / 2 + rr(-1.35, 1.35);
+      const sp = rr(260, 720);
+      const q = spawn(JP, 1, x + rr(-8, 8), gy - 6, Math.cos(a) * sp, Math.sin(a) * sp, rr(0.25, 0.55), rr(1.2, 2.4));
+      if (!q) break;
+      q.g = 900;
+      q.drag = 1.5;
+    }
+    for (let i = 0; i < (L ? 3 : 7); i++) {
+      const q = spawn(JP, 3, x + rr(-1, 1) * e.Rc, gy - rr(4, 20), rr(-40, 40), rr(-60, -20), rr(0.9, 1.5), rr(18, 30) * (0.8 + 0.2 * e.sz));
+      if (!q) break;
+      q.drag = 1.2;
+      q.b = -rr(0.08, 0.25); // 延遲出現
+    }
+    regenColumn(e);
+  }
+  function regenColumn(e) {
+    const top = e.top;
+    const gy = e.gy;
+    const N = clamp(Math.round((gy - top) / 24), 8, 50);
+    e.cn = N;
+    for (let i = 0; i <= N; i++) {
+      e.col[i * 3] = e.x + (i === N ? 0 : rr(-1, 1) * e.Wc * 0.14);
+      e.col[i * 3 + 1] = rr(0.7, 1.08);
+      e.col[i * 3 + 2] = rr(0.7, 1.08);
+    }
+    // 分叉：從柱身往外、往下劈出去
+    const nb = lite() ? 3 : 7;
+    let w = 0;
+    let k = 0;
+    while (k < nb && w < 12) {
+      const i = Math.floor(rr(1, N - 1));
+      const s = rnd() < 0.5 ? -1 : 1;
+      const y0 = top + ((gy - top) * i) / N;
+      const x0 = e.col[i * 3] + (s * e.Wc) / 2;
+      const a = rr(0.15, 0.95);
+      const len = rr(40, 130) * (0.8 + 0.2 * e.sz);
+      const x1 = x0 + s * Math.cos(a) * len;
+      const y1 = Math.min(gy - 2, y0 + Math.sin(a) * len);
+      e.bc[w] = jag(e.br, w * 16, x0, y0, x1, y1, 7, len * 0.14);
+      w++;
+      // 偶爾再分一次
+      if (w < 12 && rnd() < 0.4) {
+        const j = 3 * 2 + 16 * (w - 1);
+        const bx = e.br[j];
+        const by = e.br[j + 1];
+        const a2 = a + rr(0.3, 0.7);
+        const l2 = len * rr(0.35, 0.55);
+        e.bc[w] = jag(e.br, w * 16, bx, by, bx + s * Math.cos(a2) * l2, Math.min(gy - 2, by + Math.sin(a2) * l2), 4, l2 * 0.18);
+        w++;
+      }
+      k++;
+    }
+    e.nb = w;
+  }
+  function regenGroundArcs(e) {
+    const n = lite() ? 2 : 5;
+    e.na = n;
+    for (let i = 0; i < n; i++) {
+      if (i === 0 && e.m && !e.m.dead && e.t - e.hitT < 0.9) {
+        // 一道從坑裡往上爬到目標身上的殘電（麻痺中）
+        const hb = hitboxOf(e.m);
+        e.ac[i] = jag(e.ab, i * 20, e.x + rr(-10, 10), e.gy - 2, hb.x + rr(0.2, 0.8) * hb.w, hb.y + rr(0.3, 0.8) * hb.h, 6, 10);
+        continue;
+      }
+      const x0 = e.x + rr(-1.4, 1.4) * e.Rc;
+      const x1 = x0 + rr(-45, 45) * e.sz;
+      e.ac[i] = jag(e.ab, i * 20, x0, e.gy - 1, x1, e.gy - rr(0, 5), 6, 5);
+    }
+  }
+
+  function judgeStep(dt) {
+    stepPool(JP, dt);
+    for (let i = J.length - 1; i >= 0; i--) {
+      const e = J[i];
+      e.t += dt;
+      const t = e.t;
+      if (e.hitT < 0 && e.m && e.cloud && !e.m.dead) e.cx += (e.m.x - e.cx) * Math.min(1, dt * 8);
+      if (e.hitT < 0 && t > e.hitAt + 0.25) e.fz = true;
+      if ((e.hitT >= 0 && t - e.hitT > 2.4) || (e.fz && e.hitT < 0 && t > e.hitAt + 1.1)) {
+        J.splice(i, 1);
+        continue;
+      }
+      // 雲裡的閃電：越接近劈下越頻繁
+      if (e.cloud && e.pp && t > e.flNext && (e.hitT < 0 || t - e.hitT < 0.5)) {
+        const j = Math.floor(rnd() * e.puffs.length);
+        const p = e.puffs[j];
+        e.flX = e.cx + p.ax;
+        e.flY = e.cyB + p.ay;
+        e.flR = p.r * rr(1.4, 2.2);
+        e.flT = t;
+        e.flA = rr(0.5, 1);
+        e.flNext = t + (e.hitT < 0 ? rr(0.05, 0.16) * (1.2 - Math.min(1, t / e.hitAt)) + 0.03 : rr(0.08, 0.2));
+      }
+      if (e.hitT >= 0) {
+        const hk = t - e.hitT;
+        e.regen -= dt;
+        if (hk < 0.62 && e.regen <= 0) {
+          e.regen = 0.034;
+          regenColumn(e);
+        }
+        e.arcT -= dt;
+        if (hk > 0.12 && hk < 1.7 && e.arcT <= 0) {
+          e.arcT = 0.07;
+          regenGroundArcs(e);
+        }
+      } else if (e.cloud && t > e.hitAt - 0.16) {
+        e.lead -= dt;
+        if (e.lead <= 0) {
+          e.lead = 0.03;
+          const k = clamp((t - (e.hitAt - 0.16)) / 0.16, 0, 1);
+          const hb = e.m && !e.m.dead ? hitboxOf(e.m) : null;
+          const y1 = e.cyB + ((hb ? hb.y + hb.h * 0.5 : e.cyB + 200) - e.cyB) * k * 0.85;
+          e.ln = jag(e.lb, 0, e.cx + rr(-6, 6), e.cyB - 4, e.cx + rr(-18, 18), y1, 10, 12);
+        }
+      }
+      // 鼓：一面接一面地敲，敲的那面迸火花
+      const P = G.player;
+      if (e.hitT < 0 && !e.fz && t > 0.1 && P) {
+        const n = lite() ? 6 : 8;
+        const b = Math.floor((t - 0.1) / 0.048);
+        if (b !== e.beatI) {
+          e.beatI = b;
+          const i = b % n;
+          const d = drumPos(e, P, i, n);
+          for (let k = 0; k < (lite() ? 1 : 3); k++) {
+            const a = Math.atan2(d.y - d.cy, d.x - d.cx) + rr(-0.6, 0.6);
+            const sp = rr(120, 240);
+            const q = spawn(JP, 4, d.x, d.y, Math.cos(a) * sp, Math.sin(a) * sp, rr(0.14, 0.26), rr(1, 1.8));
+            if (q) q.drag = 3;
+          }
+        }
+      }
+      // 劈下的一瞬間，每面鼓都往天上射一道電
+      if (e.hitT >= 0 && t - e.hitT < 0.2) {
+        e.drT -= dt;
+        if (e.drT <= 0 && P) {
+          e.drT = 0.035;
+          const n = lite() ? 6 : 8;
+          e.dn = Math.min(10, n);
+          for (let i = 0; i < e.dn; i++) {
+            const d = drumPos(e, P, i, n);
+            jag(e.db, i * 14, d.x, d.y, d.x + (d.x - d.cx) * 0.6 + rr(-14, 14), d.y - rr(50, 95), 6, 7);
+          }
+        }
+      }
+    }
+  }
+  const DP_ = { x: 0, y: 0, cx: 0, cy: 0 };
+  function drumPos(e, P, i, n) {
+    const a = eBack(clamp(e.t / 0.2, 0, 1));
+    const cx = P.x - P.dir * 4;
+    const cy = P.y - 64;
+    const ang = -PI / 2 + (i / n) * TAU + e.t * 0.45 * (P.dir || 1);
+    DP_.cx = cx;
+    DP_.cy = cy;
+    DP_.x = cx + Math.cos(ang) * 68 * a;
+    DP_.y = cy + Math.sin(ang) * 56 * a;
+    return DP_;
+  }
+  function drumsOut(e) {
+    if (e.hitT >= 0) return clamp(1 - (e.t - e.hitT - 0.3) / 0.32, 0, 1);
+    if (e.fz) return clamp(1 - (e.t - e.hitAt - 0.25) / 0.3, 0, 1);
+    return 1;
+  }
+
+  function judgeBack(ctx) {
+    const P = G.player;
+    if (!P) return;
+    for (const e of J) {
+      const out = drumsOut(e);
+      if (out <= 0) continue;
+      const t = e.t;
+      const a = eBack(clamp(t / 0.2, 0, 1));
+      const n = lite() ? 6 : 8;
+      const cx = P.x - P.dir * 4;
+      const cy = P.y - 64;
+      const hk = e.hitT >= 0 ? t - e.hitT : -1;
+      const sp = hk >= 0 ? Math.max(0, 1 - hk / 0.28) : 0;
+      ctx.globalAlpha = out;
+      ctx.globalCompositeOperation = 'lighter';
+      const gr = 120 * a * (1 + 0.3 * sp);
+      ctx.globalAlpha = out * (0.35 + 0.4 * sp);
+      ctx.drawImage(GLOW_G, cx - gr, cy - gr, gr * 2, gr * 2);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = out;
+      // 金環
+      const R = 68 * a;
+      const Ry = 56 * a;
+      if (R > 2) {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, R, Ry, 0, 0, TAU);
+        ctx.strokeStyle = OUTC;
+        ctx.lineWidth = 7;
+        ctx.stroke();
+        ctx.strokeStyle = sp > 0 ? '#fff1b0' : '#f0c050';
+        ctx.lineWidth = 3.6;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, R, Ry, 0, PI * 1.08, PI * 1.45);
+        ctx.strokeStyle = '#fff6cc';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+      }
+      // 鼓與鼓之間的電鏈（敲鼓時才有）
+      const beating = hk < 0 && !e.fz && t > 0.1;
+      const bi = beating ? e.beatI % n : -1;
+      const bk = beating ? 1 - (((t - 0.1) / 0.048) % 1) : 0;
+      for (let i = 0; i < n; i++) {
+        const si = eBack(clamp((t - 0.03 - i * 0.018) / 0.14, 0, 1));
+        if (si <= 0) continue;
+        const d = drumPos(e, P, i, n);
+        const p = i === bi ? bk : 0;
+        const sc = si * (1 + 0.2 * p + 0.25 * sp) * (0.6 + 0.4 * out);
+        const w = DRUM.w * sc;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = out;
+        ctx.drawImage(DRUM.c, d.x - DRUM.ox * sc, d.y - DRUM.oy * sc, w, w);
+        const ga = 0.75 * p + 0.9 * sp;
+        if (ga > 0.02) {
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = Math.min(1, ga) * out;
+          const r = 22 * sc;
+          ctx.drawImage(GLOW_B, d.x - r, d.y - r, r * 2, r * 2);
+        }
+      }
+      // 敲響的那面鼓：一小道電往下一面鼓跳
+      if (bi >= 0 && bk > 0.4) {
+        const d0 = drumPos(e, P, bi, n);
+        const x0 = d0.x;
+        const y0 = d0.y;
+        const d1 = drumPos(e, P, (bi + 1) % n, n);
+        ctx.globalCompositeOperation = 'lighter';
+        jag(e.cb, 0, x0, y0, d1.x, d1.y, 5, 6);
+        arc(ctx, e.cb, 0, 6, 1.4, bk * out);
+      }
+      if (e.dn && hk >= 0 && hk < 0.2) {
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < e.dn; i++) arc(ctx, e.db, i * 14, 7, 1.6, (1 - hk / 0.2) * out);
+      }
+    }
+  }
+
+  function drawCloud(ctx, e, t, hk) {
+    let ca = 1;
+    if (hk >= 0) ca = clamp(1 - (hk - 0.5) / 0.6, 0, 1);
+    else if (e.fz) ca = clamp(1 - (t - e.hitAt - 0.25) / 0.5, 0, 1);
+    if (ca <= 0) return;
+    const cx = e.cx;
+    const cyB = e.cyB;
+    const n = e.puffs.length;
+    const pp = e.pp;
+    const dis = hk > 0.5 ? 1 + (hk - 0.5) * 0.5 : 1;
+    for (let i = 0; i < n; i++) {
+      const p = e.puffs[i];
+      const s = eBack(clamp((t - p.d) / 0.3, 0, 1));
+      pp[i * 3] = cx + p.ax * dis + Math.cos(t * p.sp + p.ph) * p.orb;
+      pp[i * 3 + 1] = cyB + p.ay + Math.sin(t * p.sp + p.ph) * p.orb * 0.6;
+      pp[i * 3 + 2] = s <= 0 ? 0 : p.r * s * (1 + 0.05 * Math.sin(t * 3.1 + p.ph)) * (hk > 0.5 ? 1 - (hk - 0.5) * 0.4 : 1);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = ca;
+    for (let i = 0; i < n; i++) {
+      const r = pp[i * 3 + 2] + 2.6;
+      if (r > 3) ctx.drawImage(PF_OUT, pp[i * 3] - r, pp[i * 3 + 1] - r, r * 2, r * 2);
+    }
+    for (let i = 0; i < n; i++) {
+      const r = pp[i * 3 + 2];
+      if (r > 1) ctx.drawImage(PF_FILL, pp[i * 3] - r, pp[i * 3 + 1] - r, r * 2, r * 2);
+    }
+    // 雲底的漩渦
+    const W = e.cW;
+    const form = clamp(t / 0.3, 0, 1);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(150,162,205,0.32)';
+    ctx.lineWidth = 3;
+    for (let k = 0; k < 2; k++) {
+      const a0 = t * 3.2 + k * PI;
+      ctx.beginPath();
+      ctx.ellipse(cx, cyB - W * 0.05, W * (0.14 + 0.1 * k) * form, W * (0.03 + 0.02 * k) * form, 0, a0, a0 + 2.1);
+      ctx.stroke();
+    }
+    // 雲裡的閃光
+    ctx.globalCompositeOperation = 'lighter';
+    const fk = 1 - (t - e.flT) / 0.09;
+    if (fk > 0) {
+      ctx.globalAlpha = ca * fk * e.flA * 0.8;
+      ctx.drawImage(GLOW_B, e.flX - e.flR, e.flY - e.flR, e.flR * 2, e.flR * 2);
+    }
+    // 蓄電：雲底越來越亮；劈下後雲底整片被照亮
+    const charge = hk >= 0 ? Math.max(0, 1 - hk / 0.4) : clamp(t / e.hitAt, 0, 1) * 0.45;
+    if (charge > 0.02) {
+      ctx.globalAlpha = ca * charge;
+      ctx.drawImage(GLOW_B, cx - W * 0.45, cyB - W * 0.22, W * 0.9, W * 0.4);
+    }
+  }
+
+  function drawColumn(ctx, e, hk) {
+    const top = e.top;
+    const gy = e.gy;
+    const drop = hk < 0.045 ? eOut(hk / 0.045) : 1;
+    const yEnd = top + (gy - top) * drop;
+    const wk = hk < 0.045 ? 0.8 : hk < 0.3 ? 1 + 0.12 * Math.sin(hk * 90) : Math.max(0, 1 - (hk - 0.3) / 0.32);
+    if (wk <= 0.01) return;
+    const W = e.Wc * wk;
+    ctx.globalCompositeOperation = 'lighter';
+    // 外光
+    ctx.globalAlpha = 0.75 * Math.min(1, wk);
+    ctx.drawImage(COLG, e.x - W * 2.4, top, W * 4.8, yEnd - top);
+    // 柱身：三層（藍、淡藍、白芯），兩側是參差的鋸齒
+    const N = e.cn;
+    const layer = (f, style, al) => {
+      ctx.globalAlpha = al;
+      ctx.fillStyle = style;
+      ctx.beginPath();
+      let last = 0;
+      for (let i = 0; i <= N; i++) {
+        const y = top + ((gy - top) * i) / N;
+        if (y > yEnd + 0.5) break;
+        const hw = (W / 2) * f * (i === 0 ? 1.35 : 1); // 柱頂略寬，接進雲裡
+        const x = e.col[i * 3] - hw * e.col[i * 3 + 1];
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        last = i;
+      }
+      const yl = Math.min(yEnd, top + ((gy - top) * last) / N);
+      ctx.lineTo(e.col[last * 3] + (W / 2) * f * e.col[last * 3 + 2], yl);
+      for (let i = last; i >= 0; i--) {
+        const y = top + ((gy - top) * i) / N;
+        const hw = (W / 2) * f * (i === 0 ? 1.35 : 1);
+        ctx.lineTo(e.col[i * 3] + hw * e.col[i * 3 + 2], y);
+      }
+      ctx.closePath();
+      ctx.fill();
+    };
+    layer(1, '#5c9cff', 0.7);
+    layer(0.62, '#bfe0ff', 0.9);
+    layer(0.26, '#ffffff', 1);
+    // 分叉、沿柱身爬的電
+    if (hk < 0.4) {
+      const ba = hk < 0.3 ? 1 : 1 - (hk - 0.3) / 0.1;
+      for (let i = 0; i < e.nb; i++) {
+        if (e.br[i * 16 + 1] > yEnd) continue;
+        arc(ctx, e.br, i * 16, e.bc[i], i % 2 ? 1.6 : 2.4, ba);
+      }
+    }
+    // 落下的雷頭
+    if (hk < 0.08) {
+      const r = e.Wc * 1.6;
+      ctx.globalAlpha = 1;
+      ctx.drawImage(GLOW_B, e.x - r, yEnd - r, r * 2, r * 2);
+    }
+  }
+
+  function drawCrater(ctx, e, hk) {
+    const a = hk < 1.5 ? 1 : clamp(1 - (hk - 1.5) / 0.85, 0, 1);
+    if (a <= 0) return;
+    const x = e.x;
+    const gy = e.gy;
+    const Rc = e.Rc;
+    const glowK = clamp(1 - hk / 0.9, 0, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(e.span0, gy - 3, e.span1 - e.span0, e.depth + 3);
+    ctx.clip();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = a * clamp(hk / 0.05, 0, 1);
+    ctx.drawImage(SCORCH, x - Rc * 1.9, gy - Rc * 0.3, Rc * 3.8, Rc * 0.95);
+    // 坑
+    ctx.beginPath();
+    ctx.moveTo(e.bowl[0], gy - 1);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(e.bowl[i * 2], e.bowl[i * 2 + 1]);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(20,13,16,0.92)';
+    ctx.fill();
+    // 裂縫（深色）
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let c = 0; c < e.crN; c++) {
+      for (let i = 0; i < 7; i++) {
+        const j = (c * 7 + i) * 2;
+        i ? ctx.lineTo(e.cr[j], e.cr[j + 1]) : ctx.moveTo(e.cr[j], e.cr[j + 1]);
+      }
+    }
+    ctx.strokeStyle = 'rgba(18,12,14,0.88)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // 裂縫與坑裡殘留的雷光
+    if (glowK > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = glowK * a * 0.45;
+      ctx.strokeStyle = '#5c9cff';
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.globalAlpha = glowK * a;
+      ctx.strokeStyle = '#d8ecff';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.beginPath();
+      for (let i = 1; i < 8; i++) {
+        const j = i * 2;
+        i > 1 ? ctx.lineTo(e.bowl[j], e.bowl[j + 1] - 1) : ctx.moveTo(e.bowl[j], e.bowl[j + 1] - 1);
+      }
+      ctx.strokeStyle = '#eaf4ff';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+    }
+    ctx.restore();
+    // 坑邊翻起的碎石：貼在地表上、有描邊
+    if (e.rim) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = a * clamp(hk / 0.05, 0, 1);
+      ctx.lineJoin = 'round';
+      for (const r of e.rim) {
+        ctx.beginPath();
+        for (let k = 0; k < 5; k++) {
+          const an = r.rot + (k / 5) * TAU;
+          const rad = r.r * (k % 2 ? 0.75 : 1);
+          const py = gy + 1 + Math.sin(an) * rad * 0.8 - r.r * 0.55;
+          k ? ctx.lineTo(r.x + Math.cos(an) * rad, Math.min(gy + 1.5, py)) : ctx.moveTo(r.x + Math.cos(an) * rad, Math.min(gy + 1.5, py));
+        }
+        ctx.closePath();
+        ctx.fillStyle = r.c;
+        ctx.fill();
+        ctx.strokeStyle = OUTC;
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
+    }
+  }
+
+  function drawShock(ctx, e, hk) {
+    const x = e.x;
+    const gy = e.gy;
+    ctx.globalCompositeOperation = 'lighter';
+    // 局部的光暈（不是全螢幕閃光）
+    if (hk < 0.55) {
+      const k = hk / 0.55;
+      const r = (120 + 45 * e.sz) * (hk < 0.08 ? 0.6 + hk * 5 : 1);
+      ctx.globalAlpha = Math.pow(1 - k, 1.8) * 0.7;
+      ctx.drawImage(GLOW_B, x - r, gy - 10 - r, r * 2, r * 2);
+      ctx.globalAlpha = Math.pow(1 - k, 2) * 0.8;
+      const r2 = e.cW * 0.6;
+      ctx.drawImage(GLOW_B, x - r2, e.top - r2 * 0.6, r2 * 2, r2 * 1.2);
+    }
+    // 地面上的衝擊波（兩圈）
+    for (let w = 0; w < 2; w++) {
+      const k = (hk - w * 0.08) / (0.5 + w * 0.1);
+      if (k <= 0 || k >= 1) continue;
+      const rx = 26 + (260 + 90 * (e.sz - 1)) * eOut(k) * (w ? 0.8 : 1);
+      ctx.globalAlpha = (1 - k) * (w ? 0.6 : 1);
+      ctx.strokeStyle = w ? '#8cc0ff' : '#e6f2ff';
+      ctx.lineWidth = (w ? 4 : 9) * (1 - k) + 1;
+      ctx.beginPath();
+      ctx.ellipse(x, gy - 2, rx, rx * 0.15, 0, 0, TAU);
+      ctx.stroke();
+    }
+    // 半圓的爆風
+    const kd = hk / 0.32;
+    if (kd < 1) {
+      const r = 20 + (150 + 50 * e.sz) * eOut(kd);
+      ctx.globalAlpha = (1 - kd) * 0.7;
+      ctx.strokeStyle = '#cfe6ff';
+      ctx.lineWidth = 5 * (1 - kd) + 1;
+      ctx.beginPath();
+      ctx.arc(x, gy, r, PI, TAU);
+      ctx.stroke();
+    }
+  }
+
+  function drawJP(ctx) {
+    if (!JP.n) return;
+    // 碎石（描邊的小石塊）
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.lineJoin = 'round';
+    const RC = ['#6a5a52', '#4e4648', '#7c6c5c'];
+    for (const q of JP.a) {
+      if (!q.on || q.k !== 2) continue;
+      const k = q.t / q.life;
+      ctx.globalAlpha = Math.min(1, (1 - k) * 4);
+      const s = q.s;
+      const c = Math.cos(q.rot);
+      const sn = Math.sin(q.rot);
+      ctx.beginPath();
+      ctx.moveTo(q.x + c * s, q.y + sn * s);
+      ctx.lineTo(q.x - sn * s * 0.8, q.y + c * s * 0.8);
+      ctx.lineTo(q.x - c * s * 0.9, q.y - sn * s * 0.9);
+      ctx.lineTo(q.x + sn * s * 0.7, q.y - c * s * 0.7);
+      ctx.closePath();
+      ctx.fillStyle = RC[q.c];
+      ctx.fill();
+      ctx.strokeStyle = OUTC;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    // 煙
+    for (const q of JP.a) {
+      if (!q.on || q.k !== 3) continue;
+      const tt = q.t + q.b;
+      if (tt <= 0) continue;
+      const k = tt / (q.life + q.b);
+      const s = q.s * (0.5 + k);
+      ctx.globalAlpha = (1 - k) * Math.min(1, tt / 0.15) * 0.9;
+      ctx.drawImage(SMOKE, q.x - s, q.y - s, s * 2, s * 2);
+    }
+    // 火花（拖尾的亮線）
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#dcebff';
+    for (const q of JP.a) {
+      if (!q.on || (q.k !== 1 && q.k !== 4)) continue;
+      const k = q.t / q.life;
+      ctx.globalAlpha = 1 - k;
+      ctx.lineWidth = q.s;
+      ctx.beginPath();
+      ctx.moveTo(q.x, q.y);
+      ctx.lineTo(q.x - q.vx * 0.03, q.y - q.vy * 0.03);
+      ctx.stroke();
+    }
+  }
+
+  function judgeFront(ctx) {
+    for (const e of J) {
+      const t = e.t;
+      const hk = e.hitT >= 0 ? t - e.hitT : -1;
+      if (hk >= 0 && e.ground) drawCrater(ctx, e, hk);
+      if (e.cloud) drawCloud(ctx, e, t, hk);
+      if (hk < 0 && e.cloud && e.ln && t > e.hitAt - 0.16 && !e.fz) {
+        ctx.globalCompositeOperation = 'lighter';
+        arc(ctx, e.lb, 0, e.ln, 1.6, 0.9);
+      }
+      if (hk >= 0) {
+        drawColumn(ctx, e, hk);
+        drawShock(ctx, e, hk);
+        if (hk > 0.12 && hk < 1.7 && e.na) {
+          ctx.globalCompositeOperation = 'lighter';
+          const a = 1 - (hk - 0.12) / 1.58;
+          for (let i = 0; i < e.na; i++) arc(ctx, e.ab, i * 20, e.ac[i], 1.3, a);
+        }
+      }
+    }
+    drawJP(ctx);
+  }
+
+  A.judgeFx = {
+    // 開始施法（m：預測的目標，可以是 null）
+    begin(P, m, hitAt) {
+      const e = newJudge(P, m, hitAt);
+      J.push(e);
+      return e;
+    },
+    // 真正劈下（在 hitMonster 之前呼叫，這時目標一定還活著）
+    strike(e, m) {
+      if (!e || !m) return;
+      judgeStrike(e, m);
+    },
+    fizzle(e) {
+      if (e) e.fz = true;
+    },
+  };
+  A.skillFx.add({
+    live: () => J.length > 0 || JP.n > 0,
+    step: judgeStep,
+    back: judgeBack,
+    front: judgeFront,
+    clear() {
+      J.length = 0;
+      clearPool(JP);
+    },
+  });
+
+  // ════════════════ 升龍爪 ════════════════
+  // 上勾的爪子放出一條金橙色能量的東方龍，沿著上升路徑盤旋而上：龍頭（角、鬚、張開的嘴）領頭，
+  // 身體是有鱗片與背鰭的長條光帶，尾巴漸細。身體在路徑前面的那一半畫在前景、後面那一半畫在怪物後面，
+  // 被打上天的怪看起來就在龍的盤繞裡。到頂時一聲龍吼（爆風、火花），之後從尾巴開始散成金色的鱗片。
+  const HS = 3;
+  function makeHead(roar) {
+    // 世界座標：朝右，(0,0) 是脖子接點；範圍 x -32..48, y -34..20
+    const X0 = 32;
+    const Y0 = 34;
+    const cv = mk(80 * HS, 56 * HS);
+    const c = cv.getContext('2d');
+    c.scale(HS, HS);
+    c.translate(X0, Y0);
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+    const OL = '#5a2410';
+    const shp = (fn, fill, lw) => {
+      c.beginPath();
+      fn();
+      c.fillStyle = fill;
+      c.fill();
+      c.strokeStyle = OL;
+      c.lineWidth = lw || 2.2;
+      c.stroke();
+    };
+    // 鬃（火焰狀，往後飄）
+    shp(() => {
+      c.moveTo(4, -10);
+      c.quadraticCurveTo(-8, -20, -26, -16);
+      c.quadraticCurveTo(-14, -12, -20, -6);
+      c.quadraticCurveTo(-10, -6, -24, 4);
+      c.quadraticCurveTo(-10, 2, -18, 12);
+      c.quadraticCurveTo(-4, 8, 0, 10);
+      c.closePath();
+    }, '#ff8a2a');
+    shp(() => {
+      c.moveTo(2, -6);
+      c.quadraticCurveTo(-8, -12, -18, -11);
+      c.quadraticCurveTo(-9, -6, -15, 1);
+      c.quadraticCurveTo(-5, 0, -10, 8);
+      c.quadraticCurveTo(-2, 5, 2, 6);
+      c.closePath();
+    }, '#ffb347', 1.4);
+    // 遠側的角（暗一點）
+    shp(() => {
+      c.moveTo(8, -12);
+      c.quadraticCurveTo(0, -24, -14, -30);
+      c.lineTo(-10, -26);
+      c.quadraticCurveTo(-18, -26, -20, -22);
+      c.quadraticCurveTo(-6, -22, 4, -10);
+      c.closePath();
+    }, '#e8c890', 1.8);
+    // 下顎（張開）
+    const jaw = roar ? 0.62 : 0.36;
+    // 嘴裡
+    c.beginPath();
+    c.moveTo(12, 2);
+    c.lineTo(38, -1);
+    const jx = 12 + Math.cos(jaw) * 25;
+    const jy = 2 + Math.sin(jaw) * 25;
+    c.lineTo(jx, jy);
+    c.closePath();
+    c.fillStyle = '#8a1a14';
+    c.fill();
+    c.save();
+    c.translate(12, 2);
+    c.rotate(jaw);
+    // 下排牙
+    c.fillStyle = '#fffbe8';
+    c.strokeStyle = OL;
+    c.lineWidth = 1;
+    [[8, 3], [15, 3], [21, 3]].forEach(([x, s]) => {
+      c.beginPath();
+      c.moveTo(x - s * 0.6, 0.5);
+      c.lineTo(x, -s);
+      c.lineTo(x + s * 0.6, 0.5);
+      c.closePath();
+      c.fill();
+      c.stroke();
+    });
+    shp(() => {
+      c.moveTo(-1, 0);
+      c.lineTo(24, 0);
+      c.quadraticCurveTo(29, 1, 27, 5);
+      c.quadraticCurveTo(18, 9, 2, 8);
+      c.closePath();
+    }, '#f5a238', 2);
+    c.fillStyle = '#e07a20';
+    c.beginPath();
+    c.moveTo(2, 6);
+    c.quadraticCurveTo(16, 8, 26, 4.5);
+    c.lineTo(26, 3.5);
+    c.quadraticCurveTo(16, 6.5, 2, 5);
+    c.fill();
+    c.restore();
+    // 舌頭
+    c.fillStyle = '#e8483a';
+    c.beginPath();
+    c.moveTo(14, 4);
+    c.quadraticCurveTo(24, 3 + jaw * 10, 30, 2 + jaw * 12);
+    c.quadraticCurveTo(24, 6 + jaw * 10, 14, 7);
+    c.fill();
+    // 上顎與頭骨
+    shp(() => {
+      c.moveTo(-6, -9);
+      c.quadraticCurveTo(0, -15, 9, -14);
+      c.quadraticCurveTo(13, -16, 16, -12);
+      c.quadraticCurveTo(24, -10, 32, -8);
+      c.quadraticCurveTo(36, -12, 40, -8);
+      c.quadraticCurveTo(44, -5, 41, -1);
+      c.lineTo(38, 0);
+      c.lineTo(14, 2);
+      c.quadraticCurveTo(8, 8, 2, 9);
+      c.quadraticCurveTo(-4, 10, -7, 7);
+      c.closePath();
+    }, '#ffc34a', 2.4);
+    // 下半部的陰影、額頭的高光
+    c.save();
+    c.beginPath();
+    c.moveTo(-6, -9);
+    c.quadraticCurveTo(0, -15, 9, -14);
+    c.quadraticCurveTo(13, -16, 16, -12);
+    c.quadraticCurveTo(24, -10, 32, -8);
+    c.quadraticCurveTo(36, -12, 40, -8);
+    c.quadraticCurveTo(44, -5, 41, -1);
+    c.lineTo(38, 0);
+    c.lineTo(14, 2);
+    c.quadraticCurveTo(8, 8, 2, 9);
+    c.quadraticCurveTo(-4, 10, -7, 7);
+    c.closePath();
+    c.clip();
+    c.fillStyle = '#f08a24';
+    c.beginPath();
+    c.moveTo(-10, 2);
+    c.quadraticCurveTo(14, -2, 44, -3);
+    c.lineTo(44, 14);
+    c.lineTo(-10, 14);
+    c.fill();
+    c.fillStyle = 'rgba(255,248,210,0.85)';
+    c.beginPath();
+    c.ellipse(8, -11, 7, 2, -0.15, 0, TAU);
+    c.fill();
+    c.beginPath();
+    c.ellipse(28, -8.5, 5, 1.2, -0.1, 0, TAU);
+    c.fill();
+    c.restore();
+    // 上排牙（獠牙）
+    c.fillStyle = '#fffbe8';
+    c.strokeStyle = OL;
+    c.lineWidth = 1;
+    [[18, 3], [26, 2.6], [34, 4.2]].forEach(([x, s]) => {
+      c.beginPath();
+      c.moveTo(x - s * 0.55, 0.5 - (x - 14) * 0.08);
+      c.lineTo(x, s + 1 - (x - 14) * 0.08);
+      c.lineTo(x + s * 0.55, 0 - (x - 14) * 0.08);
+      c.closePath();
+      c.fill();
+      c.stroke();
+    });
+    // 鼻孔、眉骨、眼睛
+    c.fillStyle = OL;
+    c.beginPath();
+    c.ellipse(38, -6.5, 1.6, 1.1, -0.3, 0, TAU);
+    c.fill();
+    shp(() => {
+      c.moveTo(10, -9);
+      c.quadraticCurveTo(15, -13, 22, -10.5);
+      c.quadraticCurveTo(16, -9, 12, -6);
+      c.closePath();
+    }, '#e07a20', 1.4);
+    shp(() => c.ellipse(16, -6.5, 3.6, 2.4, -0.25, 0, TAU), '#fffbe0', 1.4);
+    c.fillStyle = '#d42a10';
+    c.beginPath();
+    c.ellipse(17, -6.5, 1.6, 2.1, 0, 0, TAU);
+    c.fill();
+    c.fillStyle = '#1a0a04';
+    c.beginPath();
+    c.ellipse(17.2, -6.5, 0.55, 1.8, 0, 0, TAU);
+    c.fill();
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.arc(15.6, -7.6, 0.7, 0, TAU);
+    c.fill();
+    // 頰上的鰭刺
+    shp(() => {
+      c.moveTo(4, 5);
+      c.quadraticCurveTo(-2, 12, -10, 16);
+      c.quadraticCurveTo(-3, 10, -2, 4);
+      c.closePath();
+    }, '#ffb347', 1.6);
+    // 近側的角：鹿角狀，往後掃、帶一根分叉
+    shp(() => {
+      c.moveTo(4, -12);
+      c.quadraticCurveTo(-4, -22, -20, -26);
+      c.lineTo(-26, -32);
+      c.quadraticCurveTo(-24, -24, -20, -22);
+      c.quadraticCurveTo(-10, -20, -8, -18);
+      c.lineTo(-12, -28);
+      c.quadraticCurveTo(-4, -22, -2, -16);
+      c.quadraticCurveTo(0, -12, 0, -9);
+      c.closePath();
+    }, '#fff0c8', 2);
+    c.strokeStyle = 'rgba(210,160,90,0.8)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(1, -12);
+    c.quadraticCurveTo(-8, -20, -20, -24);
+    c.stroke();
+    return { c: cv, x0: X0, y0: Y0, w: 80, h: 56 };
+  }
+  const HEAD = makeHead(false);
+  const HEAD_R = makeHead(true);
+
+  const DG = [];
+  const DGP = pool(110);
+  const DRAG_H = 270;
+  const TURNS = 1.5;
+  const PHI = Math.PI; // 讓龍頭到頂時正好轉到前面（cos(1.5·2π + π) = 1）
+  const RH = 56;
+  function newDragon(P) {
+    const N = lite() ? 12 : 22;
+    return {
+      t: 0, dir: P.dir || 1, ax: P.x + (P.dir || 1) * 38, y0: P.y, N, du: 1.1 / N,
+      px: new Float32Array(N + 1), py: new Float32Array(N + 1), pz: new Float32Array(N + 1), pw: new Float32Array(N + 1),
+      L: new Float32Array(2 * (N + 2)), R: new Float32Array(2 * (N + 2)), roared: false, cut: N, hx: 0, hy: 0, ha: 0, hz: 1,
+    };
+  }
+  function dragonStep(dt) {
+    stepPool(DGP, dt);
+    const P = G.player;
+    for (let k = DG.length - 1; k >= 0; k--) {
+      const e = DG[k];
+      e.t += dt;
+      const t = e.t;
+      if (t > 1.25) {
+        DG.splice(k, 1);
+        continue;
+      }
+      const uh = t < 0.4 ? eOut(t / 0.4) : 1 + (t - 0.4) * 0.22;
+      const cx = P ? P.x + e.dir * 30 : e.ax;
+      const cy = P ? P.y - 46 : e.y0 - 46;
+      for (let i = 0; i <= e.N; i++) {
+        const u = uh - i * e.du;
+        let x;
+        let y;
+        let z;
+        if (u <= 0) {
+          x = cx;
+          y = cy;
+          z = 1;
+        } else {
+          const ang = u * TURNS * TAU + PHI;
+          const rad = RH * (0.35 + 0.65 * Math.min(1, u * 5));
+          x = e.ax + e.dir * Math.sin(ang) * rad;
+          y = e.y0 - 40 - DRAG_H * u;
+          z = Math.cos(ang);
+          // 從爪子接出來：最底下那一小段往爪子靠
+          if (u < 0.12) {
+            const k2 = u / 0.12;
+            x = cx + (x - cx) * k2;
+            y = cy + (y - cy) * k2;
+          }
+        }
+        e.px[i] = x;
+        e.py[i] = y;
+        e.pz[i] = z;
+        const f = i / e.N;
+        e.pw[i] = (15 * (1 - Math.pow(f, 1.25)) + 2) * (0.72 + 0.28 * z);
+      }
+      // 散掉：從尾巴開始
+      const cut = t < 0.58 ? e.N : Math.max(-1, Math.floor(e.N * (1 - (t - 0.58) / 0.42)));
+      if (cut < e.cut) {
+        for (let i = Math.max(0, cut); i < e.cut; i++) {
+          for (let j = 0; j < (lite() ? 1 : 2); j++) {
+            const q = spawn(DGP, 5, e.px[i] + rr(-5, 5), e.py[i] + rr(-5, 5), rr(-70, 70), rr(-110, -20), rr(0.45, 0.8), rr(2.5, 4.5));
+            if (q) q.drag = 1.8;
+          }
+        }
+        e.cut = cut;
+      }
+      // 龍頭的方向
+      const tx = e.px[0] - e.px[1];
+      const ty = e.py[0] - e.py[1];
+      e.hx = e.px[0];
+      e.hy = e.py[0];
+      e.hz = e.pz[0];
+      e.ha = clamp(Math.atan2(ty, tx * e.dir), -2.2, 0.5);
+      if (!e.roared && t >= 0.4) {
+        e.roared = true;
+        const mx = e.hx + e.dir * Math.cos(e.ha) * 34;
+        const my = e.hy + Math.sin(e.ha) * 34;
+        e.mx = mx;
+        e.my = my;
+        const n = lite() ? 8 : 18;
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * TAU + rr(-0.2, 0.2);
+          const sp = rr(240, 520);
+          const q = spawn(DGP, 1, mx, my, Math.cos(a) * sp, Math.sin(a) * sp - 60, rr(0.3, 0.55), rr(1.6, 2.8));
+          if (q) {
+            q.g = 500;
+            q.drag = 2;
+          }
+        }
+        for (let i = 0; i < (lite() ? 4 : 10); i++) {
+          const j = Math.floor(rr(1, e.N));
+          const q = spawn(DGP, 5, e.px[j], e.py[j], rr(-90, 90), rr(-140, -40), rr(0.5, 0.9), rr(2.5, 4.5));
+          if (q) q.drag = 1.6;
+        }
+      }
+    }
+  }
+  // 一段身體（i0..i1）畫成一條有寬度的光帶
+  function ribbon(ctx, e, i0, i1, alpha, back) {
+    if (i1 - i0 < 1) return;
+    const L = e.L;
+    const R = e.R;
+    let n = 0;
+    let wmax = 0;
+    for (let i = i0; i <= i1; i++) {
+      const a = Math.max(0, i - 1);
+      const b = Math.min(e.N, i + 1);
+      let tx = e.px[a] - e.px[b];
+      let ty = e.py[a] - e.py[b];
+      const tl = Math.hypot(tx, ty) || 1;
+      tx /= tl;
+      ty /= tl;
+      let w = e.pw[i];
+      if (i >= e.cut - 3) w *= clamp((e.cut - i) / 3, 0, 1);
+      wmax = Math.max(wmax, w);
+      L[n * 2] = e.px[i] - ty * w;
+      L[n * 2 + 1] = e.py[i] + tx * w;
+      R[n * 2] = e.px[i] + ty * w;
+      R[n * 2 + 1] = e.py[i] - tx * w;
+      n++;
+    }
+    const poly = (k) => {
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const mx = (L[i * 2] + R[i * 2]) / 2;
+        const my = (L[i * 2 + 1] + R[i * 2 + 1]) / 2;
+        const x = mx + (L[i * 2] - mx) * k;
+        const y = my + (L[i * 2 + 1] - my) * k;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      for (let i = n - 1; i >= 0; i--) {
+        const mx = (L[i * 2] + R[i * 2]) / 2;
+        const my = (L[i * 2 + 1] + R[i * 2 + 1]) / 2;
+        ctx.lineTo(mx + (R[i * 2] - mx) * k, my + (R[i * 2 + 1] - my) * k);
+      }
+      ctx.closePath();
+    };
+    // 外光
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha * (back ? 0.18 : 0.28);
+    ctx.strokeStyle = '#ff8c24';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = wmax * 3.6;
+    ctx.beginPath();
+    for (let i = i0; i <= i1; i++) (i === i0 ? ctx.moveTo : ctx.lineTo).call(ctx, e.px[i], e.py[i]);
+    ctx.stroke();
+    // 身體
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = alpha * (back ? 0.62 : 0.94);
+    poly(1);
+    ctx.fillStyle = back ? '#c8661e' : '#ffae3c';
+    ctx.fill();
+    ctx.strokeStyle = back ? 'rgba(120,44,10,0.55)' : 'rgba(128,46,10,0.85)';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    // 亮芯
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha * (back ? 0.18 : 0.7);
+    poly(0.45);
+    ctx.fillStyle = '#ffe9a0';
+    ctx.fill();
+    // 鱗片：一排往尾巴張開的 V
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = alpha * (back ? 0.45 : 0.75);
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = '#c4541a';
+    ctx.beginPath();
+    for (let j = 1; j < n - 1; j++) {
+      const i = i0 + j;
+      if (i >= e.cut - 1) break;
+      const mx = (L[j * 2] + R[j * 2]) / 2;
+      const my = (L[j * 2 + 1] + R[j * 2 + 1]) / 2;
+      const fx = (L[(j - 1) * 2] + R[(j - 1) * 2]) / 2 - mx;
+      const fy = (L[(j - 1) * 2 + 1] + R[(j - 1) * 2 + 1]) / 2 - my;
+      const lx = (L[j * 2] - mx) * 0.6;
+      const ly = (L[j * 2 + 1] - my) * 0.6;
+      ctx.moveTo(mx + lx - fx * 0.3, my + ly - fy * 0.3);
+      ctx.lineTo(mx + fx * 0.25, my + fy * 0.25);
+      ctx.lineTo(mx - lx - fx * 0.3, my - ly - fy * 0.3);
+    }
+    ctx.stroke();
+    // 背鰭：每兩節一片，長在外側（L 那一邊）
+    ctx.fillStyle = back ? '#f0b050' : '#ffd566';
+    ctx.strokeStyle = back ? 'rgba(120,44,10,0.55)' : 'rgba(128,46,10,0.85)';
+    ctx.lineWidth = 1.2;
+    for (let j = 1; j < n - 2; j += 2) {
+      const i = i0 + j;
+      if (i >= e.cut - 2 || i < 2) continue;
+      const bx = L[j * 2];
+      const by = L[j * 2 + 1];
+      const ox = L[j * 2] - (L[j * 2] + R[j * 2]) / 2;
+      const oy = L[j * 2 + 1] - (L[j * 2 + 1] + R[j * 2 + 1]) / 2;
+      const nx = L[(j + 1) * 2];
+      const ny = L[(j + 1) * 2 + 1];
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(nx + ox * 0.9, ny + oy * 0.9);
+      ctx.lineTo(nx, ny);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+  function drawHead(ctx, e, back) {
+    const t = e.t;
+    const fade = t < 0.9 ? 1 : clamp(1 - (t - 0.9) / 0.3, 0, 1);
+    if (fade <= 0) return;
+    const roar = e.roared ? clamp(1 - (t - 0.4) / 0.3, 0, 1) : 0;
+    const sc = (1.3 + 0.3 * eOut(roar)) * (0.92 + 0.08 * e.hz);
+    ctx.save();
+    ctx.translate(e.hx, e.hy);
+    ctx.scale(e.dir * sc, sc);
+    ctx.rotate(e.ha);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = fade * 0.55;
+    ctx.drawImage(GLOW_O, -34, -40, 88, 80);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = fade * (back ? 0.75 : 1);
+    const H = roar > 0.15 || (e.roared && t < 0.75) ? HEAD_R : HEAD;
+    ctx.drawImage(H.c, -H.x0, -H.y0, H.w, H.h);
+    // 龍鬚：從上唇往後飄
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 2; k++) {
+      const w = Math.sin(t * 13 + k * 1.7) * 7;
+      ctx.beginPath();
+      ctx.moveTo(34, -3 + k * 2);
+      ctx.bezierCurveTo(22, 8 + w, 4, 4 - w, -26 - k * 6, 14 + w * 0.8 + k * 6);
+      ctx.globalAlpha = fade * 0.4;
+      ctx.strokeStyle = '#ff9a30';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = '#fff2c0';
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function dragonDraw(ctx, back) {
+    for (const e of DG) {
+      const t = e.t;
+      const alpha = t < 0.05 ? t / 0.05 : 1;
+      const last = Math.min(e.N, e.cut);
+      if (last >= 1) {
+        // 依前後切成幾段：前面的畫在前景、後面的畫在怪物後面
+        let i0 = 0;
+        for (let i = 1; i <= last + 1; i++) {
+          const endRun = i > last || (e.pz[i] >= 0) !== (e.pz[i0] >= 0);
+          if (!endRun) continue;
+          const isFront = e.pz[i0] >= 0;
+          if (isFront !== back) ribbon(ctx, e, i0, Math.min(last, i), alpha, back);
+          i0 = i;
+        }
+      }
+      // 爪子上的光
+      if (!back && t < 0.45) {
+        const P = G.player;
+        if (P) {
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = (1 - t / 0.45) * 0.8;
+          ctx.drawImage(GLOW_O, P.x + e.dir * 30 - 30, P.y - 76, 60, 60);
+        }
+      }
+      // 龍頭永遠在前景（它是整條龍的焦點）
+      if (!back) drawHead(ctx, e, false);
+      // 龍吼的爆風
+      if (!back && e.roared) {
+        const k = (t - 0.4) / 0.4;
+        if (k < 1) {
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.lineCap = 'round';
+          const a0 = e.dir > 0 ? e.ha : PI - e.ha;
+          for (let w = 0; w < 3; w++) {
+            const kk = k - w * 0.12;
+            if (kk <= 0 || kk >= 1) continue;
+            const r = 14 + 110 * eOut(kk);
+            ctx.globalAlpha = (1 - kk) * 0.85;
+            ctx.strokeStyle = w === 1 ? '#ffb040' : '#fff0b8';
+            ctx.lineWidth = 6 * (1 - kk) + 1;
+            ctx.beginPath();
+            ctx.arc(e.mx, e.my, r, a0 - 0.95, a0 + 0.95);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = Math.pow(1 - k, 2) * 0.9;
+          const r = 70;
+          ctx.drawImage(GLOW_O, e.mx - r, e.my - r, r * 2, r * 2);
+        }
+      }
+    }
+    if (!back && DGP.n) {
+      // 金色火花
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#ffe2a0';
+      for (const q of DGP.a) {
+        if (!q.on || q.k !== 1) continue;
+        ctx.globalAlpha = 1 - q.t / q.life;
+        ctx.lineWidth = q.s;
+        ctx.beginPath();
+        ctx.moveTo(q.x, q.y);
+        ctx.lineTo(q.x - q.vx * 0.03, q.y - q.vy * 0.03);
+        ctx.stroke();
+      }
+      // 散開的能量鱗片（小菱形）
+      for (const q of DGP.a) {
+        if (!q.on || q.k !== 5) continue;
+        const k = q.t / q.life;
+        const s = q.s * (1 - k * 0.5);
+        const c = Math.cos(q.rot) * s;
+        const sn = Math.sin(q.rot) * s;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = (1 - k) * 0.95;
+        ctx.beginPath();
+        ctx.moveTo(q.x + c, q.y + sn);
+        ctx.lineTo(q.x - sn * 0.6, q.y + c * 0.6);
+        ctx.lineTo(q.x - c, q.y - sn);
+        ctx.lineTo(q.x + sn * 0.6, q.y - c * 0.6);
+        ctx.closePath();
+        ctx.fillStyle = '#ffc54a';
+        ctx.fill();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = (1 - k) * 0.6;
+        ctx.fillStyle = '#fff4c8';
+        ctx.fill();
+      }
+    }
+  }
+  A.dragonFx = {
+    begin(P) {
+      const e = newDragon(P);
+      DG.push(e);
+      return e;
+    },
+  };
+  A.skillFx.add({
+    live: () => DG.length > 0 || DGP.n > 0,
+    step: dragonStep,
+    back: (ctx) => dragonDraw(ctx, true),
+    front: (ctx) => dragonDraw(ctx, false),
+    clear() {
+      DG.length = 0;
+      clearPool(DGP);
+    },
+  });
+})();

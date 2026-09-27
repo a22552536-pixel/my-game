@@ -141,6 +141,7 @@
     uppercut: {
       start(P, S, id, lv) {
         P.action = { type: 'uppercut', id, lv, t: 0, dur: S.castTime, n: 0, hit: [] };
+        if (G.art.dragonFx) G.art.dragonFx.begin(P); // 純視覺：盤旋而上的金色能量龍
         P.vy = -720;
         P.onGround = false;
         P.glowT = 0.5;
@@ -390,6 +391,11 @@
     judge: {
       start(P, S, id, lv) {
         P.action = { type: 'judgeCast', id, lv, t: 0, dur: S.castTime, done: false };
+        // 純視覺：先猜會劈誰（跟 hitAt 時同一套挑法），雷雲先在那隻頭上聚起來；真正的目標在 hitAt 才決定
+        if (G.art.judgeFx) {
+          const pre = X.nearTargets(P, S.radius, 40).sort((p, q) => (q.isBoss ? 1e9 : q.hp) - (p.isBoss ? 1e9 : p.hp))[0];
+          P.action.fx = G.art.judgeFx.begin(P, pre || null, S.hitAt);
+        }
         P.glowT = 0.8;
         G.fx.sparkle(P.x, P.y - 50, '#fff6a8', 14, 36);
         G.audio.play('charge');
@@ -404,14 +410,15 @@
         const list = X.nearTargets(P, S.radius, 40).sort((p, q) => (q.isBoss ? 1e9 : q.hp) - (p.isBoss ? 1e9 : p.hp));
         const m = list[0];
         if (!m) {
+          if (G.art.judgeFx) G.art.judgeFx.fizzle(a.fx);
           G.hud.toast('附近沒有目標', '#cfe');
           return;
         }
-        for (let i = 0; i < 5; i++) G.fx.bolt(m.x + U.rand(-14, 14), m.y - 640, m.y - 4);
-        G.fx.pillar(m.x, m.y, 'rgba(255,250,200,0.95)', 0.5, 80);
-        G.fx.screenFlash('#fffbe0', 0.5);
-        G.fx.shake(14, 0.4);
-        G.fx.addHitstop(0.14);
+        // 雷柱、雷雲、焦坑都在 art/skills3.js 的 judgeFx；不閃全螢幕、震動收小
+        if (G.art.judgeFx) G.art.judgeFx.strike(a.fx, m);
+        else for (let i = 0; i < 5; i++) G.fx.bolt(m.x + U.rand(-14, 14), m.y - 640, m.y - 4);
+        G.fx.shake(7, 0.3);
+        G.fx.addHitstop(0.12);
         G.audio.play('thunder');
         G.combat.hitMonster(m, S.mult(a.lv), { knock: 0, heavy: true, sound: 'spirit' });
         if (!m.isBoss && alive(m)) m.stunT = S.stun;
@@ -589,5 +596,24 @@
     },
   });
 
-  X.resetZones = () => (zones.length = 0);
+  X.resetZones = () => {
+    zones.length = 0;
+    if (G.art.skillFx) G.art.skillFx.clear();
+  };
+
+  // 技能大特效的兩個圖層（art/skills3.js 的 A.skillFx）：
+  //   back —— 在怪物與玩家後面（掛在 loot.draw 前面，world.draw 每幀都會呼叫）
+  //   front —— 在粒子之後、傷害數字之前（掛在 fx.drawCuts 前面）
+  if (G.loot && G.loot.draw) {
+    const lootDraw = G.loot.draw;
+    G.loot.draw = function (ctx) {
+      if (G.art.skillFx) G.art.skillFx.back(ctx);
+      return lootDraw.apply(this, arguments);
+    };
+  }
+  const drawCuts = G.fx.drawCuts;
+  G.fx.drawCuts = function (ctx) {
+    if (G.art.skillFx) G.art.skillFx.front(ctx);
+    return drawCuts.apply(this, arguments);
+  };
 })();

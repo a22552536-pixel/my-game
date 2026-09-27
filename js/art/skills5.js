@@ -1003,4 +1003,550 @@
       }
     },
   };
+
+  // ═════════ 裂地震擊：沿著平台一路竄出來的岩刺 ═════════
+  // 岩刺用跟地爆天星同一套寫實碎岩畫法（切面受光、層理、顆粒、裂縫），外圈再加一道遊戲一貫的深色粗描邊。
+  // 一律「從地裡長出來」：每幀只貼出地面以上的那一段（來源裁切，不用 clip），底部永遠壓在那一點的平台表面上。
+  // 兩種尺寸：一般岩刺（參考高 60）、打中怪的大岩刺（參考高 112），各自的描邊粗細不同，縮放後都接近 2～3px。
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const SPK = 1.6; // 岩刺圖的解析度（畫布像素／世界像素）
+  const QOUT = [34, 26, 22]; // 深棕黑描邊（跟遊戲的 #4a2e1f 同色系、壓暗一些，放在灰色岩石上才不會發紅）
+  function spikePts(cx, by, bw, h, lean, n, jag, flat) {
+    const pts = [[cx - bw / 2, by + 8]];
+    const tipX = cx + lean * bw;
+    for (let i = 0; i < n; i++) {
+      const k = i / n;
+      const w = (bw / 2) * Math.pow(1 - k, flat ? 0.35 : 0.9);
+      pts.push([cx + (tipX - cx) * k - w * (1 + rr(-jag, jag)), by - h * k + rr(-0.03, 0.03) * h]);
+    }
+    if (flat) {
+      // 斷掉的平頂：兩三個參差的點
+      const tw = bw * rr(0.22, 0.32);
+      pts.push([tipX - tw, by - h * rr(0.9, 0.97)]);
+      pts.push([tipX - tw * 0.2, by - h]);
+      pts.push([tipX + tw * 0.5, by - h * rr(0.93, 0.99)]);
+      pts.push([tipX + tw, by - h * rr(0.86, 0.94)]);
+    } else pts.push([tipX, by - h]);
+    for (let i = n - 1; i >= 1; i--) {
+      const k = i / n;
+      const w = (bw / 2) * Math.pow(1 - k, flat ? 0.35 : 0.9);
+      pts.push([cx + (tipX - cx) * k + w * (1 + rr(-jag, jag)), by - h * k + rr(-0.03, 0.03) * h]);
+    }
+    pts.push([cx + bw / 2, by + 8]);
+    return pts;
+  }
+  const polyPath = (c, p) => {
+    c.beginPath();
+    p.forEach((q, i) => (i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])));
+    c.closePath();
+  };
+  // 把一個岩刺多邊形畫成多面受光的石頭（畫在 c 上，只畫在多邊形裡）
+  function facetRock(c, pts, base, axisX, halfW, cuts) {
+    c.save();
+    polyPath(c, pts);
+    c.fillStyle = rgb(base);
+    c.fill();
+    c.clip();
+    let pieces = [hull(pts)];
+    for (let i = 0; i < cuts; i++) {
+      pieces.sort((p, q) => area(q) - area(p));
+      const big = pieces.shift();
+      const ce = centroid(big);
+      // 大多是斜的縱切：切出岩刺的稜面
+      const a = rnd() < 0.7 ? rr(-0.5, 0.5) : rr(1.2, 1.9);
+      const parts = split(big, ce[0] + rr(-3, 3), ce[1] + rr(-3, 3), Math.cos(a), Math.sin(a));
+      parts.forEach((p) => p.length >= 3 && pieces.push(p));
+    }
+    pieces.forEach((p) => {
+      const ce = centroid(p);
+      let nx = ((ce[0] - axisX) / halfW) * 0.9 + rr(-0.3, 0.3);
+      let ny = rr(-0.55, 0.05);
+      let nz = rr(0.5, 1.0);
+      const nl = Math.hypot(nx, ny, nz);
+      nx /= nl;
+      ny /= nl;
+      nz /= nl;
+      const l = nx * L3[0] + ny * L3[1] + nz * L3[2];
+      polyPath(c, p);
+      c.fillStyle = rgb(tone(base, l * 1.25 - 0.05, 0.75));
+      c.fill();
+      c.strokeStyle = l > 0.35 ? 'rgba(200,206,220,0.22)' : 'rgba(6,5,6,0.5)';
+      c.lineWidth = 0.9;
+      c.stroke();
+    });
+    c.restore();
+  }
+  function makeSpike(type, REF, OW) {
+    const K = SPK;
+    const W = Math.ceil(REF * 1.05 * K);
+    const H = Math.ceil((REF + 14) * K);
+    const cv = mk(W, H);
+    const c = cv.getContext('2d');
+    c.scale(K, K);
+    const cx = W / K / 2;
+    const by = H / K - 6; // 地面線（以下會被裁掉）
+    const base = rnd() < 0.3 ? [86, 76, 66] : ROCK[ri(0, ROCK.length - 1)];
+    const polys = [];
+    if (type === 'pillar') polys.push({ p: spikePts(cx, by, REF * rr(0.42, 0.5), REF * rr(0.72, 0.8), rr(-0.08, 0.08), 5, 0.1, true), ax: cx, hw: REF * 0.23 });
+    else {
+      const lean = rr(-0.28, 0.28);
+      polys.push({ p: spikePts(cx + rr(-2, 2), by, REF * rr(0.34, 0.42), REF * rr(0.92, 1), lean, 5, 0.16, false), ax: cx, hw: REF * 0.19 });
+      if (type === 'cluster') {
+        const s = rnd() < 0.5 ? -1 : 1;
+        const sx = cx + s * REF * 0.2;
+        polys.unshift({ p: spikePts(sx, by, REF * 0.26, REF * rr(0.45, 0.58), s * rr(0.35, 0.6), 4, 0.18, false), ax: sx, hw: REF * 0.13 });
+      }
+    }
+    // 本體（先畫在另一張圖上，外框再用膨脹的剪影描）
+    const body = mk(W, H);
+    const bc = body.getContext('2d');
+    bc.scale(K, K);
+    polys.forEach((q) => facetRock(bc, q.p, base, q.ax, q.hw, type === 'pillar' ? ri(6, 8) : ri(5, 7)));
+    // 小岩刺壓在大岩刺前面：交界描一條暗線
+    if (polys.length > 1) {
+      polyPath(bc, polys[0].p);
+      bc.strokeStyle = 'rgba(20,14,12,0.75)';
+      bc.lineWidth = 1.3;
+      bc.save();
+      bc.clip();
+      bc.stroke();
+      bc.restore();
+    }
+    bc.globalCompositeOperation = 'source-atop';
+    // 層理
+    const th = type === 'pillar' ? rr(-0.1, 0.1) : rr(-0.9, -0.3) * (rnd() < 0.5 ? 1 : -1);
+    bc.save();
+    bc.translate(cx, by - REF * 0.5);
+    bc.rotate(th);
+    for (let y = -REF; y < REF; y += REF * rr(0.08, 0.14)) {
+      if (rnd() < 0.35) continue;
+      const x0 = rr(-REF * 0.5, 0);
+      bc.beginPath();
+      bc.moveTo(x0, y);
+      bc.lineTo(x0 + rr(0.3, 0.8) * REF, y + rr(-1, 1));
+      bc.strokeStyle = 'rgba(8,7,8,0.38)';
+      bc.lineWidth = rr(0.6, 1.1);
+      bc.stroke();
+    }
+    bc.restore();
+    // 裂縫
+    for (let i = 0; i < 2; i++) {
+      let x = cx + rr(-0.12, 0.12) * REF;
+      let y = by - REF * rr(0.15, 0.7);
+      let d = rr(-2.2, -0.9);
+      bc.beginPath();
+      bc.moveTo(x, y);
+      for (let k = 0; k < 4; k++) {
+        d += rr(-0.5, 0.5);
+        x += Math.cos(d) * REF * 0.08;
+        y += Math.sin(d) * REF * 0.08;
+        bc.lineTo(x, y);
+      }
+      bc.strokeStyle = 'rgba(4,3,4,0.75)';
+      bc.lineWidth = 1.1;
+      bc.stroke();
+    }
+    // 右半邊整體壓暗（體積感）、根部沾著的泥土
+    let g = bc.createLinearGradient(cx - REF * 0.25, 0, cx + REF * 0.3, 0);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(4,4,8,0.4)');
+    bc.fillStyle = g;
+    bc.fillRect(0, 0, W, H);
+    g = bc.createLinearGradient(0, by - REF * 0.32, 0, by);
+    g.addColorStop(0, 'rgba(52,38,26,0)');
+    g.addColorStop(1, 'rgba(52,38,26,0.75)');
+    bc.fillStyle = g;
+    bc.fillRect(0, 0, W, H);
+    for (let i = 0; i < 18; i++) {
+      bc.fillStyle = rnd() < 0.5 ? 'rgba(70,54,40,0.55)' : 'rgba(40,30,22,0.5)';
+      const s = rr(1, 3);
+      bc.fillRect(cx + rr(-0.25, 0.25) * REF, by - rr(0, 0.25) * REF, s, s);
+    }
+    // 朝光的稜線（左上）
+    polys.forEach((q) => {
+      const p = q.p;
+      for (let i = 1; i < p.length - 1; i++) {
+        const a = p[i];
+        const b = p[i + 1];
+        const nx = b[1] - a[1];
+        const ny = -(b[0] - a[0]);
+        const nl = Math.hypot(nx, ny) || 1;
+        const l = ((nx / nl) * L3[0] + (ny / nl) * L3[1]) / Math.hypot(L3[0], L3[1]);
+        if (l < 0.3 || a[1] > by - 4) continue;
+        bc.beginPath();
+        bc.moveTo(a[0] + 1, a[1] + 0.8);
+        bc.lineTo(b[0] + 1, b[1] + 0.8);
+        bc.strokeStyle = 'rgba(206,214,230,' + (0.45 * l).toFixed(2) + ')';
+        bc.lineWidth = 1;
+        bc.stroke();
+      }
+    });
+    bc.globalCompositeOperation = 'source-over';
+    // 石材顆粒
+    const img = bc.getImageData(0, 0, W, H);
+    const px = img.data;
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] < 8) continue;
+      const n = rr(-10, 10);
+      px[i] += n;
+      px[i + 1] += n;
+      px[i + 2] += n * 1.05;
+    }
+    bc.putImageData(img, 0, 0);
+    // 外框：把剪影往八個方向推開、塗成深色，墊在本體下面
+    const sil = mk(W, H);
+    const sc = sil.getContext('2d');
+    sc.drawImage(body, 0, 0);
+    sc.globalCompositeOperation = 'source-in';
+    sc.fillStyle = rgb(QOUT);
+    sc.fillRect(0, 0, W, H);
+    const o = OW * K;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.drawImage(sil, Math.cos(a) * o, Math.sin(a) * o);
+    }
+    c.drawImage(body, 0, 0);
+    // 找出岩刺最高點（裁切用）
+    let top = 0;
+    polys.forEach((q) => q.p.forEach((p) => (top = Math.max(top, by - p[1]))));
+    return { c: cv, W, H, by: by * K, top: (top + OW) * K, bwTop: 0 };
+  }
+  const QS = { S: [], L: [] };
+  [['spike', 4], ['pillar', 3], ['cluster', 2]].forEach(([t, n]) => {
+    for (let i = 0; i < n; i++) QS.S.push(makeSpike(t, 60, 2.1));
+  });
+  [['spike', 3], ['cluster', 2], ['pillar', 1]].forEach(([t, n]) => {
+    for (let i = 0; i < n; i++) QS.L.push(makeSpike(t, 112, 2.3));
+  });
+  const PUFF_E = radial(64, [[0, 'rgba(150,134,112,0.55)'], [0.5, 'rgba(136,120,100,0.3)'], [1, 'rgba(126,110,92,0)']]);
+  const SHADOW = radial(64, [[0, 'rgba(20,14,10,0.6)'], [0.6, 'rgba(20,14,10,0.3)'], [1, 'rgba(20,14,10,0)']]);
+
+  // 粒子池：塵（p=1）、碎屑（p=0）、碎石塊（p=2，用 SMALL 的碎岩圖、會在地面彈一下）
+  const QP = [];
+  for (let i = 0; i < 260; i++) QP.push({ on: false, p: 0, x: 0, y: 0, vx: 0, vy: 0, s0: 1, t: 0, life: 1, c: '', floor: 1e9, rot: 0, vr: 0, spr: null, b: 0 });
+  let qpI = 0;
+  let qpN = 0;
+  function qp(p, x, y, vx, vy, s, life) {
+    for (let j = 0; j < QP.length; j++) {
+      const q = QP[(qpI + j) % QP.length];
+      if (q.on) continue;
+      qpI = (qpI + j + 1) % QP.length;
+      qpN++;
+      q.on = true;
+      q.p = p;
+      q.x = x;
+      q.y = y;
+      q.vx = vx;
+      q.vy = vy;
+      q.s0 = s;
+      q.t = 0;
+      q.life = life;
+      q.floor = 1e9;
+      q.rot = rr(0, TAU);
+      q.vr = rr(-8, 8);
+      q.b = 0;
+      q.c = ['#3a3430', '#4e4640', '#2a2522', '#6a6058'][ri(0, 3)];
+      q.spr = p === 2 ? SMALL[ri(0, SMALL.length - 1)] : null;
+      return q;
+    }
+    return null;
+  }
+
+  const QK = [];
+  // 某個 x 上、跟 y0 同一層的平台表面（沒有平台 → null）
+  function surfY(x, y0) {
+    const map = G.world && G.world.map;
+    if (!map || !G.physics) return null;
+    const i = G.physics.platformBelow(map, x, y0 - 40);
+    if (i < 0) return null;
+    const p = map.platforms[i];
+    return Math.abs(p[2] - y0) < 40 ? p : null;
+  }
+  function dust(x, gy, n, big) {
+    const L = G.lowFx;
+    for (let i = 0; i < (L ? Math.ceil(n / 2) : n); i++) qp(1, x + rr(-10, 10) * big, gy - rr(2, 10), rr(-70, 70) * big, rr(-60, -15), rr(14, 24) * big, rr(0.5, 0.9));
+  }
+  function grit(x, gy, n, big) {
+    const L = G.lowFx;
+    for (let i = 0; i < (L ? Math.ceil(n / 2) : n); i++) {
+      const q = qp(0, x + rr(-8, 8), gy - 4, rr(-130, 130) * big, rr(-420, -160) * big, rr(1.8, 3.6), rr(0.5, 0.9));
+      if (q) q.floor = gy;
+    }
+  }
+  function chunks(x, y, gy, n, big) {
+    const L = G.lowFx;
+    for (let i = 0; i < (L ? Math.ceil(n / 2) : n); i++) {
+      const q = qp(2, x + rr(-8, 8), y, rr(-160, 160) * big, rr(-380, -140) * big, rr(4, 7.5) * big, rr(0.8, 1.2));
+      if (q) q.floor = gy;
+    }
+  }
+  function quakeCast(o) {
+    const L = G.lowFx;
+    const e = { t: 0, x: o.x, gy: o.y, rocks: [], cracks: [], reach: o.reach, speed: o.speed || 1100 };
+    const tg = o.targets || [];
+    // 打中怪的大岩刺：出現時間跟傷害時間一樣（距離 ÷ 震波速度），提早一點點讓尖端剛好頂到
+    tg.forEach((m) => {
+      const p = surfY(m.x, o.y);
+      if (!p) return;
+      const h = clamp(m.h * 0.85 + 52, 98, 190);
+      const d = Math.abs(m.x - o.x);
+      const delay = Math.max(0, d / e.speed - 0.02);
+      e.rocks.push({ x: m.x, gy: p[2], h, spr: QS.L[ri(0, QS.L.length - 1)], d: delay, hold: 0.42, big: true, seen: false, gone: false, skirt: skirt(2) });
+      // 兩側各一根較矮的陪襯岩刺
+      if (!L) {
+        [-1, 1].forEach((s) => {
+          const x = m.x + s * h * rr(0.32, 0.42);
+          const q = surfY(x, o.y);
+          if (q) e.rocks.push({ x, gy: q[2], h: h * rr(0.38, 0.5), spr: QS.S[ri(0, QS.S.length - 1)], d: delay + 0.03, hold: 0.36, big: false, seen: false, gone: false, skirt: skirt(1) });
+        });
+      }
+    });
+    const step = L ? 70 : 44;
+    for (const s of [-1, 1]) {
+      let n = 0;
+      for (let d = 46 + rr(0, 8); d <= e.reach; d += step * rr(0.85, 1.15)) {
+        const x = o.x + s * d;
+        const p = surfY(x, o.y);
+        if (!p) continue;
+        if (tg.some((m) => Math.abs(m.x - x) < 40)) continue;
+        const fall = 1 - (d / e.reach) * 0.35;
+        const h = (n++ % 2 ? rr(34, 48) : rr(54, 78)) * fall;
+        e.rocks.push({ x, gy: p[2], h, spr: QS.S[ri(0, QS.S.length - 1)], d: d / e.speed, hold: rr(0.24, 0.34), big: false, seen: false, gone: false, skirt: skirt(L ? 0 : 1) });
+      }
+      // 地裂：從腳下沿著平台往外，縫的點每 14px 一個，沒有平台的地方斷開
+      const pts = [];
+      let y = o.y + 4;
+      for (let d = 0; d <= e.reach + 20; d += 14) {
+        const x = o.x + s * d;
+        const p = surfY(x, o.y);
+        if (!p) {
+          pts.push(x, NaN, 0);
+          continue;
+        }
+        y = clamp(y + rr(-2.2, 2.2), p[2] + 2, p[2] + (p === G.world.map.platforms[0] ? 11 : 7));
+        pts.push(x, y, p[2]);
+      }
+      // 分叉：往下斜劈幾道短縫
+      const br = [];
+      for (let i = 3; i < pts.length / 3 - 1; i += ri(3, 5)) {
+        if (Number.isNaN(pts[i * 3 + 1])) continue;
+        const bx = pts[i * 3];
+        const by = pts[i * 3 + 1];
+        const len = rr(8, 22);
+        const a = rr(0.5, 1.1);
+        br.push(bx, by, bx + s * Math.cos(a) * len, by + Math.sin(a) * len * 0.6, pts[i * 3 + 2]);
+      }
+      e.cracks.push({ s, pts, br });
+    }
+    // 腳下：重踏的塵與碎石
+    dust(o.x, o.y, 8, 1.3);
+    grit(o.x, o.y, 10, 1);
+    chunks(o.x, o.y - 4, o.y, 3, 0.8);
+    e.rocks.sort((a, b) => a.big - b.big);
+    QK.push(e);
+  }
+  function skirt(n) {
+    const a = [];
+    for (let i = 0; i < n + 1; i++) a.push({ dx: rr(-0.5, 0.5), s: SMALL[ri(0, SMALL.length - 1)], z: rr(0.16, 0.26), rot: rr(0, TAU) });
+    return a;
+  }
+  // 岩刺在時間 lt 的露出比例（0～1）
+  function riseK(r, lt) {
+    if (lt < 0) return 0;
+    if (lt < 0.09) {
+      const k = lt / 0.09;
+      return 1 - (1 - k) * (1 - k) * (1 - k);
+    }
+    const c = (lt - 0.09 - r.hold) / 0.3;
+    if (c <= 0) return 1;
+    if (c >= 1) return 0;
+    return 1 - c * c;
+  }
+  function quakeStep(dt) {
+    if (qpN) {
+      for (const q of QP) {
+        if (!q.on) continue;
+        q.t += dt;
+        if (q.t >= q.life) {
+          q.on = false;
+          qpN--;
+          continue;
+        }
+        if (q.p === 1) {
+          const d = 1 - Math.min(1, dt * 2.6);
+          q.vx *= d;
+          q.vy = q.vy * d + 16 * dt;
+        } else {
+          q.vy += 1300 * dt;
+          q.rot += q.vr * dt;
+        }
+        q.x += q.vx * dt;
+        q.y += q.vy * dt;
+        if (q.y > q.floor) {
+          q.y = q.floor;
+          if (q.b++ < 1 && q.vy > 80) {
+            q.vy *= -0.28;
+            q.vx *= 0.5;
+            q.vr *= 0.5;
+          } else {
+            q.vy = 0;
+            q.vx *= 0.7;
+            q.vr = 0;
+          }
+        }
+      }
+    }
+    for (let k = QK.length - 1; k >= 0; k--) {
+      const e = QK[k];
+      e.t += dt;
+      let alive = e.t < e.reach / e.speed + 1.7;
+      for (const r of e.rocks) {
+        const lt = e.t - r.d;
+        if (lt >= 0 && !r.seen) {
+          r.seen = true;
+          const big = r.big ? 1.4 : 0.8 + r.h / 120;
+          dust(r.x, r.gy, r.big ? 5 : 1, big);
+          grit(r.x, r.gy, r.big ? 8 : 3, big);
+          if (r.big || rnd() < 0.5) chunks(r.x, r.gy - 6, r.gy, r.big ? 4 : 1, big * 0.9);
+        }
+        if (!r.gone && lt > 0.09 + r.hold) {
+          r.gone = true;
+          // 崩下來：頂端掉碎石、根部冒塵
+          chunks(r.x, r.gy - r.h * 0.6, r.gy, r.big ? 4 : 2, r.big ? 1 : 0.7);
+          if (r.big || rnd() < 0.5) dust(r.x, r.gy, r.big ? 3 : 1, r.big ? 1.2 : 0.8);
+        }
+        if (lt < 0.09 + r.hold + 0.3) alive = true;
+      }
+      if (!alive) QK.splice(k, 1);
+    }
+  }
+  // 旋轉貼圖不用 save/restore：直接把「基礎矩陣 × 平移 × 旋轉」算好設進去（畫完再設回 B）
+  function blitRot(ctx, B, img, x, y, rot, w) {
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    ctx.setTransform(B.a * c + B.c * s, B.b * c + B.d * s, B.c * c - B.a * s, B.d * c - B.b * s, B.a * x + B.c * y + B.e, B.b * x + B.d * y + B.f);
+    ctx.drawImage(img, -w / 2, -w / 2, w, w);
+  }
+  function quakeDraw(ctx) {
+    ctx.save();
+    const B = ctx.getTransform();
+    for (const e of QK) {
+      const t = e.t;
+      // 1. 地裂：跟著震波往外長；1.2 秒後淡掉
+      const ca = t < 1.2 ? 1 : Math.max(0, 1 - (t - 1.2) / 0.5);
+      if (ca > 0) {
+        const front = t * e.speed;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (const cr of e.cracks) {
+          const p = cr.pts;
+          const build = (dy) => {
+            ctx.beginPath();
+            let pen = false;
+            for (let i = 0; i < p.length; i += 3) {
+              if (Math.abs(p[i] - e.x) > front) break;
+              if (Number.isNaN(p[i + 1])) {
+                pen = false;
+                continue;
+              }
+              pen ? ctx.lineTo(p[i], p[i + 1] + dy) : ctx.moveTo(p[i], p[i + 1] + dy);
+              pen = true;
+            }
+            for (let i = 0; i < cr.br.length; i += 5) {
+              if (Math.abs(cr.br[i] - e.x) > front) break;
+              ctx.moveTo(cr.br[i], cr.br[i + 1] + dy);
+              ctx.lineTo(cr.br[i + 2], cr.br[i + 3] + dy);
+            }
+          };
+          build(0);
+          ctx.globalAlpha = ca;
+          ctx.strokeStyle = 'rgba(24,16,12,0.85)';
+          ctx.lineWidth = 2.6;
+          ctx.stroke();
+          // 縫上緣崩起的淺色斷面
+          build(-2);
+          ctx.globalAlpha = ca * 0.5;
+          ctx.strokeStyle = 'rgba(214,196,160,0.6)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+      // 2. 岩刺根部的影子
+      for (const r of e.rocks) {
+        const k = riseK(r, t - r.d);
+        if (k <= 0) continue;
+        const w = (r.spr.W / r.spr.top) * r.h * 0.9;
+        ctx.globalAlpha = Math.min(1, k * 1.5);
+        ctx.drawImage(SHADOW, r.x - w * 0.6, r.gy - 5, w * 1.2, 11);
+      }
+      // 3. 岩刺：只貼出地面以上的那一段
+      for (const r of e.rocks) {
+        const lt = t - r.d;
+        const k = riseK(r, lt);
+        if (k <= 0.01) continue;
+        const S = r.spr;
+        const sc = r.h / (S.top / SPK); // 世界像素 / 圖的世界像素
+        const vis = S.top * k; // 露出的高度（畫布像素）
+        const dw = (S.W / SPK) * sc;
+        const dh = (vis / SPK) * sc;
+        // 竄出來的一瞬間橫向抖一下
+        const jit = lt > 0.09 && lt < 0.16 ? Math.sin(lt * 140) * 1.2 : 0;
+        ctx.globalAlpha = 1;
+        ctx.drawImage(S.c, 0, S.by - S.top, S.W, vis, r.x - dw / 2 + jit, r.gy - dh, dw, dh);
+      }
+      // 4. 根部的碎石裙：壓在岩刺前面，讓它看起來是從土裡頂出來的
+      for (const r of e.rocks) {
+        const k = riseK(r, t - r.d);
+        if (k <= 0.05) continue;
+        const w = (r.spr.W / r.spr.top) * r.h * 0.5;
+        for (const q of r.skirt) {
+          const z = r.h * q.z * (r.big ? 0.8 : 1);
+          blitRot(ctx, B, q.s.c, r.x + q.dx * w, r.gy - z * 0.18, q.rot, z);
+        }
+      }
+      ctx.setTransform(B);
+    }
+    // 5. 碎石塊、碎屑、塵
+    if (qpN) {
+      for (const q of QP) {
+        if (!q.on || q.p !== 2) continue;
+        const k = q.t / q.life;
+        ctx.globalAlpha = Math.min(1, (1 - k) * 4);
+        blitRot(ctx, B, q.spr.c, q.x, q.y - q.s0 * 0.5, q.rot, (q.spr.S * q.s0) / q.spr.R);
+      }
+      ctx.setTransform(B);
+      for (const q of QP) {
+        if (!q.on || q.p !== 0) continue;
+        ctx.globalAlpha = Math.min(1, (1 - q.t / q.life) * 3);
+        ctx.fillStyle = q.c;
+        ctx.fillRect(q.x - q.s0 / 2, q.y - q.s0 / 2, q.s0, q.s0 * 0.75);
+      }
+      for (const q of QP) {
+        if (!q.on || q.p !== 1) continue;
+        const k = q.t / q.life;
+        const s = q.s0 * (0.55 + 0.9 * Math.sqrt(k));
+        ctx.globalAlpha = (1 - k) * (k < 0.15 ? k / 0.15 : 1);
+        ctx.drawImage(PUFF_E, q.x - s, q.y - s, s * 2, s * 2);
+      }
+    }
+    ctx.restore();
+  }
+  A.quakeFx = {
+    // o: { x, y（施放者腳下）, reach, speed, targets: [{ x, y, h }] }
+    cast: quakeCast,
+    spr: QS,
+  };
+  if (A.skillFx) {
+    A.skillFx.add({
+      live: () => QK.length > 0 || qpN > 0,
+      step: quakeStep,
+      front: quakeDraw,
+      clear() {
+        QK.length = 0;
+        for (const q of QP) q.on = false;
+        qpN = 0;
+      },
+    });
+  }
 })();

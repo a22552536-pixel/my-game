@@ -69,7 +69,14 @@
           .slice(0, S.targets);
         // 震波：沿著地面往兩邊傳
         const reach = S.screen ? G.W : 520;
-        for (let d = 0; d <= reach; d += 60) {
+        const rocks = !S.lava && G.art.quakeFx;
+        if (rocks) {
+          // 裂地震擊：一路竄出岩刺（純視覺，art/skills5.js 的 quakeFx）；怪底下的岩刺跟傷害同一時間頂上來
+          let far = reach;
+          list.forEach((m) => (far = Math.max(far, Math.abs(m.x - P.x) + 60)));
+          const tg = list.map((m) => ({ x: m.x, y: m.y, h: m.hitbox ? m.hitbox().h : 60 }));
+          G.art.quakeFx.cast({ x: P.x, y: P.y, reach: far, speed: 1100, targets: tg });
+        } else for (let d = 0; d <= reach; d += 60) {
           [-1, 1].forEach((s) => {
             X.later(d / 1100, () => {
               const x = P.x + s * d;
@@ -78,7 +85,7 @@
             });
           });
         }
-        G.fx.shake(S.screen ? 16 : 10, S.screen ? 0.6 : 0.4);
+        G.fx.shake(S.screen ? 16 : rocks ? 8 : 10, S.screen ? 0.6 : 0.4);
         G.fx.addHitstop(0.08);
         if (S.lava) G.fx.screenFlash('#ff9a3a', 0.3);
         G.audio.play('slam');
