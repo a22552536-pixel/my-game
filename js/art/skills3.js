@@ -877,12 +877,15 @@
     speedLines(ctx, [[-(p.dir || 1) * 16, -3, -(p.dir || 1) * 26, -3], [-(p.dir || 1) * 16, 3, -(p.dir || 1) * 22, 3]], 'rgba(255,255,255,0.7)', 1.6);
     shuriken(ctx, 0, 0, 12, rot, '#e4ecf6', '#8a98b0', 1.8, 0.1);
   }
-  // 風魔手裡劍：四片往後掃的彎刃（厚刃背、磨亮的刃口斜面、血槽），青銅鑲邊的輪轂＋鉚釘，中心嵌風之翠玉。
-  // 高速旋轉時身後有淡淡的轉盤殘影與兩片殘刃；外圈是一條條細長、頭粗尾細的風痕和被捲起的葉子。
+  // 風魔手裡劍（闇夜盜王）：四片又長又利、往後掃的黑鋼彎刃，刃背有鋸齒缺口，刃口一線紫光；
+  // 輪轂是暗鐵加暗紅鑲邊，中心嵌一顆血紅的眼石。身後拖著黑紫色的煙與風痕、飄著暗色的羽片。
   function fumaBlade(c, r) {
-    c.moveTo(r * 0.2, -r * 0.13);
-    c.quadraticCurveTo(r * 0.62, -r * 0.2, r * 1.02, -r * 0.4); // 刃背（往後彎）
-    c.quadraticCurveTo(r * 0.86, r * 0.02, r * 0.22, r * 0.19); // 刃口（外凸的弧）
+    c.moveTo(r * 0.2, -r * 0.12);
+    c.lineTo(r * 0.42, -r * 0.17);
+    c.lineTo(r * 0.47, -r * 0.13); // 刃背的缺口
+    c.lineTo(r * 0.55, -r * 0.2);
+    c.quadraticCurveTo(r * 0.82, -r * 0.3, r * 1.1, -r * 0.5); // 刃背（往後彎，尖端更長）
+    c.quadraticCurveTo(r * 0.88, r * 0.0, r * 0.22, r * 0.17); // 刃口（外凸的弧）
     c.closePath();
   }
   function bigShuriken(ctx, p, t) {
@@ -890,66 +893,82 @@
     const dir = p.dir || 1;
     const s = p.seed || 0;
     const rot = t * 20 * dir + s;
-    const O = A.outline();
+    const O = '#120a18';
     const lite = !!G.lowFx;
-    glow(ctx, 0, 0, r * 1.4, '170,240,120', 0.38);
-    // 風痕：細長、頭粗尾細的弧，跟著轉的反方向拖尾
+    // 暗色光暈（中心發紫、外圈是黑煙）
+    const aura = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.5);
+    aura.addColorStop(0, 'rgba(120,60,200,0.35)');
+    aura.addColorStop(0.6, 'rgba(30,10,50,0.28)');
+    aura.addColorStop(1, 'rgba(10,0,20,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.5, 0, TAU);
+    ctx.fill();
+    // 黑紫的風痕：頭粗尾細，跟著轉的反方向拖尾（外層黑煙、內層一線紫光）
     ctx.save();
-    ctx.lineCap = 'round';
     ctx.lineCap = 'butt';
     const nTr = lite ? 4 : 7;
     for (let i = 0; i < nTr; i++) {
       const rr = r * (1.02 + ((i * 37) % 5) * 0.07);
       const a0 = -t * 7 * dir + (i * TAU) / nTr + s;
-      const span = 0.7 + (i % 3) * 0.25;
+      const span = 0.8 + (i % 3) * 0.28;
       const seg = 5;
       for (let j = 0; j < seg; j++) {
         const k0 = j / seg;
+        const a1 = a0 + dir * span * k0;
+        const a2 = a0 + dir * span * (k0 + 1 / seg) + dir * 0.03;
         ctx.beginPath();
-        ctx.arc(0, 0, rr, a0 + dir * span * k0, a0 + dir * span * (k0 + 1 / seg) + dir * 0.03, dir < 0);
-        ctx.strokeStyle = 'rgba(215,255,185,' + (0.75 * (1 - k0)).toFixed(2) + ')';
-        ctx.lineWidth = Math.max(0.6, 3.4 * (1 - k0));
+        ctx.arc(0, 0, rr, a1, a2, dir < 0);
+        ctx.strokeStyle = 'rgba(20,6,30,' + (0.7 * (1 - k0)).toFixed(2) + ')';
+        ctx.lineWidth = Math.max(0.8, 6 * (1 - k0));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, rr, a1, a2, dir < 0);
+        ctx.strokeStyle = 'rgba(190,130,255,' + (0.85 * (1 - k0)).toFixed(2) + ')';
+        ctx.lineWidth = Math.max(0.5, 2 * (1 - k0));
         ctx.stroke();
       }
     }
     ctx.lineCap = 'round';
-    // 被捲起的葉子
+    // 飄散的暗色羽片
     if (!lite) {
-      for (let i = 0; i < 3; i++) {
-        const a = -t * 5 * dir + i * 2.1 + s;
-        const rr = r * (1.18 + 0.08 * Math.sin(t * 3 + i));
+      for (let i = 0; i < 4; i++) {
+        const a = -t * 5 * dir + i * 1.7 + s;
+        const rr = r * (1.2 + 0.1 * Math.sin(t * 3 + i));
         ctx.save();
         ctx.translate(Math.cos(a) * rr, Math.sin(a) * rr);
         ctx.rotate(a * 2 + t * 6);
         ctx.beginPath();
-        ctx.ellipse(0, 0, r * 0.07, r * 0.028, 0, 0, TAU);
-        ctx.fillStyle = i % 2 ? '#9ad85a' : '#c8ec8a';
+        ctx.moveTo(-r * 0.09, 0);
+        ctx.quadraticCurveTo(0, -r * 0.04, r * 0.09, 0);
+        ctx.quadraticCurveTo(0, r * 0.03, -r * 0.09, 0);
+        ctx.fillStyle = i % 2 ? '#2a1838' : '#4a2a66';
         ctx.fill();
-        ctx.strokeStyle = O;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(200,150,255,0.6)';
+        ctx.lineWidth = 0.8;
         ctx.stroke();
         ctx.restore();
       }
     }
     ctx.restore();
-    // 高速旋轉的轉盤殘影
+    // 高速旋轉的暗色轉盤殘影
     ctx.save();
-    const disc = ctx.createRadialGradient(0, 0, r * 0.3, 0, 0, r * 1.02);
-    disc.addColorStop(0, 'rgba(210,225,240,0.16)');
-    disc.addColorStop(0.8, 'rgba(210,235,225,0.1)');
-    disc.addColorStop(1, 'rgba(210,235,225,0)');
+    const disc = ctx.createRadialGradient(0, 0, r * 0.3, 0, 0, r * 1.08);
+    disc.addColorStop(0, 'rgba(40,20,60,0.3)');
+    disc.addColorStop(0.85, 'rgba(90,50,140,0.14)');
+    disc.addColorStop(1, 'rgba(90,50,140,0)');
     ctx.fillStyle = disc;
     ctx.beginPath();
-    ctx.arc(0, 0, r * 1.02, 0, TAU);
+    ctx.arc(0, 0, r * 1.08, 0, TAU);
     ctx.fill();
     ctx.restore();
-    // 殘刃（落後一點角度、半透明）
+    // 殘刃
     if (!lite) {
-      [0.28, 0.52].forEach((lag, k) => {
+      [0.26, 0.5].forEach((lag, k) => {
         ctx.save();
         ctx.rotate(rot - lag * dir);
-        ctx.globalAlpha = 0.22 - k * 0.08;
-        ctx.fillStyle = '#dfe8f2';
+        ctx.globalAlpha = 0.3 - k * 0.12;
+        ctx.fillStyle = '#3a2250';
         for (let i = 0; i < 4; i++) {
           ctx.save();
           ctx.rotate((i * TAU) / 4);
@@ -962,100 +981,111 @@
         ctx.restore();
       });
     }
-    // 四片刃
+    // 四片黑鋼刃
     ctx.save();
     ctx.rotate(rot);
     for (let i = 0; i < 4; i++) {
       ctx.save();
       ctx.rotate((i * TAU) / 4);
-      ctx.scale(1, dir); // 刃背永遠朝著旋轉的後方
-      // 刃身：鋼的漸層（刃背暗、刃口亮）
-      const g = ctx.createLinearGradient(0, -r * 0.35, 0, r * 0.2);
-      g.addColorStop(0, '#5e6b80');
-      g.addColorStop(0.45, '#a9b6c8');
-      g.addColorStop(1, '#dfe7f1');
+      ctx.scale(1, dir);
+      const g = ctx.createLinearGradient(0, -r * 0.45, 0, r * 0.2);
+      g.addColorStop(0, '#0e0a14');
+      g.addColorStop(0.5, '#2c2638');
+      g.addColorStop(1, '#5a5268');
       ctx.beginPath();
       fumaBlade(ctx, r);
       ctx.fillStyle = g;
       ctx.fill();
-      // 刃口的磨亮斜面
       ctx.save();
       ctx.beginPath();
       fumaBlade(ctx, r);
       ctx.clip();
+      // 刃口：一道冷紫的磨亮斜面＋最外緣一線白光
       ctx.beginPath();
-      ctx.moveTo(r * 1.02, -r * 0.4);
-      ctx.quadraticCurveTo(r * 0.86, r * 0.02, r * 0.22, r * 0.19);
-      ctx.lineTo(r * 0.24, r * 0.09);
-      ctx.quadraticCurveTo(r * 0.74, -r * 0.02, r * 1.02, -r * 0.4);
+      ctx.moveTo(r * 1.1, -r * 0.5);
+      ctx.quadraticCurveTo(r * 0.88, r * 0.0, r * 0.22, r * 0.17);
+      ctx.lineTo(r * 0.24, r * 0.08);
+      ctx.quadraticCurveTo(r * 0.76, -r * 0.05, r * 1.1, -r * 0.5);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(248,252,255,0.85)';
+      const eg = ctx.createLinearGradient(r * 0.2, 0, r * 1.1, 0);
+      eg.addColorStop(0, 'rgba(120,80,190,0.55)');
+      eg.addColorStop(1, 'rgba(210,170,255,0.95)');
+      ctx.fillStyle = eg;
       ctx.fill();
-      // 血槽
       ctx.beginPath();
-      ctx.moveTo(r * 0.32, -r * 0.08);
-      ctx.quadraticCurveTo(r * 0.6, -r * 0.13, r * 0.84, -r * 0.27);
-      ctx.strokeStyle = 'rgba(40,50,68,0.75)';
-      ctx.lineWidth = Math.max(1.2, r * 0.03);
+      ctx.moveTo(r * 1.1, -r * 0.5);
+      ctx.quadraticCurveTo(r * 0.88, r * 0.0, r * 0.22, r * 0.17);
+      ctx.strokeStyle = 'rgba(245,235,255,0.9)';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      // 刃身上的暗紅符紋（血槽）
+      ctx.beginPath();
+      ctx.moveTo(r * 0.3, -r * 0.06);
+      ctx.quadraticCurveTo(r * 0.62, -r * 0.14, r * 0.9, -r * 0.34);
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+      ctx.lineWidth = Math.max(1.6, r * 0.035);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(r * 0.32, -r * 0.05);
-      ctx.quadraticCurveTo(r * 0.6, -r * 0.1, r * 0.84, -r * 0.24);
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.lineWidth = 1;
+      ctx.moveTo(r * 0.34, -r * 0.07);
+      ctx.quadraticCurveTo(r * 0.62, -r * 0.14, r * 0.84, -r * 0.3);
+      ctx.strokeStyle = 'rgba(220,40,70,' + (0.55 + 0.35 * Math.sin(t * 6 + i)).toFixed(2) + ')';
+      ctx.lineWidth = 1.2;
       ctx.stroke();
       ctx.restore();
-      // 描邊
       ctx.beginPath();
       fumaBlade(ctx, r);
       ctx.strokeStyle = O;
-      ctx.lineWidth = 2.6;
-      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2.8;
+      ctx.lineJoin = 'miter';
       ctx.stroke();
       ctx.restore();
     }
     ctx.restore();
-    // 輪轂：暗鋼圓盤 → 青銅鑲邊 → 鉚釘 → 風之翠玉
+    // 輪轂：暗鐵 → 暗紅鑲邊 → 尖釘 → 血紅眼石
     ctx.save();
     ctx.rotate(rot);
     const hub = ctx.createRadialGradient(-r * 0.08, -r * 0.08, 0, 0, 0, r * 0.32);
-    hub.addColorStop(0, '#8a96a8');
-    hub.addColorStop(1, '#3c4558');
+    hub.addColorStop(0, '#4a4458');
+    hub.addColorStop(1, '#141018');
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.3, 0, TAU);
     ctx.fillStyle = hub;
     ctx.fill();
     ctx.strokeStyle = O;
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.6;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.24, 0, TAU);
-    ctx.strokeStyle = '#c89a4a';
+    ctx.arc(0, 0, r * 0.23, 0, TAU);
+    ctx.strokeStyle = '#7a1a2a';
     ctx.lineWidth = Math.max(2, r * 0.045);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,230,160,0.7)';
+    ctx.strokeStyle = 'rgba(255,120,140,0.5)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.24, PI * 1.05, PI * 1.6);
+    ctx.arc(0, 0, r * 0.23, PI * 1.05, PI * 1.6);
     ctx.stroke();
     for (let i = 0; i < 4; i++) {
       const a = (i * TAU) / 4 + PI / 4;
-      const x = Math.cos(a) * r * 0.24;
-      const y = Math.sin(a) * r * 0.24;
+      const x = Math.cos(a) * r * 0.23;
+      const y = Math.sin(a) * r * 0.23;
+      const q = Math.max(2, r * 0.045);
       ctx.beginPath();
-      ctx.arc(x, y, Math.max(1.6, r * 0.035), 0, TAU);
-      ctx.fillStyle = '#e8c878';
+      ctx.moveTo(x + Math.cos(a) * q * 1.6, y + Math.sin(a) * q * 1.6);
+      ctx.lineTo(x + Math.cos(a + 1.9) * q, y + Math.sin(a + 1.9) * q);
+      ctx.lineTo(x + Math.cos(a - 1.9) * q, y + Math.sin(a - 1.9) * q);
+      ctx.closePath();
+      ctx.fillStyle = '#6a6278';
       ctx.fill();
       ctx.strokeStyle = O;
       ctx.lineWidth = 1;
       ctx.stroke();
     }
     ctx.restore();
-    glow(ctx, 0, 0, r * 0.3, '160,240,110', 0.55);
+    glow(ctx, 0, 0, r * 0.34, '230,40,80', 0.5);
     const gem = ctx.createRadialGradient(-r * 0.04, -r * 0.05, 0, 0, 0, r * 0.14);
-    gem.addColorStop(0, '#eaffc8');
-    gem.addColorStop(0.5, '#8ed848');
-    gem.addColorStop(1, '#3f8a24');
+    gem.addColorStop(0, '#ffd0d8');
+    gem.addColorStop(0.45, '#e8203c');
+    gem.addColorStop(1, '#5a0414');
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.13, 0, TAU);
     ctx.fillStyle = gem;
@@ -1063,9 +1093,13 @@
     ctx.strokeStyle = O;
     ctx.lineWidth = 1.8;
     ctx.stroke();
-    // 刃上的閃光（固定在畫面左上，轉到那裡就閃一下）
+    // 眼石裡的直瞳
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.025, r * 0.09, 0, 0, TAU);
+    ctx.fillStyle = '#12020a';
+    ctx.fill();
     const sh = Math.max(0, Math.sin(t * 20 + s));
-    if (sh > 0.3) sparkle(ctx, -r * 0.5, -r * 0.42, r * 0.16 * sh, '#ffffff');
+    if (sh > 0.3) sparkle(ctx, -r * 0.52, -r * 0.44, r * 0.16 * sh, '#f0e0ff');
   }
   function hammer(ctx, p, t) {
     const s = p.seed || 0;
