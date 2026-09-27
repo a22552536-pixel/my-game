@@ -877,37 +877,195 @@
     speedLines(ctx, [[-(p.dir || 1) * 16, -3, -(p.dir || 1) * 26, -3], [-(p.dir || 1) * 16, 3, -(p.dir || 1) * 22, 3]], 'rgba(255,255,255,0.7)', 1.6);
     shuriken(ctx, 0, 0, 12, rot, '#e4ecf6', '#8a98b0', 1.8, 0.1);
   }
+  // 風魔手裡劍：四片往後掃的彎刃（厚刃背、磨亮的刃口斜面、血槽），青銅鑲邊的輪轂＋鉚釘，中心嵌風之翠玉。
+  // 高速旋轉時身後有淡淡的轉盤殘影與兩片殘刃；外圈是一條條細長、頭粗尾細的風痕和被捲起的葉子。
+  function fumaBlade(c, r) {
+    c.moveTo(r * 0.2, -r * 0.13);
+    c.quadraticCurveTo(r * 0.62, -r * 0.2, r * 1.02, -r * 0.4); // 刃背（往後彎）
+    c.quadraticCurveTo(r * 0.86, r * 0.02, r * 0.22, r * 0.19); // 刃口（外凸的弧）
+    c.closePath();
+  }
   function bigShuriken(ctx, p, t) {
     const r = p.r || 64;
     const dir = p.dir || 1;
     const s = p.seed || 0;
-    glow(ctx, 0, 0, r * 1.45, '170,240,120', 0.45);
-    // 風的漩渦弧
+    const rot = t * 20 * dir + s;
+    const O = A.outline();
+    const lite = !!G.lowFx;
+    glow(ctx, 0, 0, r * 1.4, '170,240,120', 0.38);
+    // 風痕：細長、頭粗尾細的弧，跟著轉的反方向拖尾
     ctx.save();
     ctx.lineCap = 'round';
-    for (let i = 0; i < 5; i++) {
-      const rr = r * (1.05 + (i % 3) * 0.14);
-      const a0 = -t * 7 * dir + (i * TAU) / 5 + s;
+    ctx.lineCap = 'butt';
+    const nTr = lite ? 4 : 7;
+    for (let i = 0; i < nTr; i++) {
+      const rr = r * (1.02 + ((i * 37) % 5) * 0.07);
+      const a0 = -t * 7 * dir + (i * TAU) / nTr + s;
+      const span = 0.7 + (i % 3) * 0.25;
+      const seg = 5;
+      for (let j = 0; j < seg; j++) {
+        const k0 = j / seg;
+        ctx.beginPath();
+        ctx.arc(0, 0, rr, a0 + dir * span * k0, a0 + dir * span * (k0 + 1 / seg) + dir * 0.03, dir < 0);
+        ctx.strokeStyle = 'rgba(215,255,185,' + (0.75 * (1 - k0)).toFixed(2) + ')';
+        ctx.lineWidth = Math.max(0.6, 3.4 * (1 - k0));
+        ctx.stroke();
+      }
+    }
+    ctx.lineCap = 'round';
+    // 被捲起的葉子
+    if (!lite) {
+      for (let i = 0; i < 3; i++) {
+        const a = -t * 5 * dir + i * 2.1 + s;
+        const rr = r * (1.18 + 0.08 * Math.sin(t * 3 + i));
+        ctx.save();
+        ctx.translate(Math.cos(a) * rr, Math.sin(a) * rr);
+        ctx.rotate(a * 2 + t * 6);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 0.07, r * 0.028, 0, 0, TAU);
+        ctx.fillStyle = i % 2 ? '#9ad85a' : '#c8ec8a';
+        ctx.fill();
+        ctx.strokeStyle = O;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+    // 高速旋轉的轉盤殘影
+    ctx.save();
+    const disc = ctx.createRadialGradient(0, 0, r * 0.3, 0, 0, r * 1.02);
+    disc.addColorStop(0, 'rgba(210,225,240,0.16)');
+    disc.addColorStop(0.8, 'rgba(210,235,225,0.1)');
+    disc.addColorStop(1, 'rgba(210,235,225,0)');
+    ctx.fillStyle = disc;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.02, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+    // 殘刃（落後一點角度、半透明）
+    if (!lite) {
+      [0.28, 0.52].forEach((lag, k) => {
+        ctx.save();
+        ctx.rotate(rot - lag * dir);
+        ctx.globalAlpha = 0.22 - k * 0.08;
+        ctx.fillStyle = '#dfe8f2';
+        for (let i = 0; i < 4; i++) {
+          ctx.save();
+          ctx.rotate((i * TAU) / 4);
+          ctx.scale(1, dir);
+          ctx.beginPath();
+          fumaBlade(ctx, r);
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
+      });
+    }
+    // 四片刃
+    ctx.save();
+    ctx.rotate(rot);
+    for (let i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.rotate((i * TAU) / 4);
+      ctx.scale(1, dir); // 刃背永遠朝著旋轉的後方
+      // 刃身：鋼的漸層（刃背暗、刃口亮）
+      const g = ctx.createLinearGradient(0, -r * 0.35, 0, r * 0.2);
+      g.addColorStop(0, '#5e6b80');
+      g.addColorStop(0.45, '#a9b6c8');
+      g.addColorStop(1, '#dfe7f1');
       ctx.beginPath();
-      ctx.arc(0, 0, rr, a0, a0 + 0.9 + (i % 2) * 0.4);
-      ctx.strokeStyle = 'rgba(200,255,160,' + (0.55 + (i % 2) * 0.3).toFixed(2) + ')';
-      ctx.lineWidth = 4 - (i % 3);
+      fumaBlade(ctx, r);
+      ctx.fillStyle = g;
+      ctx.fill();
+      // 刃口的磨亮斜面
+      ctx.save();
+      ctx.beginPath();
+      fumaBlade(ctx, r);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.moveTo(r * 1.02, -r * 0.4);
+      ctx.quadraticCurveTo(r * 0.86, r * 0.02, r * 0.22, r * 0.19);
+      ctx.lineTo(r * 0.24, r * 0.09);
+      ctx.quadraticCurveTo(r * 0.74, -r * 0.02, r * 1.02, -r * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(248,252,255,0.85)';
+      ctx.fill();
+      // 血槽
+      ctx.beginPath();
+      ctx.moveTo(r * 0.32, -r * 0.08);
+      ctx.quadraticCurveTo(r * 0.6, -r * 0.13, r * 0.84, -r * 0.27);
+      ctx.strokeStyle = 'rgba(40,50,68,0.75)';
+      ctx.lineWidth = Math.max(1.2, r * 0.03);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(r * 0.32, -r * 0.05);
+      ctx.quadraticCurveTo(r * 0.6, -r * 0.1, r * 0.84, -r * 0.24);
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+      // 描邊
+      ctx.beginPath();
+      fumaBlade(ctx, r);
+      ctx.strokeStyle = O;
+      ctx.lineWidth = 2.6;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+    // 輪轂：暗鋼圓盤 → 青銅鑲邊 → 鉚釘 → 風之翠玉
+    ctx.save();
+    ctx.rotate(rot);
+    const hub = ctx.createRadialGradient(-r * 0.08, -r * 0.08, 0, 0, 0, r * 0.32);
+    hub.addColorStop(0, '#8a96a8');
+    hub.addColorStop(1, '#3c4558');
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.3, 0, TAU);
+    ctx.fillStyle = hub;
+    ctx.fill();
+    ctx.strokeStyle = O;
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.24, 0, TAU);
+    ctx.strokeStyle = '#c89a4a';
+    ctx.lineWidth = Math.max(2, r * 0.045);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,230,160,0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.24, PI * 1.05, PI * 1.6);
+    ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      const a = (i * TAU) / 4 + PI / 4;
+      const x = Math.cos(a) * r * 0.24;
+      const y = Math.sin(a) * r * 0.24;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(1.6, r * 0.035), 0, TAU);
+      ctx.fillStyle = '#e8c878';
+      ctx.fill();
+      ctx.strokeStyle = O;
+      ctx.lineWidth = 1;
       ctx.stroke();
     }
     ctx.restore();
-    // 旋轉的殘像
-    ctx.save();
-    ctx.globalAlpha = 0.3;
-    ctx.rotate(t * 20 * dir + s - 0.35 * dir);
-    A.shape(ctx, (c) => shurikenPath(c, r, r * 0.3, 0.18), '#e0f0d0', null, { noStroke: true, hl: false });
-    ctx.restore();
-    shuriken(ctx, 0, 0, r, t * 20 * dir + s, '#d0dcec', '#8a98b0', 3, 0.18);
-    // 中心綠寶石環
-    A.ellipse(ctx, 0, 0, r * 0.2, r * 0.2, '#a8e05a', '#78b030', { lw: 2.4, hl: false });
-    A.ellipse(ctx, 0, 0, r * 0.08, r * 0.08, '#2e3a48', null, { lw: 1.6, hl: false });
-    // 刃上的高光（固定角度，看起來會閃）
+    glow(ctx, 0, 0, r * 0.3, '160,240,110', 0.55);
+    const gem = ctx.createRadialGradient(-r * 0.04, -r * 0.05, 0, 0, 0, r * 0.14);
+    gem.addColorStop(0, '#eaffc8');
+    gem.addColorStop(0.5, '#8ed848');
+    gem.addColorStop(1, '#3f8a24');
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.13, 0, TAU);
+    ctx.fillStyle = gem;
+    ctx.fill();
+    ctx.strokeStyle = O;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    // 刃上的閃光（固定在畫面左上，轉到那裡就閃一下）
     const sh = Math.max(0, Math.sin(t * 20 + s));
-    if (sh > 0.3) sparkle(ctx, -r * 0.35, -r * 0.35, r * 0.18 * sh, '#ffffff');
+    if (sh > 0.3) sparkle(ctx, -r * 0.5, -r * 0.42, r * 0.16 * sh, '#ffffff');
   }
   function hammer(ctx, p, t) {
     const s = p.seed || 0;
