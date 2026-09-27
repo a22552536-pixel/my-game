@@ -3,7 +3,7 @@
   'use strict';
   const KEY = 'xiaozong_save_v1';
   // v2：第二章起的怪物、委託、等級帶全部改版，舊存檔（v1）不能繼續，要開新遊戲
-  const VERSION = 2;
+  const VERSION = 3;
   const current = () => {
     const d = G.store.get(KEY);
     return d && (d.v || 1) >= VERSION ? d : null;

@@ -16,13 +16,14 @@
     { id: 'drop', keys: () => ['down', 'jump'], text: '按住 ↓ 再按跳躍，從平台往下跳', sub: '要站在平台上才能往下跳（在地面上的話，先爬藤蔓上去）' },
     { id: 'infoHp', info: true, keys: () => ['jump'], text: '紅色的是 HP（生命）', sub: '被怪物打到會減少，歸零就會倒下（倒下沒有懲罰，會在營地醒來）' },
     { id: 'infoMp', info: true, keys: () => ['jump'], text: '藍色的是 MP（魔力）', sub: '放技能會用掉 MP，不夠的時候技能放不出來' },
-    { id: 'infoExp', info: true, keys: () => ['jump'], text: '最下面黃色的是 EXP（經驗）', sub: '打怪、完成任務會增加；集滿就升級，HP、MP 全滿，還會拿到技能點' },
+    { id: 'infoExp', info: true, keys: () => ['jump'], text: '最下面黃色的是 EXP（經驗）', sub: '打怪、完成任務會增加；集滿就升級，還會拿到技能點（升級不會補血，記得喝藥水）' },
     { id: 'openSkills', keys: () => [], text: '點左上角的「技能」圖示' },
     { id: 'learn', keys: () => [], text: '按「＋」學會「小吼」', sub: '送你 1 點技能點。每升一級都會再拿到 1 點' },
     { id: 'useSkill', keys: () => [slotKey('roar')], text: '放出小吼（先按 Esc 關掉視窗）', sub: '注意看，放完之後 MP 會變少' },
     { id: 'potion', keys: () => ['hpPot'], text: '受傷了！吃一顆紅漿果補 HP' },
     { id: 'mpPot', keys: () => ['mpPot'], text: 'MP 快用完了！喝一瓶藍花蜜補 MP' },
-    { id: 'infoRegen', info: true, keys: () => ['jump'], text: 'HP、MP 也會慢慢自己回復', sub: '站在營地的營火旁邊回得更快；紅漿果、藍花蜜可以在貓頭鷹的商店買' },
+    { id: 'infoRegen', info: true, keys: () => ['jump'], text: 'HP、MP 會慢慢自己回復，但很慢', sub: '打怪時要靠紅漿果、藍花蜜；站在營地的營火旁邊回得比較快' },
+    { id: 'shop', keys: () => ['up'], text: '去貓頭鷹商人那裡買一顆紅漿果', sub: '走到牠旁邊按鍵說話 →「交易」→ 紅漿果「買 1」。藥水快用完就回來買' },
     { id: 'talk', keys: () => ['up'], text: '頭上有「！」的 NPC 有任務。走到刺蝟婆婆旁邊按鍵說話' },
     { id: 'accept', keys: () => [], text: '點發光的任務名稱，再按「接受」', sub: '「！」＝有新任務，「？」＝任務完成，可以回報' },
     { id: 'infoTracker', info: true, keys: () => ['jump'], text: '接下的任務會顯示在右上角', sub: '照著上面寫的去做，完成後回來找 NPC 回報，就能拿到經驗和獎勵' },
@@ -69,6 +70,10 @@
       }
       if (s.id === 'accept' && G.ui.isOpen('dialogue')) G.ui.render('dialogue');
       if (s.id === 'learn' && P.sp <= 0 && !(P.skills.roar > 0)) P.sp = 1;
+      if (s.id === 'shop') {
+        this.shopHp0 = P.potions.hp || 0;
+        if (P.gold < 30) P.gold = 30;
+      }
       if (s.id === 'potion') {
         P.hp = Math.max(1, Math.round(P.maxHp * 0.45));
         P.potions.hp = Math.max(1, P.potions.hp || 0);
@@ -157,6 +162,9 @@
           break;
         case 'accept':
           if (G.quests.state.q1) this.on('accept');
+          break;
+        case 'shop':
+          if ((P.potions.hp || 0) > this.shopHp0) this.on('shop');
           break;
       }
       this.lastX = P.x;
@@ -281,6 +289,11 @@
           return G.ui.blocking() || (G.touch && G.touch.on) ? [] : [{ box: [sx0 + slotOf('roar') * 52, barY + 5, 48, 44] }];
         case 'potion':
           return G.touch && G.touch.on ? [] : [{ box: [sx0 + nSlots * 52, barY + 5, 48, 44] }];
+        case 'shop': {
+          if (G.ui.isOpen('shop') || G.ui.isOpen('dialogue')) return [];
+          const n = G.world.npcs.find((k) => k.id === 'owl');
+          return n ? [[sx(n.x), sy(n.y) - 110, 'down']] : [];
+        }
         case 'talk': {
           const n = G.world.npcs.find((k) => k.id === 'hedgehog');
           return n ? [[sx(n.x), sy(n.y) - 110, 'down']] : [];

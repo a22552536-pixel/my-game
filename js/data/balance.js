@@ -82,8 +82,8 @@ G.data.balance = {
   bagSize: 30,
 
   // ── 自然回復 ──
-  hpRegen: { every: 5, pct: 0.03 },
-  mpRegen: { every: 2, pct: 0.02 * 1.5 },
+  hpRegen: { every: 5, pct: 0.01 },
+  mpRegen: { every: 3, pct: 0.01 },
 
   // ── 其他 ──
   autosaveInterval: 30,

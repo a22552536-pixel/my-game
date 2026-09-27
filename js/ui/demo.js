@@ -36,6 +36,27 @@
     ],
   };
 
+  // 練功場的章節：每章 9 種怪全部擺出來，背景換成該章的狩獵地圖
+  const CHAPTERS = [
+    { no: '一', theme: 'forestMushroom', ids: ['dewsnail', 'mosssnail', 'woodsnail', 'capshroom', 'spotshroom', 'lampshroom', 'seedling', 'sproutling', 'flowerling'] },
+    { no: '二', theme: 'tidepool', ids: ['postcrab', 'bulbjelly', 'umbrellagull', 'alarmurchin', 'kiteray', 'blockcoral', 'stampstar', 'accordioneel', 'musicturtle'] },
+    { no: '三', theme: 'redRift', ids: ['matchlizard', 'angerrock', 'magnetdillo', 'candlesnake', 'weightbeetle', 'bellowsbat', 'potgoat', 'moodchameleon', 'mapvulture'] },
+    { no: '四', theme: 'snowField', ids: ['echoferret', 'crystalowl', 'avalanchehare', 'drumyak', 'shadowwolf', 'dreamsheep', 'silencefox', 'heartcedar', 'shieldbear'] },
+    { no: '終', theme: 'timeCorridor', ids: ['hourowl', 'mirrordeer', 'stopmoth', 'ouroboros', 'clocksnail', 'pouchroo', 'gravjelly', 'parallelfox', 'constellfish'] },
+  ];
+  const FIELD_BOSSES = ['fb_shroom', 'fb_kraken', 'fb_balrog', 'fb_zakum', 'fb_voiddragon'];
+  function chapterMobs(ids) {
+    const ok = ids.filter((id) => G.data.monsters[id]);
+    const out = [];
+    // 地面 5 種、三層平台各 1～2 種
+    ok.slice(0, 5).forEach((m, i) => out.push({ m, p: 0, n: 2, x1: 400 + i * 500, x2: 400 + i * 500 + 400 }));
+    if (ok[5]) out.push({ m: ok[5], p: 1, n: 2 });
+    if (ok[6]) out.push({ m: ok[6], p: 2, n: 2 });
+    if (ok[7]) out.push({ m: ok[7], p: 3, n: 1, x1: 720, x2: 1250 });
+    if (ok[8]) out.push({ m: ok[8], p: 3, n: 1, x1: 1350, x2: 1880 });
+    return out;
+  }
+
   const FORM_ORDER = ['base', 'might1', 'might2', 'might3', 'might4', 'magic1', 'magic2', 'magic3', 'magic4', 'agile1', 'agile2', 'agile3', 'agile4', 'apex'];
   const LINE_COLOR = { might: '#d8803a', magic: '#3aa8c8', agile: '#6aa83a' };
 
@@ -48,6 +69,34 @@
     active: false,
     tough: true,
     panel: null,
+
+    chapter: 0,
+
+    // 換章節：怪物、背景、音樂一起換
+    loadChapter(c) {
+      const C = CHAPTERS[c - 1];
+      const M = G.data.maps.DEMO;
+      if (!this.baseMobs) this.baseMobs = { mobs: M.mobs, theme: M.theme, region: M.region, music: M.music };
+      if (C) {
+        M.mobs = chapterMobs(C.ids);
+        M.theme = C.theme;
+        M.region = c;
+        M.music = null;
+      } else Object.assign(M, this.baseMobs);
+      this.chapter = c;
+      delete M._theme; // 換背景：讓地圖重新準備主題與裝飾
+      const P = G.player;
+      G.world.load('DEMO', { x: P.x, y: P.y });
+      this.renderPanel();
+    },
+
+    summon(id) {
+      const FB = G.fieldBoss;
+      if (!FB || !G.data.monsters[id]) return;
+      const cur = FB.current();
+      if (cur) G.world.monsters.splice(G.world.monsters.indexOf(cur), 1);
+      FB.spawn(id);
+    },
 
     start() {
       this.active = true;
@@ -107,7 +156,7 @@
         if (m.dead || m.demoHp === this.tough) continue;
         if (this.tough) {
           m.demoBase = m.demoBase || m.maxHp;
-          m.maxHp = Math.max(m.demoBase * 40, 30000);
+          m.maxHp = m.fieldBoss ? m.demoBase * 4 : Math.max(m.demoBase * 40, 30000);
           m.hp = m.maxHp;
         } else if (m.demoBase) {
           m.maxHp = m.demoBase;
@@ -135,7 +184,9 @@
           G.ui.closeAll();
           G.player.action = null;
           G.player.useSkill(arg);
-        } else if (act === 'gallery') G.ui.open('gallery');
+        } else if (act === 'chapter') this.loadChapter(+arg);
+        else if (act === 'summon') this.summon(arg);
+        else if (act === 'gallery') G.ui.open('gallery');
         else if (act === 'tough') {
           this.tough = !this.tough;
           this.renderPanel();
@@ -173,6 +224,11 @@
         const passive = S.type === 'passive';
         h += '<button data-d="cast:' + id + '"' + (passive ? ' disabled' : '') + ' title="' + S.desc(S.maxLv).replace(/"/g, '') + '"><img src="' + A.iconURL(S.icon) + '"><span>' + S.name + '</span>' + (passive ? '<em>被動</em>' : key ? '<em>' + key + '</em>' : '') + '</button>';
       });
+      h += '</div><div class="dp-lbl">練功場的怪物（點一下換章節）</div><div class="dp-forms">';
+      h += '<button data-d="chapter:0" class="' + (this.chapter === 0 ? 'on' : '') + '">混合</button>';
+      CHAPTERS.forEach((c, i) => (h += '<button data-d="chapter:' + (i + 1) + '" class="' + (this.chapter === i + 1 ? 'on' : '') + '">' + (c.no === '終' ? '終章' : '第' + c.no + '章') + '</button>'));
+      h += '</div><div class="dp-lbl">召喚野外魔王</div><div class="dp-forms">';
+      FIELD_BOSSES.filter((id) => G.data.monsters[id]).forEach((id) => (h += '<button data-d="summon:' + id + '">' + G.data.monsters[id].name + '</button>'));
       h += '</div><div class="dp-row"><button data-d="gallery">全部形態與怪物圖鑑</button><button data-d="tough" class="' + (this.tough ? 'on' : '') + '">怪物耐打：' + (this.tough ? '開' : '關') + '</button><button data-d="respawn">怪物重生</button><button data-d="exit">離開試玩</button></div>';
       this.panel.innerHTML = h;
     },

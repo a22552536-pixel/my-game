@@ -115,9 +115,12 @@
         ups++;
       }
       if (ups > 0) {
+        // 升級不再自動補滿（紅水藍水要自己喝）；最大值變高的部分照比例給
+        const hpK = this.hp / Math.max(1, this.maxHp);
+        const mpK = this.mp / Math.max(1, this.maxMp);
         this.recalc();
-        this.hp = this.maxHp;
-        this.mp = this.maxMp;
+        this.hp = Math.max(1, Math.round(this.maxHp * hpK));
+        this.mp = Math.round(this.maxMp * mpK);
         G.fx.pillar(this.x, this.y, 'rgba(255,220,90,0.9)', 1.4, 90);
         G.fx.sparkle(this.x, this.y - 30, '#ffe680', 24, 40);
         G.fx.ring(this.x, this.y - 30, '#fff3a0', 120, 0.5, 5);

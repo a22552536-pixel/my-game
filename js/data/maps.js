@@ -29,7 +29,7 @@ G.data.maps = {
       { id: 'hedgehog', x: 1230, p: 0 },
       { id: 'hedgekid', x: 1310, p: 0 },
       { id: 'squirrel', x: 1450, p: 0 },
-      { id: 'mushgirl', x: 1640, p: 0 },
+      { id: 'mushgirl', x: 1775, p: 0 },
     ],
     camp: { x1: 800, x2: 1700 },
     signs: [
@@ -39,7 +39,7 @@ G.data.maps = {
     mobs: [
       { m: 'dewsnail', p: 0, n: 4, x1: 380, x2: 700 },
       { m: 'dewsnail', p: 1, n: 2 },
-      { m: 'dewsnail', p: 0, n: 2, x1: 1820, x2: 2350 },
+      { m: 'dewsnail', p: 0, n: 2, x1: 1920, x2: 2350 },
     ],
   },
 

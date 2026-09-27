@@ -77,6 +77,11 @@
 
       const cx = m.x;
       const cy = m.y - m.h * (m.scale || 1) * 0.5;
+      // 持續型的多段傷害（例如冥道殘月破的黑洞）：只留小火花，不震畫面、不頓格、不推鏡頭
+      if (opts.noFx) {
+        m.squash = 1;
+        G.fx.burst(cx, cy, r.crit ? ['#ffffff', '#ffd27a'] : ['#ffffff', '#d8c8ff'], r.crit ? 4 : 2, 160, { life: 0.25 });
+      } else {
       G.fx.burst(cx, cy, r.crit ? ['#fff', '#ffd27a', '#ff8a3a'] : ['#fff', '#fff3c0'], r.crit ? 12 : 7, r.crit ? 320 : 220, { life: 0.35 });
       G.fx.ring(cx, cy, 'rgba(255,255,255,0.8)', r.crit ? 50 : 34, 0.18, 3);
       G.fx.impact(cx + U.rand(-8, 8), cy + U.rand(-8, 8), r.crit ? 78 : opts.heavy ? 58 : 44, r.crit ? '#ffc23a' : opts.heavy ? '#ffe08a' : '#fff3c8');
@@ -99,6 +104,7 @@
         G.fx.addHitstop(b.hitstop.normal);
         const snd = { spirit: 'spiritHit', feather: 'featherHit', double: 'claw' }[opts.sound];
         G.audio.play(snd || 'hit');
+      }
       }
 
       // 傳說特效

@@ -23,7 +23,11 @@
       const P = G.player;
       const n = this.nextTier();
       if (n > 5) return '已經是最終形態';
-      if (P.level < n * 10) return '需要 Lv' + n * 10;
+      const lv = (G.data.balance.evolveLv || [10, 20, 30, 40, 50])[n - 1];
+      if (P.level < lv) return '需要 Lv' + lv;
+      // 每一轉都綁在劇情上：打倒該章 Boss 才能進化；五轉要雲鬃的傳承
+      const gate = [['queenShroomDefeated', '打倒菇菇女王'], ['hermitCrabDefeated', '打倒潮汐寄居蟹'], ['lavaTortoiseDefeated', '打倒熔岩甲龜'], ['frostSpiritDefeated', '打倒霜靈'], ['apexBlessing', '接受雲鬃的傳承（倒轉庭園）']][n - 1];
+      if (gate && !G.world.flags[gate[0]] && !(G.demo && G.demo.active)) return '需要' + gate[1];
       return null;
     },
 
@@ -57,7 +61,7 @@
         if (G.data.forms[a.to].apex) P.apexLine = G.data.forms[a.from].line || P.apexLine || 'might';
         P.form = a.to;
         G.formSwitch.ensurePages(P);
-        G.formSwitch.addSP(P, 3);
+        G.formSwitch.addSP(P, 1);
         P.recalc();
         P.hp = P.maxHp;
         P.mp = P.maxMp;
@@ -68,7 +72,7 @@
       }
       if (a.t >= 4.2) {
         this.anim = null;
-        G.hud.toast('進化成「' + G.data.forms[P.form].name + '」！獲得 3 點技能點，點左上角的「技能」圖示學新技能；也可以用「形態」圖示切換路線', '#ffe14a');
+        G.hud.toast('進化成「' + G.data.forms[P.form].name + '」！獲得 1 點技能點，點左上角的「技能」圖示學新技能；也可以用「形態」圖示切換路線', '#ffe14a');
         G.save.write();
       }
       return true;

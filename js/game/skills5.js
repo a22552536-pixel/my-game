@@ -66,7 +66,7 @@
         const S = G.data.skills[a.id];
         G.audio.play('sweep');
         G.audio.play('portal');
-        G.fx.shake(10, 0.25);
+        G.fx.shake(4, 0.18);
         ults.push({ kind: 'meidou', phase: 'fly', x: P.x + P.dir * 50, y: P.y - 60, x0: P.x + P.dir * 50, dir: P.dir, t: 0, pt: 0, lv: a.lv, S, hit: [], tickT: 0, r: 0, spin: 0, size: 70, trail: [] });
       },
     },
@@ -128,10 +128,19 @@
         m.hover = m.baseHover || 0;
         if (m.dead) return;
         m.y -= lift;
-        m.onGround = false;
+        // 落點：腳底下的平台；身體已經跨過某個平台就站在那個平台上（不能掉到平台底下、更不能掉出地圖）
         const map = G.world.map;
-        const p = G.physics.platformBelow(map, m.x, m.y - 2);
-        m.plat = p >= 0 ? p : 0;
+        const H = m.h * (m.scale || 1);
+        let p = G.physics.platformBelow(map, m.x, m.y - 2);
+        if (p < 0) p = G.physics.platformBelow(map, m.x, m.y - H);
+        if (p < 0) p = 0;
+        const surf = map.platforms[p][2];
+        m.plat = p;
+        m.vy = 0;
+        if (m.y >= surf - 1) {
+          m.y = surf;
+          m.onGround = true;
+        } else m.onGround = false;
       });
       u.sucked = [];
     },
@@ -160,7 +169,7 @@
           u.pt = 0;
           u.trail.length = 0;
           G.audio.play('bossWarn');
-          G.fx.shake(12, 0.3);
+          G.fx.shake(5, 0.2);
           G.fx.ring(u.x, u.y, 'rgba(210,190,255,0.9)', R * 1.25, 0.4, 6);
         }
         return false;
@@ -169,9 +178,8 @@
         // 黑洞張開：把敵人往中心吸，連續傷害
         u.r = R * (1 - Math.pow(1 - Math.min(1, u.pt / 0.28), 3));
         G.fx.iaiDim = Math.max(G.fx.iaiDim, 0.3);
-        G.fx.shake(1.5, 0.05);
-        // 黑洞引力：圓外約 2.3 倍半徑內的怪也會被捲進來，越近越快，吸離地面懸在圓心附近
-        const pullR = R * 2.3;
+        // 黑洞引力：圓外約 1.15 倍半徑內的怪也會被捲進來，越近越快，吸離地面懸在圓心附近
+        const pullR = R * 1.15;
         G.combat.targets().filter((m) => !m.isBoss && !m.dead && U.dist(m.x, midY(m), u.x, u.y) < pullR).slice(0, S.targets * 2).forEach((m) => {
           if (!m.sucked) {
             m.sucked = true;
@@ -216,8 +224,8 @@
         if (u.pt >= 0.2 && !u.boom) {
           u.boom = true;
           G.audio.play('thunder');
-          G.fx.shake(16, 0.45, true);
-          G.fx.addHitstop(0.12, true);
+          G.fx.shake(7, 0.3);
+          G.fx.addHitstop(0.08, true);
           G.fx.screenFlash('#ffffff', 0.55);
           G.fx.cut(u.x, u.y, 0, R * 2.6, { w: 9, life: 0.45, grow: 0.03, col: '200,170,255' });
           G.fx.ring(u.x, u.y, 'rgba(255,255,255,0.95)', R * 1.6, 0.45, 8);
