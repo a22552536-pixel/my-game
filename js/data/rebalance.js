@@ -54,10 +54,32 @@
     fb.atkMul = 1.0;
   }
 
+  // ── 每章一個委託改成「討伐野外魔王」（發委託的 NPC 就在野外魔王那張地圖上）──
+  const FBQ = {
+    q24: ['fb_shroom', '沼澤裡的九頭蛇', '嘿咻，根洞外面的沼澤裡，有東西把頭一顆一顆伸出來……\n是一條九頭蛇！牠吐的毒霧把坑道都燻黑了。\n牠每隔一陣子就會從沼澤裡冒出來，幫我把牠打回去！', '牠的頭往後仰的時候，就是要吐毒霧了。往旁邊跳！', '沼澤安靜了……嘿咻，謝啦。這些金葉跟硬殼果收好。'],
+    q36: ['fb_kraken', '沉船海魔', '補給船一出港就被拖下海——是沉船海魔！\n一隻背著沉船的巨章魚，會甩錨、會從地下冒出觸手。\n牠常在這片礁岩出沒，拜託你把牠打退！', '地上發亮的地方就是觸手要冒出來的位置。墨雲會讓你變慢！', '海魔沉回海底了！補給線保住了。漿果算我請你！'],
+    q57: ['fb_balrog', '熔岩河的炎魔', '喀啦……熔岩河床出現了一頭長著翅膀的炎魔！\n火鞭一甩，整條坑道都是火。\n牠會定時在河床現身，你打得過牠嗎？', '牠飛上天的時候就是要俯衝了，看地上的警示線！', '喀啦喀啦！你真的把炎魔打倒了！坑道保住了！'],
+    q64: ['fb_zakum', '千手冰像', '參道深處有一尊上古冰像醒了，六隻手臂一起砸下來……\n旅人們都不敢上山了。\n它會定時在這裡現身，請你讓它重新沉睡。', '地上出現圓圈，就是手臂要砸下來的位置。它眼睛發光時，冰光束要來了。', '冰像睡著了。旅人們可以上山了……謝謝你。'],
+    q76: ['fb_voiddragon', '吞星的龍', '喵。最後一題之前，先幫我一個忙：\n星之階梯上有一條吞掉星座的龍，把樓梯都吃出洞了。\n牠會定時出現。打倒牠，喵。', '黑洞球會把你吸過去，別硬撐，先跑開。牠吐息前嘴裡會發光。', '喵。你連吞星星的龍都打倒了。'],
+  };
+  for (const qid in FBQ) {
+    const q = D.quests[qid];
+    const [fbId, name, offer, progress, done] = FBQ[qid];
+    const fb = D.monsters[fbId];
+    if (!q || !fb) continue;
+    q.name = name;
+    q.type = 'kill';
+    q.target = fbId;
+    q.count = 1;
+    delete q.item;
+    q.req = Object.assign({}, q.req, { lv: Math.max(1, fb.lv - 1) });
+    q.lines = Object.assign({}, q.lines, { offer, progress, done });
+  }
+
   // ── 委託：需求等級、經驗（依新舊等級帶的比例）──
   for (const qid in D.quests) {
     const q = D.quests[qid];
-    if (q.req && q.req.lv) q.req.lv = f(q.req.lv);
+    if (q.req && q.req.lv && !FBQ[qid]) q.req.lv = f(q.req.lv);
     const r = q.region;
     if (q.reward && q.reward.exp && oldBands[r] && B.bands[r]) q.reward.exp = Math.max(5, Math.round((q.reward.exp * need(B.bands[r])) / need(oldBands[r])));
   }

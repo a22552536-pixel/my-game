@@ -43,6 +43,13 @@
   W.load = function (mapId, entry) {
     const out = baseLoad.apply(this, arguments);
     const map = this.map;
+    // 身上有「討伐野外魔王」的委託：進到牠的地圖就不用等冷卻
+    const fbId = G.data.fieldBosses && G.data.fieldBosses[mapId];
+    if (fbId && G.fieldBoss) {
+      const Q = G.data.quests;
+      const want = Object.keys(Q).some((id) => Q[id].target === fbId && G.quests.state[id] === 'active');
+      if (want) G.fieldBoss.clearCooldown(fbId);
+    }
     if (map && map.type === 'camp' && map.region === 2 && !this.flags.squirrelHint) {
       this.flags.squirrelHint = true;
       setTimeout(() => G.scene === 'play' && G.hud.toast('松鼠信差也跑來了！找牠就能在去過的營地之間傳送，隨時回森林看看大家', '#ffd35a'), 2500);

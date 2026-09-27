@@ -54,7 +54,7 @@
 
   Object.assign(AB, {
     // ═════ 第四章　霜鈴雪峰 ═════
-    // 殘影雪貂：撲咬後 1 秒，殘影在原地再咬一次
+    // 鎌鼬：撲咬後 1 秒，殘影在原地再咬一次
     echo: {
       update(m, dt, P, aggro) {
         if (m.lgWind > 0) {
@@ -97,7 +97,7 @@
         return false;
       },
     },
-    // 水晶球雪鴞：懸空，施法射出追蹤的水晶光球（射擊本身交給 ranged）
+    // 白澤：懸空，施法射出追蹤的水晶光球（射擊本身交給 ranged）
     orbcast: {
       init(m) {
         m.hover = 120;
@@ -108,7 +108,7 @@
         m.fx.cast = casting ? Math.min(1, (m.fx.cast || 0) + dt * 4) : Math.max(0, (m.fx.cast || 0) - dt * 2);
       },
     },
-    // 雪崩符兔：踢出一顆沿地面滾、越滾越大的雪球
+    // 雪男：踢出一顆沿地面滾、越滾越大的雪球
     avalanche: {
       update(m, dt, P, aggro) {
         if (m.kkT > 0) {
@@ -145,7 +145,7 @@
         return false;
       },
     },
-    // 戰鼓犛牛：擂三下鼓，每一下沿地面送出一道符文震波
+    // 雷獸：擂三下鼓，每一下沿地面送出一道符文震波
     drum: {
       update(m, dt, P, aggro) {
         if (m.fx.beat > 0) m.fx.beat = Math.max(0, m.fx.beat - dt * 4);
@@ -173,7 +173,7 @@
         return false;
       },
     },
-    // 影縛狼：影子脫離本體滑到玩家腳下，冒出來咬人並定身
+    // 影之芬里爾：影子脫離本體滑到玩家腳下，冒出來咬人並定身
     shadow: {
       update(m, dt, P, aggro) {
         const s = m.shade;
@@ -215,7 +215,7 @@
         if (m.shade) m.shade.z.life = 0;
       },
     },
-    // 夢咒綿羊：放出睡意霧，玩家在霧裡變得很慢
+    // 貘：放出睡意霧，玩家在霧裡變得很慢
     sleep: {
       update(m, dt, P, aggro) {
         if (m.fx.puff > 0) m.fx.puff = Math.max(0, m.fx.puff - dt * 1.5);
@@ -230,30 +230,38 @@
         return false;
       },
     },
-    // 封印狐：張開封印結界，玩家在結界裡不能放技能
-    seal: {
+    // 九尾封印狐（v1.4 起不再封技能）：身邊浮出三團狐火，蓄力後追著玩家飛過去
+    foxfire: {
       update(m, dt, P, aggro) {
-        if (m.sealZ) {
-          m.sealZ.x = m.x;
-          m.sealZ.y = m.y;
-          m.fx.aura = Math.min(1, (m.fx.aura || 0) + dt * 3);
-          if (m.sealZ.t >= m.sealZ.life) m.sealZ = null;
-        } else m.fx.aura = Math.max(0, (m.fx.aura || 0) - dt * 3);
-        m.seCd = (m.seCd == null ? U.rand(2, 4) : m.seCd) - dt;
-        if (!m.sealZ && aggro && m.seCd <= 0 && near(m, P, 300, 80)) {
-          m.seCd = U.rand(6.5, 7.5);
-          m.sealZ = zone({ kind: 'sealfield', x: m.x, y: m.y, r: 150, life: 3.2 });
-          fields.push({ z: m.sealZ, fn: (P2) => (P2.silenceT = Math.max(P2.silenceT || 0, 0.35)) });
-          G.audio.play('bossWarn');
-          say(m, '封！', '#e0c0ff');
+        if (m.ffT > 0) {
+          m.ffT -= dt;
+          m.vx = 0;
+          m.fx.aura = Math.min(1, (m.fx.aura || 0) + dt * 2.5);
+          m.attackPhase = 'wind';
+          if (m.ffT <= 0) {
+            m.attackPhase = null;
+            m.fx.aura = 0;
+            G.audio.play('spiritShot');
+            for (let k = 0; k < 3; k++) {
+              const a = -Math.PI / 2 + (k - 1) * 0.7;
+              G.world.projectiles.push({ kind: 'foxfire', x: m.x + Math.cos(a) * 40, y: midY(m) - 30 + Math.sin(a) * 20, vx: Math.cos(a) * 120 + m.dir * 80, vy: Math.sin(a) * 120, r: 11, dmg: Math.round(m.atk * 0.8), life: 2.6, t: 0, seed: k * 2, owner: 'monster', homing: 2.4 });
+            }
+          }
+          return true;
+        }
+        if ((m.fx.aura || 0) > 0) m.fx.aura = Math.max(0, m.fx.aura - dt * 3);
+        m.ffCd = (m.ffCd == null ? U.rand(1.5, 3) : m.ffCd) - dt;
+        if (aggro && m.ffCd <= 0 && near(m, P, 460, 160)) {
+          m.ffCd = U.rand(3.8, 4.6);
+          m.ffT = 0.9;
+          m.dir = U.sign(P.x - m.x) || m.dir;
+          say(m, '狐火！', '#ffcf6a');
+          return true;
         }
         return false;
       },
-      onDie(m) {
-        if (m.sealZ) m.sealZ.life = 0;
-      },
     },
-    // 心核雪松：心臟規律打開；關著時很硬，打開時很脆
+    // 古木樹靈：心臟規律打開；關著時很硬，打開時很脆
     heart: {
       init(m) {
         m.hcT = U.rand(2, 3.5);
@@ -273,7 +281,7 @@
         return m.fx.open > 0.5 ? 1.5 : 0.2;
       },
     },
-    // 冰盾熊：正面舉盾（只受 30%），盾擊衝撞之後盾放下、露出破綻
+    // 狛犬：正面舉盾（只受 30%），盾擊衝撞之後盾放下、露出破綻
     shield: {
       init(m) {
         m.fx.guard = true;
@@ -338,7 +346,7 @@
     },
 
     // ═════ 終章　時空間神殿 ═════
-    // 沙漏鴞：血第一次掉到 40% 以下時，沙往回流，血回到 3 秒前
+    // 時之鳳凰：血第一次掉到 40% 以下時，沙往回流，血回到 3 秒前
     rewind: {
       init(m) {
         m.hover = 130;
@@ -381,7 +389,7 @@
         return false;
       },
     },
-    // 鏡像鹿：造出一隻鏡像分身（打一下就碎）
+    // 鏡麒麟：造出一隻鏡像分身（打一下就碎）
     mirror: {
       update(m, dt, P, aggro) {
         if (tickIllusion(m, dt)) return false;
@@ -468,7 +476,7 @@
         return m.fx.wheel ? 0.5 : 1;
       },
     },
-    // 時計蝸牛：替周圍的同伴施加速魔法
+    // 時之聖甲蟲：替周圍的同伴施加速魔法
     haste: {
       update(m, dt, P, aggro) {
         if (m.gsT > 0) {
@@ -495,7 +503,7 @@
         return false;
       },
     },
-    // 次元袋鼠：跳進袋子消失，從玩家背後的次元門跳出來踢人
+    // 虛空鯨：潛進次元裂縫消失，從玩家背後的次元門跳出來踢人
     portal: {
       invuln(m) {
         return (m.fx.warp || 0) > 0.6;
@@ -541,7 +549,7 @@
         return false;
       },
     },
-    // 重力水母：把玩家往自己吸
+    // 重力魔眼：把玩家往自己吸
     gravity: {
       init(m) {
         m.hover = 120;
@@ -566,7 +574,7 @@
         return false;
       },
     },
-    // 平行狐：分出平行世界的假身；打碎假身，真身會現形（踉蹌、變脆）
+    // 雙生天馬：分出平行世界的假身；打碎假身，真身會現形（踉蹌、變脆）
     parallel: {
       update(m, dt, P, aggro) {
         if (tickIllusion(m, dt)) return false;
