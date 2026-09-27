@@ -438,6 +438,7 @@
     for (let i = 0; i < (k === 'clump' ? 3 : 6); i++) SPR[k].push(makeRock(k));
   });
   const SMALL = SPR.gravel.concat(SPR.shard);
+  A.rockSpr = { SPR, SMALL }; // 天輝流星的噴飛岩塊、隕石本體也用這組碎岩圖
   const PUFF = radial(64, [[0, 'rgba(124,130,142,0.5)'], [0.5, 'rgba(108,114,126,0.28)'], [1, 'rgba(96,102,114,0)']]);
   const PUFF_D = radial(64, [[0, 'rgba(46,48,56,0.55)'], [0.55, 'rgba(42,44,52,0.26)'], [1, 'rgba(40,42,50,0)']]);
   const GLOW = radial(128, [[0, 'rgba(232,236,255,1)'], [0.3, 'rgba(176,166,255,0.6)'], [0.65, 'rgba(96,72,200,0.16)'], [1, 'rgba(60,40,140,0)']]);
@@ -1549,4 +1550,1206 @@
       },
     });
   }
+})();
+
+// ═════════ 天輝流星：寫實的隕石 ═════════
+// 飛行：深色岩殼、裂縫透出熔岩光的隕石（迎風面燒到白熱），拖著白熱→橙→紅→煙的長電漿尾；
+//   周圍一圈游離光暈、前緣的弓形激波亮弧，沿路剝落火花與岩殼碎片、留下一條慢慢散開的煙。
+// 撞擊：只在落點附近的局部光暈（不閃全螢幕）、火球翻滾成煙柱、地面衝擊波與兩側揚起的塵、
+//   噴飛的熾熱岩塊（落在平台表面、彈一下、慢慢冷卻）、熔岩飛沫；地上留下熔岩緣的坑與半埋的隕石殘骸，
+//   坑裡燒 3 秒（跟燃燒區域一樣長）。
+(function () {
+  'use strict';
+  const A = G.art;
+  if (!A.skillFx) return;
+  const TAU = Math.PI * 2;
+  const PI = Math.PI;
+  let seed = 55117;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const rr = (a, b) => a + (b - a) * rnd();
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const eOut = (k) => 1 - (1 - k) * (1 - k);
+  const lite = () => !!G.lowFx;
+  const mk = (w, h) => {
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w);
+    c.height = Math.ceil(h || w);
+    return c;
+  };
+  function radial(size, stops) {
+    const cv = mk(size);
+    const c = cv.getContext('2d');
+    const g = c.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    stops.forEach((s) => g.addColorStop(s[0], s[1]));
+    c.fillStyle = g;
+    c.fillRect(0, 0, size, size);
+    return cv;
+  }
+  const HOT = radial(128, [[0, 'rgba(255,255,244,1)'], [0.16, 'rgba(255,244,184,0.95)'], [0.42, 'rgba(255,164,64,0.45)'], [1, 'rgba(255,90,20,0)']]);
+  const FIRE = radial(128, [[0, 'rgba(255,214,130,0.95)'], [0.35, 'rgba(255,128,40,0.6)'], [0.7, 'rgba(196,58,18,0.2)'], [1, 'rgba(150,36,10,0)']]);
+  const ION = radial(128, [[0, 'rgba(255,236,200,0.5)'], [0.45, 'rgba(255,170,110,0.18)'], [0.75, 'rgba(170,190,255,0.08)'], [1, 'rgba(140,170,255,0)']]);
+  const SMK = radial(64, [[0, 'rgba(92,86,84,0.62)'], [0.55, 'rgba(78,72,70,0.3)'], [1, 'rgba(66,62,60,0)']]);
+  const DUST = radial(64, [[0, 'rgba(146,128,110,0.55)'], [0.55, 'rgba(128,112,96,0.28)'], [1, 'rgba(118,102,88,0)']]);
+  const SCORCH = radial(128, [[0, 'rgba(16,10,8,0.9)'], [0.5, 'rgba(30,18,14,0.6)'], [1, 'rgba(34,24,20,0)']]);
+  const RS = A.rockSpr || { SPR: { boulder: [] }, SMALL: [] };
+  const SMALL = RS.SMALL;
+
+  // 電漿尾：預先畫好的長條（右端是頭、往左漸細漸淡），疊幾層柔邊
+  function trailTex(stops, len, hw) {
+    const cv = mk(len, hw * 2 + 4);
+    const c = cv.getContext('2d');
+    const g = c.createLinearGradient(0, 0, len, 0);
+    stops.forEach((s) => g.addColorStop(s[0], s[1]));
+    c.fillStyle = g;
+    const cy = hw + 2;
+    for (let k = 0; k < 6; k++) {
+      const h = hw * (1 - k / 7);
+      c.globalAlpha = 0.28;
+      c.beginPath();
+      c.moveTo(len, cy - h);
+      c.bezierCurveTo(len * 0.6, cy - h * 0.95, len * 0.25, cy - h * 0.35, 0, cy);
+      c.bezierCurveTo(len * 0.25, cy + h * 0.35, len * 0.6, cy + h * 0.95, len, cy + h);
+      c.arc(len, cy, h, PI / 2, -PI / 2, true);
+      c.fill();
+    }
+    return cv;
+  }
+  const T_OUT = trailTex([[0, 'rgba(90,40,30,0)'], [0.35, 'rgba(170,36,16,0.3)'], [0.7, 'rgba(236,72,24,0.6)'], [1, 'rgba(255,140,56,0.85)']], 512, 30);
+  const T_MID = trailTex([[0, 'rgba(255,90,20,0)'], [0.5, 'rgba(255,140,40,0.7)'], [0.85, 'rgba(255,210,110,0.95)'], [1, 'rgba(255,236,170,1)']], 384, 18);
+  const T_CORE = trailTex([[0, 'rgba(255,220,120,0)'], [0.55, 'rgba(255,244,200,0.9)'], [1, 'rgba(255,255,250,1)']], 256, 8);
+
+  // 隕石本體：拿一顆多面玄武岩，染成焦黑偏暖的岩殼，再刻上透光的熔岩裂縫
+  const HEAD = (() => {
+    const src = RS.SPR.boulder[1] || RS.SPR.boulder[0];
+    const S = 112;
+    const cv = mk(S);
+    const c = cv.getContext('2d');
+    const R = S * 0.4;
+    if (src) c.drawImage(src.c, S / 2 - (src.S * R) / src.R / 2, S / 2 - (src.S * R) / src.R / 2, (src.S * R) / src.R, (src.S * R) / src.R);
+    else {
+      c.beginPath();
+      c.arc(S / 2, S / 2, R, 0, TAU);
+      c.fillStyle = '#3a2c28';
+      c.fill();
+    }
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = 'rgba(70,24,8,0.42)';
+    c.fillRect(0, 0, S, S);
+    // 熔岩裂縫
+    const cr = [
+      [[-0.55, -0.35], [-0.15, -0.08], [-0.25, 0.4]],
+      [[-0.15, -0.08], [0.35, -0.22], [0.62, 0.12]],
+      [[-0.25, 0.4], [0.18, 0.62]],
+      [[0.35, -0.22], [0.2, -0.62]],
+      [[0.05, 0.15], [0.45, 0.45]],
+    ];
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    [[5.5, 'rgba(255,90,20,0.55)'], [3, '#ff8a2a'], [1.2, '#ffe68a']].forEach(([w, col]) => {
+      c.strokeStyle = col;
+      c.lineWidth = w;
+      c.beginPath();
+      cr.forEach((l) => l.forEach((p, i) => (i ? c.lineTo(S / 2 + p[0] * R, S / 2 + p[1] * R) : c.moveTo(S / 2 + p[0] * R, S / 2 + p[1] * R))));
+      c.stroke();
+    });
+    // 幾處熔化的斑
+    [[0.3, 0.3, 0.2], [-0.4, 0.1, 0.14], [0.1, -0.4, 0.12]].forEach(([x, y, r]) => {
+      const g = c.createRadialGradient(S / 2 + x * R, S / 2 + y * R, 0, S / 2 + x * R, S / 2 + y * R, r * R);
+      g.addColorStop(0, 'rgba(255,190,80,0.8)');
+      g.addColorStop(1, 'rgba(255,90,20,0)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, S, S);
+    });
+    return { c: cv, S, R };
+  })();
+  // 熾熱的岩塊：同一組碎岩圖染成燒紅的版本（冷卻時從紅版淡回原本的灰）
+  const HOTROCK = SMALL.map((s) => {
+    const cv = mk(s.S);
+    const c = cv.getContext('2d');
+    c.drawImage(s.c, 0, 0);
+    c.globalCompositeOperation = 'source-atop';
+    const g = c.createRadialGradient(s.S * 0.4, s.S * 0.62, 0, s.S / 2, s.S / 2, s.S * 0.55);
+    g.addColorStop(0, 'rgba(255,200,90,0.95)');
+    g.addColorStop(0.5, 'rgba(255,100,30,0.7)');
+    g.addColorStop(1, 'rgba(120,30,10,0.35)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, s.S, s.S);
+    return cv;
+  });
+
+  // ── 粒子池 ──
+  // k：0 飛行的煙 1 火花 2 岩殼碎片 3 噴飛岩塊 4 熔岩飛沫 5 撞擊煙柱 6 地面揚塵 7 上升的火星
+  const MP = [];
+  for (let i = 0; i < 340; i++) MP.push({ on: false, k: 0, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 1, s: 1, rot: 0, vr: 0, g: 0, drag: 0, floor: 1e9, x0: -1e9, x1: 1e9, b: 0, land: -1, spr: 0 });
+  let mpI = 0;
+  let mpN = 0;
+  function sp(k, x, y, vx, vy, life, s) {
+    for (let j = 0; j < MP.length; j++) {
+      const q = MP[(mpI + j) % MP.length];
+      if (q.on) continue;
+      mpI = (mpI + j + 1) % MP.length;
+      mpN++;
+      q.on = true;
+      q.k = k;
+      q.x = x;
+      q.y = y;
+      q.vx = vx;
+      q.vy = vy;
+      q.t = 0;
+      q.life = life;
+      q.s = s;
+      q.rot = rr(0, TAU);
+      q.vr = rr(-8, 8);
+      q.g = 0;
+      q.drag = 0;
+      q.floor = 1e9;
+      q.x0 = -1e9;
+      q.x1 = 1e9;
+      q.b = 0;
+      q.land = -1;
+      q.spr = Math.floor(rnd() * Math.max(1, SMALL.length));
+      return q;
+    }
+    return null;
+  }
+  function stepMP(dt) {
+    if (!mpN) return;
+    for (const q of MP) {
+      if (!q.on) continue;
+      q.t += dt;
+      if (q.t >= q.life) {
+        q.on = false;
+        mpN--;
+        continue;
+      }
+      if (q.drag) {
+        const d = Math.max(0, 1 - q.drag * dt);
+        q.vx *= d;
+        q.vy *= d;
+      }
+      q.vy += q.g * dt;
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.rot += q.vr * dt;
+      // 飛出平台邊緣就不再有地板（往下掉出去）
+      if (q.x < q.x0 || q.x > q.x1) q.floor = 1e9;
+      if (q.y > q.floor) {
+        q.y = q.floor;
+        if (q.land < 0) q.land = q.t;
+        if (q.b++ < 1 && q.vy > 90 && q.k === 3) {
+          q.vy *= -0.3;
+          q.vx *= 0.5;
+          q.vr *= 0.5;
+        } else {
+          q.vy = 0;
+          q.vx *= 0.6;
+          q.vr = 0;
+        }
+      }
+    }
+  }
+
+  const MS = [];
+  // 某個 x 上、跟 y0 同一層的平台（沒有 → null）
+  function platAt(x, y0) {
+    const map = G.world && G.world.map;
+    if (!map || !G.physics) return null;
+    const i = G.physics.platformBelow(map, x, y0 - 6);
+    if (i < 0) return null;
+    const p = map.platforms[i];
+    return p[2] - y0 < 60 ? { p, i } : null;
+  }
+
+  function cast(o) {
+    const pl = platAt(o.x, o.y);
+    const gy = pl ? pl.p[2] : o.y;
+    const side = o.from || -1;
+    const e = {
+      t: 0, fall: o.fall || 0.75, x: o.x, gy, blast: o.blast || 180, burn: o.burn || 3,
+      sx: o.x + side * 380, sy: gy - 780, hx: 0, hy: 0, ang: 0, dirx: -side,
+      hit: false, ht: 0, ground: !!pl, span0: pl ? pl.p[0] : 0, span1: pl ? pl.p[1] : 0, depth: pl ? (pl.i === 0 ? 150 : 20) : 0,
+      smT: 0, spT: 0, chT: 0, emT: 0, bowl: new Float32Array(2 * 11), cr: null, crN: 0, lips: [], rot: rr(0, TAU),
+    };
+    e.ang = Math.atan2(gy - e.sy, e.x - e.sx);
+    e.hx = e.sx;
+    e.hy = e.sy;
+    MS.push(e);
+    return e;
+  }
+  function headAt(e, k) {
+    // 越落越快一點（k^1.15），確保 k=1 時剛好落地
+    const kk = Math.pow(clamp(k, 0, 1), 1.15);
+    e.hx = e.sx + (e.x - e.sx) * kk;
+    e.hy = e.sy + (e.gy - 14 - e.sy) * kk;
+  }
+  function impact(e) {
+    if (e.hit) return;
+    e.hit = true;
+    e.ht = 0;
+    const L = lite();
+    const x = e.x;
+    const gy = e.gy;
+    const Rc = e.blast * 0.4;
+    e.Rc = Rc;
+    if (e.ground) {
+      // 坑：參差的碗，兩側稍微隆起
+      for (let i = 0; i <= 10; i++) {
+        const k = i / 10;
+        e.bowl[i * 2] = x - Rc + 2 * Rc * k + (i && i < 10 ? rr(-3, 3) : 0);
+        e.bowl[i * 2 + 1] = gy + Math.sin(k * PI) * Rc * 0.3 * rr(0.8, 1.08);
+      }
+      // 放射狀的熔岩裂縫
+      const nC = L ? 4 : 8;
+      e.crN = nC;
+      e.cr = new Float32Array(nC * 2 * 6);
+      for (let c = 0; c < nC; c++) {
+        const s = c % 2 ? 1 : -1;
+        const flat = c < 4;
+        const a0 = flat ? rr(0.02, 0.12) : rr(0.3, 1.0);
+        const ang = s > 0 ? a0 : PI - a0;
+        const len = flat ? rr(70, 130) : rr(30, 70);
+        let px = x + s * Rc * rr(0.75, 0.95);
+        let py = gy + (flat ? 2 : rr(3, 7));
+        for (let i = 0; i < 6; i++) {
+          e.cr[(c * 6 + i) * 2] = px;
+          e.cr[(c * 6 + i) * 2 + 1] = py;
+          const d = ang + rr(-0.5, 0.5);
+          px += (Math.cos(d) * len) / 5;
+          py = Math.max(gy + 1.5, py + (Math.sin(d) * len) / 5);
+        }
+      }
+      // 坑緣翻起的岩塊（坐在地表上）
+      e.lips.length = 0;
+      const nl = L ? 3 : 7;
+      for (let i = 0; i < nl; i++) {
+        const s = i % 2 ? 1 : -1;
+        const r = rr(6, 12);
+        const lx = x + s * Rc * rr(0.85, 1.3);
+        if (lx < e.span0 + 4 || lx > e.span1 - 4) continue;
+        e.lips.push({ x: lx, r, rot: rr(-0.5, 0.5), spr: Math.floor(rnd() * Math.max(1, SMALL.length)) });
+      }
+    }
+    const fl = e.ground ? gy : 1e9;
+    // 噴飛的熾熱岩塊：往兩側拋、落在平台上
+    for (let i = 0; i < (L ? 5 : 11); i++) {
+      const s = i % 2 ? 1 : -1;
+      const q = sp(3, x + rr(-0.4, 0.4) * Rc, gy - 8, s * rr(90, 430), -rr(280, 640), rr(2.2, 3.0), rr(5, 10.5));
+      if (!q) break;
+      q.g = 1450;
+      q.floor = fl;
+      q.x0 = e.span0;
+      q.x1 = e.span1;
+    }
+    // 熔岩飛沫
+    for (let i = 0; i < (L ? 6 : 16); i++) {
+      const a = -PI / 2 + rr(-1.2, 1.2);
+      const v = rr(260, 620);
+      const q = sp(4, x + rr(-10, 10), gy - 10, Math.cos(a) * v, Math.sin(a) * v, rr(1.0, 1.8), rr(1.6, 3));
+      if (!q) break;
+      q.g = 1300;
+      q.floor = fl;
+      q.x0 = e.span0;
+      q.x1 = e.span1;
+    }
+    // 火花
+    for (let i = 0; i < (L ? 8 : 22); i++) {
+      const a = -PI / 2 + rr(-1.45, 1.45);
+      const v = rr(320, 820);
+      const q = sp(1, x + rr(-8, 8), gy - 8, Math.cos(a) * v, Math.sin(a) * v, rr(0.25, 0.55), rr(1.2, 2.4));
+      if (!q) break;
+      q.g = 900;
+      q.drag = 1.6;
+    }
+    // 煙柱：先是被火光照亮的橘色，往上翻滾、變成灰煙
+    for (let i = 0; i < (L ? 6 : 14); i++) {
+      const q = sp(5, x + rr(-0.6, 0.6) * Rc, gy - rr(10, 40), rr(-90, 90), -rr(60, 240), rr(1.4, 2.4), rr(26, 46));
+      if (!q) break;
+      q.drag = 1.1;
+      q.g = -12;
+      q.b = -rr(0, 0.12);
+    }
+    // 沿著地面往兩側滾的塵
+    for (let i = 0; i < (L ? 4 : 10); i++) {
+      const s = i % 2 ? 1 : -1;
+      const q = sp(6, x + s * Rc * 0.6, gy - rr(4, 14), s * rr(200, 460), -rr(10, 40), rr(0.8, 1.3), rr(16, 28));
+      if (!q) break;
+      q.drag = 2.4;
+    }
+  }
+
+  function meteorStep(dt) {
+    stepMP(dt);
+    const L = lite();
+    for (let i = MS.length - 1; i >= 0; i--) {
+      const e = MS[i];
+      e.t += dt;
+      if (!e.hit) {
+        headAt(e, e.t / e.fall);
+        // 保險：遊戲那邊沒有呼叫 impact（計時器被清掉）也要落地
+        if (e.t >= e.fall + 0.08) impact(e);
+        const ca = Math.cos(e.ang);
+        const sa = Math.sin(e.ang);
+        const vx = ca * 1150;
+        const vy = sa * 1150;
+        // 煙
+        e.smT -= dt;
+        if (e.smT <= 0) {
+          e.smT = L ? 0.05 : 0.022;
+          const q = sp(0, e.hx - ca * rr(40, 70), e.hy - sa * rr(40, 70), -vx * 0.06 + rr(-20, 20), -vy * 0.06 + rr(-20, 20), rr(0.9, 1.5), rr(12, 20));
+          if (q) q.drag = 1.5;
+        }
+        // 剝落的火花
+        e.spT -= dt;
+        if (e.spT <= 0) {
+          e.spT = L ? 0.04 : 0.014;
+          const a = e.ang + PI + rr(-0.5, 0.5);
+          const v = rr(160, 420);
+          const q = sp(1, e.hx + rr(-12, 12), e.hy + rr(-12, 12), Math.cos(a) * v + vx * 0.25, Math.sin(a) * v + vy * 0.25, rr(0.18, 0.4), rr(1.2, 2.2));
+          if (q) {
+            q.g = 400;
+            q.drag = 2;
+          }
+        }
+        // 岩殼碎片
+        e.chT -= dt;
+        if (e.chT <= 0) {
+          e.chT = L ? 0.14 : 0.06;
+          const a = e.ang + PI + rr(-0.7, 0.7);
+          const q = sp(2, e.hx + rr(-10, 10), e.hy + rr(-10, 10), Math.cos(a) * rr(80, 220) + vx * 0.4, Math.sin(a) * rr(80, 220) + vy * 0.4, rr(0.35, 0.6), rr(2, 3.6));
+          if (q) {
+            q.g = 700;
+            q.drag = 1.2;
+          }
+        }
+      } else {
+        e.ht += dt;
+        // 坑裡還在燒：往上飄的火星
+        if (e.ground && e.ht < e.burn) {
+          e.emT -= dt;
+          if (e.emT <= 0) {
+            e.emT = L ? 0.12 : 0.05;
+            const q = sp(7, e.x + rr(-1, 1) * e.Rc * 0.9, e.gy + rr(0, 4), rr(-20, 20), -rr(40, 110), rr(0.6, 1.2), rr(1.2, 2.4));
+            if (q) q.drag = 0.6;
+          }
+        }
+        if (e.ht > e.burn + 1) MS.splice(i, 1);
+      }
+    }
+  }
+
+  // ── 畫 ──
+  function drawHead(ctx, e) {
+    const t = e.t;
+    const x = e.hx;
+    const y = e.hy;
+    const k = clamp(t / e.fall, 0, 1);
+    const ca = Math.cos(e.ang);
+    const sa = Math.sin(e.ang);
+    const fk = 1 + 0.08 * Math.sin(t * 47) + 0.05 * Math.sin(t * 83);
+    ctx.globalCompositeOperation = 'lighter';
+    // 游離光暈
+    ctx.globalAlpha = 0.85;
+    let r = 150 * fk;
+    ctx.drawImage(ION, x - r, y - r, r * 2, r * 2);
+    // 電漿尾（旋轉到飛行方向；圖的右端是頭）
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(e.ang);
+    const grow = clamp(t / 0.25, 0, 1);
+    const w = fk;
+    ctx.globalAlpha = 0.9;
+    ctx.drawImage(T_OUT, -470 * grow, -30 * 1.5 * w, 490 * grow, 64 * 1.5 * w);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(T_MID, -300 * grow, -20 * w, 318 * grow, 40 * w);
+    ctx.drawImage(T_CORE, -150 * grow, -10, 166 * grow, 20);
+    // 尾巴裡順流而下的電漿團（讓尾巴看起來在流動）
+    for (let j = 0; j < (lite() ? 2 : 5); j++) {
+      const q = (t * 2.6 + j / 5) % 1;
+      const px = -30 - q * 320 * grow;
+      const py = Math.sin(t * 13 + j * 2.1) * (6 + q * 14);
+      const rr2 = (22 - q * 10) * (1 + q);
+      ctx.globalAlpha = (1 - q) * 0.55;
+      ctx.drawImage(FIRE, px - rr2, py - rr2 * 0.6, rr2 * 2, rr2 * 1.2);
+    }
+    // 前緣的弓形激波：頭前方一道被壓亮的弧
+    ctx.globalAlpha = 0.55 + 0.2 * Math.sin(t * 60);
+    ctx.strokeStyle = 'rgba(255,236,190,0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(-6, 0, 40, -1.1, 1.1);
+    ctx.stroke();
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(255,170,90,0.8)';
+    ctx.beginPath();
+    ctx.arc(-14, 0, 50, -1.0, 1.0);
+    ctx.stroke();
+    ctx.restore();
+    // 熱浪：頭周圍兩圈淡淡、不停抖動的光環
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = 'rgba(255,220,180,1)';
+    ctx.lineWidth = 1.5;
+    for (let j = 0; j < 2; j++) {
+      ctx.beginPath();
+      ctx.ellipse(x - ca * 8, y - sa * 8, 44 + j * 12 + Math.sin(t * 40 + j) * 3, 38 + j * 10 + Math.cos(t * 37 + j) * 3, e.ang, 0, TAU);
+      ctx.stroke();
+    }
+    // 岩體（自轉）
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    const RH = 30;
+    const sc = RH / HEAD.R;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(e.rot + t * 5);
+    ctx.drawImage(HEAD.c, (-HEAD.S / 2) * sc, (-HEAD.S / 2) * sc, HEAD.S * sc, HEAD.S * sc);
+    ctx.restore();
+    // 迎風面燒到白熱
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.95;
+    r = RH * 1.25;
+    ctx.drawImage(HOT, x + ca * RH * 0.45 - r, y + sa * RH * 0.45 - r, r * 2, r * 2);
+    ctx.globalAlpha = 0.5 + 0.2 * k;
+    r = 70 * fk;
+    ctx.drawImage(FIRE, x - r, y - r, r * 2, r * 2);
+  }
+
+  function drawBack(ctx) {
+    for (const e of MS) {
+      const x = e.x;
+      const gy = e.gy;
+      if (!e.hit) {
+        // 落點的地面被越照越亮，還有越來越濃的影子
+        const k = clamp(e.t / e.fall, 0, 1);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.5 * k;
+        ctx.drawImage(SCORCH, x - 60 * k, gy - 8, 120 * k, 16);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.6 * k * k;
+        const r = 60 + 160 * k;
+        ctx.drawImage(FIRE, x - r, gy - r * 0.28, r * 2, r * 0.56);
+        continue;
+      }
+      if (!e.ground) continue;
+      const ht = e.ht;
+      const a = ht < e.burn ? 1 : clamp(1 - (ht - e.burn) / 0.9, 0, 1);
+      const heat = clamp(1 - ht / (e.burn + 0.4), 0, 1);
+      const Rc = e.Rc;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(e.span0, gy - 3, e.span1 - e.span0, e.depth + 3);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = a;
+      ctx.drawImage(SCORCH, x - Rc * 2.2, gy - Rc * 0.3, Rc * 4.4, Rc * 1.1);
+      // 坑
+      ctx.beginPath();
+      ctx.moveTo(e.bowl[0], gy - 1);
+      for (let i = 0; i <= 10; i++) ctx.lineTo(e.bowl[i * 2], e.bowl[i * 2 + 1]);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(22,12,10,0.94)';
+      ctx.fill();
+      // 坑底的熔岩：一灘會慢慢冷卻的亮橘
+      if (heat > 0) {
+        ctx.globalCompositeOperation = 'lighter';
+        const fl = 0.85 + 0.15 * Math.sin(ht * 17) * Math.sin(ht * 7.3);
+        ctx.globalAlpha = heat * fl;
+        ctx.drawImage(FIRE, x - Rc * 0.85, gy + Rc * 0.02, Rc * 1.7, Rc * 0.42);
+        ctx.globalAlpha = heat * heat * 0.8;
+        ctx.drawImage(HOT, x - Rc * 0.45, gy + Rc * 0.06, Rc * 0.9, Rc * 0.26);
+      }
+      // 裂縫（先深色、再透出熔岩光）
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let c = 0; c < e.crN; c++) {
+        for (let i = 0; i < 6; i++) {
+          const j = (c * 6 + i) * 2;
+          i ? ctx.lineTo(e.cr[j], e.cr[j + 1]) : ctx.moveTo(e.cr[j], e.cr[j + 1]);
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = 'rgba(20,10,8,0.9)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      if (heat > 0) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = heat * 0.5;
+        ctx.strokeStyle = '#ff5a1a';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.globalAlpha = heat;
+        ctx.strokeStyle = '#ffc860';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        // 坑緣一圈熔岩亮邊
+        ctx.beginPath();
+        for (let i = 1; i < 10; i++) {
+          const j = i * 2;
+          i > 1 ? ctx.lineTo(e.bowl[j], e.bowl[j + 1] - 1.5) : ctx.moveTo(e.bowl[j], e.bowl[j + 1] - 1.5);
+        }
+        ctx.globalAlpha = heat * 0.55;
+        ctx.strokeStyle = '#ff7a2a';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.globalAlpha = heat;
+        ctx.strokeStyle = '#ffe08a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+      // 半埋在坑裡的隕石殘骸（下半截被地面裁掉）
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x - 60, gy - 80, 120, 80 + Rc * 0.12);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = a;
+      const sc = 22 / HEAD.R;
+      ctx.translate(x + 4, gy + 4);
+      ctx.rotate(e.rot);
+      ctx.drawImage(HEAD.c, (-HEAD.S / 2) * sc, (-HEAD.S / 2) * sc, HEAD.S * sc, HEAD.S * sc);
+      ctx.restore();
+      if (heat > 0) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = heat * 0.8;
+        ctx.drawImage(FIRE, x - 40, gy - 30, 80, 50);
+      }
+      // 坑緣翻起的岩塊：坐在地表上，燒紅慢慢退成灰
+      ctx.globalCompositeOperation = 'source-over';
+      for (const l of e.lips) {
+        const s = SMALL[l.spr];
+        if (!s) break;
+        const w = (s.S * l.r) / s.R;
+        ctx.save();
+        ctx.translate(l.x, gy - l.r * 0.55);
+        ctx.rotate(l.rot);
+        ctx.globalAlpha = a;
+        ctx.drawImage(s.c, -w / 2, -w / 2, w, w);
+        if (heat > 0.02) {
+          ctx.globalAlpha = a * heat;
+          ctx.drawImage(HOTROCK[l.spr], -w / 2, -w / 2, w, w);
+        }
+        ctx.restore();
+      }
+      // 坑裡竄起的火舌（燃燒區域期間）
+      if (ht < e.burn) {
+        const fa = clamp((e.burn - ht) / 0.6, 0, 1) * clamp(ht / 0.2, 0, 1);
+        ctx.globalCompositeOperation = 'lighter';
+        const n = lite() ? 3 : 6;
+        for (let j = 0; j < n; j++) {
+          const fx = x + ((j / (n - 1)) * 2 - 1) * Rc * 0.8;
+          const f = 0.5 + 0.5 * Math.sin(ht * (9 + j * 1.7) + j * 2.3);
+          const h = (26 + 26 * f) * (1 - Math.abs((j / (n - 1)) * 2 - 1) * 0.45);
+          ctx.globalAlpha = fa * (0.45 + 0.35 * f);
+          ctx.drawImage(FIRE, fx - h * 0.32, gy - h + 6, h * 0.64, h);
+        }
+      }
+    }
+  }
+
+  function drawFront(ctx) {
+    // 1. 煙（飛行的煙尾、撞擊的煙柱、地面的塵）
+    if (mpN) {
+      ctx.globalCompositeOperation = 'source-over';
+      for (const q of MP) {
+        if (!q.on) continue;
+        if (q.k === 0) {
+          const k = q.t / q.life;
+          const s = q.s * (0.7 + 2.2 * k);
+          ctx.globalAlpha = (1 - k) * 0.8;
+          ctx.drawImage(SMK, q.x - s, q.y - s, s * 2, s * 2);
+        } else if (q.k === 6) {
+          const k = q.t / q.life;
+          const s = q.s * (0.6 + 1.1 * k);
+          ctx.globalAlpha = (1 - k) * 0.85;
+          ctx.drawImage(DUST, q.x - s, q.y - s * 0.7, s * 2, s * 1.4);
+        }
+      }
+      for (const q of MP) {
+        if (!q.on || q.k !== 5) continue;
+        const tt = q.t + q.b;
+        if (tt <= 0) continue;
+        const k = tt / q.life;
+        const s = q.s * (0.55 + 1.3 * Math.sqrt(k));
+        ctx.globalAlpha = (1 - k) * Math.min(1, tt / 0.12) * 0.9;
+        ctx.drawImage(SMK, q.x - s, q.y - s, s * 2, s * 2);
+      }
+      // 煙柱裡面透出的火光（早期）
+      ctx.globalCompositeOperation = 'lighter';
+      for (const q of MP) {
+        if (!q.on || q.k !== 5) continue;
+        const tt = q.t + q.b;
+        if (tt <= 0 || tt > 0.55) continue;
+        const k = tt / 0.55;
+        const s = q.s * (0.5 + 0.8 * k);
+        ctx.globalAlpha = (1 - k) * 0.7;
+        ctx.drawImage(FIRE, q.x - s, q.y - s, s * 2, s * 2);
+      }
+    }
+    // 2. 流星本體
+    for (const e of MS) if (!e.hit && e.t > 0) drawHead(ctx, e);
+    // 3. 岩塊
+    if (mpN) {
+      ctx.globalCompositeOperation = 'source-over';
+      for (const q of MP) {
+        if (!q.on || q.k !== 3) continue;
+        const s = SMALL[q.spr];
+        if (!s) continue;
+        const k = q.t / q.life;
+        const a = Math.min(1, (1 - k) * 5);
+        const w = (s.S * q.s) / s.R;
+        const heat = clamp(1 - q.t / 1.6, 0, 1);
+        const y = q.land >= 0 ? q.y - q.s * 0.5 : q.y;
+        ctx.save();
+        ctx.translate(q.x, y);
+        ctx.rotate(q.rot);
+        ctx.globalAlpha = a;
+        ctx.drawImage(s.c, -w / 2, -w / 2, w, w);
+        if (heat > 0.02) {
+          ctx.globalAlpha = a * heat;
+          ctx.drawImage(HOTROCK[q.spr], -w / 2, -w / 2, w, w);
+        }
+        ctx.restore();
+        // 飛行中拖一小段火光
+        if (q.land < 0 && heat > 0.1) {
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = heat * 0.6;
+          ctx.strokeStyle = '#ff9a3a';
+          ctx.lineWidth = q.s * 0.8;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(q.x, q.y);
+          ctx.lineTo(q.x - q.vx * 0.045, q.y - q.vy * 0.045);
+          ctx.stroke();
+          ctx.globalCompositeOperation = 'source-over';
+        }
+      }
+      // 岩殼碎片
+      for (const q of MP) {
+        if (!q.on || q.k !== 2) continue;
+        const k = q.t / q.life;
+        ctx.globalAlpha = 1 - k;
+        const s = q.s;
+        const c = Math.cos(q.rot);
+        const sn = Math.sin(q.rot);
+        ctx.beginPath();
+        ctx.moveTo(q.x + c * s, q.y + sn * s);
+        ctx.lineTo(q.x - sn * s * 0.7, q.y + c * s * 0.7);
+        ctx.lineTo(q.x - c * s * 0.8, q.y - sn * s * 0.8);
+        ctx.closePath();
+        ctx.fillStyle = k < 0.4 ? '#8a3a1a' : '#2e2220';
+        ctx.fill();
+      }
+      // 4. 發光的粒子：火花、熔岩飛沫、火星
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      for (const q of MP) {
+        if (!q.on) continue;
+        const k = q.t / q.life;
+        if (q.k === 1) {
+          ctx.globalAlpha = 1 - k;
+          ctx.strokeStyle = k < 0.35 ? '#fff2c0' : '#ffae4a';
+          ctx.lineWidth = q.s;
+          ctx.beginPath();
+          ctx.moveTo(q.x, q.y);
+          ctx.lineTo(q.x - q.vx * 0.03, q.y - q.vy * 0.03);
+          ctx.stroke();
+        } else if (q.k === 4) {
+          if (q.land < 0) {
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = '#ffc860';
+            ctx.lineWidth = q.s;
+            ctx.beginPath();
+            ctx.moveTo(q.x, q.y);
+            ctx.lineTo(q.x - q.vx * 0.025, q.y - q.vy * 0.025);
+            ctx.stroke();
+          } else {
+            // 落地的熔岩滴：攤成一小片，慢慢暗掉
+            const c = clamp(1 - (q.t - q.land) / 0.9, 0, 1);
+            ctx.globalAlpha = c * (1 - k);
+            const r = q.s * 3.2;
+            ctx.drawImage(FIRE, q.x - r, q.y - r * 0.35, r * 2, r * 0.7);
+          }
+        } else if (q.k === 7) {
+          ctx.globalAlpha = (1 - k) * (0.6 + 0.4 * Math.sin(q.t * 30 + q.rot));
+          ctx.fillStyle = k < 0.5 ? '#ffd27a' : '#ff7a2a';
+          ctx.fillRect(q.x - q.s / 2, q.y - q.s / 2, q.s, q.s);
+        }
+      }
+    }
+    // 5. 撞擊：局部的光暈、火球、地面衝擊波
+    for (const e of MS) {
+      if (!e.hit) continue;
+      const ht = e.ht;
+      const x = e.x;
+      const gy = e.gy;
+      ctx.globalCompositeOperation = 'lighter';
+      if (ht < 0.5) {
+        const k = ht / 0.5;
+        const r = 70 + 110 * eOut(Math.min(1, ht / 0.1));
+        ctx.globalAlpha = Math.pow(1 - k, 1.8) * 0.75;
+        ctx.drawImage(HOT, x - r, gy - 20 - r * 0.8, r * 2, r * 1.6);
+        // 往上竄的光柱（撞擊的一瞬間）
+        ctx.globalAlpha = Math.pow(1 - k, 2.6) * 0.55;
+        ctx.drawImage(HOT, x - 28, gy - 230, 56, 250);
+      }
+      if (ht < 0.8) {
+        // 火球：一團往上翻、邊冷邊散的火
+        const k = ht / 0.8;
+        const r = 40 + 90 * eOut(Math.min(1, ht / 0.3));
+        ctx.globalAlpha = (1 - k) * (1 - k) * 0.8;
+        ctx.drawImage(FIRE, x - r, gy - r * 0.9 - 50 * k, r * 2, r * 1.6);
+        ctx.globalAlpha = (1 - k) * 0.6;
+        const r2 = r * 0.55;
+        ctx.drawImage(FIRE, x - r2 + 30 * k, gy - r - 70 * k - r2, r2 * 2, r2 * 2);
+      }
+      // 地面衝擊波（兩圈）＋空氣中的半圓爆風
+      for (let w = 0; w < 2; w++) {
+        const k = (ht - w * 0.07) / (0.48 + w * 0.12);
+        if (k <= 0 || k >= 1) continue;
+        const rx = 30 + e.blast * 1.7 * eOut(k) * (w ? 0.8 : 1);
+        ctx.globalAlpha = (1 - k) * (w ? 0.55 : 0.95);
+        ctx.strokeStyle = w ? '#ff8a3a' : '#ffe6b0';
+        ctx.lineWidth = (w ? 4 : 8) * (1 - k) + 1;
+        ctx.beginPath();
+        ctx.ellipse(x, gy - 2, rx, rx * 0.14, 0, 0, TAU);
+        ctx.stroke();
+      }
+      const kd = ht / 0.3;
+      if (kd < 1) {
+        const r = 24 + e.blast * 1.05 * eOut(kd);
+        ctx.globalAlpha = (1 - kd) * 0.5;
+        ctx.strokeStyle = '#ffd8a0';
+        ctx.lineWidth = 5 * (1 - kd) + 1;
+        ctx.beginPath();
+        ctx.arc(x, gy, r, PI, TAU);
+        ctx.stroke();
+      }
+    }
+  }
+
+  A.meteorFx = {
+    // o: { x, y（目標腳下）, from（從哪一側飛來：-1 左、1 右）, fall（飛行秒數）, blast, burn }
+    cast,
+    // 落地（遊戲那邊造成傷害的同一刻呼叫）
+    impact(e) {
+      if (e) {
+        headAt(e, 1);
+        impact(e);
+      }
+    },
+  };
+  A.skillFx.add({
+    live: () => MS.length > 0 || mpN > 0,
+    step: meteorStep,
+    back: drawBack,
+    front: drawFront,
+    clear() {
+      MS.length = 0;
+      for (const q of MP) q.on = false;
+      mpN = 0;
+    },
+  });
+})();
+
+// ═════════ 極光風暴 ═════════
+// 施法者身邊捲起一層層極光簾幕（下緣亮綠、往上轉青、再轉紫，帶著一條條垂直的光束紋），
+// 簾幕沿著橢圓螺旋繞著施法者轉、越轉越緊，形成漩渦；每一波是一圈極光簾往外掃出去（綠、紫、青三色），
+// 掃過的敵人身上留下極光冰霜的微光（緩速中的標示）；空中飄著閃爍的光點，地上映著極光的倒影。
+// 簾幕是事先畫好的貼圖，每幀只切成一條條垂直的細片沿著曲線貼上去；在施法者後面的那一半畫在 back 層。
+(function () {
+  'use strict';
+  const A = G.art;
+  if (!A.skillFx) return;
+  const TAU = Math.PI * 2;
+  const PI = Math.PI;
+  let seed = 90210;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const rr = (a, b) => a + (b - a) * rnd();
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const eOut = (k) => 1 - (1 - k) * (1 - k);
+  const lite = () => !!G.lowFx;
+  const mk = (w, h) => {
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w);
+    c.height = Math.ceil(h || w);
+    return c;
+  };
+  function radial(size, stops) {
+    const cv = mk(size);
+    const c = cv.getContext('2d');
+    const g = c.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    stops.forEach((s) => g.addColorStop(s[0], s[1]));
+    c.fillStyle = g;
+    c.fillRect(0, 0, size, size);
+    return cv;
+  }
+  const rgba = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+
+  // 極光簾幕貼圖：橫向可以無縫重複（光束紋用整數頻率的正弦疊出來）
+  const CW = 256;
+  const CH = 128;
+  function curtain(bot, mid, top, seedOff) {
+    const strip = mk(1, CH);
+    const sc = strip.getContext('2d');
+    const g = sc.createLinearGradient(0, CH, 0, 0);
+    g.addColorStop(0, rgba(bot, 0));
+    g.addColorStop(0.05, 'rgba(206,255,228,0.85)');
+    g.addColorStop(0.12, rgba(bot, 0.95));
+    g.addColorStop(0.36, rgba(bot, 0.6));
+    g.addColorStop(0.62, rgba(mid, 0.38));
+    g.addColorStop(0.86, rgba(top, 0.18));
+    g.addColorStop(1, rgba(top, 0));
+    sc.fillStyle = g;
+    sc.fillRect(0, 0, 1, CH);
+    const cv = mk(CW, CH);
+    const c = cv.getContext('2d');
+    const ph = [1.3, 4.1, 2.2, 5.7, 0.4].map((p) => p + seedOff);
+    for (let x = 0; x < CW; x++) {
+      const u = (x / CW) * TAU;
+      const n = 0.5 + 0.22 * Math.sin(u * 3 + ph[0]) + 0.16 * Math.sin(u * 7 + ph[1]) + 0.12 * Math.sin(u * 13 + ph[2]) + 0.1 * Math.sin(u * 29 + ph[3]);
+      const n2 = 0.5 + 0.5 * Math.sin(u * 11 + ph[4]) * Math.sin(u * 5 + ph[1]);
+      c.globalAlpha = clamp(0.2 + 0.85 * n * n * 1.6, 0.12, 1);
+      const y0 = CH * 0.28 * n2; // 光束高低不齊
+      c.drawImage(strip, x, y0, 1, CH - y0);
+    }
+    return cv;
+  }
+  const GREEN = [110, 255, 180];
+  const CYAN = [110, 220, 255];
+  const VIOLET = [190, 130, 255];
+  const PINK = [255, 140, 220];
+  const CUR = [curtain(GREEN, CYAN, VIOLET, 0), curtain(VIOLET, PINK, CYAN, 1.7), curtain(CYAN, GREEN, VIOLET, 3.1)];
+  const GLOW = radial(128, [[0, 'rgba(210,255,236,0.9)'], [0.3, 'rgba(120,240,200,0.45)'], [0.65, 'rgba(140,120,255,0.14)'], [1, 'rgba(120,90,255,0)']]);
+  const REFL = radial(128, [[0, 'rgba(120,255,200,0.5)'], [0.45, 'rgba(100,200,255,0.22)'], [0.8, 'rgba(170,120,255,0.08)'], [1, 'rgba(170,120,255,0)']]);
+  const FROST = radial(64, [[0, 'rgba(236,255,255,0.9)'], [0.4, 'rgba(150,230,255,0.4)'], [1, 'rgba(150,200,255,0)']]);
+  const WAVE_C = [GREEN, VIOLET, CYAN];
+
+  // 一段簾幕：沿著一串點（x、地面 y、高度、透明度）切片貼上；front：只畫 z>=0（施法者前面）或 z<0 的片
+  const BX = new Float32Array(64);
+  const BY = new Float32Array(64);
+  const BH = new Float32Array(64);
+  const BA = new Float32Array(64);
+  const BZ = new Float32Array(64);
+  function drawStrip(ctx, tex, n, u0, uLen, front, amul) {
+    for (let i = 0; i < n - 1; i++) {
+      const z = BZ[i] + BZ[i + 1];
+      if (front ? z < 0 : z >= 0) continue;
+      const a = (BA[i] + BA[i + 1]) * 0.5 * amul;
+      if (a <= 0.01) continue;
+      const h = (BH[i] + BH[i + 1]) * 0.5;
+      if (h < 2) continue;
+      const x0 = Math.min(BX[i], BX[i + 1]);
+      const w = Math.abs(BX[i + 1] - BX[i]) + 1.2;
+      const y = (BY[i] + BY[i + 1]) * 0.5;
+      let sx = (((u0 + (i / (n - 1)) * uLen) % 1) + 1) % 1;
+      sx *= CW;
+      const sw = Math.max(1, Math.min(CW - sx, (uLen * CW) / (n - 1)));
+      ctx.globalAlpha = Math.min(1, a);
+      ctx.drawImage(tex, sx, 0, sw, CH, x0, y - h, w, h);
+    }
+  }
+
+  const AU = [];
+  const HIT = [];
+  // 光點池
+  const MO = [];
+  for (let i = 0; i < 90; i++) MO.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 1, s: 1, c: 0, ph: 0 });
+  let moN = 0;
+  function mote(x, y, vx, vy, life, s, c) {
+    for (const q of MO) {
+      if (q.on) continue;
+      q.on = true;
+      moN++;
+      q.x = x;
+      q.y = y;
+      q.vx = vx;
+      q.vy = vy;
+      q.t = 0;
+      q.life = life;
+      q.s = s;
+      q.c = c;
+      q.ph = rr(0, TAU);
+      return q;
+    }
+    return null;
+  }
+  const MOC = ['#c8ffe6', '#9ff0ff', '#d8c0ff', '#ffffff'];
+
+  function begin(P, S) {
+    const e = { t: 0, hitAt: S.hitAt || 0.25, radius: S.radius || 480, waves: [], nW: S.waves || 3, every: 0.28, dir: P.dir || 1, moT: 0, end: 0, x: P.x, y: P.y, rib: [] };
+    const n = lite() ? 2 : 4;
+    for (let i = 0; i < n; i++) e.rib.push({ th: (i / n) * TAU + rr(-0.3, 0.3), sp: rr(2.8, 3.8), span: rr(3.4, 4.4), h: i % 2 ? rr(150, 190) : rr(210, 250), tex: i % 3, u: rr(0, 1), lift: rr(8, 26) });
+    e.end = e.hitAt + (e.nW - 1) * e.every + 0.9;
+    AU.push(e);
+    return e;
+  }
+  function wave(e, w) {
+    if (!e) return;
+    e.waves.push({ t: 0, w, u: rr(0, 1) });
+    // 波出發的一瞬間，從腳下往上噴一把光點
+    const n = lite() ? 4 : 10;
+    for (let i = 0; i < n; i++) {
+      const a = rr(0, TAU);
+      mote(e.x + Math.cos(a) * 30, e.y - 20 - rr(0, 60), Math.cos(a) * rr(60, 200), -rr(40, 160), rr(0.8, 1.4), rr(1.5, 3), i % 4);
+    }
+  }
+  function hit(m, w) {
+    if (!m) return;
+    for (const h of HIT) {
+      if (h.m === m) {
+        h.t = 0;
+        h.w = w;
+        return;
+      }
+    }
+    if (HIT.length >= 24) HIT.shift();
+    HIT.push({ m, t: 0, w, ph: rr(0, TAU), u: rr(0, 1) });
+  }
+
+  function auroraStep(dt) {
+    if (moN) {
+      for (const q of MO) {
+        if (!q.on) continue;
+        q.t += dt;
+        if (q.t >= q.life) {
+          q.on = false;
+          moN--;
+          continue;
+        }
+        const d = 1 - Math.min(1, dt * 1.8);
+        q.vx *= d;
+        q.vy = q.vy * d - 22 * dt;
+        q.x += q.vx * dt;
+        q.y += q.vy * dt;
+      }
+    }
+    const P = G.player;
+    for (let i = AU.length - 1; i >= 0; i--) {
+      const e = AU[i];
+      e.t += dt;
+      if (P) {
+        e.x = P.x;
+        e.y = P.y;
+      }
+      for (const wv of e.waves) wv.t += dt;
+      if (e.t > e.end + 0.5) {
+        AU.splice(i, 1);
+        continue;
+      }
+      // 漩渦裡飄的光點
+      e.moT -= dt;
+      if (e.moT <= 0 && e.t < e.end) {
+        e.moT = lite() ? 0.06 : 0.022;
+        const a = rr(0, TAU);
+        const r = rr(40, rad(e) * 1.1);
+        mote(e.x + Math.cos(a) * r, e.y - 10 - rr(0, 150), -Math.sin(a) * rr(20, 70) * e.dir, -rr(10, 50), rr(0.8, 1.6), rr(1.2, 2.6), Math.floor(rr(0, 4)));
+      }
+    }
+    for (let i = HIT.length - 1; i >= 0; i--) {
+      const h = HIT[i];
+      h.t += dt;
+      const m = h.m;
+      const on = m && !m.dead && (m.slowT > 0 || h.t < 0.6);
+      if (!on || h.t > 3.4) HIT.splice(i, 1);
+    }
+  }
+  // 漩渦半徑：施法時由內往外張開，最後一波後收掉
+  function rad(e) {
+    const t = e.t;
+    const open = eOut(clamp(t / e.hitAt, 0, 1));
+    return 60 + 170 * open + 14 * Math.sin(t * 5);
+  }
+  function fadeOf(e) {
+    const t = e.t;
+    return clamp(t / 0.15, 0, 1) * clamp((e.end - t) / 0.5, 0, 1);
+  }
+
+  // 螺旋簾幕：一條從外往內捲、繞著施法者轉的極光帶
+  function ribbons(ctx, e, front) {
+    const fa = fadeOf(e);
+    if (fa <= 0) return;
+    const R = rad(e);
+    const n = lite() ? 18 : 34;
+    const cx = e.x;
+    const gy = e.y - 6;
+    for (const rb of e.rib) {
+      const th0 = rb.th + e.t * rb.sp * e.dir;
+      for (let i = 0; i < n; i++) {
+        const u = i / (n - 1);
+        const th = th0 - u * rb.span * e.dir;
+        const r = R * (1.1 - 0.55 * u);
+        const s = Math.sin(th);
+        BX[i] = cx + Math.cos(th) * r;
+        BZ[i] = s;
+        BY[i] = gy + s * r * 0.26 - rb.lift - u * 30;
+        const taper = Math.pow(Math.sin(PI * clamp(u * 1.05, 0, 1)), 0.7);
+        BH[i] = rb.h * taper * (0.75 + 0.25 * Math.sin(e.t * 6 + u * 9 + rb.u * 6)) * (0.6 + 0.4 * fa);
+        BA[i] = fa * (0.55 + 0.45 * taper) * (front ? 0.46 : 0.85);
+      }
+      drawStrip(ctx, CUR[rb.tex], n, rb.u - e.t * 0.35, 1.4, front, 1);
+    }
+  }
+  // 往外掃出去的一圈極光簾
+  function waves(ctx, e, front) {
+    const n = lite() ? 26 : 44;
+    const cx = e.x;
+    const gy = e.y - 6;
+    for (const wv of e.waves) {
+      const k = wv.t / 0.5;
+      if (k >= 1) continue;
+      const r = 50 + (e.radius - 50) * eOut(k);
+      const a = (1 - k) * Math.min(1, wv.t / 0.05);
+      const h = 200 * (1 - k * 0.7);
+      for (let i = 0; i < n; i++) {
+        const th = (i / (n - 1)) * TAU;
+        const s = Math.sin(th);
+        BX[i] = cx + Math.cos(th) * r;
+        BZ[i] = s;
+        BY[i] = gy + s * r * 0.2;
+        BH[i] = h * (0.8 + 0.2 * Math.sin(th * 5 + wv.t * 12));
+        BA[i] = a * (front ? 0.45 : 0.8);
+      }
+      drawStrip(ctx, CUR[wv.w % 3], n, wv.u, 3, front, 1);
+    }
+  }
+  // 地上的倒影、波在地面上的亮圈
+  function groundGlow(ctx, e) {
+    const fa = fadeOf(e);
+    const cx = e.x;
+    const gy = e.y;
+    ctx.globalCompositeOperation = 'lighter';
+    const R = rad(e) * 1.6;
+    ctx.globalAlpha = fa * (0.55 + 0.1 * Math.sin(e.t * 7));
+    ctx.drawImage(REFL, cx - R, gy - R * 0.2, R * 2, R * 0.4);
+    for (const wv of e.waves) {
+      const k = wv.t / 0.5;
+      if (k >= 1) continue;
+      const r = 50 + (e.radius - 50) * eOut(k);
+      const c = WAVE_C[wv.w % 3];
+      ctx.globalAlpha = (1 - k) * 0.8;
+      ctx.strokeStyle = rgba(c, 1);
+      ctx.lineWidth = 6 * (1 - k) + 1.5;
+      ctx.beginPath();
+      ctx.ellipse(cx, gy - 2, r, r * 0.2, 0, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = (1 - k) * 0.9;
+      ctx.strokeStyle = '#eafff6';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+  }
+
+  function hitboxOf(m) {
+    if (m.hitbox) return m.hitbox();
+    const sc = m.scale || 1;
+    return { x: m.x - (m.w || 40) * sc * 0.5, y: m.y - (m.h || 40) * sc, w: (m.w || 40) * sc, h: (m.h || 40) * sc };
+  }
+  // 被掃到的敵人：剛打中時一道極光從腳下竄起；緩速期間身上一層冰霜極光在流動、冰晶閃爍
+  function drawHits(ctx, t) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const h of HIT) {
+      const m = h.m;
+      const hb = hitboxOf(m);
+      const cx = hb.x + hb.w / 2;
+      const fy = hb.y + hb.h;
+      const w = Math.max(40, hb.w * 1.1);
+      const k0 = h.t / 0.45;
+      if (k0 < 1) {
+        // 竄起的光束
+        const hh = hb.h * 1.2 + 70;
+        ctx.globalAlpha = (1 - k0) * 0.42;
+        ctx.drawImage(CUR[h.w % 3], (h.u * CW) % (CW - 40), 0, 40, CH, cx - w * 0.5, fy - hh * eOut(Math.min(1, k0 * 3)), w, hh * eOut(Math.min(1, k0 * 3)));
+        const r = Math.max(hb.w, hb.h) * 0.8;
+        ctx.globalAlpha = (1 - k0) * (1 - k0) * 0.4;
+        ctx.drawImage(GLOW, cx - r, hb.y + hb.h * 0.5 - r, r * 2, r * 2);
+      }
+      const slow = m.slowT > 0 ? clamp(m.slowT / 0.4, 0, 1) : 0;
+      if (slow <= 0) continue;
+      // 身上流動的冰霜極光（很淡）
+      const pul = 0.5 + 0.5 * Math.sin(t * 4 + h.ph);
+      ctx.globalAlpha = slow * (0.22 + 0.14 * pul);
+      const sx = ((h.u + t * 0.2) % 1) * (CW - 48);
+      ctx.drawImage(CUR[2], sx, 0, 48, CH, cx - w * 0.55, hb.y - 10, w * 1.1, hb.h + 12);
+      // 腳下的一圈冷光
+      ctx.globalAlpha = slow * 0.5;
+      ctx.drawImage(REFL, cx - w * 0.8, fy - 8, w * 1.6, 16);
+      // 冰晶：繞著身體慢慢轉、一閃一閃
+      const nC = lite() ? 2 : 4;
+      for (let i = 0; i < nC; i++) {
+        const a = t * 1.3 + h.ph + (i / nC) * TAU;
+        const px = cx + Math.cos(a) * w * 0.5;
+        const py = hb.y + hb.h * (0.35 + 0.3 * Math.sin(a * 0.7 + i)) + Math.sin(a) * 4;
+        const tw = 0.5 + 0.5 * Math.sin(t * 9 + i * 2.1 + h.ph);
+        const s = 3 + 3 * tw;
+        ctx.globalAlpha = slow * (0.4 + 0.6 * tw) * (Math.cos(a) > -0.2 ? 1 : 0.4);
+        ctx.drawImage(FROST, px - s * 1.6, py - s * 1.6, s * 3.2, s * 3.2);
+        ctx.fillStyle = '#f0ffff';
+        ctx.fillRect(px - s, py - 0.6, s * 2, 1.2);
+        ctx.fillRect(px - 0.6, py - s, 1.2, s * 2);
+      }
+    }
+  }
+  function drawMotes(ctx) {
+    if (!moN) return;
+    ctx.globalCompositeOperation = 'lighter';
+    for (const q of MO) {
+      if (!q.on) continue;
+      const k = q.t / q.life;
+      const tw = 0.55 + 0.45 * Math.sin(q.t * 14 + q.ph);
+      const a = (1 - k) * Math.min(1, q.t / 0.12) * tw;
+      ctx.globalAlpha = a * 0.6;
+      const s = q.s * 3;
+      ctx.drawImage(FROST, q.x - s, q.y - s, s * 2, s * 2);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = MOC[q.c];
+      ctx.fillRect(q.x - q.s * 0.5, q.y - q.s * 0.5, q.s, q.s);
+    }
+  }
+
+  function auroraBack(ctx) {
+    for (const e of AU) {
+      groundGlow(ctx, e);
+      ctx.globalCompositeOperation = 'lighter';
+      // 施法者身後的一團光
+      const fa = fadeOf(e);
+      const r = 90 + rad(e) * 0.5;
+      ctx.globalAlpha = fa * 0.4;
+      ctx.drawImage(GLOW, e.x - r, e.y - 70 - r * 0.8, r * 2, r * 1.6);
+      ribbons(ctx, e, false);
+      waves(ctx, e, false);
+    }
+  }
+  function auroraFront(ctx) {
+    for (const e of AU) {
+      ctx.globalCompositeOperation = 'lighter';
+      ribbons(ctx, e, true);
+      waves(ctx, e, true);
+    }
+    if (HIT.length) drawHits(ctx, G.time || 0);
+    drawMotes(ctx);
+  }
+
+  A.auroraFx = {
+    // 開始施法（S：技能資料，用 hitAt、radius、waves）
+    begin,
+    // 第 w 波出發（遊戲那邊造成傷害的同一刻）
+    wave,
+    // 這一波打中了 m（之後緩速期間身上有冰霜極光）
+    hit,
+  };
+  A.skillFx.add({
+    live: () => AU.length > 0 || HIT.length > 0 || moN > 0,
+    step: auroraStep,
+    back: auroraBack,
+    front: auroraFront,
+    clear() {
+      AU.length = 0;
+      HIT.length = 0;
+      for (const q of MO) q.on = false;
+      moN = 0;
+    },
+  });
 })();

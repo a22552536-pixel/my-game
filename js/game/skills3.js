@@ -6,6 +6,8 @@
   const X = G.skillExec;
   const alive = (m) => X.alive(m);
   const midY = (m) => m.y - m.h * (m.scale || 1) * 0.5;
+  // 「最強」的排序：Boss 優先，其次 HP 最多
+  const strongest = (p, q) => (q.isBoss ? 1e9 : q.hp) - (p.isBoss ? 1e9 : p.hp);
 
   // 從 (x1,y1) 到 (x2,y2) 的一道閃電（用 fx.bolts 的畫法）
   function zap(x1, y1, x2, y2, w, life) {
@@ -357,14 +359,18 @@
         G.fx.sparkle(P.x, P.y - 50, '#ffd35a', 14, 36);
         G.audio.play('charge');
         const fall = 0.75;
-        G.world.projectiles.push({ kind: 'meteor', owner: 'fx', x: tx - 260, y: ty - 560, vx: 260 / fall, vy: 560 / fall, t: 0, life: fall, dir: 1, seed: 0, r: 0 });
+        // 寫實的隕石、撞擊坑、噴飛岩塊都在 art/skills5.js 的 meteorFx；不閃全螢幕、震動收小
+        const mfx = G.art.meteorFx ? G.art.meteorFx.cast({ x: tx, y: ty, from: P.x <= tx ? -1 : 1, fall, blast: S.blast, burn: S.burnZone }) : null;
+        if (!mfx) G.world.projectiles.push({ kind: 'meteor', owner: 'fx', x: tx - 260, y: ty - 560, vx: 260 / fall, vy: 560 / fall, t: 0, life: fall, dir: 1, seed: 0, r: 0 });
         X.later(fall, () => {
-          G.fx.shake(16, 0.5, true);
-          G.fx.addHitstop(0.1, true);
-          G.fx.screenFlash('#ffcf8a', 0.4);
-          G.fx.ring(tx, ty - 20, 'rgba(255,160,60,0.95)', S.blast, 0.45, 10);
-          G.fx.impact(tx, ty - 30, 180, '#ffb03a');
-          G.fx.burst(tx, ty - 10, ['#ff6a2a', '#ffb03a', '#ffe07a', '#3a2a24'], 40, 460, { angle: -Math.PI / 2, spread: 1.5 });
+          G.fx.shake(9, 0.4, true);
+          G.fx.addHitstop(0.08, true);
+          if (mfx) G.art.meteorFx.impact(mfx);
+          else {
+            G.fx.ring(tx, ty - 20, 'rgba(255,160,60,0.95)', S.blast, 0.45, 10);
+            G.fx.impact(tx, ty - 30, 180, '#ffb03a');
+            G.fx.burst(tx, ty - 10, ['#ff6a2a', '#ffb03a', '#ffe07a', '#3a2a24'], 40, 460, { angle: -Math.PI / 2, spread: 1.5 });
+          }
           G.audio.play('slam');
           G.combat.targets().forEach((o) => {
             if (Math.abs(o.x - tx) < S.blast && Math.abs(o.y - ty) < 140) {
@@ -391,10 +397,10 @@
     judge: {
       start(P, S, id, lv) {
         P.action = { type: 'judgeCast', id, lv, t: 0, dur: S.castTime, done: false };
-        // 純視覺：先猜會劈誰（跟 hitAt 時同一套挑法），雷雲先在那隻頭上聚起來；真正的目標在 hitAt 才決定
+        // 純視覺：先猜會劈哪幾隻（跟真正劈的時候同一套挑法），雷雲先在它們頭上聚起來；真正的目標每一道劈下時才決定
         if (G.art.judgeFx) {
-          const pre = X.nearTargets(P, S.radius, 40).sort((p, q) => (q.isBoss ? 1e9 : q.hp) - (p.isBoss ? 1e9 : p.hp))[0];
-          P.action.fx = G.art.judgeFx.begin(P, pre || null, S.hitAt);
+          const pre = X.nearTargets(P, S.radius, 40).sort(strongest).slice(0, S.strikes || 1);
+          P.action.fx = G.art.judgeFx.begin(P, pre, S.hitAt);
         }
         P.glowT = 0.8;
         G.fx.sparkle(P.x, P.y - 50, '#fff6a8', 14, 36);
@@ -406,28 +412,51 @@
         const S = G.data.skills[a.id];
         if (a.done || a.t < S.hitAt) return;
         a.done = true;
-        // 最強的目標：Boss 優先，其次 HP 最多的
-        const list = X.nearTargets(P, S.radius, 40).sort((p, q) => (q.isBoss ? 1e9 : q.hp) - (p.isBoss ? 1e9 : p.hp));
-        const m = list[0];
-        if (!m) {
-          if (G.art.judgeFx) G.art.judgeFx.fizzle(a.fx);
-          G.hud.toast('附近沒有目標', '#cfe');
-          return;
+        // 五連劈：每一道劈向範圍內還沒被這次劈過的最強目標（Boss 優先，其次 HP 最多）；目標不夠就再劈最強的
+        const n = S.strikes || 1;
+        const hit = new Set();
+        const fx = a.fx;
+        const lv = a.lv;
+        const strike = (i) => {
+          const list = X.nearTargets(P, S.radius, 40).sort(strongest);
+          const m = list.find((o) => !hit.has(o)) || list[0];
+          const last = i === n - 1;
+          if (!m) {
+            if (i === 0) {
+              if (G.art.judgeFx) G.art.judgeFx.fizzle(fx);
+              G.hud.toast('附近沒有目標', '#cfe');
+            } else if (G.art.judgeFx) G.art.judgeFx.finish(fx);
+            return false;
+          }
+          // 雷柱、雷雲、焦坑都在 art/skills3.js 的 judgeFx；不閃全螢幕、震動收小
+          if (G.art.judgeFx) G.art.judgeFx.strike(fx, m, last);
+          else for (let k = 0; k < (last ? 5 : 2); k++) G.fx.bolt(m.x + U.rand(-14, 14), m.y - 640, m.y - 4);
+          G.fx.shake(last ? 7 : 3, last ? 0.3 : 0.12);
+          G.fx.addHitstop(last ? 0.1 : i ? 0.025 : 0.05);
+          G.audio.play('thunder');
+          const first = !hit.has(m);
+          hit.add(m);
+          G.combat.hitMonster(m, S.mult(lv) * (S.strikeK || 1), { knock: 0, heavy: last, sound: 'spirit' });
+          // 麻痺只在第一次被劈中時給
+          if (first && !m.isBoss && alive(m)) m.stunT = S.stun;
+          return true;
+        };
+        if (!strike(0)) return;
+        for (let i = 1; i < n; i++) {
+          X.later(i * (S.every || 0.2), () => {
+            // 連劈途中換了地圖／死掉就不劈了
+            if (G.player !== P || P.dead) return;
+            strike(i);
+          });
         }
-        // 雷柱、雷雲、焦坑都在 art/skills3.js 的 judgeFx；不閃全螢幕、震動收小
-        if (G.art.judgeFx) G.art.judgeFx.strike(a.fx, m);
-        else for (let i = 0; i < 5; i++) G.fx.bolt(m.x + U.rand(-14, 14), m.y - 640, m.y - 4);
-        G.fx.shake(7, 0.3);
-        G.fx.addHitstop(0.12);
-        G.audio.play('thunder');
-        G.combat.hitMonster(m, S.mult(a.lv), { knock: 0, heavy: true, sound: 'spirit' });
-        if (!m.isBoss && alive(m)) m.stunT = S.stun;
       },
     },
 
     auroraS: {
       start(P, S, id, lv) {
         P.action = { type: 'auroraCast', id, lv, t: 0, dur: S.castTime, done: false };
+        // 極光簾幕、漩渦、每一波、敵人身上的冰霜微光都在 art/skills5.js 的 auroraFx
+        if (G.art.auroraFx) P.action.fx = G.art.auroraFx.begin(P, S);
         P.glowT = 0.9;
         G.audio.play('evolve');
       },
@@ -437,13 +466,19 @@
         const S = G.data.skills[a.id];
         if (a.done || a.t < S.hitAt) return;
         a.done = true;
+        const AF = G.art.auroraFx;
+        const fx = a.fx;
         const cols = ['rgba(120,255,210,0.9)', 'rgba(200,150,255,0.9)', 'rgba(120,200,255,0.9)'];
         for (let w = 0; w < S.waves; w++) {
           X.later(w * 0.28, () => {
-            G.fx.ring(P.x, P.y - 40, cols[w % 3], S.radius, 0.5, 10);
-            G.fx.ring(P.x, P.y - 40, 'rgba(255,255,255,0.7)', S.radius * 0.7, 0.4, 4);
+            if (AF) AF.wave(fx, w);
+            else {
+              G.fx.ring(P.x, P.y - 40, cols[w % 3], S.radius, 0.5, 10);
+              G.fx.ring(P.x, P.y - 40, 'rgba(255,255,255,0.7)', S.radius * 0.7, 0.4, 4);
+            }
             X.nearTargets(P, S.radius, S.targets).forEach((m) => {
-              G.fx.pillar(m.x, m.y, cols[(w + 1) % 3], 0.35, 40);
+              if (AF) AF.hit(m, w);
+              else G.fx.pillar(m.x, m.y, cols[(w + 1) % 3], 0.35, 40);
               G.combat.hitMonster(m, S.mult(a.lv), { knock: 60, sound: 'spirit' });
               if (!m.isBoss) m.slowT = S.slow;
             });

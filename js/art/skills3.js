@@ -1679,8 +1679,9 @@
 
   // ════════════════ 雷霆審判 ════════════════
   // 施法者背後浮出一圈雷鼓光環（金環＋八面太鼓，鼓面是三道雷勾紋）→ 鼓一面接一面地敲、迸出火花；
-  // 目標頭上翻滾出厚重的雷雲，雲底閃著電；先導雷從雲底一節節探下來 → 巨大的藍白雷柱整根砸下，
-  // 地面炸出焦黑的坑、放射狀裂縫與一圈衝擊波，之後地上還爬著殘電。不做全螢幕閃白，只有局部的光暈。
+  // 畫面最上方翻滾出厚重的雷雲（寬度蓋住要劈的目標群），雲底閃著電；先導雷從雲底一節節探下來 →
+  // 藍白雷柱一道接一道劈下（五連劈，前四道細一點、最後一道最粗），每道都在地面炸出焦黑的坑、裂縫與衝擊波，
+  // 之後地上還爬著殘電。不做全螢幕閃白，只有局部的光暈。
 
   // 太鼓（正面、往右下看得到一點鼓身）：預先畫成 3 倍解析度的圖
   const DS = 3;
@@ -1829,199 +1830,220 @@
   })();
 
   const J = [];
-  const JP = pool(170);
+  const JP = pool(260);
   function hitboxOf(m) {
     if (m && m.hitbox) return m.hitbox();
     return { x: (m ? m.x : 0) - 30, y: (m ? m.y : 0) - 80, w: 60, h: 80 };
   }
-  function placeCloud(e, m, init) {
-    const hb = hitboxOf(m);
-    e.cW = clamp(180 + hb.w * 0.9, 180, 460);
-    const cam = G.cam;
-    // 雷雲壓在畫面最上方（神從天上劈下來）；只有目標本身就在畫面頂端時才往下讓一點
-    e.cW = Math.max(e.cW, 320);
-    let yb = cam.y + 30 + e.cW * 0.24;
-    yb = Math.min(yb, hb.y - 36);
-    e.cyB = yb;
-    if (init) {
-      e.cx = m.x;
-      e.puffs.length = 0;
-      const n = lite() ? 7 : 12;
-      const W = e.cW;
-      for (let i = 0; i < n; i++) {
-        const k = (i / (n - 1)) * 2 - 1;
-        const r = W * (0.12 + (1 - k * k) * 0.08) * rr(0.9, 1.1);
-        e.puffs.push({ ax: k * W * 0.42 + rr(-5, 5), ay: -r * 0.55 - (1 - k * k) * W * 0.12 - (i % 2 ? W * 0.05 : 0), r, ph: rr(0, TAU), sp: rr(1.1, 2.2) * (rnd() < 0.5 ? -1 : 1), orb: rr(2, 6), d: Math.abs(k) * 0.12 + rr(0, 0.05) });
-      }
-      e.puffs.sort((p, q) => p.ay - q.ay);
-      e.pp = new Float32Array(n * 3);
+  // 雷雲壓在畫面最上方（神從天上劈下來），寬度蓋住預測要劈的所有目標；只有目標本身就在畫面頂端時才往下讓一點。
+  // H 是雲的「厚度」尺寸（雲團大小、雲底高度都跟它走），W 是橫向寬度 —— 很寬的雲不會跟著變得很厚。
+  function placeCloud(e, list) {
+    let x0 = 1e9;
+    let x1 = -1e9;
+    let top = 1e9;
+    for (const m of list) {
+      const hb = hitboxOf(m);
+      x0 = Math.min(x0, hb.x);
+      x1 = Math.max(x1, hb.x + hb.w);
+      top = Math.min(top, hb.y);
     }
+    const W = clamp(x1 - x0 + 170, 320, 780);
+    const H = clamp(200 + (x1 - x0) * 0.12, 320, 380);
+    e.cW = W;
+    e.H = H;
+    e.cx = e.cxT = (x0 + x1) / 2;
+    const cam = G.cam;
+    e.cyB = Math.min(cam.y + 30 + H * 0.24, top - 36);
+    e.puffs.length = 0;
+    const n = Math.round(clamp(W / 30, 11, 24) * (lite() ? 0.6 : 1));
+    for (let i = 0; i < n; i++) {
+      const k = (i / (n - 1)) * 2 - 1;
+      const bell = 1 - k * k;
+      const r = H * (0.12 + bell * 0.08) * rr(0.9, 1.1) * (W > 460 ? 0.92 : 1);
+      e.puffs.push({ ax: k * W * 0.43 + rr(-5, 5), ay: -r * 0.55 - bell * H * 0.12 - (i % 2 ? H * 0.05 : 0), r, ph: rr(0, TAU), sp: rr(1.1, 2.2) * (rnd() < 0.5 ? -1 : 1), orb: rr(2, 6), d: Math.abs(k) * 0.12 + rr(0, 0.05) });
+    }
+    e.puffs.sort((p, q) => p.ay - q.ay);
+    e.pp = new Float32Array(n * 3);
   }
-  function newJudge(P, m, hitAt) {
+  function newJudge(P, list, hitAt) {
     const e = {
-      t: 0, hitAt: hitAt || 0.45, hitT: -1, fz: false, m: m || null, cloud: false, cx: 0, cyB: 0, cW: 200, puffs: [], pp: null,
-      x: 0, gy: 0, top: 0, Wc: 50, sz: 1, Rc: 50, ground: false, span0: 0, span1: 0, depth: 0, hb: null,
-      beatI: -1, regen: 0, lead: 0, flT: 0, flX: 0, flY: 0, flR: 0, flA: 0, flNext: 0.12,
-      col: new Float32Array(3 * 52), cn: 0, br: new Float32Array(2 * 8 * 12), bc: new Int8Array(12), nb: 0,
-      lb: new Float32Array(2 * 12), ln: 0, cb: new Float32Array(2 * 8), ab: new Float32Array(2 * 8 * 10), ac: new Int8Array(10), na: 0, arcT: 0,
-      db: new Float32Array(2 * 7 * 10), dn: 0, drT: 0, cr: null, crN: 0, bowl: new Float32Array(2 * 9), rim: null,
+      t: 0, hitAt: hitAt || 0.45, hitT: -1, lastHit: -1, lastBig: false, lastX: 0, done: false, nS: 0, fz: false, m: null, pre: list,
+      cloud: false, cx: 0, cxT: 0, cyB: 0, cW: 320, H: 320, puffs: [], pp: null, S: [],
+      beatI: -1, lead: 0, flT: -1, flX: 0, flY: 0, flR: 0, flA: 0, flNext: 0.12,
+      lb: new Float32Array(2 * 12), ln: 0, cb: new Float32Array(2 * 8), db: new Float32Array(2 * 7 * 10), dn: 0, drT: 0,
     };
-    if (m) {
+    if (list.length) {
+      e.m = list[0];
       e.cloud = true;
-      placeCloud(e, m, true);
+      placeCloud(e, list);
     }
     return e;
   }
-  function judgeStrike(e, m) {
-    e.hitT = e.t;
-    const hb = hitboxOf(m);
-    e.hb = hb;
+  // 一道落雷（五連劈的其中一道）。big：最後、最粗的那一道
+  function judgeStrike(e, m, big) {
     if (!e.cloud) {
       e.cloud = true;
-      placeCloud(e, m, true);
-    } else if (m !== e.m) {
-      placeCloud(e, m, false);
-      e.cx = m.x;
+      placeCloud(e, [m]);
     }
+    const hb = hitboxOf(m);
+    // 目標在雲外 → 雲往那邊挪（雷柱還是從雲底劈下）
+    const edge = e.cW * 0.4;
+    if (m.x < e.cxT - edge) e.cxT = m.x + e.cW * 0.3;
+    else if (m.x > e.cxT + edge) e.cxT = m.x - e.cW * 0.3;
+    if (e.hitT < 0) e.hitT = e.t;
+    e.lastHit = e.t;
+    e.lastBig = big;
+    e.lastX = m.x;
+    e.nS++;
     e.m = m;
-    e.x = m.x;
-    e.sz = clamp(hb.w / 70, 1, 2.6);
-    e.Wc = clamp(40 + hb.w * 0.3, 46, 124);
-    e.Rc = 30 + 22 * e.sz;
-    e.top = e.cyB - e.cW * 0.06;
-    const feet = hb.y + hb.h;
+    if (big) e.done = true;
+    // 雲裡對應的位置亮一下
+    e.flX = m.x;
+    e.flY = e.cyB - e.H * 0.12;
+    e.flR = e.H * (big ? 0.62 : 0.46);
+    e.flT = e.t;
+    e.flA = 1;
+    const pw = big ? 1 : 0.72;
+    const sz = clamp(hb.w / 70, 1, 2.6);
+    const s = {
+      t: 0, m, big, pw, hb, x: m.x, gy: hb.y + hb.h, top: e.cyB - e.H * 0.06, H: e.H, sz,
+      Wc: clamp(40 + hb.w * 0.3, 46, 124) * (big ? 1.12 : 0.66), Rc: (30 + 22 * sz) * (big ? 1 : 0.7),
+      ground: false, span0: 0, span1: 0, depth: 0, regen: 0, arcT: 0, arcDur: big ? 1.7 : 0.6,
+      col: new Float32Array(3 * 52), cn: 0, br: new Float32Array(2 * 8 * 12), bc: new Int8Array(12), nb: 0,
+      ab: new Float32Array(2 * 8 * 10), ac: new Int8Array(10), na: 0, cr: null, crN: 0, bowl: new Float32Array(2 * 9), rim: null,
+    };
+    e.S.push(s);
+    const feet = s.gy;
     const map = G.world && G.world.map;
-    e.ground = false;
-    e.gy = feet;
     if (map && G.physics) {
       const i = G.physics.platformBelow(map, m.x, feet - 4);
       if (i >= 0) {
         const p = map.platforms[i];
         if (p[2] - feet < 240) {
-          e.ground = true;
-          e.gy = p[2];
-          e.span0 = p[0];
-          e.span1 = p[1];
-          e.depth = i === 0 ? 150 : 20;
+          s.ground = true;
+          s.gy = p[2];
+          s.span0 = p[0];
+          s.span1 = p[1];
+          s.depth = i === 0 ? 150 : 20;
         }
       }
     }
-    const x = e.x;
-    const gy = e.gy;
+    const x = s.x;
+    const gy = s.gy;
     const L = lite();
-    if (e.ground) {
+    if (s.ground) {
       // 坑：參差的淺碗
-      const Rc = e.Rc;
+      const Rc = s.Rc;
       for (let i = 0; i <= 8; i++) {
         const k = i / 8;
-        e.bowl[i * 2] = x - Rc + 2 * Rc * k + (i && i < 8 ? rr(-3, 3) : 0);
-        e.bowl[i * 2 + 1] = gy + Math.sin(k * PI) * Rc * 0.22 * rr(0.75, 1.1);
+        s.bowl[i * 2] = x - Rc + 2 * Rc * k + (i && i < 8 ? rr(-3, 3) : 0);
+        s.bowl[i * 2 + 1] = gy + Math.sin(k * PI) * Rc * 0.22 * rr(0.75, 1.1);
       }
-      // 放射狀裂縫：兩條貼著地表往外跑、其餘斜斜往下劈進地裡
-      const nC = L ? 4 : 8;
-      e.crN = nC;
-      e.cr = new Float32Array(nC * 2 * 7);
+      // 放射狀裂縫：兩條貼著地表往外跑、其餘斜斜往下劈進地裡（小雷少一點）
+      const nC = big ? (L ? 4 : 8) : L ? 2 : 4;
+      s.crN = nC;
+      s.cr = new Float32Array(nC * 2 * 7);
       for (let c = 0; c < nC; c++) {
-        const s = c % 2 ? 1 : -1;
+        const sg = c % 2 ? 1 : -1;
         const flat = c < 2;
         const a0 = flat ? rr(0.02, 0.1) : rr(0.25, 1.15);
-        const ang = s > 0 ? a0 : PI - a0;
-        const len = (flat ? rr(90, 150) : rr(40, 100)) * (0.7 + 0.3 * e.sz);
-        let px = x + s * rr(0.3, 0.8) * Rc;
+        const ang = sg > 0 ? a0 : PI - a0;
+        const len = (flat ? rr(90, 150) : rr(40, 100)) * (0.7 + 0.3 * sz) * (big ? 1 : 0.6);
+        let px = x + sg * rr(0.3, 0.8) * Rc;
         let py = gy + (flat ? 2 : rr(3, 8));
         for (let i = 0; i < 7; i++) {
-          e.cr[(c * 7 + i) * 2] = px;
-          e.cr[(c * 7 + i) * 2 + 1] = py;
+          s.cr[(c * 7 + i) * 2] = px;
+          s.cr[(c * 7 + i) * 2 + 1] = py;
           const d = ang + rr(-0.45, 0.45);
           px += Math.cos(d) * (len / 6);
           py = Math.max(gy + 1.5, py + Math.sin(d) * (len / 6));
         }
       }
       // 坑邊翻起來的碎石（描邊的小石塊，貼在地表上）
-      e.rim = [];
-      for (let i = 0; i < (L ? 3 : 6); i++) {
-        const s = i % 2 ? 1 : -1;
-        e.rim.push({ x: x + s * Rc * rr(0.75, 1.25), r: rr(3, 6) * (0.8 + 0.2 * e.sz), rot: rr(0, TAU), c: ['#6a5a52', '#57504e', '#7a6a5a'][i % 3] });
+      s.rim = [];
+      for (let i = 0; i < (big ? (L ? 3 : 6) : L ? 1 : 3); i++) {
+        const sg = i % 2 ? 1 : -1;
+        s.rim.push({ x: x + sg * Rc * rr(0.75, 1.25), r: rr(3, 6) * (0.8 + 0.2 * sz) * (big ? 1 : 0.8), rot: rr(0, TAU), c: ['#6a5a52', '#57504e', '#7a6a5a'][i % 3] });
       }
     }
-    // 碎石、火花、煙
-    const nR = L ? 5 : 11;
+    // 碎石、火花、煙（小雷大約一半）
+    const nR = Math.round((L ? 5 : 11) * (big ? 1 : 0.5));
     for (let i = 0; i < nR; i++) {
-      const q = spawn(JP, 2, x + rr(-0.5, 0.5) * e.Rc, gy - 4, rr(-260, 260), rr(-520, -220), rr(0.8, 1.2), rr(3, 6.5) * (0.8 + 0.2 * e.sz));
+      const q = spawn(JP, 2, x + rr(-0.5, 0.5) * s.Rc, gy - 4, rr(-260, 260) * pw, rr(-520, -220) * pw, rr(0.8, 1.2), rr(3, 6.5) * (0.8 + 0.2 * sz) * (big ? 1 : 0.8));
       if (!q) break;
       q.g = 1500;
-      q.floor = e.ground ? gy - 1 : 1e9;
+      q.floor = s.ground ? gy - 1 : 1e9;
       q.c = i % 3;
     }
-    const nS = L ? 12 : 28;
-    for (let i = 0; i < nS; i++) {
+    const nSp = Math.round((L ? 12 : 28) * (big ? 1 : 0.55));
+    for (let i = 0; i < nSp; i++) {
       const a = -PI / 2 + rr(-1.35, 1.35);
-      const sp = rr(260, 720);
+      const sp = rr(260, 720) * (big ? 1 : 0.8);
       const q = spawn(JP, 1, x + rr(-8, 8), gy - 6, Math.cos(a) * sp, Math.sin(a) * sp, rr(0.25, 0.55), rr(1.2, 2.4));
       if (!q) break;
       q.g = 900;
       q.drag = 1.5;
     }
-    for (let i = 0; i < (L ? 3 : 7); i++) {
-      const q = spawn(JP, 3, x + rr(-1, 1) * e.Rc, gy - rr(4, 20), rr(-40, 40), rr(-60, -20), rr(0.9, 1.5), rr(18, 30) * (0.8 + 0.2 * e.sz));
+    for (let i = 0; i < (big ? (L ? 3 : 7) : L ? 1 : 3); i++) {
+      const q = spawn(JP, 3, x + rr(-1, 1) * s.Rc, gy - rr(4, 20), rr(-40, 40), rr(-60, -20), rr(0.9, 1.5), rr(18, 30) * (0.8 + 0.2 * sz) * (big ? 1 : 0.75));
       if (!q) break;
       q.drag = 1.2;
       q.b = -rr(0.08, 0.25); // 延遲出現
     }
-    regenColumn(e);
+    regenColumn(s);
   }
-  function regenColumn(e) {
-    const top = e.top;
-    const gy = e.gy;
+  function regenColumn(s) {
+    const top = s.top;
+    const gy = s.gy;
     const N = clamp(Math.round((gy - top) / 24), 8, 50);
-    e.cn = N;
+    s.cn = N;
     for (let i = 0; i <= N; i++) {
-      e.col[i * 3] = e.x + (i === N ? 0 : rr(-1, 1) * e.Wc * 0.14);
-      e.col[i * 3 + 1] = rr(0.7, 1.08);
-      e.col[i * 3 + 2] = rr(0.7, 1.08);
+      s.col[i * 3] = s.x + (i === N ? 0 : rr(-1, 1) * s.Wc * 0.14);
+      s.col[i * 3 + 1] = rr(0.7, 1.08);
+      s.col[i * 3 + 2] = rr(0.7, 1.08);
     }
     // 分叉：從柱身往外、往下劈出去
-    const nb = lite() ? 3 : 7;
+    const nb = lite() ? (s.big ? 3 : 2) : s.big ? 7 : 4;
     let w = 0;
     let k = 0;
     while (k < nb && w < 12) {
       const i = Math.floor(rr(1, N - 1));
-      const s = rnd() < 0.5 ? -1 : 1;
+      const sg = rnd() < 0.5 ? -1 : 1;
       const y0 = top + ((gy - top) * i) / N;
-      const x0 = e.col[i * 3] + (s * e.Wc) / 2;
+      const x0 = s.col[i * 3] + (sg * s.Wc) / 2;
       const a = rr(0.15, 0.95);
-      const len = rr(40, 130) * (0.8 + 0.2 * e.sz);
-      const x1 = x0 + s * Math.cos(a) * len;
+      const len = rr(40, 130) * (0.8 + 0.2 * s.sz) * (s.big ? 1 : 0.75);
+      const x1 = x0 + sg * Math.cos(a) * len;
       const y1 = Math.min(gy - 2, y0 + Math.sin(a) * len);
-      e.bc[w] = jag(e.br, w * 16, x0, y0, x1, y1, 7, len * 0.14);
+      s.bc[w] = jag(s.br, w * 16, x0, y0, x1, y1, 7, len * 0.14);
       w++;
       // 偶爾再分一次
       if (w < 12 && rnd() < 0.4) {
         const j = 3 * 2 + 16 * (w - 1);
-        const bx = e.br[j];
-        const by = e.br[j + 1];
+        const bx = s.br[j];
+        const by = s.br[j + 1];
         const a2 = a + rr(0.3, 0.7);
         const l2 = len * rr(0.35, 0.55);
-        e.bc[w] = jag(e.br, w * 16, bx, by, bx + s * Math.cos(a2) * l2, Math.min(gy - 2, by + Math.sin(a2) * l2), 4, l2 * 0.18);
+        s.bc[w] = jag(s.br, w * 16, bx, by, bx + sg * Math.cos(a2) * l2, Math.min(gy - 2, by + Math.sin(a2) * l2), 4, l2 * 0.18);
         w++;
       }
       k++;
     }
-    e.nb = w;
+    s.nb = w;
   }
-  function regenGroundArcs(e) {
-    const n = lite() ? 2 : 5;
-    e.na = n;
+  function regenGroundArcs(s) {
+    const n = s.big ? (lite() ? 2 : 5) : lite() ? 1 : 2;
+    s.na = n;
     for (let i = 0; i < n; i++) {
-      if (i === 0 && e.m && !e.m.dead && e.t - e.hitT < 0.9) {
+      if (i === 0 && s.m && !s.m.dead && s.t < 0.9) {
         // 一道從坑裡往上爬到目標身上的殘電（麻痺中）
-        const hb = hitboxOf(e.m);
-        e.ac[i] = jag(e.ab, i * 20, e.x + rr(-10, 10), e.gy - 2, hb.x + rr(0.2, 0.8) * hb.w, hb.y + rr(0.3, 0.8) * hb.h, 6, 10);
+        const hb = hitboxOf(s.m);
+        s.ac[i] = jag(s.ab, i * 20, s.x + rr(-10, 10), s.gy - 2, hb.x + rr(0.2, 0.8) * hb.w, hb.y + rr(0.3, 0.8) * hb.h, 6, 10);
         continue;
       }
-      const x0 = e.x + rr(-1.4, 1.4) * e.Rc;
-      const x1 = x0 + rr(-45, 45) * e.sz;
-      e.ac[i] = jag(e.ab, i * 20, x0, e.gy - 1, x1, e.gy - rr(0, 5), 6, 5);
+      const x0 = s.x + rr(-1.4, 1.4) * s.Rc;
+      const x1 = x0 + rr(-45, 45) * s.sz;
+      s.ac[i] = jag(s.ab, i * 20, x0, s.gy - 1, x1, s.gy - rr(0, 5), 6, 5);
     }
   }
 
@@ -2031,14 +2053,30 @@
       const e = J[i];
       e.t += dt;
       const t = e.t;
-      if (e.hitT < 0 && e.m && e.cloud && !e.m.dead) e.cx += (e.m.x - e.cx) * Math.min(1, dt * 8);
+      // 保險：五連劈的計時器被清掉（換地圖等）時也要收尾
+      if (!e.done && e.hitT >= 0 && t - e.lastHit > 0.6) e.done = true;
       if (e.hitT < 0 && t > e.hitAt + 0.25) e.fz = true;
-      if ((e.hitT >= 0 && t - e.hitT > 2.4) || (e.fz && e.hitT < 0 && t > e.hitAt + 1.1)) {
+      if ((e.done && t - e.lastHit > 2.4) || (e.fz && e.hitT < 0 && t > e.hitAt + 1.1)) {
         J.splice(i, 1);
         continue;
       }
-      // 雲裡的閃電：越接近劈下越頻繁
-      if (e.cloud && e.pp && t > e.flNext && (e.hitT < 0 || t - e.hitT < 0.5)) {
+      // 劈之前：雲跟著預測的目標群移動；劈了之後：往需要的位置挪
+      if (e.cloud) {
+        if (e.hitT < 0 && e.pre.length) {
+          let x0 = 1e9;
+          let x1 = -1e9;
+          for (const m of e.pre) {
+            if (m.dead) continue;
+            x0 = Math.min(x0, m.x);
+            x1 = Math.max(x1, m.x);
+          }
+          if (x1 >= x0) e.cxT = (x0 + x1) / 2;
+        }
+        e.cx += (e.cxT - e.cx) * Math.min(1, dt * 9);
+      }
+      const hkL = e.hitT >= 0 ? t - e.lastHit : -1;
+      // 雲裡的閃電：越接近劈下越頻繁；連劈期間一直閃
+      if (e.cloud && e.pp && t > e.flNext && (!e.done || hkL < 0.5)) {
         const j = Math.floor(rnd() * e.puffs.length);
         const p = e.puffs[j];
         e.flX = e.cx + p.ax;
@@ -2046,39 +2084,42 @@
         e.flR = p.r * rr(1.4, 2.2);
         e.flT = t;
         e.flA = rr(0.5, 1);
-        e.flNext = t + (e.hitT < 0 ? rr(0.05, 0.16) * (1.2 - Math.min(1, t / e.hitAt)) + 0.03 : rr(0.08, 0.2));
+        e.flNext = t + (e.hitT < 0 ? rr(0.05, 0.16) * (1.2 - Math.min(1, t / e.hitAt)) + 0.03 : rr(0.06, 0.14));
       }
-      if (e.hitT >= 0) {
-        const hk = t - e.hitT;
-        e.regen -= dt;
-        if (hk < 0.62 && e.regen <= 0) {
-          e.regen = 0.034;
-          regenColumn(e);
+      for (const s of e.S) {
+        s.t += dt;
+        const hk = s.t;
+        s.regen -= dt;
+        if (hk < 0.62 && s.regen <= 0) {
+          s.regen = 0.034;
+          regenColumn(s);
         }
-        e.arcT -= dt;
-        if (hk > 0.12 && hk < 1.7 && e.arcT <= 0) {
-          e.arcT = 0.07;
-          regenGroundArcs(e);
+        s.arcT -= dt;
+        if (hk > 0.12 && hk < s.arcDur && s.arcT <= 0) {
+          s.arcT = 0.07;
+          regenGroundArcs(s);
         }
-      } else if (e.cloud && t > e.hitAt - 0.16) {
+      }
+      if (e.hitT < 0 && e.cloud && t > e.hitAt - 0.16) {
+        // 第一道之前，先導雷從雲底一節節探向預測的目標
         e.lead -= dt;
         if (e.lead <= 0) {
           e.lead = 0.03;
           const k = clamp((t - (e.hitAt - 0.16)) / 0.16, 0, 1);
           const hb = e.m && !e.m.dead ? hitboxOf(e.m) : null;
+          const lx = e.m ? e.m.x : e.cx;
           const y1 = e.cyB + ((hb ? hb.y + hb.h * 0.5 : e.cyB + 200) - e.cyB) * k * 0.85;
-          e.ln = jag(e.lb, 0, e.cx + rr(-6, 6), e.cyB - 4, e.cx + rr(-18, 18), y1, 10, 12);
+          e.ln = jag(e.lb, 0, lx + rr(-6, 6), e.cyB - 4, lx + rr(-18, 18), y1, 10, 12);
         }
       }
-      // 鼓：一面接一面地敲，敲的那面迸火花
+      // 鼓：一面接一面地敲（連劈期間也一直敲），敲的那面迸火花
       const P = G.player;
-      if (e.hitT < 0 && !e.fz && t > 0.1 && P) {
+      if (!e.done && !e.fz && t > 0.1 && P) {
         const n = lite() ? 6 : 8;
         const b = Math.floor((t - 0.1) / 0.048);
         if (b !== e.beatI) {
           e.beatI = b;
-          const i = b % n;
-          const d = drumPos(e, P, i, n);
+          const d = drumPos(e, P, b % n, n);
           for (let k = 0; k < (lite() ? 1 : 3); k++) {
             const a = Math.atan2(d.y - d.cy, d.x - d.cx) + rr(-0.6, 0.6);
             const sp = rr(120, 240);
@@ -2087,8 +2128,8 @@
           }
         }
       }
-      // 劈下的一瞬間，每面鼓都往天上射一道電
-      if (e.hitT >= 0 && t - e.hitT < 0.2) {
+      // 每劈一道，每面鼓都往天上射一道電（最後一道射得久一點）
+      if (hkL >= 0 && hkL < (e.lastBig ? 0.2 : 0.11)) {
         e.drT -= dt;
         if (e.drT <= 0 && P) {
           e.drT = 0.035;
@@ -2096,7 +2137,7 @@
           e.dn = Math.min(10, n);
           for (let i = 0; i < e.dn; i++) {
             const d = drumPos(e, P, i, n);
-            jag(e.db, i * 14, d.x, d.y, d.x + (d.x - d.cx) * 0.6 + rr(-14, 14), d.y - rr(50, 95), 6, 7);
+            jag(e.db, i * 14, d.x, d.y, d.x + (d.x - d.cx) * 0.6 + rr(-14, 14), d.y - rr(50, 95) * (e.lastBig ? 1 : 0.7), 6, 7);
           }
         }
       }
@@ -2115,8 +2156,8 @@
     return DP_;
   }
   function drumsOut(e) {
-    if (e.hitT >= 0) return clamp(1 - (e.t - e.hitT - 0.3) / 0.32, 0, 1);
-    if (e.fz) return clamp(1 - (e.t - e.hitAt - 0.25) / 0.3, 0, 1);
+    if (e.done) return clamp(1 - (e.t - e.lastHit - 0.3) / 0.32, 0, 1);
+    if (e.fz && e.hitT < 0) return clamp(1 - (e.t - e.hitAt - 0.25) / 0.3, 0, 1);
     return 1;
   }
 
@@ -2131,9 +2172,8 @@
       const n = lite() ? 6 : 8;
       const cx = P.x - P.dir * 4;
       const cy = P.y - 64;
-      const hk = e.hitT >= 0 ? t - e.hitT : -1;
-      const sp = hk >= 0 ? Math.max(0, 1 - hk / 0.28) : 0;
-      ctx.globalAlpha = out;
+      const hk = e.hitT >= 0 ? t - e.lastHit : -1;
+      const sp = hk >= 0 ? Math.max(0, 1 - hk / (e.lastBig ? 0.28 : 0.16)) * (e.lastBig ? 1 : 0.7) : 0;
       ctx.globalCompositeOperation = 'lighter';
       const gr = 120 * a * (1 + 0.3 * sp);
       ctx.globalAlpha = out * (0.35 + 0.4 * sp);
@@ -2159,7 +2199,7 @@
         ctx.stroke();
       }
       // 鼓與鼓之間的電鏈（敲鼓時才有）
-      const beating = hk < 0 && !e.fz && t > 0.1;
+      const beating = !e.done && !e.fz && t > 0.1;
       const bi = beating ? e.beatI % n : -1;
       const bk = beating ? 1 - (((t - 0.1) / 0.048) % 1) : 0;
       for (let i = 0; i < n; i++) {
@@ -2190,17 +2230,19 @@
         jag(e.cb, 0, x0, y0, d1.x, d1.y, 5, 6);
         arc(ctx, e.cb, 0, 6, 1.4, bk * out);
       }
-      if (e.dn && hk >= 0 && hk < 0.2) {
+      const dd = e.lastBig ? 0.2 : 0.11;
+      if (e.dn && hk >= 0 && hk < dd) {
         ctx.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < e.dn; i++) arc(ctx, e.db, i * 14, 7, 1.6, (1 - hk / 0.2) * out);
+        for (let i = 0; i < e.dn; i++) arc(ctx, e.db, i * 14, 7, 1.6, (1 - hk / dd) * out);
       }
     }
   }
 
-  function drawCloud(ctx, e, t, hk) {
+  function drawCloud(ctx, e, t) {
+    const hk = e.done ? t - e.lastHit : -1;
     let ca = 1;
     if (hk >= 0) ca = clamp(1 - (hk - 0.5) / 0.6, 0, 1);
-    else if (e.fz) ca = clamp(1 - (t - e.hitAt - 0.25) / 0.5, 0, 1);
+    else if (e.fz && e.hitT < 0) ca = clamp(1 - (t - e.hitAt - 0.25) / 0.5, 0, 1);
     if (ca <= 0) return;
     const cx = e.cx;
     const cyB = e.cyB;
@@ -2225,7 +2267,7 @@
       if (r > 1) ctx.drawImage(PF_FILL, pp[i * 3] - r, pp[i * 3 + 1] - r, r * 2, r * 2);
     }
     // 雲底的漩渦
-    const W = e.cW;
+    const H = e.H;
     const form = clamp(t / 0.3, 0, 1);
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'rgba(150,162,205,0.32)';
@@ -2233,38 +2275,51 @@
     for (let k = 0; k < 2; k++) {
       const a0 = t * 3.2 + k * PI;
       ctx.beginPath();
-      ctx.ellipse(cx, cyB - W * 0.05, W * (0.14 + 0.1 * k) * form, W * (0.03 + 0.02 * k) * form, 0, a0, a0 + 2.1);
+      ctx.ellipse(cx, cyB - H * 0.05, (H * (0.14 + 0.1 * k) + (e.cW - H) * 0.25) * form, H * (0.03 + 0.02 * k) * form, 0, a0, a0 + 2.1);
       ctx.stroke();
     }
     // 雲裡的閃光
     ctx.globalCompositeOperation = 'lighter';
     const fk = 1 - (t - e.flT) / 0.09;
-    if (fk > 0) {
+    if (fk > 0 && e.flT >= 0) {
       ctx.globalAlpha = ca * fk * e.flA * 0.8;
       ctx.drawImage(GLOW_B, e.flX - e.flR, e.flY - e.flR, e.flR * 2, e.flR * 2);
     }
-    // 蓄電：雲底越來越亮；劈下後雲底整片被照亮
-    const charge = hk >= 0 ? Math.max(0, 1 - hk / 0.4) : clamp(t / e.hitAt, 0, 1) * 0.45;
-    if (charge > 0.02) {
-      ctx.globalAlpha = ca * charge;
-      ctx.drawImage(GLOW_B, cx - W * 0.45, cyB - W * 0.22, W * 0.9, W * 0.4);
+    // 蓄電：雲底越來越亮；每劈一道，那一段雲底被照亮
+    if (e.hitT < 0) {
+      const charge = clamp(t / e.hitAt, 0, 1) * 0.45;
+      if (charge > 0.02) {
+        ctx.globalAlpha = ca * charge;
+        const w = Math.min(e.cW, H * 1.3);
+        ctx.drawImage(GLOW_B, cx - w * 0.45, cyB - H * 0.22, w * 0.9, H * 0.4);
+      }
+    } else {
+      const k = t - e.lastHit;
+      const charge = Math.max(0, 1 - k / (e.lastBig ? 0.4 : 0.22)) * (e.lastBig ? 1 : 0.75);
+      if (charge > 0.02) {
+        ctx.globalAlpha = ca * charge;
+        ctx.drawImage(GLOW_B, e.lastX - H * 0.45, cyB - H * 0.22, H * 0.9, H * 0.4);
+      }
     }
   }
 
-  function drawColumn(ctx, e, hk) {
-    const top = e.top;
-    const gy = e.gy;
+  function drawColumn(ctx, s, hk) {
+    const top = s.top;
+    const gy = s.gy;
     const drop = hk < 0.045 ? eOut(hk / 0.045) : 1;
     const yEnd = top + (gy - top) * drop;
-    const wk = hk < 0.045 ? 0.8 : hk < 0.3 ? 1 + 0.12 * Math.sin(hk * 90) : Math.max(0, 1 - (hk - 0.3) / 0.32);
+    // 小雷收得比較快
+    const hold = s.big ? 0.3 : 0.16;
+    const fade = s.big ? 0.32 : 0.22;
+    const wk = hk < 0.045 ? 0.8 : hk < hold ? 1 + 0.12 * Math.sin(hk * 90) : Math.max(0, 1 - (hk - hold) / fade);
     if (wk <= 0.01) return;
-    const W = e.Wc * wk;
+    const W = s.Wc * wk;
     ctx.globalCompositeOperation = 'lighter';
     // 外光
     ctx.globalAlpha = 0.75 * Math.min(1, wk);
-    ctx.drawImage(COLG, e.x - W * 2.4, top, W * 4.8, yEnd - top);
+    ctx.drawImage(COLG, s.x - W * 2.4, top, W * 4.8, yEnd - top);
     // 柱身：三層（藍、淡藍、白芯），兩側是參差的鋸齒
-    const N = e.cn;
+    const N = s.cn;
     const layer = (f, style, al) => {
       ctx.globalAlpha = al;
       ctx.fillStyle = style;
@@ -2274,16 +2329,16 @@
         const y = top + ((gy - top) * i) / N;
         if (y > yEnd + 0.5) break;
         const hw = (W / 2) * f * (i === 0 ? 1.35 : 1); // 柱頂略寬，接進雲裡
-        const x = e.col[i * 3] - hw * e.col[i * 3 + 1];
+        const x = s.col[i * 3] - hw * s.col[i * 3 + 1];
         i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
         last = i;
       }
       const yl = Math.min(yEnd, top + ((gy - top) * last) / N);
-      ctx.lineTo(e.col[last * 3] + (W / 2) * f * e.col[last * 3 + 2], yl);
+      ctx.lineTo(s.col[last * 3] + (W / 2) * f * s.col[last * 3 + 2], yl);
       for (let i = last; i >= 0; i--) {
         const y = top + ((gy - top) * i) / N;
         const hw = (W / 2) * f * (i === 0 ? 1.35 : 1);
-        ctx.lineTo(e.col[i * 3] + hw * e.col[i * 3 + 2], y);
+        ctx.lineTo(s.col[i * 3] + hw * s.col[i * 3 + 2], y);
       }
       ctx.closePath();
       ctx.fill();
@@ -2292,39 +2347,40 @@
     layer(0.62, '#bfe0ff', 0.9);
     layer(0.26, '#ffffff', 1);
     // 分叉、沿柱身爬的電
-    if (hk < 0.4) {
-      const ba = hk < 0.3 ? 1 : 1 - (hk - 0.3) / 0.1;
-      for (let i = 0; i < e.nb; i++) {
-        if (e.br[i * 16 + 1] > yEnd) continue;
-        arc(ctx, e.br, i * 16, e.bc[i], i % 2 ? 1.6 : 2.4, ba);
+    if (hk < hold + 0.1) {
+      const ba = hk < hold ? 1 : 1 - (hk - hold) / 0.1;
+      for (let i = 0; i < s.nb; i++) {
+        if (s.br[i * 16 + 1] > yEnd) continue;
+        arc(ctx, s.br, i * 16, s.bc[i], i % 2 ? 1.6 : 2.4, ba);
       }
     }
     // 落下的雷頭
     if (hk < 0.08) {
-      const r = e.Wc * 1.6;
+      const r = s.Wc * 1.6;
       ctx.globalAlpha = 1;
-      ctx.drawImage(GLOW_B, e.x - r, yEnd - r, r * 2, r * 2);
+      ctx.drawImage(GLOW_B, s.x - r, yEnd - r, r * 2, r * 2);
     }
   }
 
-  function drawCrater(ctx, e, hk) {
+  function drawCrater(ctx, s, hk) {
     const a = hk < 1.5 ? 1 : clamp(1 - (hk - 1.5) / 0.85, 0, 1);
     if (a <= 0) return;
-    const x = e.x;
-    const gy = e.gy;
-    const Rc = e.Rc;
+    const x = s.x;
+    const gy = s.gy;
+    const Rc = s.Rc;
     const glowK = clamp(1 - hk / 0.9, 0, 1);
     ctx.save();
     ctx.beginPath();
-    ctx.rect(e.span0, gy - 3, e.span1 - e.span0, e.depth + 3);
+    ctx.rect(s.span0, gy - 3, s.span1 - s.span0, s.depth + 3);
     ctx.clip();
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = a * clamp(hk / 0.05, 0, 1);
+    ctx.globalAlpha = a * clamp(hk / 0.05, 0, 1) * (s.big ? 1 : 0.75);
     ctx.drawImage(SCORCH, x - Rc * 1.9, gy - Rc * 0.3, Rc * 3.8, Rc * 0.95);
+    ctx.globalAlpha = a * clamp(hk / 0.05, 0, 1);
     // 坑
     ctx.beginPath();
-    ctx.moveTo(e.bowl[0], gy - 1);
-    for (let i = 0; i <= 8; i++) ctx.lineTo(e.bowl[i * 2], e.bowl[i * 2 + 1]);
+    ctx.moveTo(s.bowl[0], gy - 1);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(s.bowl[i * 2], s.bowl[i * 2 + 1]);
     ctx.closePath();
     ctx.fillStyle = 'rgba(20,13,16,0.92)';
     ctx.fill();
@@ -2332,21 +2388,21 @@
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    for (let c = 0; c < e.crN; c++) {
+    for (let c = 0; c < s.crN; c++) {
       for (let i = 0; i < 7; i++) {
         const j = (c * 7 + i) * 2;
-        i ? ctx.lineTo(e.cr[j], e.cr[j + 1]) : ctx.moveTo(e.cr[j], e.cr[j + 1]);
+        i ? ctx.lineTo(s.cr[j], s.cr[j + 1]) : ctx.moveTo(s.cr[j], s.cr[j + 1]);
       }
     }
     ctx.strokeStyle = 'rgba(18,12,14,0.88)';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = s.big ? 3 : 2.2;
     ctx.stroke();
     // 裂縫與坑裡殘留的雷光
     if (glowK > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = glowK * a * 0.45;
       ctx.strokeStyle = '#5c9cff';
-      ctx.lineWidth = 7;
+      ctx.lineWidth = s.big ? 7 : 5;
       ctx.stroke();
       ctx.globalAlpha = glowK * a;
       ctx.strokeStyle = '#d8ecff';
@@ -2355,7 +2411,7 @@
       ctx.beginPath();
       for (let i = 1; i < 8; i++) {
         const j = i * 2;
-        i > 1 ? ctx.lineTo(e.bowl[j], e.bowl[j + 1] - 1) : ctx.moveTo(e.bowl[j], e.bowl[j + 1] - 1);
+        i > 1 ? ctx.lineTo(s.bowl[j], s.bowl[j + 1] - 1) : ctx.moveTo(s.bowl[j], s.bowl[j + 1] - 1);
       }
       ctx.strokeStyle = '#eaf4ff';
       ctx.lineWidth = 2.2;
@@ -2363,11 +2419,11 @@
     }
     ctx.restore();
     // 坑邊翻起的碎石：貼在地表上、有描邊
-    if (e.rim) {
+    if (s.rim) {
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = a * clamp(hk / 0.05, 0, 1);
       ctx.lineJoin = 'round';
-      for (const r of e.rim) {
+      for (const r of s.rim) {
         ctx.beginPath();
         for (let k = 0; k < 5; k++) {
           const an = r.rot + (k / 5) * TAU;
@@ -2385,39 +2441,41 @@
     }
   }
 
-  function drawShock(ctx, e, hk) {
-    const x = e.x;
-    const gy = e.gy;
+  function drawShock(ctx, s, hk) {
+    const x = s.x;
+    const gy = s.gy;
+    const pw = s.pw;
     ctx.globalCompositeOperation = 'lighter';
     // 局部的光暈（不是全螢幕閃光）
-    if (hk < 0.55) {
-      const k = hk / 0.55;
-      const r = (120 + 45 * e.sz) * (hk < 0.08 ? 0.6 + hk * 5 : 1);
+    const gl = s.big ? 0.55 : 0.34;
+    if (hk < gl) {
+      const k = hk / gl;
+      const r = (120 + 45 * s.sz) * pw * (hk < 0.08 ? 0.6 + hk * 5 : 1);
       ctx.globalAlpha = Math.pow(1 - k, 1.8) * 0.7;
       ctx.drawImage(GLOW_B, x - r, gy - 10 - r, r * 2, r * 2);
-      ctx.globalAlpha = Math.pow(1 - k, 2) * 0.8;
-      const r2 = e.cW * 0.6;
-      ctx.drawImage(GLOW_B, x - r2, e.top - r2 * 0.6, r2 * 2, r2 * 1.2);
+      ctx.globalAlpha = Math.pow(1 - k, 2) * 0.8 * pw;
+      const r2 = s.H * 0.6 * pw;
+      ctx.drawImage(GLOW_B, x - r2, s.top - r2 * 0.6, r2 * 2, r2 * 1.2);
     }
-    // 地面上的衝擊波（兩圈）
-    for (let w = 0; w < 2; w++) {
-      const k = (hk - w * 0.08) / (0.5 + w * 0.1);
+    // 地面上的衝擊波（大雷兩圈、小雷一圈）
+    for (let w = 0; w < (s.big ? 2 : 1); w++) {
+      const k = (hk - w * 0.08) / ((0.5 + w * 0.1) * (s.big ? 1 : 0.8));
       if (k <= 0 || k >= 1) continue;
-      const rx = 26 + (260 + 90 * (e.sz - 1)) * eOut(k) * (w ? 0.8 : 1);
+      const rx = 26 + (260 + 90 * (s.sz - 1)) * pw * eOut(k) * (w ? 0.8 : 1);
       ctx.globalAlpha = (1 - k) * (w ? 0.6 : 1);
       ctx.strokeStyle = w ? '#8cc0ff' : '#e6f2ff';
-      ctx.lineWidth = (w ? 4 : 9) * (1 - k) + 1;
+      ctx.lineWidth = ((w ? 4 : 9) * (1 - k) + 1) * (s.big ? 1 : 0.7);
       ctx.beginPath();
       ctx.ellipse(x, gy - 2, rx, rx * 0.15, 0, 0, TAU);
       ctx.stroke();
     }
     // 半圓的爆風
-    const kd = hk / 0.32;
+    const kd = hk / (s.big ? 0.32 : 0.24);
     if (kd < 1) {
-      const r = 20 + (150 + 50 * e.sz) * eOut(kd);
+      const r = 20 + (150 + 50 * s.sz) * pw * eOut(kd);
       ctx.globalAlpha = (1 - kd) * 0.7;
       ctx.strokeStyle = '#cfe6ff';
-      ctx.lineWidth = 5 * (1 - kd) + 1;
+      ctx.lineWidth = 5 * (1 - kd) * pw + 1;
       ctx.beginPath();
       ctx.arc(x, gy, r, PI, TAU);
       ctx.stroke();
@@ -2478,20 +2536,20 @@
   function judgeFront(ctx) {
     for (const e of J) {
       const t = e.t;
-      const hk = e.hitT >= 0 ? t - e.hitT : -1;
-      if (hk >= 0 && e.ground) drawCrater(ctx, e, hk);
-      if (e.cloud) drawCloud(ctx, e, t, hk);
-      if (hk < 0 && e.cloud && e.ln && t > e.hitAt - 0.16 && !e.fz) {
+      for (const s of e.S) if (s.ground) drawCrater(ctx, s, s.t);
+      if (e.cloud) drawCloud(ctx, e, t);
+      if (e.hitT < 0 && e.cloud && e.ln && t > e.hitAt - 0.16 && !e.fz) {
         ctx.globalCompositeOperation = 'lighter';
         arc(ctx, e.lb, 0, e.ln, 1.6, 0.9);
       }
-      if (hk >= 0) {
-        drawColumn(ctx, e, hk);
-        drawShock(ctx, e, hk);
-        if (hk > 0.12 && hk < 1.7 && e.na) {
+      for (const s of e.S) {
+        const hk = s.t;
+        drawColumn(ctx, s, hk);
+        drawShock(ctx, s, hk);
+        if (hk > 0.12 && hk < s.arcDur && s.na) {
           ctx.globalCompositeOperation = 'lighter';
-          const a = 1 - (hk - 0.12) / 1.58;
-          for (let i = 0; i < e.na; i++) arc(ctx, e.ab, i * 20, e.ac[i], 1.3, a);
+          const a = 1 - (hk - 0.12) / (s.arcDur - 0.12);
+          for (let i = 0; i < s.na; i++) arc(ctx, s.ab, i * 20, s.ac[i], 1.3, a);
         }
       }
     }
@@ -2499,16 +2557,23 @@
   }
 
   A.judgeFx = {
-    // 開始施法（m：預測的目標，可以是 null）
-    begin(P, m, hitAt) {
-      const e = newJudge(P, m, hitAt);
+    // 開始施法。pre：預測會被劈的目標（陣列，可以是空的；也接受單一隻或 null），雷雲會蓋住它們
+    begin(P, pre, hitAt) {
+      const list = Array.isArray(pre) ? pre.filter(Boolean) : pre ? [pre] : [];
+      const e = newJudge(P, list, hitAt);
       J.push(e);
       return e;
     },
-    // 真正劈下（在 hitMonster 之前呼叫，這時目標一定還活著）
-    strike(e, m) {
+    // 劈下一道（在 hitMonster 之前呼叫，這時目標一定還活著）；last：最後、最粗的那一道
+    strike(e, m, last) {
       if (!e || !m) return;
-      judgeStrike(e, m);
+      judgeStrike(e, m, last !== false);
+    },
+    // 連劈中途沒有目標了：直接收尾
+    finish(e) {
+      if (e && e.hitT >= 0) {
+        e.done = true;
+      } else if (e) e.fz = true;
     },
     fizzle(e) {
       if (e) e.fz = true;

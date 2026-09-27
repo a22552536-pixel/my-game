@@ -73,8 +73,8 @@
     },
     thunderJudge: {
       name: '雷霆審判', form: 'magic4', maxLv: 10, icon: 'thunderJudge', type: 'judge',
-      mp: mpf(24), mult: lin(9.0, 0.5), radius: 620, stun: 1, castTime: 0.7, hitAt: 0.45, cd: 6,
-      desc: (lv) => '一道巨雷劈中附近最強的敵人：' + pct(9.0 + 0.5 * (lv - 1)) + ' 並麻痺 1 秒（冷卻 6 秒）',
+      mp: mpf(24), mult: lin(9.0, 0.5), strikes: 5, every: 0.2, strikeK: 0.45, radius: 620, stun: 1, castTime: 0.7, hitAt: 0.45, cd: 6,
+      desc: (lv) => '雷雲連劈 5 道巨雷，每道劈向附近還沒被劈過的最強敵人（敵人不夠就再劈最強的）：各 ' + pct((9.0 + 0.5 * (lv - 1)) * 0.45) + '，第一次被劈中的敵人麻痺 1 秒（冷卻 6 秒）',
     },
     auroraStorm: {
       name: '極光風暴', form: 'magic4', maxLv: 10, icon: 'auroraStorm', type: 'auroraS',
