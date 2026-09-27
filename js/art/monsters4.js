@@ -2351,13 +2351,30 @@
     // 三腳架步態：近側前、後腳＋遠側中腳一組，另一組差半拍；身體跟著微微起伏
     const cyc = walk && !dead && !jump ? (t * 1.9) % 1 : 0;
     const step = walk && !dead ? Math.sin(cyc * 2 * TAU) : 0;
+    // 攻擊時間軸：蓄力＝鎚角往後仰（身體後坐）→出招＝往前下方猛砸到身前地面→收招＝抬回背上
+    //   （近戰的 wind 0.35s → strike 0.22s，之後沒有 recover 階段，所以用出招結束的時間自己補一段收招）
+    const ease = (q) => q * q * (3 - 2 * q);
+    let windQ = 0;
+    let smash = 0;
+    let recQ = 0;
+    if (wind) windQ = ease(clamp(1 - (m.attackT || 0) / 0.35, 0, 1));
+    if (strike) {
+      smash = clamp((1 - (m.attackT || 0) / 0.22) / 0.4, 0, 1);
+      smash = smash * smash;
+      m._hamEnd = t;
+    }
+    if (ph === 'recover') recQ = 1 - ease(clamp(1 - (m.attackT || 0) / 0.3, 0, 1));
+    else if (!strike && !wind && m._hamEnd != null && t - m._hamEnd < 0.4 && t >= m._hamEnd) recQ = 1 - ease((t - m._hamEnd) / 0.4);
+    const impact = smash >= 1 || recQ > 0.75;
     let sq = 1;
-    if (wind) sq = 0.84;
-    if (strike) sq = 0.8;
+    if (wind) sq = 1 - windQ * 0.1;
+    if (strike) sq = smash >= 1 ? 0.84 : 0.96;
     if (jump) sq = 1.1;
     ctx.save();
     if (!jump) contact(ctx, 0, 0, 36, 0.35);
     ctx.scale(1.07, 1.07);
+    // 蓄力時往後坐、砸下時整個身體往前壓
+    ctx.rotate(-windQ * 0.07 + (strike ? 0.02 + smash * 0.03 : 0) + recQ * 0.03);
     ctx.scale(1 / Math.sqrt(sq), sq);
     const lift = jump ? 6 : 0;
     const by = (dead ? -12 : -19) - lift + (walk ? step * -0.8 : Math.sin(t * 2.2) * 0.4);
@@ -2515,12 +2532,14 @@
     const gy = by - 7;
     const L = 38;
     let a = -2.45 + (walk ? Math.sin(cyc * 2 * TAU - 0.9) * 0.05 : Math.sin(t * 2) * 0.02);
-    if (jump) a = -1.72;
-    if (wind) a = -2.75;
-    if (strike) a = 0.1;
-    if (hurt) a = -2.6;
+    // 跳起來時先舉過頭、落下時往前下方揮（落地正好砸地）
+    if (jump) a = (m.vy || 0) > 60 ? -1.72 + clamp(((m.vy || 0) - 60) / 400, 0, 1) * 2.1 : -1.72;
+    if (wind) a = -2.45 - windQ * 0.55;
+    if (strike) a = -3 + smash * 3.1;
+    if (recQ > 0) a = -2.45 + recQ * 2.55;
+    if (hurt && !strike) a = -2.6;
     if (dead) a = -2.3;
-    const runeA = dead ? 0 : strike || jump ? 1 : wind ? 0.75 : 0.3 + Math.sin(t * 3) * 0.12;
+    const runeA = dead ? 0 : strike || jump || recQ > 0.5 ? 1 : wind ? 0.5 + windQ * 0.5 : 0.3 + Math.sin(t * 3) * 0.12;
     ctx.save();
     ctx.translate(gx, gy);
     ctx.rotate(a);
@@ -2704,29 +2723,50 @@
     }
     ctx.restore();
 
-    // 鎚子砸地的衝擊
-    if (strike) {
-      const ix = 68;
-      glow(ctx, ix, -4, 26, '140,240,255', 0.45);
+    // 鎚子砸地的衝擊：落點在身前的地面——青色衝擊光、放射狀的線、揚起的沙塵、地面裂痕與碎石
+    if (impact && !dead) {
+      const ix = 66;
+      const k = strike ? 1 : clamp((recQ - 0.75) / 0.25, 0, 1);
+      const q = strike ? clamp(1 - (m.attackT || 0) / 0.22, 0, 1) : 1;
+      glow(ctx, ix, -4, 30, '140,240,255', 0.5 * k);
+      ctx.save();
+      ctx.globalAlpha *= k;
       ctx.strokeStyle = 'rgba(200,250,255,0.9)';
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      for (let s = -1; s <= 1; s += 2) {
-        ctx.moveTo(ix + s * 14, -6);
-        ctx.lineTo(ix + s * 24, -14);
-        ctx.moveTo(ix + s * 16, -2);
-        ctx.lineTo(ix + s * 28, -3);
+      for (let sg = -1; sg <= 1; sg += 2) {
+        ctx.moveTo(ix + sg * 14, -6);
+        ctx.lineTo(ix + sg * (24 + q * 6), -15 - q * 4);
+        ctx.moveTo(ix + sg * 16, -2);
+        ctx.lineTo(ix + sg * (28 + q * 8), -3);
       }
       ctx.stroke();
-      puff(ctx, ix - 18, -4, 6, '#e8c8a0', 0.8);
-      puff(ctx, ix + 18, -4, 6, '#e8c8a0', 0.8);
-      // 地面裂痕
+      // 往兩側翻滾的沙塵
+      for (let i = 0; i < 4; i++) {
+        const sg = i % 2 ? 1 : -1;
+        const r = 5 + q * 5 - (i > 1 ? 1.5 : 0);
+        puff(ctx, ix + sg * (12 + q * (16 + i * 4)), -3 - q * (4 + i * 2), r, '#e8c8a0', 0.85 * (1 - q * 0.5));
+      }
+      // 地面裂痕（放射狀）＋飛起的碎石
       ctx.strokeStyle = A.c('#4a2e1f');
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.moveTo(ix - 12, 0); ctx.lineTo(ix - 5, -1.5); ctx.lineTo(ix, 0); ctx.lineTo(ix + 6, -1.2); ctx.lineTo(ix + 13, 0);
+      ctx.moveTo(ix - 16, 0.5); ctx.lineTo(ix - 8, -1); ctx.lineTo(ix - 3, 0.8); ctx.lineTo(ix + 4, -1); ctx.lineTo(ix + 10, 0.6); ctx.lineTo(ix + 17, -0.8);
+      ctx.moveTo(ix - 3, 0.8); ctx.lineTo(ix - 5, 3);
+      ctx.moveTo(ix + 4, -1); ctx.lineTo(ix + 7, 2.5);
       ctx.stroke();
+      ctx.fillStyle = A.c('#8a6a4a');
+      for (let i = 0; i < 5; i++) {
+        const sg = i % 2 ? 1 : -1;
+        const px = ix + sg * (4 + q * (10 + i * 5));
+        const py = -2 - Math.sin(q * PI) * (10 + i * 3);
+        ctx.beginPath();
+        ctx.moveTo(px - 1.6, py); ctx.lineTo(px, py - 1.8); ctx.lineTo(px + 1.8, py + 0.2); ctx.lineTo(px, py + 1.6);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
     }
   }
 
@@ -4251,7 +4291,7 @@
         // 上抬時翅膀立起來、下拍時翻到身體下面（scaleY 變負）
         ctx.rotate(-wf * 0.18);
         const sy = 0.25 + wf * 0.8;
-        ctx.scale(1.15, 1.15 * (Math.abs(sy) < 0.12 ? (sy < 0 ? -0.12 : 0.12) : sy));
+        ctx.scale(1.44, 1.44 * (Math.abs(sy) < 0.12 ? (sy < 0 ? -0.12 : 0.12) : sy));
       }
       if (dive) ctx.rotate(-0.25);
       const wingP = (c) => {
