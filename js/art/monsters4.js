@@ -818,7 +818,7 @@
       } });
       // 根部的熔岩橘肉鰭（把刃「長」在皮上）
       A.shape(ctx, (c) => { c.moveTo(-bw - 1.6, 3); c.quadraticCurveTo(0, -1.8, bw + 1.6, 3); c.closePath(); }, heat > 0.5 ? '#ffc05a' : '#ff9a3a', '#c8561a', { lw: 1.5, cel: [0.8, 0] });
-      if (!lit && !dead && h > 9) flame(ctx, 0.5, -h - 0.5, 1.6 + heat * 1.4, t, i * 1.3, -0.25);
+      if (!lit && !dead && h > 16) flame(ctx, 0.5, -h - 0.5, 1.6 + heat * 1.4, t, i * 1.3, -0.25);
       ctx.restore();
     });
     // 點燃中的火星（蓄力）／燒起來後往上飄的火粉
@@ -1115,6 +1115,11 @@
     ctx.save();
     ctx.translate(0, lift0);
     if (walk && !dead) ctx.rotate(step * 0.04);
+    // 技能「重拳砸地」：fx.smash 0→1 蓄力（石拳高舉過頭、身體後仰）、1 出手（往身前地面猛砸、身體前壓）、1→0 收招
+    const sm = dead ? 0 : clamp(fx.smash || 0, 0, 1);
+    const smUp = sm > 0 && ph === 'wind' ? sm * sm * (3 - 2 * sm) : 0;
+    const smDn = sm > 0 && (ph === 'strike' || ph === 'recover') ? sm : 0;
+    if (sm > 0) ctx.rotate(-smUp * 0.1 + smDn * 0.12);
 
     // 後面的拳頭
     const fistUp = wind ? -22 : strike ? -2 : Math.sin(t * (4 + rage * 2)) * (1 + k * 2) + (walk ? -Math.abs(step) * 2 : 0);
@@ -1450,8 +1455,18 @@
     }
 
     // 前面的拳頭：石拳＋皮護腕＋鐵指環
-    const fx2 = (strike ? 34 : 29) - armSw;
-    const fy = -22 + fistUp;
+    let fx2 = (strike ? 34 : 29) - armSw;
+    let fy = -22 + fistUp;
+    if (smUp > 0) {
+      fx2 += (14 - fx2) * smUp;
+      fy += (-74 - fy) * smUp;
+    }
+    if (smDn > 0) {
+      fx2 += (42 - fx2) * smDn;
+      fy += (-4 - fy) * smDn;
+    }
+    // 舉拳時拳頭發燙、砸下時地面炸開
+    if (smUp > 0.3) glow(ctx, fx2, fy, 16, '255,140,60', smUp * 0.4);
     vol(ctx, (c) => A.roundRect(c, fx2 - 12, fy - 5.5, 7, 11, 2), '#8a5a34', '#5a3a1e', '#c08a5a', { cel: 1, rim: 0.8, lw: 2, tex: (c) => {
       c.strokeStyle = A.c('#4a2a14');
       c.lineWidth = 0.9;
@@ -1502,6 +1517,32 @@
         ctx.fill();
       }
     }
+    if (smDn > 0.5) {
+      const q = ph === 'strike' ? 0.4 : 1 - smDn;
+      const gy2 = 3.5;
+      glow(ctx, fx2, gy2 - 4, 26, '255,150,70', smDn * 0.45);
+      for (let i = 0; i < 4; i++) {
+        const sg = i % 2 ? 1 : -1;
+        puff(ctx, fx2 + sg * (10 + q * (14 + i * 4)), gy2 - 4 - q * (3 + i * 2), 4.5 + q * 4, '#d8c0a0', 0.85 * smDn);
+      }
+      ctx.strokeStyle = A.c('#3a2618');
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(fx2 - 16, gy2); ctx.lineTo(fx2 - 8, gy2 - 1.5); ctx.lineTo(fx2 - 2, gy2 + 1); ctx.lineTo(fx2 + 5, gy2 - 1.2); ctx.lineTo(fx2 + 12, gy2 + 0.8); ctx.lineTo(fx2 + 18, gy2 - 0.5);
+      ctx.moveTo(fx2 - 2, gy2 + 1); ctx.lineTo(fx2 - 4, gy2 + 3.5);
+      ctx.stroke();
+      ctx.fillStyle = A.c(ST[1]);
+      for (let i = 0; i < 5; i++) {
+        const sg = i % 2 ? 1 : -1;
+        const px = fx2 + sg * (5 + q * (8 + i * 5));
+        const py = gy2 - 3 - Math.sin(Math.min(1, q + 0.2) * PI) * (8 + i * 3);
+        ctx.beginPath();
+        ctx.moveTo(px - 1.8, py); ctx.lineTo(px, py - 2); ctx.lineTo(px + 2, py + 0.2); ctx.lineTo(px, py + 1.8);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
     if (lava > 0) embers(ctx, 0, -36, 50, 40, 3 + Math.round(lava * 4), t, 0.8, ['#ffd35a', '#ff7a2a'], 5);
 
     // 頭盔頂冒出的怒氣煙：越氣煙越多、越紅
@@ -1533,7 +1574,9 @@
     const AR = ['#7c88b8', '#4a5486', '#c8d2f4'];
     const AR2 = ['#6c78aa', '#434c7c', '#b4bee8'];
     const band = '#343c68';
-    const pg = pulling ? 0.7 + Math.sin(t * 14) * 0.2 : wind ? 0.45 : 0.14 + Math.sin(t * 2.5) * 0.06;
+    // 技能「磁暴」：fx.pulse 1 → 0（水晶爆亮、背甲的甲片往外撐開、甲縫透出紫光）
+    const pl = dead ? 0 : clamp(fx.pulse || 0, 0, 1);
+    const pg = Math.max(pl, pulling ? 0.7 + Math.sin(t * 14) * 0.2 : wind ? 0.45 : 0.14 + Math.sin(t * 2.5) * 0.06);
     // 甲片上的小鱗板（一排排圓角小方塊）
     const plates = (c, x0, y0, w, h, s) => {
       c.fillStyle = 'rgba(30,36,80,0.22)';
@@ -1728,6 +1771,14 @@
     // 圓頂背甲：前後兩塊大盾甲＋中間五條可以伸縮的環帶
     const cx = -6;
     const cy = -14 + bob;
+    if (pl > 0) {
+      // 甲片往外撐開：以背甲中心為軸放大、往上鼓
+      glow(ctx, cx + 2, cy - 22, 60 * pl + 20, '190,130,255', 0.35 * pl);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(1 + 0.09 * pl, 1 + 0.15 * pl);
+      ctx.translate(-cx, -cy);
+    }
     const shell = (c) => {
       c.moveTo(cx - 29, cy + 1);
       c.bezierCurveTo(cx - 31, cy - 26, cx - 12, cy - 34, cx + 2, cy - 33);
@@ -1816,6 +1867,32 @@
       ctx.stroke();
       ctx.restore();
     });
+    if (pl > 0) {
+      ctx.restore();
+      // 甲片之間的縫透出紫光＋往外炸的衝擊環
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(230,200,255,' + (0.9 * pl).toFixed(2) + ')';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      [-10, -3.5, 3, 9.5].forEach((x) => {
+        ctx.moveTo(cx + x * 1.9 * (1 + 0.09 * pl), cy + 2);
+        ctx.quadraticCurveTo(cx + x * 2.1 * (1 + 0.09 * pl), cy - 16 * (1 + 0.15 * pl), cx + x * 1.3 * (1 + 0.09 * pl), cy - 34 * (1 + 0.15 * pl));
+      });
+      ctx.stroke();
+      const q = 1 - pl;
+      ctx.strokeStyle = 'rgba(200,150,255,' + (pl * 0.9).toFixed(2) + ')';
+      ctx.lineWidth = 3 * pl + 1;
+      ctx.beginPath();
+      ctx.ellipse(cx + 2, cy - 18, 30 + q * 40, (30 + q * 40) * 0.6, 0, 0, TAU);
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a2 = (i / 8) * TAU;
+        const r = 24 + q * 36;
+        sparkle(ctx, cx + 2 + Math.cos(a2) * r, cy - 22 + Math.sin(a2) * r * 0.6, 2.6 * pl + 0.8, i % 2 ? '#ffffff' : '#e0c8ff');
+      }
+      ctx.restore();
+    }
     // 被引力水晶吸住、繞著轉的小石子（兩顆＋一道軌跡）
     ctx.save();
     ctx.strokeStyle = 'rgba(210,170,255,' + (0.35 + pg * 0.4).toFixed(2) + ')';
@@ -2296,7 +2373,6 @@
       } });
       if (litHere) {
         const big = wind ? 1.35 : strike ? 1.5 : 1;
-        glow(ctx, tipX, tipY - 3, 12 * big, '200,120,255', 0.35);
         flame(ctx, tipX, tipY - 0.5, 4.8 * big, t, i * 2, strike ? 0.3 : wind ? -0.1 : -0.15, MAGIC);
       } else {
         // 熄掉的帽尖冒一縷紫煙
@@ -3157,6 +3233,7 @@
     const dead = !!m.dead;
     const walk = walking(m);
     const charge = !!fx.charge || strike;
+    const btLean = clamp(fx.butt || 0, 0, 1);
     const ST = ['#cfd6e2', '#838ea2', '#ffffff'];
     const STD = '#5a6478';
     const GOLD = ['#f2c24a', '#a8741e', '#fff2b0'];
@@ -3171,6 +3248,7 @@
     contact(ctx, 0, 0, 38, 0.35);
     ctx.scale(1.05, 1.05);
     if (charge) ctx.rotate(0.06);
+    if (btLean > 0 && !dead) ctx.rotate(btLean * (ph === 'wind' ? 0.07 : 0.05));
     if (wind) ctx.rotate(-0.07);
     if (hurt) ctx.rotate(-0.1);
     if (walk && !dead) ctx.rotate(Math.sin(gcyc * TAU + 0.6) * 0.022);
@@ -3477,6 +3555,20 @@
     if (dead) { hx = 32; hy = cy - 16; hr = 0.5; }
     if (wind) { hx = 26; hy = cy - 33; hr = -0.35; }
     if (hurt) { hx = 26; hy = cy - 30; hr = -0.4; }
+    // 技能「鎧角衝頂」：fx.butt 0→1 蓄力（低頭、角對準前方、後腿蹬地）、1 出手（整顆頭往前頂出）、1→0 收回
+    const bt = dead ? 0 : clamp(fx.butt || 0, 0, 1);
+    const btW = bt > 0 && ph === 'wind' ? bt : 0;
+    const btS = bt > 0 && (ph === 'strike' || ph === 'recover') ? bt : 0;
+    if (btW > 0) {
+      hx += (29 - hx) * btW;
+      hy += (cy - 8 - hy) * btW;
+      hr += (1.05 - hr) * btW;
+    }
+    if (btS > 0) {
+      hx += (47 - hx) * btS;
+      hy += (cy - 12 - hy) * btS;
+      hr += (0.7 - hr) * btS;
+    }
     // 護頸：一節一節的鋼環
     const mx = 18;
     const my = cy - 15;
@@ -3738,6 +3830,26 @@
     A.blush(ctx, 2, 4.5, 2.6);
     ctx.restore();
 
+    // 角尖撞擊的閃光
+    if (btS > 0.7 && ph === 'strike') {
+      const ix = hx + 18;
+      const iy = hy + 2;
+      glow(ctx, ix, iy, 18, '255,220,160', 0.55);
+      ctx.strokeStyle = 'rgba(255,245,220,0.95)';
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a2 = -1.2 + i * 0.48;
+        ctx.moveTo(ix + Math.cos(a2) * 6, iy + Math.sin(a2) * 6);
+        ctx.lineTo(ix + Math.cos(a2) * 13, iy + Math.sin(a2) * 13);
+      }
+      ctx.stroke();
+    }
+    if (btW > 0.3) {
+      // 後腳蹬地揚起的沙
+      dust(ctx, -18, 0, t, 0.8 + btW * 0.4);
+    }
     if (charge) {
       speedLines(ctx, -34, cy, 30, 4, 18, t, 'rgba(255,240,220,0.8)');
       dust(ctx, -26, 0, t, 1.2);
