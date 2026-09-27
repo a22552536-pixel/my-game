@@ -282,8 +282,33 @@
   }
   // 半透明的分身：先畫到暫存畫布再整張淡淡貼上，重疊的描邊才不會一格一格透出來
   let scratch = null;
-  function ghostDraw(ctx, box, alpha, fn) {
+  // key 有給的話，同一個姿勢的分身圖只畫一次，之後直接貼（分身很淡，細部動畫看不出來）
+  const ghostCache = new Map();
+  function ghostDraw(ctx, box, alpha, fn, key) {
     if (!(alpha > 0)) return;
+    if (key && typeof document !== 'undefined' && ctx.getTransform) {
+      const tr0 = ctx.getTransform();
+      const kq = Math.min(4, Math.max(1, Math.round(Math.hypot(tr0.a, tr0.b) * 2) / 2));
+      const ck = key + '|' + kq;
+      let cv = ghostCache.get(ck);
+      if (!cv) {
+        if (ghostCache.size > 96) ghostCache.clear();
+        cv = document.createElement('canvas');
+        cv.width = Math.ceil(box[2] * kq);
+        cv.height = Math.ceil(box[3] * kq);
+        const g = cv.getContext('2d');
+        g.setTransform(kq, 0, 0, kq, -box[0] * kq, -box[1] * kq);
+        g.save();
+        fn(g);
+        g.restore();
+        ghostCache.set(ck, cv);
+      }
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      ctx.drawImage(cv, box[0], box[1], box[2], box[3]);
+      ctx.restore();
+      return;
+    }
     if (typeof document === 'undefined' || !ctx.getTransform) {
       ctx.save();
       ctx.globalAlpha *= alpha;
@@ -1111,7 +1136,9 @@
       const a = (dash ? 0.42 : walk ? 0.28 : 0.14) * (1 - (i - 1) / (n + 0.6));
       ctx.save();
       ctx.translate(-lag, hop * 0.6 - (walk || dash ? Math.sin(t * spd - i) : Math.sin(t * 2.5) * 1.5));
-      ghostDraw(ctx, FERRET_BOX, a * 1.6, (g) => withTint('#6ff0d0', 0.72, () => ferretPose(g, m, Object.assign({}, pose, { step: walk || dash ? Math.sin(t * spd - i * 0.9) : 0, echo: true, seed: i }))));
+      const gs = walk || dash ? Math.round(Math.sin(t * spd - i * 0.9) * 3) / 3 : 0;
+      ghostDraw(ctx, FERRET_BOX, a * 1.6, (g) => withTint('#6ff0d0', 0.72, () => ferretPose(g, m, Object.assign({}, pose, { step: gs, echo: true, seed: i }))),
+        'fe|' + (m.id || '') + '|' + pose.stretch + pose.crouch + (pose.bite ? 1 : 0) + '|' + gs + '|' + i);
       ctx.restore();
     }
     ctx.translate(0, hop);
@@ -3514,7 +3541,8 @@
     if (bite) ctx.translate((1 - left / 0.2) * 12, 0);
     const ga = (0.6 + Math.sin(t * 20) * 0.06) * fadeIn * fadeOut;
     const fake = { t: t, fx: { dash: bite }, attackPhase: bite ? 'strike' : windUp ? 'wind' : null, hurtT: 0, state: 'idle', vx: 0, onGround: true };
-    ghostDraw(ctx, FERRET_BOX, ga, (g) => withTint('#6ff0d0', 0.62, () => ferretPose(g, fake, { step: 0, stretch: bite ? 1 : 0, crouch: windUp ? 1 : 0, bite: bite, echo: false })));
+    ghostDraw(ctx, FERRET_BOX, ga, (g) => withTint('#6ff0d0', 0.62, () => ferretPose(g, fake, { step: 0, stretch: bite ? 1 : 0, crouch: windUp ? 1 : 0, bite: bite, echo: false })),
+      'fz|' + (bite ? 1 : 0) + (windUp ? 1 : 0));
     ctx.restore();
   }
   // 雷獸擂鼓送出的雷擊地波（z.r 半寬會變大）：地面一道電光，兩端是竄起的閃電與太鼓的巴紋
