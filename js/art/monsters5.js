@@ -3333,69 +3333,114 @@
     } });
     const ex2 = hx + 7;
     const ey2 = hy - 0.8;
-    // 細長的杏眼：半垂的眼皮、長睫毛；施法時睜大、淡青發光
+    // 人的眼睛：杏仁形的眼裂（上眼皮弧線高而彎、下眼皮較平；外眼角微微上揚、內眼角有淚阜的小凹），
+    //   圓形虹膜的上緣被半垂的上眼皮蓋住、兩側露出眼白；上眼線粗、外眼角幾根睫毛，下眼線淡。
+    //   3/4 側面：遠側的眼（靠近鼻樑那隻）較窄。施法時虹膜發淡青光、眼皮抬起，但形狀不變
     const yEye = (x, y, w, far) => {
-      const wide = cast;
-      const open2 = 0.62 + wide * 0.4;
       if (kind === 'x' || kind === 'hurt') {
         A.eye(ctx, x, y, w * 0.55, w * 0.55, kind);
         return;
       }
+      const sx = far ? 0.78 : 1;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(sx, 1);
+      const inner = far ? -w : w; // 內眼角朝著鼻樑：近側眼（左）在右邊、遠側眼（右）在左邊
+      const outer = -inner;
+      const h = w * 0.62;
       if (kind === 'closed') {
-        ctx.strokeStyle = A.outline();
+        ctx.strokeStyle = A.c(YK.hair);
         ctx.lineWidth = 1.3;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(x - w, y);
-        ctx.quadraticCurveTo(x, y + 1.6, x + w, y - 0.6);
+        ctx.moveTo(inner, 0.2);
+        ctx.quadraticCurveTo(0, h * 0.9, outer, -0.4);
         ctx.stroke();
+        ctx.restore();
         return;
       }
-      if (wide > 0.2 && !dead) glowH(ctx, x, y, 7, P4.teal, 0.45 * wide);
-      const h = 2.1 * open2;
-      const P = (c) => { c.moveTo(x - w, y + 0.4); c.quadraticCurveTo(x - w * 0.1, y - h * 1.3, x + w, y - 0.5); c.quadraticCurveTo(x + w * 0.1, y + h * 0.9, x - w, y + 0.4); c.closePath(); };
-      ctx.fillStyle = A.c('#fbfdff');
+      const lid = 1 - cast; // 1 = 半垂
+      const upH = h * (1.55 - lid * 0.45);
+      const eyeP = (c) => {
+        c.moveTo(inner, 0.25);
+        c.bezierCurveTo(inner * 0.6, -upH, outer * 0.35, -upH * 1.05, outer, -h * 0.35);
+        c.bezierCurveTo(outer * 0.55, h * 0.75, inner * 0.45, h * 0.8, inner, 0.25);
+        c.closePath();
+      };
+      if (cast > 0.2 && !dead) glowH(ctx, 0, 0, 6.5, P4.teal, 0.45 * cast);
+      ctx.fillStyle = A.c('#f7f9ff');
       ctx.beginPath();
-      P(ctx);
+      eyeP(ctx);
       ctx.fill();
       ctx.save();
       ctx.beginPath();
-      P(ctx);
+      eyeP(ctx);
       ctx.clip();
-      ctx.fillStyle = A.c(wide > 0.3 ? '#7fe0d6' : '#6a86c4');
+      // 虹膜（圓）＋瞳孔＋上半的亮點；上眼皮的影子
+      const ir = h * 1.05;
+      const ix = outer * 0.05;
+      const iy = h * 0.05;
+      ctx.fillStyle = A.c(cast > 0.3 ? '#7fd9cf' : '#5b77b4');
       ctx.beginPath();
-      ctx.arc(x + w * 0.15, y - 0.2, 1.9, 0, TAU);
+      ctx.arc(ix, iy, ir, 0, TAU);
       ctx.fill();
-      ctx.fillStyle = A.c(wide > 0.3 ? '#2a5a64' : '#1c1d33');
+      ctx.fillStyle = A.c(cast > 0.3 ? '#bff4ee' : '#8fa6d8');
       ctx.beginPath();
-      ctx.arc(x + w * 0.18, y - 0.2, 0.95, 0, TAU);
+      ctx.arc(ix, iy + ir * 0.35, ir * 0.55, 0, PI);
+      ctx.fill();
+      ctx.fillStyle = A.c(cast > 0.3 ? '#244a54' : '#161a30');
+      ctx.beginPath();
+      ctx.arc(ix, iy, ir * 0.45, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(160,172,215,0.55)';
+      ctx.beginPath();
+      ctx.ellipse(0, -upH * 0.55, w * 1.2, h * 0.5, 0, 0, TAU);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(x - w * 0.05, y - 0.9, 0.5, 0, TAU);
+      ctx.arc(ix - ir * 0.3, iy - ir * 0.25, ir * 0.22, 0, TAU);
       ctx.fill();
       ctx.restore();
-      // 上眼線（粗）＋往外上翹的長睫毛；下眼線細
+      // 內眼角的淚阜
+      ctx.fillStyle = A.c('#e7b9c4');
+      ctx.beginPath();
+      ctx.ellipse(inner * 0.9, 0.35, 0.45, 0.35, 0, 0, TAU);
+      ctx.fill();
+      // 上眼線（粗）與外眼角的睫毛
       ctx.strokeStyle = A.c(YK.hair);
       ctx.lineCap = 'round';
-      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 1.35 / sx;
       ctx.beginPath();
-      ctx.moveTo(x - w * 1.05, y + 0.3);
-      ctx.quadraticCurveTo(x - w * 0.1, y - h * 1.4, x + w * 1.05, y - 0.6);
+      ctx.moveTo(inner * 0.95, 0.05);
+      ctx.bezierCurveTo(inner * 0.6, -upH - 0.2, outer * 0.35, -upH * 1.05 - 0.2, outer * 1.08, -h * 0.45);
       ctx.stroke();
-      ctx.lineWidth = 0.8;
+      ctx.lineWidth = 0.65 / sx;
       ctx.beginPath();
-      ctx.moveTo(x + w * 1.05, y - 0.6);
-      ctx.quadraticCurveTo(x + w * 1.5, y - 1.2, x + w * 1.7, y - 2.4);
-      ctx.moveTo(x + w * 0.85, y - h * 0.75);
-      ctx.quadraticCurveTo(x + w * 1.25, y - h - 0.6, x + w * 1.45, y - h - 1.2);
-      ctx.moveTo(x - w * 0.6, y + 1);
-      ctx.quadraticCurveTo(x + w * 0.2, y + h * 1.1, x + w * 0.9, y + 0.3);
+      ctx.moveTo(outer * 1.05, -h * 0.42);
+      ctx.quadraticCurveTo(outer * 1.35, -h * 0.55, outer * 1.55, -h * 1.1);
+      ctx.moveTo(outer * 0.8, -h * 0.85);
+      ctx.quadraticCurveTo(outer * 1.05, -h * 1.2, outer * 1.15, -h * 1.6);
       ctx.stroke();
-      void far;
+      // 下眼線（淡）
+      ctx.strokeStyle = A.c('#a2adcf');
+      ctx.lineWidth = 0.6 / sx;
+      ctx.beginPath();
+      ctx.moveTo(outer * 0.95, -h * 0.25);
+      ctx.bezierCurveTo(outer * 0.55, h * 0.78, inner * 0.45, h * 0.82, inner * 0.8, h * 0.35);
+      ctx.stroke();
+      // 細細的柳葉眉（微微拱起）
+      ctx.strokeStyle = A.c(YK.hairL);
+      ctx.lineWidth = 0.75 / sx;
+      ctx.beginPath();
+      ctx.moveTo(inner * 1.0, -h * 2.2);
+      ctx.quadraticCurveTo(0, -h * 3.0 - (cast > 0.3 ? 0.5 : 0), outer * 1.2, -h * 2.1);
+      ctx.stroke();
+      ctx.restore();
     };
-    yEye(ex2, ey2, 2.9, false);
-    yEye(hx - 0.5, ey2 - 0.2, 2.2, true);
+    // 近側的眼在左（較寬）、遠側的眼靠近鼻樑（較窄）
+    yEye(hx + 0.5, ey2, 2.9, false);
+    yEye(hx + 7.6, ey2 - 0.3, 2.3, true);
     // 小巧的鼻（一筆淡影）
     ctx.strokeStyle = A.c('#a9b5da');
     ctx.lineWidth = 0.9;
@@ -4125,8 +4170,9 @@
     ctx.rotate(rot || 0);
     ctx.lineCap = 'round';
     ctx.beginPath();
-    for (let i = 0; i <= 16; i++) {
-      const k = i / 16;
+    const nseg = r < 4 ? 9 : 14;
+    for (let i = 0; i <= nseg; i++) {
+      const k = i / nseg;
       const a = dir * k * TAU * 1.1 + PI;
       const rr = r * (1 - k * 0.78);
       const px = Math.cos(a) * rr;
@@ -4136,6 +4182,10 @@
     ctx.strokeStyle = A.c(KM_DARK[1]);
     ctx.lineWidth = Math.max(1.3, r * 0.3);
     ctx.stroke();
+    if (r < 3) {
+      ctx.restore();
+      return;
+    }
     ctx.strokeStyle = A.c(KM_STONE[2]);
     ctx.lineWidth = 0.8;
     ctx.translate(-0.8, -0.8);
@@ -4284,7 +4334,18 @@
     if (shine > 0) glowH(ctx, hx, hy + 2, 38, P4.goldL, shine * 0.4);
     // 雲卷領圈：一圈大大的雲形卷（每個都是深刻的渦卷，槽裡有苔）
     const scrollLobe = (x, y, r, dir, rot) => {
-      A.shape(ctx, (c) => c.arc(x, y, r, 0, TAU), S[0], S[1], { lw: 2.1, cel: [r * 0.22, r * 0.22] });
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU);
+      ctx.fillStyle = A.c(S[0]);
+      ctx.fill();
+      ctx.lineWidth = 2.1;
+      ctx.strokeStyle = A.outline();
+      ctx.stroke();
+      ctx.fillStyle = A.c(S[1]);
+      ctx.beginPath();
+      ctx.arc(x, y, r - 1, -0.2, PI * 0.8);
+      ctx.arc(x - r * 0.22, y - r * 0.22, r * 0.95, PI * 0.8, -0.2, true);
+      ctx.fill();
       ctx.fillStyle = A.c(KM_MOSS);
       ctx.beginPath();
       ctx.ellipse(x + r * 0.2, y + r * 0.55, r * 0.45, r * 0.16, 0, 0, TAU);
@@ -4303,67 +4364,164 @@
     ctx.translate(hx, hy);
     ctx.scale(1.22, 1.22);
     ctx.translate(-hx, -hy);
-    // 耳（垂耳，左右各一）
-    [[-1, hx - 13], [1, hx + 11]].forEach((e) => A.shape(ctx, (c) => { c.moveTo(e[1], hy - 6); c.quadraticCurveTo(e[1] + e[0] * 8, hy - 7, e[1] + e[0] * 7, hy + 2); c.quadraticCurveTo(e[1] + e[0] * 3, hy + 2, e[1], hy - 2); c.closePath(); }, S[0], S[1], { lw: 1.9, shadeY: hy - 2 }));
-    // 臉：寬而方的獅子臉（正面）
+    // 螺髮：一顆顆雕成蝸牛殼般的圓卷（石頭的立體陰影＋螺旋刻槽＋槽底青苔）
+    const snail = (x, y, r, dir) => {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU);
+      ctx.fillStyle = A.c(S[0]);
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = A.outline();
+      ctx.stroke();
+      // 右下的立體陰影（月牙）
+      ctx.fillStyle = A.c(D[0]);
+      ctx.beginPath();
+      ctx.arc(x, y, r - 0.7, -0.2, PI * 0.8);
+      ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.9, PI * 0.8, -0.2, true);
+      ctx.fill();
+      carvedCurl(ctx, x, y, r * 0.8, dir, 0);
+      ctx.fillStyle = A.c(KM_MOSS);
+      ctx.beginPath();
+      ctx.arc(x + r * 0.45, y + r * 0.55, r * 0.22, 0, TAU);
+      ctx.fill();
+    };
+    // 臉周圍左右對稱、一排排緊密的螺髮（外排大、內排小），往下接到雲卷領圈
+    const rows = [[15.5, 4.8, 10, -PI * 1.02, 0.02], [11.8, 3.6, 9, -PI * 0.98, -0.02]];
+    rows.forEach((rw) => {
+      const [R, r, n, a0, a1] = rw;
+      for (let i = 0; i <= n; i++) {
+        const a = a0 + ((a1 - a0) * i) / n;
+        snail(hx - 1 + Math.cos(a) * R, hy + 1 + Math.sin(a) * R * 0.95, r, i % 2 ? 1 : -1);
+      }
+    });
+    // 兩頰垂下的螺髮（左右各兩排往下）
+    [[-1, hx - 14], [1, hx + 12]].forEach((e) => {
+      for (let j = 0; j < 3; j++) snail(e[1] + e[0] * (j % 2) * 1.5, hy + 4 + j * 5.2, 3.4, e[0]);
+    });
+    // 臉：寬而方的獅面（下顎方正）
     const faceP = (c) => {
-      c.moveTo(hx - 13, hy - 4);
-      c.quadraticCurveTo(hx - 14, hy - 13, hx - 1, hy - 13);
-      c.quadraticCurveTo(hx + 12, hy - 13, hx + 11, hy - 4);
-      c.quadraticCurveTo(hx + 12, hy + 9, hx - 1, hy + 12);
-      c.quadraticCurveTo(hx - 14, hy + 9, hx - 13, hy - 4);
+      c.moveTo(hx - 11, hy - 6);
+      c.quadraticCurveTo(hx - 12, hy - 11, hx - 1, hy - 11);
+      c.quadraticCurveTo(hx + 10, hy - 11, hx + 9, hy - 6);
+      c.lineTo(hx + 10, hy + 7);
+      c.quadraticCurveTo(hx + 9, hy + 13, hx - 1, hy + 13);
+      c.quadraticCurveTo(hx - 11, hy + 13, hx - 12, hy + 7);
       c.closePath();
     };
-    rimShape(ctx, faceP, S[0], S[1], S[2], { cel: 2.6, rim: 1.5, lw: 2.5, inner: () => {
-      // 鑿痕
+    rimShape(ctx, faceP, S[0], S[1], S[2], { cel: 2.4, rim: 1.4, lw: 2.4, inner: () => {
+      // 深陷的眼窩陰影
+      ctx.fillStyle = A.c(D[0]);
+      ctx.beginPath();
+      ctx.ellipse(hx - 5.5, hy - 3.2, 4.6, 3.6, 0.15, 0, TAU);
+      ctx.ellipse(hx + 3.6, hy - 3.2, 4.6, 3.6, -0.15, 0, TAU);
+      ctx.fill();
+      // 頰上的鑿痕
       ctx.strokeStyle = A.c(D[0]);
       ctx.lineWidth = 0.7;
       ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        ctx.moveTo(hx - 11 + i * 1.6, hy + 4 + i * 0.4);
-        ctx.lineTo(hx - 9.5 + i * 1.6, hy + 7 + i * 0.4);
+      for (let i = 0; i < 4; i++) {
+        ctx.moveTo(hx - 10 + i * 1.5, hy + 1);
+        ctx.lineTo(hx - 9 + i * 1.5, hy + 3.6);
+        ctx.moveTo(hx + 5 + i * 1.5, hy + 1);
+        ctx.lineTo(hx + 6 + i * 1.5, hy + 3.6);
       }
       ctx.stroke();
     } });
-    // 兩隻圓鼓鼓的大眼（金色、黑瞳），上面壓著雕刻的捲眉
-    const eyeR = 4.4;
-    [[hx - 6.5, -1], [hx + 5, 1]].forEach((e, i) => {
+    // 眼睛：深陷、往前稍往下看的金眼，兩眼瞳孔同一個方向（專注）
+    const angry = charging || wind || kind === 'angry';
+    [[hx - 5.5, 1], [hx + 3.6, -1]].forEach((e) => {
       const ex = e[0];
-      const ey = hy - 4;
-      if (kind === 'x' || (recover && kind === 'normal')) {
-        A.shape(ctx, (c) => c.arc(ex, ey, eyeR, 0, TAU), S[2], S[1], { lw: 1.8, shadeY: ey + 1 });
-        A.eye(ctx, ex, ey, 2.2, 2.2, recover && kind !== 'x' ? 'hurt' : 'x');
-      } else if (kind === 'closed' || kind === 'hurt') {
-        A.shape(ctx, (c) => c.arc(ex, ey, eyeR, 0, TAU), S[0], S[1], { lw: 1.8, shadeY: ey + 1 });
-        A.eye(ctx, ex, ey, 2.4, 2.2, kind);
-      } else {
-        if (shine > 0.3) glowH(ctx, ex, ey, 8, P4.gold, shine * 0.5);
-        A.shape(ctx, (c) => c.arc(ex, ey, eyeR, 0, TAU), P4.goldL, P4.gold, { lw: 1.9, cel: [1, 1] });
-        ctx.fillStyle = A.c('#2a2226');
+      const ey = hy - 3;
+      if (kind === 'x' || kind === 'hurt' || kind === 'closed' || (recover && kind === 'normal')) {
+        ctx.strokeStyle = A.outline();
+        ctx.lineWidth = 1.4;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.arc(ex + e[1] * 0.8 + 0.6, ey + 0.4, 2.2, 0, TAU);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(ex - 1.2, ey - 1.5, 1, 0, TAU);
-        ctx.fill();
+        if (kind === 'x') {
+          ctx.moveTo(ex - 2, ey - 2);
+          ctx.lineTo(ex + 2, ey + 2);
+          ctx.moveTo(ex + 2, ey - 2);
+          ctx.lineTo(ex - 2, ey + 2);
+        } else {
+          ctx.moveTo(ex - 2.8, ey + 0.3);
+          ctx.quadraticCurveTo(ex, ey + 1.6, ex + 2.8, ey + 0.3);
+        }
+        ctx.stroke();
+        return;
       }
-      // 捲眉（往外捲，生氣時壓低）
-      const low = charging || wind || kind === 'angry' ? 1.5 : 0;
-      A.shape(ctx, (c) => { c.moveTo(ex - e[1] * 5.5, ey - 4 + low * 0.2); c.quadraticCurveTo(ex, ey - 9 + low, ex + e[1] * 6.5, ey - 6.5); c.quadraticCurveTo(ex + e[1] * 2, ey - 5.5 + low, ex - e[1] * 5.5, ey - 4 + low * 0.2); c.closePath(); }, S[0], S[1], { lw: 1.6, shadeY: ey - 5 });
-      carvedCurl(ctx, ex + e[1] * 6.5, ey - 7.5, 2.2, e[1], 0);
-      void i;
+      if (shine > 0.3) glowH(ctx, ex, ey, 7, P4.gold, shine * 0.5);
+      const P = (c) => c.ellipse(ex, ey, 3.3, 2.5, 0, 0, TAU);
+      A.shape(ctx, P, P4.goldL, P4.gold, { lw: 1.4, cel: [0.8, 0.8] });
+      ctx.save();
+      ctx.beginPath();
+      P(ctx);
+      ctx.clip();
+      ctx.fillStyle = A.c('#231c1e');
+      ctx.beginPath();
+      ctx.arc(ex + 0.9, ey + 0.8, 1.55, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex + 0.3, ey + 0.1, 0.5, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+      void e;
     });
-    // 寬扁的獅鼻
-    A.shape(ctx, (c) => { c.moveTo(hx - 4.5, hy + 1); c.quadraticCurveTo(hx - 0.5, hy - 2.5, hx + 3.5, hy + 1); c.quadraticCurveTo(hx + 4.5, hy + 4, hx - 0.5, hy + 4); c.quadraticCurveTo(hx - 5.5, hy + 4, hx - 4.5, hy + 1); c.closePath(); }, '#6e6a64', '#57534e', { lw: 1.3, shadeY: hy + 3 });
-    // 張開的大嘴（朱色）與上下獠牙
-    const mo = charging ? 1 : recover ? 0.8 : 0.5;
-    const mouthP = (c) => { c.moveTo(hx - 8, hy + 5.5); c.quadraticCurveTo(hx - 0.5, hy + 4.5, hx + 7, hy + 5.5); c.quadraticCurveTo(hx + 5, hy + 10 + mo * 4, hx - 0.5, hy + 10.5 + mo * 4); c.quadraticCurveTo(hx - 6, hy + 10 + mo * 4, hx - 8, hy + 5.5); c.closePath(); };
-    A.shape(ctx, mouthP, P4.verm, P4.vermS, { lw: 1.8, shadeY: hy + 8 + mo * 3 });
-    fang(ctx, hx - 5.5, hy + 5.6, 2.8, false);
-    fang(ctx, hx + 4.5, hy + 5.6, 2.8, false);
-    fang(ctx, hx - 3.5, hy + 10 + mo * 3.6, 2.2, true);
-    fang(ctx, hx + 2.5, hy + 10 + mo * 3.6, 2.2, true);
+    // 皺起的粗眉骨：中間往下壓成 V 字，上面刻著捲紋
+    const drop = angry ? 1.4 : 0.6;
+    const browP = (c) => {
+      c.moveTo(hx - 12, hy - 5.5);
+      c.quadraticCurveTo(hx - 8, hy - 11, hx - 3, hy - 7.5 + drop);
+      c.lineTo(hx - 1, hy - 5 + drop);
+      c.lineTo(hx + 1, hy - 7.5 + drop);
+      c.quadraticCurveTo(hx + 6, hy - 11, hx + 10, hy - 5.5);
+      c.quadraticCurveTo(hx + 6, hy - 7.2, hx + 1.5, hy - 4.8 + drop);
+      c.lineTo(hx - 1, hy - 3 + drop);
+      c.lineTo(hx - 3.5, hy - 4.8 + drop);
+      c.quadraticCurveTo(hx - 8, hy - 7.2, hx - 12, hy - 5.5);
+      c.closePath();
+    };
+    rimShape(ctx, browP, S[0], S[1], S[2], { cel: 1.2, rim: 0.8, lw: 1.7 });
+    carvedCurl(ctx, hx - 9.5, hy - 7.4, 2, 1, 0);
+    carvedCurl(ctx, hx + 7.5, hy - 7.4, 2, -1, 0);
+    // 眉間的皺紋
+    ctx.strokeStyle = A.c(D[1]);
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(hx - 2, hy - 9.5);
+    ctx.lineTo(hx - 1.4, hy - 7);
+    ctx.moveTo(hx, hy - 9.5);
+    ctx.lineTo(hx - 0.6, hy - 7);
+    ctx.stroke();
+    // 寬扁的獅鼻、外張的鼻翼
+    A.shape(ctx, (c) => { c.moveTo(hx - 2.5, hy - 3); c.lineTo(hx + 0.5, hy - 3); c.lineTo(hx + 4.5, hy + 2); c.quadraticCurveTo(hx + 4, hy + 4.2, hx - 1, hy + 4.2); c.quadraticCurveTo(hx - 6, hy + 4.2, hx - 6.5, hy + 2); c.closePath(); }, S[0], S[1], { lw: 1.5, shadeY: hy + 2.5 });
+    ctx.fillStyle = A.c('#4e4a45');
+    ctx.beginPath();
+    ctx.ellipse(hx - 3.6, hy + 2.8, 1.2, 0.8, 0.3, 0, TAU);
+    ctx.ellipse(hx + 1.6, hy + 2.8, 1.2, 0.8, -0.3, 0, TAU);
+    ctx.fill();
+    carvedCurl(ctx, hx - 5.6, hy + 1.8, 1.3, -1, 0);
+    carvedCurl(ctx, hx + 3.6, hy + 1.8, 1.3, 1, 0);
+    // 方正張開的大嘴：上排方齒、四角獠牙，下顎方正、下巴一撮捲鬚
+    const mo = charging ? 1 : recover ? 0.75 : 0.55;
+    const my = hy + 5.5;
+    const mh = 3 + mo * 4;
+    A.shape(ctx, (c) => { c.moveTo(hx - 9, my); c.lineTo(hx + 7, my); c.lineTo(hx + 6.5, my + mh); c.lineTo(hx - 8.5, my + mh); c.closePath(); }, '#7a1e22', null, { lw: 1.8 });
+    ctx.fillStyle = A.c(P4.verm);
+    ctx.fillRect(hx - 6.5, my + mh * 0.55, 11, mh * 0.45);
+    ctx.fillStyle = A.c('#f4f1e6');
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) ctx.rect(hx - 6.2 + i * 2.4, my, 2, 1.8);
+    ctx.fill();
+    fang(ctx, hx - 8, my + 0.2, 3, false);
+    fang(ctx, hx + 6, my + 0.2, 3, false);
+    fang(ctx, hx - 7.5, my + mh, 2.6, true);
+    fang(ctx, hx + 5.5, my + mh, 2.6, true);
+    // 下顎（方正的石塊）＋捲鬚
+    A.shape(ctx, (c) => { c.moveTo(hx - 9.5, my + mh); c.lineTo(hx + 7.5, my + mh); c.lineTo(hx + 6.5, my + mh + 3.5); c.lineTo(hx - 8.5, my + mh + 3.5); c.closePath(); }, S[0], S[1], { lw: 1.8, shadeY: my + mh + 2 });
+    snail(hx - 5, my + mh + 5.5, 2.8, 1);
+    snail(hx - 1, my + mh + 6.5, 3, -1);
+    snail(hx + 3, my + mh + 5.5, 2.8, 1);
     // 金色獨角（正中央）
     const hn = cb(hx - 1, hy - 11, hx - 1.5, hy - 18, hx + 1, hy - 23, hx + 4, hy - 27);
     rimShape(ctx, (c) => taper(c, hn, (s) => 6.5 * (1 - s * 0.85), 10), P4.gold, P4.goldS, P4.goldL, { cel: 1.4, rim: 0.9, lw: 1.8 });
