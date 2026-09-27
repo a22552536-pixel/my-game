@@ -973,63 +973,111 @@
     ctx.translate(m.x, m.y);
 
     if (m.frozenT > 0) {
-      const bw = Math.max(w * 1.3, h * 0.95);
-      const bh = h * 1.12 + 6;
-      const x0 = -bw / 2;
-      const y0 = -bh + 3;
-      const box = (c) => A.roundRect(c, x0, y0, bw, bh, Math.min(12, bw * 0.18));
-      // 淡出（快解凍時閃爍）
+      // 冰凍：幾根高低、傾斜不一的水晶柱擠成一團把怪物包住。半透明、看得到裡面；
+      // 每根柱子有受光面（左）、背光面（右）和斜切的頂面。形狀用位置當種子，同一隻怪每一格都一樣。
+      const bw = Math.max(w * 1.25, h * 0.8) + 8;
+      const bh = h * 1.22 + 12;
       const a = m.frozenT < 0.5 ? 0.5 + 0.5 * Math.abs(Math.sin(t * 18)) : 1;
+      const rnd = (i) => {
+        const v = Math.sin(seed * 91.7 + i * 12.9898) * 43758.5453;
+        return v - Math.floor(v);
+      };
+      const n = Math.max(3, Math.min(6, Math.round(bw / 48) + 2));
+      const cols = [];
+      for (let i = 0; i < n; i++) {
+        const k = n === 1 ? 0.5 : i / (n - 1);
+        const mid = 1 - Math.abs(k - 0.5) * 2; // 中間的柱子最高
+        const cw = (bw / n) * (1.45 + rnd(i) * 0.6);
+        cols.push({
+          x: -bw / 2 + k * bw * 0.86 + bw * 0.07 + (rnd(i + 10) - 0.5) * 6,
+          cw,
+          ch: bh * (0.55 + mid * 0.5 + rnd(i + 20) * 0.18),
+          tilt: (k - 0.5) * 0.85 + (rnd(i + 30) - 0.5) * 0.3,
+          tip: (rnd(i + 40) - 0.35) * 0.5, // 頂端斜切的方向
+          back: i % 2 === 1,
+        });
+      }
+      cols.sort((p, q) => (p.back === q.back ? 0 : p.back ? -1 : 1));
       ctx.globalAlpha = a;
-      glow(ctx, 0, y0 + bh / 2, Math.max(bw, bh) * 0.75, '170,225,255', 0.35);
-      ctx.fillStyle = 'rgba(170,220,255,0.42)';
-      ctx.beginPath();
-      box(ctx);
-      ctx.fill();
-      ctx.save();
-      ctx.beginPath();
-      box(ctx);
-      ctx.clip();
-      // 下半部較深、內側折射面
-      ctx.fillStyle = 'rgba(110,180,235,0.28)';
-      ctx.beginPath();
-      ctx.moveTo(x0, y0 + bh * 0.62);
-      ctx.lineTo(x0 + bw, y0 + bh * 0.45);
-      ctx.lineTo(x0 + bw, y0 + bh);
-      ctx.lineTo(x0, y0 + bh);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.beginPath();
-      ctx.moveTo(x0 + bw * 0.12, y0);
-      ctx.lineTo(x0 + bw * 0.3, y0);
-      ctx.lineTo(x0, y0 + bh * 0.4);
-      ctx.lineTo(x0, y0 + bh * 0.2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-      // 冰塊邊框：描邊 + 白色內邊
-      ctx.beginPath();
-      box(ctx);
-      ctx.strokeStyle = A.outline();
-      ctx.globalAlpha = a * 0.55;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.globalAlpha = a;
-      ctx.strokeStyle = 'rgba(235,250,255,0.95)';
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-      // 高光條
-      line(ctx, [[x0 + 6, y0 + bh * 0.55], [x0 + 6, y0 + 10], [x0 + 14, y0 + 5]], 'rgba(255,255,255,0.95)', 2.6);
-      line(ctx, [[x0 + bw - 7, y0 + 12], [x0 + bw - 7, y0 + 20]], 'rgba(255,255,255,0.8)', 2);
-      // 頂上的小冰晶
-      iceShardAt(ctx, x0 + bw * 0.28, y0 + 2, 8, 3, -PI / 2 - 0.25, 1.5);
-      iceShardAt(ctx, x0 + bw * 0.72, y0 + 2, 11, 3.5, -PI / 2 + 0.2, 1.5);
-      // 雪花
+      glow(ctx, 0, -bh * 0.5, Math.max(bw, bh) * 0.7, '170,225,255', 0.28);
+      const O = A.outline();
+      cols.forEach((c, i) => {
+        const hw = c.cw / 2;
+        const sx = Math.sin(c.tilt);
+        const cyc = Math.cos(c.tilt);
+        // 本地座標（x 右、y 往上），轉成世界座標：沿傾斜方向長上去
+        const P = (lx, ly) => [c.x + lx * cyc + ly * sx, -(ly * cyc - lx * sx) + 3];
+        const top = c.ch;
+        const shoulder = top - c.cw * (0.45 + Math.abs(c.tip) * 0.4);
+        const tipX = c.tip * hw;
+        const bl = P(-hw, 0), br = P(hw, 0), sl = P(-hw, shoulder), sr = P(hw, shoulder);
+        const tp = P(tipX, top), ridgeB = P(hw * 0.12, 0), ridgeS = P(hw * 0.12, shoulder);
+        const poly = (ptsArr) => {
+          ctx.beginPath();
+          ctx.moveTo(ptsArr[0][0], ptsArr[0][1]);
+          for (let j = 1; j < ptsArr.length; j++) ctx.lineTo(ptsArr[j][0], ptsArr[j][1]);
+          ctx.closePath();
+        };
+        const dim = c.back ? 0.75 : 1;
+        // 左側受光面、右側背光面、頂端兩個斜面
+        poly([bl, sl, ridgeS, ridgeB]);
+        ctx.fillStyle = 'rgba(215,242,255,' + (0.32 * dim).toFixed(3) + ')';
+        ctx.fill();
+        poly([ridgeB, ridgeS, sr, br]);
+        ctx.fillStyle = 'rgba(95,160,220,' + (0.26 * dim).toFixed(3) + ')';
+        ctx.fill();
+        poly([sl, tp, ridgeS]);
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.42 * dim).toFixed(3) + ')';
+        ctx.fill();
+        poly([ridgeS, tp, sr]);
+        ctx.fillStyle = 'rgba(150,205,245,' + (0.34 * dim).toFixed(3) + ')';
+        ctx.fill();
+        // 外輪廓
+        poly([bl, sl, tp, sr, br]);
+        ctx.globalAlpha = a * (c.back ? 0.35 : 0.55);
+        ctx.strokeStyle = O;
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = 'rgba(235,250,255,' + (c.back ? 0.6 : 0.9) + ')';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        // 中稜與頂面稜線
+        ctx.strokeStyle = 'rgba(255,255,255,' + (c.back ? 0.35 : 0.6) + ')';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ridgeB[0], ridgeB[1]);
+        ctx.lineTo(ridgeS[0], ridgeS[1]);
+        ctx.lineTo(tp[0], tp[1]);
+        ctx.moveTo(sl[0], sl[1]);
+        ctx.lineTo(ridgeS[0], ridgeS[1]);
+        ctx.lineTo(sr[0], sr[1]);
+        ctx.stroke();
+        // 受光面上一道細高光
+        if (!c.back) {
+          const h1 = P(-hw * 0.62, shoulder * 0.18), h2 = P(-hw * 0.62, shoulder * 0.82);
+          line(ctx, [h1, h2], 'rgba(255,255,255,0.85)', 2);
+        }
+      });
+      // 腳邊幾塊碎冰
+      for (let i = 0; i < 3; i++) {
+        const x = (rnd(i + 50) - 0.5) * bw * 1.05;
+        const r = 4 + rnd(i + 55) * 5;
+        ctx.beginPath();
+        ctx.moveTo(x - r, 3);
+        ctx.lineTo(x - r * 0.4, 3 - r * 1.1);
+        ctx.lineTo(x + r * 0.7, 3 - r * 0.7);
+        ctx.lineTo(x + r, 3);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(210,240,255,0.7)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(40,90,140,0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
       const tw = 0.8 + 0.2 * Math.sin(t * 5 + seed);
-      snowflake(ctx, x0 + bw - 8, y0 + bh * 0.35, 5 * tw, '#ffffff', 1.5);
-      snowflake(ctx, x0 + 9, y0 + bh * 0.8, 3.6, '#ffffff', 1.3);
-      sparkle(ctx, x0 + bw * 0.55, y0 + bh * 0.2, 3 + 2 * Math.max(0, Math.sin(t * 7 + seed)), '#ffffff');
+      sparkle(ctx, -bw * 0.18, -bh * 0.78, 3 + 2 * Math.max(0, Math.sin(t * 7 + seed)), '#ffffff');
+      snowflake(ctx, bw * 0.28, -bh * 0.5, 4 * tw, '#ffffff', 1.3);
       ctx.globalAlpha = 1;
     }
 
