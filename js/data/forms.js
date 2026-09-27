@@ -8,7 +8,7 @@ G.data.lines = {
 };
 
 G.data.forms = {
-  base: { name: '小獅子', line: null, tier: 0, look: { hd: 'base', hdIris: ['#5a2c14', '#c98a3a'] } },
+  base: { name: '小獅子', line: null, tier: 0, look: {} },
 
   // ── 力量：剛毅的戰士，從岩石鍛成鋼鐵、刀劍，最後成為龍騎士 ──
   might1: {
@@ -35,7 +35,6 @@ G.data.forms = {
       scale: 1.13,
       pal: { body: '#eda84c', bodyShade: '#cc8634', mane: '#3e4f7a', maneShade: '#28355a', tuft: '#d8452b', farLeg: '#c98a3c', farLegShade: '#a86e2c', cloth: '#3a64c8', clothShade: '#27469a', trim: '#ffcf3a' },
       bodyRx: 24, bodyRy: 15.5, legW: 12.5, mane: 'blades', tail: 'sword', brows: true, bracers: true, armor: 'knight',
-      hd: 'might', hdIris: ['#1a2a5a', '#5a8ae8'],
     },
   },
   might4: {
@@ -55,7 +54,6 @@ G.data.forms = {
     look: {
       pal: { body: '#ffd08a', bodyShade: '#eeaa5c', mane: '#ff6a2a', maneShade: '#d8401a', flame: '#ffd84a', ear: '#ffb070', tuft: '#ffd23a', tuftShade: '#e09a10' },
       bodyRx: 20, mane: 'fire', tail: 'flame', fx: 'embers',
-      hd: 'magic', hdIris: ['#7a2408', '#ffae2a', '#fff2a0'],
     },
   },
   magic2: {
@@ -118,7 +116,6 @@ G.data.forms = {
       scale: 1.22,
       pal: { body: '#4a3868', bodyShade: '#33244c', cream: '#8e78b4', mane: '#241838', maneShade: '#120a20', rim: '#a070ff', ear: '#c04a8a', tuft: '#e0203a', tuftShade: '#90102a', cape: '#221634', capeShade: '#120a1e', lining: '#b01c3c', liningShade: '#7a1028', crown: '#2a1f3a', crownShade: '#140c20', gem: '#ff2a4a', moon: '#f4ecff', moonShade: '#b8a0e8', clasp: '#ffd84a', claspShade: '#c89a10', farLeg: '#35264e', farLegShade: '#261a3a' },
       bodyRx: 23, bodyRy: 13, legW: 9.5, legLen: 18, mane: 'abyss', tail: 'crescent', ears: 'pointed', crown: 'shadow', cape: true, fx: 'wisps', eyeTint: '#ff2a4a', eyeGlow: true, brows: 'sly',
-      hd: 'agile', hdIris: ['#4a0616', '#ff3a52'],
     },
   },
 
