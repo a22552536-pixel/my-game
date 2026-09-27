@@ -579,6 +579,12 @@
         m.attackT = 0;
         return true;
       }
+      if (m.heldT > 0) {
+        m.heldT -= dt;
+        m.vx = 0;
+        m.attackT = 0;
+        return true;
+      }
       return false;
     },
   });

@@ -288,7 +288,7 @@
           m.pull = U.sign(u.ox - m.x) * Math.min(1, 0.4 + u.t * 0.5);
         } else {
           m.x += (u.ox - m.x) * Math.min(1, dt * 6);
-          if (!m.isBoss) m.frozenT = Math.max(m.frozenT || 0, 0.05);
+          m.heldT = Math.max(m.heldT || 0, 0.05); // 被引力抓住：不能行動，但不是冰凍（不畫冰塊）
         }
       };
       if (u.phase === 'pull') {
