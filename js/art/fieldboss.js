@@ -1,4 +1,4 @@
-// 野外魔王（規格：docs/SPEC-fieldboss.md）的美術：深淵菇魔、沉船海魔、赤焰炎魔、千手冰像、星蝕魔龍，
+// 野外魔王（規格：docs/SPEC-fieldboss.md）的美術：苔冠蛙王、沉船海魔、赤焰炎魔、千手冰像、星蝕魔龍，
 // 以及牠們的投射物（fb_anchor / fb_meteor / fb_voidorb）與地面區域（fb_tentacle / fb_inkcloud / fb_armslam）。
 // 楓之谷巴洛古、殘暴炎魔那種暗黑奇幻：巨大的剪影、犄角、翅膀、鎖鏈、發光裂紋與眼睛，
 // 但仍是本作的畫法：平塗、深棕描邊（A.shape / A.outline）、右下月牙陰影、左上高光，顏色一律經過 A.c()。
@@ -615,22 +615,6 @@
     }
   }
 
-  // ═════════════════════════ 毒沼九頭蛇 fb_shroom（170×190，id 沿用） ═════════════════════════
-  // 從腐沼裡立起的多頭巨蛇：沼水裡隆起的鱗甲巨軀（背脊骨刺、腹甲、掛著水草、插著斷枝、發光的毒裂紋），
-  // 五條長頸（暴走時七條）各頂著一顆帶尖角、發光實心眼的蛇頭，毒牙滴著發光的毒液；
-  // 腳下是冒泡的毒沼、蘆葦與枯枝，貼地的毒霧。
-  // 對應：breath＝所有頭往後仰蓄毒 → 一起往前噴毒霧；jump＝整個身體從沼裡竄起（m.hover）再砸下；
-  // summon＝沼澤冒出小蛇頭；暴走＝頭變多、張口、赤紅與毒綠交織的光；spawn＝從沼裡升起。
-  const HY = {
-    sc: '#3f6c3a', scS: '#274a2a', scD: '#17301c', scR: '#2f4a2a', scRS: '#1c301c', scRD: '#0e1c10',
-    belly: '#c4c070', bellyS: '#8e8a48', bellyR: '#b4a060', bellyRS: '#7a6436',
-    fin: '#6a9a4a', finS: '#3e6a30', finR: '#8a2436', finRS: '#521422',
-    horn: '#ddd3ae', hornS: '#a39670', hornTip: '#22160e',
-    mouth: '#3a0a16', tongue: '#c0405e', fang: '#f4eed6',
-    venom: '#8dff3a', venomHot: '#eaffa0', crim: '#ff2a4a', eye: '#d6ff2a', eyeR: '#ff3030',
-    bog: '#2a3822', bogD: '#172014', bank: '#4a3c26', bankS: '#2e2418',
-    reed: '#7c7c3e', reedS: '#50522a', cat: '#5c3820', wood: '#5e4632', woodS: '#382a1e', moss: '#6e8e3a', mossS: '#46602a',
-  };
   // 實心發光眼（沒有眼白）：整顆眼睛都是發光的虹膜色，中心更亮，細細的暗色直瞳
   function solidEye(ctx, x, y, w, h, col, g, slit, rot) {
     glow(ctx, x, y, w * 2.6, col, 0.45 * g);
@@ -666,954 +650,1020 @@
     ctx.restore();
     glow(ctx, x - w * 0.15, y - h * 0.15, w * 0.9, U.mix(col, '#ffffff', 0.4), 0.45 * g);
   }
-  // 調色：後排的頭／頸比較暗
-  function hyPal(rage, back) {
-    const d = back ? 0.28 : 0;
-    const f = (c) => (d ? U.mix(c, '#0c1a10', d) : c);
-    return {
-      sc: f(rage ? HY.scR : HY.sc), scS: f(rage ? HY.scRS : HY.scS), scD: f(rage ? HY.scRD : HY.scD),
-      belly: f(rage ? HY.bellyR : HY.belly), bellyS: f(rage ? HY.bellyRS : HY.bellyS),
-      fin: f(rage ? HY.finR : HY.fin), finS: f(rage ? HY.finRS : HY.finS),
-      horn: f(HY.horn), hornS: f(HY.hornS),
-    };
+
+  // ═════════════════════════ 苔冠蛙王 fb_shroom（設計 220×170；資料 240×190 時等比例放大，id 沿用） ═════════════════════════
+  // 童話裡蹲在沼澤睡蓮葉上的青蛙國王：圓滾滾的苔綠身體、深色斑紋、奶油色的肚子與喉囊，
+  // 一對半瞇的金色大眼（橫瞳）、得意的大嘴；頭上戴著長滿青苔的古金王冠（綠寶石會發光、冒出小芽和小花），
+  // 背上長著紅帽小傘菇、會發光的符文疣，肩上披著睡蓮葉披風，手裡拄著香蒲權杖。
+  // 對應：breath＝喉囊一路鼓大、頭往後仰 → 張嘴打出沼氣嗝（雲本身是 fb_sporebreath 區域）；
+  // jump＝蹲低蓄力 → 騰空（m.hover）後腿伸直、雙手張開；summon＝鼓喉呱呱叫、背上的傘菇發光搖晃再彈出去；
+  // 暴走＝皮膚轉深沼綠帶紫斑、眼睛變橘紅、疣更亮、王冠寶石轉紅、身上冒沼氣；spawn＝從沼裡浮上來（泥水四濺）。
+  const FR = {
+    gold: '#ecc04e', goldS: '#b47c2a', goldD: '#7a4a1a', patina: '#5aa894',
+    moss: '#7cb44a', mossS: '#4e8034', flower: '#fff2f4', flowerC: '#ffd23a',
+    mouth: '#4a1422', mouthD: '#2a0a14', tongue: '#e8687e', tongueS: '#b8405a',
+    cap: '#e2463a', capS: '#a82c2a', dot: '#fff6e6', stem: '#f2e4c2', stemS: '#c8b28a', gill: '#c89a7a',
+    reed: '#8a9a4a', reedS: '#5e6a30', cat: '#7a4a28', catS: '#50301a',
+    water: '#3e5a44', waterD: '#26382c', waterL: '#8ab89a', bank: '#5a4a30', bankS: '#3a2e1e',
+    pad: '#5eaa4e', padS: '#3c7a36', padV: '#2e5e2c', lotus: '#ffb6c8', lotusS: '#e07a9a',
+    gas: '#9ad86a', gasP: '#8a6aa8',
+  };
+  // 調色（暴走時整隻轉暗、斑紋帶紫）
+  function frPal(rage) {
+    return rage
+      ? { skin: '#4e7446', skinS: '#34503e', spot: '#5e3a72', stripe: '#a4c070', belly: '#d8cfae', bellyS: '#aa9e7c', leaf: '#4a7040', leafS: '#2e4c32', eye: '#ff7a2a', eyeS: '#c8341a', gem: '#ff3a4a', wart: '#d4ff4a', rim: '#e8d0ff' }
+      : { skin: '#74a054', skinS: '#4e7a4a', spot: '#3a6a4c', stripe: '#c4d890', belly: '#f4ecc6', bellyS: '#d9c894', leaf: '#56a24a', leafS: '#387438', eye: '#ffd23a', eyeS: '#e0901a', gem: '#5aff8a', wart: '#a6ff6a', rim: '#f6ffd4' };
   }
-  // 一條長頸：從 (bx,by) 到頭的關節 (hx,hy)，末端切線對齊頭的方向 a
-  function hyNeck(ctx, bx, by, hx, hy, a, s, P, sway, heat, gcol, seed) {
-    const L = Math.hypot(hx - bx, hy - by);
-    const fn = cb(bx, by, bx + sway, by - L * 0.45, hx - Math.cos(a) * L * 0.4, hy - Math.sin(a) * L * 0.4, hx, hy);
-    const wf = (q) => (34 - 15 * q) * s;
-    // 頸的腹側：頭朝右時在法線 +側，朝左時在 -側
-    const bs = Math.cos(a) < 0 ? -1 : 1;
-    // 背鰭骨刺（先畫，只露出尖端）
-    for (let k = 0; k < 6; k++) {
-      const q = 0.12 + k * 0.14;
-      const w = wf(q);
-      const p0 = along(fn, q - 0.04, -bs * w * 0.4);
-      const p1 = along(fn, q + 0.03, -bs * (w * 0.5 + (11 - k) * s));
-      const p2 = along(fn, q + 0.05, -bs * w * 0.4);
-      A.shape(ctx, (c) => {
-        c.moveTo(p0[0], p0[1]);
-        c.quadraticCurveTo((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, p1[0], p1[1]);
-        c.lineTo(p2[0], p2[1]);
-        c.closePath();
-      }, P.fin, null, { lw: 2 });
-    }
-    A.shape(ctx, (c) => taper(c, fn, wf, 22), P.sc, P.scS, { cel: [3 * s * bs, 2.5 * s], lw: 3 });
-    const nb = [Math.min(bx, hx) - 30 * s, Math.min(by, hy) - 30 * s, Math.max(bx, hx) + 30 * s, Math.max(by, hy) + 20 * s];
-    finish(ctx, (c) => taper(c, fn, wf, 22), nb, { rim: '#eaffc0', rimA: 0.2, rimW: 3.2 * s, dark: '#08140a', darkA: 0.3, lw: 3 });
-    ctx.save();
-    ctx.beginPath();
-    taper(ctx, fn, wf, 22);
-    ctx.clip();
-    // 腹甲
-    const bf = (q) => {
-      const p = along(fn, q, bs * wf(q) * 0.3);
-      return [p[0], p[1]];
-    };
-    ctx.beginPath();
-    taper(ctx, bf, (q) => wf(q) * 0.46, 20);
-    ctx.fillStyle = A.c(P.belly);
-    ctx.fill();
-    ctx.strokeStyle = A.c(P.bellyS);
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    for (let q = 0.04; q < 0.98; q += 0.075) {
-      const a1 = along(fn, q, bs * wf(q) * 0.08);
-      const a2 = along(fn, q + 0.012, bs * wf(q) * 0.55);
-      ctx.moveTo(a1[0], a1[1]);
-      ctx.lineTo(a2[0], a2[1]);
-    }
-    ctx.stroke();
-    // 鱗片（背側一排排的小弧）
-    ctx.strokeStyle = A.c(P.scD);
-    ctx.globalAlpha *= 0.75;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    for (let q = 0.03; q < 0.97; q += 0.05) {
-      for (let r = 0; r < 2; r++) {
-        const off = -bs * wf(q) * (0.08 + r * 0.22) + (r ? 0 : 0);
-        const p = along(fn, q + r * 0.025, off);
-        const rr = wf(q) * 0.13;
-        ctx.moveTo(p[0] + Math.cos(p[2] + 0.4) * rr, p[1] + Math.sin(p[2] + 0.4) * rr);
-        ctx.arc(p[0], p[1], rr, p[2] + 0.4, p[2] + PI - 0.4);
-      }
-    }
-    ctx.stroke();
-    ctx.restore();
-    // 發光的毒紋（沿著頸側的斑點）
-    if (heat > 0) {
-      for (let k = 0; k < 4; k++) {
-        const q = 0.18 + k * 0.2 + hash(seed + k) * 0.05;
-        const p = along(fn, q, -bs * wf(q) * 0.18);
-        glow(ctx, p[0], p[1], 7 * s, gcol, 0.55 * heat);
-        ctx.fillStyle = A.c(U.mix(gcol, '#ffffff', 0.3));
-        ctx.beginPath();
-        ctx.ellipse(p[0], p[1], 2.6 * s, 1.6 * s, p[2], 0, TAU);
-        ctx.fill();
-      }
-    }
-    return fn;
+  // 身體剪影（正面偏右的 3/4 視角：頭頂平、兩頰鼓、屁股寬）
+  function frBody(c, bot) {
+    c.moveTo(-94, 4);
+    c.bezierCurveTo(-116, -18, -114, -58, -94, -80);
+    c.bezierCurveTo(-104, -98, -88, -122, -56, -128);
+    c.bezierCurveTo(-26, -138, 56, -140, 86, -128);
+    c.bezierCurveTo(114, -118, 122, -96, 106, -80);
+    c.bezierCurveTo(124, -56, 122, -18, 100, 4);
+    c.quadraticCurveTo(4, bot || 14, -94, 4);
+    c.closePath();
   }
-  // 蛇頭：(x,y) 是頸的關節，a 是朝向，頭長約 62*s。回傳嘴尖與毒牙尖的位置
-  function hyHead(ctx, o) {
-    const s = o.s;
-    const P = o.P;
-    const flip = Math.cos(o.a) < 0 ? -1 : 1;
-    const ja = clamp(o.jaw, 0, 1) * 0.85;
-    const heat = o.heat;
-    ctx.save();
-    ctx.translate(o.x, o.y);
-    ctx.rotate(o.a);
-    ctx.scale(s, s * flip);
-    // 後腦的鰭刺
-    A.shape(ctx, (c) => {
-      c.moveTo(-2, -10);
-      c.lineTo(-24, -20);
-      c.lineTo(-10, -4);
-      c.lineTo(-26, -2);
-      c.lineTo(-8, 4);
-      c.lineTo(-22, 14);
-      c.lineTo(2, 8);
-      c.closePath();
-    }, P.fin, P.finS, { lw: 2.4, shadeY: 2 });
-    // 兩對往後彎的尖角
-    horn(ctx, qb(8, -14, -6, -34, -30, -38), 10, P.horn, P.hornS, HY.hornTip, heat * 0.6, o.gcol);
-    horn(ctx, qb(20, -16, 16, -30, 4, -40), 7, P.horn, P.hornS, HY.hornTip, heat * 0.6, o.gcol);
-    // 嘴裡
-    const jt = [8 + Math.cos(ja) * 46 - Math.sin(ja) * 4, 4 + Math.sin(ja) * 46 + Math.cos(ja) * 4];
-    if (ja > 0.02) {
-      A.shape(ctx, (c) => {
-        c.moveTo(4, 3);
-        c.lineTo(56, 3);
-        c.lineTo(jt[0], jt[1]);
-        c.closePath();
-      }, HY.mouth, null, { lw: 2 });
-      if (o.spit > 0) glow(ctx, 30, 4 + ja * 14, 26, o.gcol, 0.8 * o.spit);
-      // 分岔的舌頭
-      ctx.save();
-      ctx.translate(10, 5);
-      ctx.rotate(ja * 0.55);
-      ctx.strokeStyle = A.c(HY.tongue);
+  // 金色大眼：眼丘 → 眼球（橫瞳）→ 高光 → 眼皮（lid 0 張開～1 閉上，tilt 讓眼皮斜成生氣）
+  function frEye(ctx, x, y, r, P, o) {
+    A.shape(ctx, (c) => c.arc(x, y, r, 0, TAU), P.skin, P.skinS, { cel: [r * 0.16, r * 0.2], lw: 3 });
+    const er = r * 0.8;
+    const ey = y - r * 0.06;
+    if (o.dead) {
+      A.shape(ctx, (c) => c.arc(x, ey, er, 0, TAU), '#e8dcb0', '#c4b488', { cel: [er * 0.2, er * 0.2], lw: 2.4 });
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - er * 0.5, ey - er * 0.5);
+      ctx.lineTo(x + er * 0.5, ey + er * 0.5);
+      ctx.moveTo(x + er * 0.5, ey - er * 0.5);
+      ctx.lineTo(x - er * 0.5, ey + er * 0.5);
+      ctx.stroke();
+      return;
+    }
+    if (o.shut) {
+      // 用力閉眼（受傷）：眼皮蓋滿＋一個 > < 的皺褶
+      A.shape(ctx, (c) => c.arc(x, ey, er, 0, TAU), P.skinS, null, { lw: 2.4 });
+      ctx.strokeStyle = A.outline();
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
-      const tl = 30 + Math.sin(o.t * 9 + o.i) * 5;
+      ctx.lineJoin = 'round';
+      const s = o.side;
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(tl * 0.5, 5 + Math.sin(o.t * 12 + o.i) * 3, tl, 1);
-      ctx.lineTo(tl + 7, -3);
-      ctx.moveTo(tl, 1);
-      ctx.lineTo(tl + 7, 5);
+      ctx.moveTo(x - er * 0.55 * s, ey - er * 0.45);
+      ctx.lineTo(x + er * 0.45 * s, ey);
+      ctx.lineTo(x - er * 0.55 * s, ey + er * 0.45);
       ctx.stroke();
-      ctx.restore();
+      return;
     }
-    // 下顎
-    ctx.save();
-    ctx.translate(8, 4);
-    ctx.rotate(ja);
-    for (let k = 0; k < 4; k++) {
-      const x = 12 + k * 9;
-      A.shape(ctx, (c) => {
-        c.moveTo(x - 2.5, 0);
-        c.lineTo(x, -5 - (k === 3 ? 4 : 0));
-        c.lineTo(x + 2.5, 0);
-        c.closePath();
-      }, HY.fang, null, { lw: 1.4 });
-    }
-    A.shape(ctx, (c) => {
-      c.moveTo(-14, -1);
-      c.quadraticCurveTo(8, 15, 45, 5);
-      c.lineTo(48, 0);
-      c.lineTo(-4, 0);
-      c.closePath();
-    }, P.belly, P.bellyS, { lw: 2.6, shadeY: 6 });
-    ctx.restore();
-    // 上顎的牙
-    for (let k = 0; k < 4; k++) {
-      const x = 20 + k * 8;
-      A.shape(ctx, (c) => {
-        c.moveTo(x - 2.4, 3);
-        c.lineTo(x, 8.5);
-        c.lineTo(x + 2.4, 3);
-        c.closePath();
-      }, HY.fang, null, { lw: 1.4 });
-    }
-    // 毒牙
-    A.shape(ctx, (c) => {
-      c.moveTo(47, 2);
-      c.quadraticCurveTo(48, 10, 45, 16);
-      c.quadraticCurveTo(43, 9, 42, 2);
-      c.closePath();
-    }, HY.fang, null, { lw: 1.8 });
-    // 頭
-    const headPath = (c) => {
-      c.moveTo(-10, -11);
-      c.quadraticCurveTo(6, -21, 24, -17);
-      c.quadraticCurveTo(44, -13, 58, -5);
-      c.quadraticCurveTo(64, -1, 59, 3);
-      c.lineTo(10, 4);
-      c.quadraticCurveTo(-2, 10, -11, 7);
-      c.closePath();
-    };
-    A.shape(ctx, headPath, P.sc, P.scS, { cel: [2, 3], lw: 3 });
-    finish(ctx, headPath, [-12, -22, 64, 10], { rim: '#eaffc0', rimA: 0.26, rimW: 2.6, dark: '#08140a', darkA: 0.3, bounce: o.gcol, bounceA: 0.3 * heat, tex: P.scD, texA: 0.35, texN: 14, texR: 1.4, seed: o.i * 3, lw: 3 });
-    ctx.save();
+    if (o.glowA > 0) glow(ctx, x, ey, er * 2.1, P.eye, o.glowA);
+    A.shape(ctx, (c) => c.arc(x, ey, er, 0, TAU), P.eye, P.eyeS, { cel: [er * 0.22, er * 0.28], lw: 2.4, noStroke: true });
+    // 虹膜紋
+    ctx.strokeStyle = rgba(P.eyeS, 0.85);
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    headPath(ctx);
-    ctx.clip();
-    // 頭頂的鱗板
-    ctx.strokeStyle = A.c(P.scD);
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    for (let k = 0; k < 5; k++) {
-      const x = 30 + k * 6;
-      ctx.moveTo(x, -13 + k * 1.6);
-      ctx.quadraticCurveTo(x + 3, -8 + k * 1.5, x + 1, -4 + k);
+    ctx.arc(x, ey, er * 0.66, 0, TAU);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU + 0.2;
+      ctx.moveTo(x + Math.cos(a) * er * 0.38, ey + Math.sin(a) * er * 0.38);
+      ctx.lineTo(x + Math.cos(a) * er * 0.62, ey + Math.sin(a) * er * 0.62);
     }
-    ctx.moveTo(-6, -2);
-    ctx.quadraticCurveTo(4, -6, 12, 0);
     ctx.stroke();
-    ctx.fillStyle = A.c(P.belly);
-    ctx.globalAlpha *= 0.55;
+    // 橫瞳（往前看）
+    const px = x + er * 0.2 * (o.look == null ? 1 : o.look);
+    ctx.fillStyle = A.c('#1a0e0a');
     ctx.beginPath();
-    ctx.ellipse(28, 3, 26, 3, 0, 0, TAU);
+    ctx.ellipse(px, ey + er * 0.04, er * (o.wide ? 0.46 : 0.52), er * (o.wide ? 0.3 : 0.2), 0, 0, TAU);
     ctx.fill();
-    ctx.restore();
-    // 鼻孔
-    ctx.fillStyle = A.c('#0a0806');
+    ctx.fillStyle = A.c('#ffffff');
     ctx.beginPath();
-    ctx.ellipse(54, -4.5, 2.4, 1.4, 0.35, 0, TAU);
+    ctx.arc(x - er * 0.34, ey - er * 0.38, er * 0.22, 0, TAU);
+    ctx.arc(x + er * 0.36, ey + er * 0.36, er * 0.09, 0, TAU);
     ctx.fill();
-    // 眉骨（壓低的兇相）
-    A.shape(ctx, (c) => {
-      c.moveTo(10, -16);
-      c.quadraticCurveTo(22, -17, 36, -11);
-      c.lineTo(34, -7);
-      c.quadraticCurveTo(24, -11, 14, -10);
-      c.closePath();
-    }, P.scD, null, { lw: 2 });
-    // 眼
-    if (o.dead) {
+    // 眼皮
+    const lid = clamp(o.lid || 0, 0, 1);
+    if (lid > 0.01) {
+      const ly = -er + 2 * er * lid;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, ey, er, 0, TAU);
+      ctx.clip();
+      ctx.translate(x, ey);
+      ctx.rotate(o.tilt || 0);
+      ctx.fillStyle = A.c(P.skinS);
+      ctx.fillRect(-er * 1.6, -er * 1.6, er * 3.2, ly + er * 1.6);
+      ctx.fillStyle = A.c(P.skin);
+      ctx.fillRect(-er * 1.6, -er * 1.6, er * 3.2, ly + er * 1.6 - 3);
       ctx.strokeStyle = A.outline();
       ctx.lineWidth = 2.6;
       ctx.beginPath();
-      ctx.moveTo(18, -8);
-      ctx.lineTo(30, -5);
+      ctx.moveTo(-er * 1.2, ly);
+      ctx.lineTo(er * 1.2, ly);
       ctx.stroke();
-    } else {
-      solidEye(ctx, 25, -7, 7.5, o.hurt ? 1.8 : 4.4, o.eyeCol, o.eg, true, 0.05);
+      ctx.restore();
     }
-    ctx.restore();
-    const W = (lx, ly) => {
-      const X = lx * s;
-      const Y = ly * s * flip;
-      return [o.x + X * Math.cos(o.a) - Y * Math.sin(o.a), o.y + X * Math.sin(o.a) + Y * Math.cos(o.a)];
-    };
-    return { mouth: W(58, 6 + ja * 10), fang: W(45, 16), a: o.a };
-  }
-  // 滴下的發光毒液
-  function hyDrip(ctx, x, y, t, seed, col, k) {
-    const q = (t * 0.7 + hash(seed)) % 1;
-    const len = q < 0.4 ? 4 + q * 22 : 12 * (1 - (q - 0.4) / 0.6);
-    ctx.strokeStyle = rgba(col, 0.85 * k);
+    ctx.beginPath();
+    ctx.arc(x, ey, er, 0, TAU);
+    ctx.strokeStyle = A.outline();
     ctx.lineWidth = 2.4;
+    ctx.stroke();
+  }
+  // 長滿青苔的古金王冠（原點在冠底中央）
+  function frCrown(ctx, x, y, s, rot, P, gemA, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.scale(s, s);
+    const tips = [[-34, -26], [-16, -32], [0, -40], [16, -32], [34, -26]];
+    const crownPath = (c) => {
+      c.moveTo(-30, 2);
+      c.quadraticCurveTo(0, 7, 30, 2);
+      c.lineTo(32, -12);
+      c.lineTo(34, -26);
+      c.lineTo(23, -15);
+      c.lineTo(16, -32);
+      c.lineTo(7, -16);
+      c.lineTo(0, -40);
+      c.lineTo(-7, -16);
+      c.lineTo(-16, -32);
+      c.lineTo(-23, -15);
+      c.lineTo(-34, -26);
+      c.lineTo(-32, -12);
+      c.closePath();
+    };
+    A.shape(ctx, crownPath, FR.gold, FR.goldS, { cel: [4, 3], lw: 2.6 });
+    // 左邊的亮面
+    ctx.fillStyle = rgba('#fff8d0', 0.55);
+    ctx.beginPath();
+    ctx.moveTo(-30, -13);
+    ctx.lineTo(-32, -22);
+    ctx.lineTo(-25, -15);
+    ctx.moveTo(-15, -16);
+    ctx.lineTo(-15, -27);
+    ctx.lineTo(-10, -16);
+    ctx.moveTo(-3, -17);
+    ctx.lineTo(-1, -33);
+    ctx.lineTo(1, -17);
+    ctx.fill();
+    // 冠帶
+    A.shape(ctx, (c) => {
+      c.moveTo(-32, -12);
+      c.quadraticCurveTo(0, -7, 32, -12);
+      c.lineTo(31, 1);
+      c.quadraticCurveTo(0, 7, -31, 1);
+      c.closePath();
+    }, FR.goldS, FR.goldD, { shadeY: -1, lw: 2.2 });
+    // 銅綠斑
+    ctx.fillStyle = rgba(FR.patina, 0.7);
+    ctx.beginPath();
+    ctx.ellipse(22, -4, 4, 2.4, 0.2, 0, TAU);
+    ctx.ellipse(12, -20, 2, 3, 0, 0, TAU);
+    ctx.ellipse(-27, -3, 2.6, 1.8, 0, 0, TAU);
+    ctx.fill();
+    // 尖端的金珠
+    tips.forEach(([tx, ty], i) => A.ellipse(ctx, tx, ty - 1, i === 2 ? 4.2 : 3.4, i === 2 ? 4.2 : 3.4, FR.gold, FR.goldS, { lw: 1.8, hl: false }));
+    // 寶石（中間一顆大的、兩邊小的）
+    const gems = [[0, -3, 6, 5], [-19, -4, 3.6, 3.2], [19, -5, 3.6, 3.2]];
+    gems.forEach(([gx, gy, rx, ry], i) => {
+      if (gemA > 0) glow(ctx, gx, gy, rx * 3.2, P.gem, gemA * (i ? 0.6 : 0.9));
+      A.shape(ctx, (c) => {
+        c.moveTo(gx, gy - ry);
+        c.lineTo(gx + rx, gy);
+        c.lineTo(gx, gy + ry);
+        c.lineTo(gx - rx, gy);
+        c.closePath();
+      }, P.gem, U.mix(P.gem, '#0a2a10', 0.45), { shadeY: gy, lw: 1.8 });
+      ctx.fillStyle = A.c('#ffffff');
+      ctx.fillRect(gx - rx * 0.45, gy - ry * 0.45, 1.6, 1.6);
+    });
+    // 青苔：從左邊蓋過冠帶、垂下幾絲
+    const sw = Math.sin(t * 1.8) * 1.2;
+    A.shape(ctx, (c) => {
+      c.moveTo(-36, -8);
+      c.quadraticCurveTo(-34, -20, -24, -16);
+      c.quadraticCurveTo(-20, -24, -12, -16);
+      c.quadraticCurveTo(-8, -20, -4, -12);
+      c.quadraticCurveTo(-6, -4, -9, 2);
+      c.lineTo(-11 + sw, 9);
+      c.lineTo(-14, 3);
+      c.quadraticCurveTo(-18, 6, -22, 3);
+      c.lineTo(-25 + sw, 12);
+      c.lineTo(-28, 3);
+      c.quadraticCurveTo(-34, 4, -36, -8);
+      c.closePath();
+    }, FR.moss, FR.mossS, { cel: [2, 2], lw: 2 });
+    A.shape(ctx, (c) => {
+      c.moveTo(22, -14);
+      c.quadraticCurveTo(26, -21, 32, -16);
+      c.quadraticCurveTo(38, -12, 33, -6);
+      c.lineTo(31 + sw, 2);
+      c.lineTo(28, -5);
+      c.quadraticCurveTo(22, -7, 22, -14);
+      c.closePath();
+    }, FR.moss, FR.mossS, { cel: [1.5, 1.5], lw: 1.8 });
+    ctx.fillStyle = rgba('#d8ff9a', 0.7);
+    ctx.beginPath();
+    ctx.arc(-27, -15, 1.6, 0, TAU);
+    ctx.arc(-17, -17, 1.3, 0, TAU);
+    ctx.arc(27, -16, 1.3, 0, TAU);
+    ctx.fill();
+    // 小芽（兩片葉子）
+    const bs = Math.sin(t * 2.3) * 0.12;
+    ctx.save();
+    ctx.translate(-20, -18);
+    ctx.rotate(-0.25 + bs);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 3.4;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x, y + len);
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-2, -8, 0, -15);
     ctx.stroke();
-    if (q >= 0.4) {
-      const d = (q - 0.4) / 0.6;
-      const yy = y + 14 + d * d * 110;
-      ctx.save();
-      ctx.globalAlpha *= 1 - d * 0.6;
-      glow(ctx, x, yy, 8, col, 0.7 * k);
-      ctx.fillStyle = A.c(U.mix(col, '#ffffff', 0.35));
-      ctx.beginPath();
-      ctx.moveTo(x, yy - 5);
-      ctx.quadraticCurveTo(x + 3.2, yy, x, yy + 3);
-      ctx.quadraticCurveTo(x - 3.2, yy, x, yy - 5);
-      ctx.fill();
-      ctx.restore();
-    } else {
-      ctx.fillStyle = A.c(U.mix(col, '#ffffff', 0.35));
-      ctx.beginPath();
-      ctx.arc(x, y + len, 2.4 + q * 2, 0, TAU);
-      ctx.fill();
-    }
-  }
-  // 沼澤裡的蘆葦／香蒲一叢
-  function hyReeds(ctx, x, y, n, h, t, seed) {
-    for (let i = 0; i < n; i++) {
-      const bx = x + (i - (n - 1) / 2) * 7;
-      const hh = h * (0.7 + hash(seed + i) * 0.5);
-      const sw = Math.sin(t * 1.4 + seed + i * 0.8) * 5;
-      const lean = (hash(seed + i + 3) - 0.5) * 16;
-      const broken = hash(seed + i + 9) > 0.7;
-      const tx = bx + lean + sw;
-      const ty = y - hh;
-      if (broken) {
-        // 折斷垂下的蘆葦
-        const mx = bx + lean * 0.6;
-        const my = y - hh * 0.6;
-        A.shape(ctx, (c) => taper(c, qb(bx, y, bx + lean * 0.3, y - hh * 0.3, mx, my), (q) => 4.4 - q * 1.2, 8), HY.reed, null, { lw: 1.6 });
-        A.shape(ctx, (c) => taper(c, qb(mx, my, mx + 10, my - 4, mx + 16 + sw * 0.4, my + 16), (q) => 3.2 - q * 2.4, 8), HY.reedS, null, { lw: 1.6 });
-        continue;
-      }
-      A.shape(ctx, (c) => taper(c, qb(bx, y, bx + lean * 0.4, y - hh * 0.5, tx, ty), (q) => 4.4 - q * 3.2, 10), HY.reed, null, { lw: 1.6 });
-      if (hash(seed + i + 5) > 0.45) {
-        A.ellipse(ctx, bx + lean * 0.78 + sw * 0.8, y - hh * 0.8, 3.6, 10, HY.cat, null, { lw: 1.6, hl: false, rot: (lean + sw) * 0.02 });
-      }
-    }
-  }
-  // 斷枝（折斷的枯木，尖端參差）
-  function hySnag(ctx, x0, y0, x1, y1, w, twig) {
-    const fn = qb(x0, y0, (x0 + x1) / 2 + (y1 - y0) * 0.08, (y0 + y1) / 2, x1, y1);
+    ctx.strokeStyle = A.c('#6ab83a');
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
     A.shape(ctx, (c) => {
-      const L = [];
-      const R = [];
-      for (let i = 0; i <= 8; i++) {
-        const q = i / 8;
-        L.push(along(fn, q, w * (1 - q * 0.45) / 2));
-        R.push(along(fn, q, -w * (1 - q * 0.45) / 2));
-      }
-      c.moveTo(L[0][0], L[0][1]);
-      for (let i = 1; i < L.length; i++) c.lineTo(L[i][0], L[i][1]);
-      // 參差的斷口
-      const e = L[L.length - 1];
-      const f = R[R.length - 1];
-      const a = along(fn, 1, 0)[2];
-      c.lineTo(lerp(e[0], f[0], 0.3) + Math.cos(a) * 9, lerp(e[1], f[1], 0.3) + Math.sin(a) * 9);
-      c.lineTo(lerp(e[0], f[0], 0.5) + Math.cos(a) * 2, lerp(e[1], f[1], 0.5) + Math.sin(a) * 2);
-      c.lineTo(lerp(e[0], f[0], 0.75) + Math.cos(a) * 6, lerp(e[1], f[1], 0.75) + Math.sin(a) * 6);
-      for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]);
+      c.moveTo(0, -14);
+      c.quadraticCurveTo(-6, -22, -13, -19);
+      c.quadraticCurveTo(-8, -12, 0, -14);
       c.closePath();
-    }, HY.wood, HY.woodS, { cel: [2, 2], lw: 2.4 });
-    ctx.strokeStyle = A.c(HY.woodS);
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    for (let k = 1; k < 4; k++) {
-      const p = along(fn, k * 0.22, w * 0.15 * (k % 2 ? 1 : -1));
-      const q = along(fn, k * 0.22 + 0.14, w * 0.15 * (k % 2 ? 1 : -1));
-      ctx.moveTo(p[0], p[1]);
-      ctx.lineTo(q[0], q[1]);
+      c.moveTo(0, -15);
+      c.quadraticCurveTo(5, -24, 12, -23);
+      c.quadraticCurveTo(9, -15, 0, -15);
+      c.closePath();
+    }, '#8ad04a', '#5a9a34', { shadeY: -16, lw: 1.8 });
+    ctx.restore();
+    // 小白花（冠帶右邊）
+    ctx.save();
+    ctx.translate(26, -24);
+    ctx.rotate(bs * 0.8);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * TAU - PI / 2;
+      A.ellipse(ctx, Math.cos(a) * 3.4, Math.sin(a) * 3.4, 2.8, 2.8, FR.flower, null, { lw: 1.4, hl: false });
     }
-    ctx.stroke();
-    if (twig) {
-      const p = along(fn, 0.55, 0);
-      const a = p[2] + twig;
-      limb(ctx, (c) => {
-        c.moveTo(p[0], p[1]);
-        c.lineTo(p[0] + Math.cos(a) * w * 1.6, p[1] + Math.sin(a) * w * 1.6);
-        c.lineTo(p[0] + Math.cos(a + 0.4) * w * 2.2, p[1] + Math.sin(a + 0.4) * w * 2.2);
-      }, 5, HY.wood);
-    }
+    A.ellipse(ctx, 0, 0, 2.2, 2.2, FR.flowerC, null, { lw: 1.2, hl: false });
+    ctx.restore();
+    ctx.restore();
   }
-  // 沼面（後半：泥岸、沼水、毒光、浮萍與氣泡）
-  function hyBogBack(ctx, rx, ry, t, gcol, k, rage) {
-    A.ellipse(ctx, 0, 3, rx + 10, ry + 7, HY.bank, HY.bankS, { lw: 3, hl: false, shadeAt: 0.1 });
-    const g = ctx.createRadialGradient(0, 0, rx * 0.1, 0, 0, rx);
-    g.addColorStop(0, rgba(U.mix(HY.bog, gcol, 0.28), 1));
-    g.addColorStop(1, rgba(HY.bogD, 1));
+  // 背上的紅帽小傘菇（原點在菇柄根部）
+  function frMush(ctx, x, y, s, rot, glowK) {
     ctx.save();
-    ctx.scale(1, ry / rx);
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.scale(s, s);
+    if (glowK > 0) glow(ctx, 0, -20, 30, '#d8ff6a', 0.75 * glowK);
+    A.shape(ctx, (c) => {
+      c.moveTo(-5, 4);
+      c.quadraticCurveTo(-6, -8, -4, -17);
+      c.lineTo(4, -17);
+      c.quadraticCurveTo(6, -8, 5, 4);
+      c.closePath();
+    }, FR.stem, FR.stemS, { cel: [2, 0], lw: 2.2 });
+    // 菌褶
+    A.shape(ctx, (c) => c.ellipse(0, -17, 14, 3.6, 0, 0, TAU), FR.gill, null, { lw: 2 });
+    A.shape(ctx, (c) => {
+      c.moveTo(-16, -16);
+      c.bezierCurveTo(-16, -36, 16, -36, 16, -16);
+      c.quadraticCurveTo(0, -12, -16, -16);
+      c.closePath();
+    }, FR.cap, FR.capS, { cel: [3, 2.5], lw: 2.4 });
+    ctx.fillStyle = A.c(FR.dot);
     ctx.beginPath();
-    ctx.arc(0, 0, rx, 0, TAU);
-    ctx.fillStyle = g;
+    ctx.ellipse(-6, -26, 3.4, 2.6, -0.3, 0, TAU);
+    ctx.ellipse(5, -28, 2.4, 2, 0.2, 0, TAU);
+    ctx.ellipse(9, -20, 2, 1.6, 0, 0, TAU);
+    ctx.ellipse(-11, -19, 1.8, 1.4, 0, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = A.outline();
-    ctx.lineWidth = 2.6;
+    ctx.fillStyle = rgba('#ffffff', 0.55);
+    ctx.beginPath();
+    ctx.ellipse(-9, -28, 3, 1.4, -0.6, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+  // 一叢青苔（圓鼓鼓的一坨＋垂下的幾絲＋亮點）
+  function frMoss(ctx, x, y, w, t, seed, P) {
+    const n = 4;
+    A.shape(ctx, (c) => {
+      c.moveTo(x - w / 2, y + 3);
+      for (let i = 0; i < n; i++) {
+        const x0 = x - w / 2 + (i * w) / n;
+        const bump = 4 + hash(seed + i) * 4;
+        c.quadraticCurveTo(x0 + w / n / 2, y - bump * 1.6, x0 + w / n, y + (i === n - 1 ? 3 : 0));
+      }
+      const sw = Math.sin(t * 1.7 + seed) * 1.5;
+      c.lineTo(x + w * 0.3, y + 6);
+      c.lineTo(x + w * 0.22 + sw, y + 14);
+      c.lineTo(x + w * 0.12, y + 6);
+      c.lineTo(x - w * 0.12, y + 7);
+      c.lineTo(x - w * 0.2 + sw, y + 17);
+      c.lineTo(x - w * 0.3, y + 6);
+      c.closePath();
+    }, FR.moss, FR.mossS, { shadeY: y + 3, lw: 2 });
+    ctx.fillStyle = rgba('#d8ff9a', 0.75);
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      ctx.moveTo(x - w * 0.35 + i * w * 0.22 + 1.4, y - 2 - hash(seed + i) * 3);
+      ctx.arc(x - w * 0.35 + i * w * 0.22, y - 2 - hash(seed + i) * 3, 1.4, 0, TAU);
+    }
+    ctx.fill();
+  }
+  // 披風的一片葉子（原點在葉柄，往 ang 方向長 L）
+  function frLeaf(ctx, x, y, ang, L, W, col, colS) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    A.shape(ctx, (c) => {
+      c.moveTo(0, 0);
+      c.bezierCurveTo(L * 0.25, -W, L * 0.7, -W * 0.9, L, 0);
+      c.lineTo(L * 0.86, W * 0.18);
+      c.lineTo(L * 0.8, W * 0.5);
+      c.bezierCurveTo(L * 0.55, W * 0.95, L * 0.2, W * 0.8, 0, 0);
+      c.closePath();
+    }, col, colS, { cel: [0, -W * 0.3], lw: 2.4 });
+    ctx.strokeStyle = rgba(U.mix(colS, '#0a2010', 0.35), 0.8);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(2, 0);
+    ctx.quadraticCurveTo(L * 0.5, -W * 0.08, L * 0.92, 0);
+    for (let i = 1; i < 4; i++) {
+      const q = i * 0.22;
+      ctx.moveTo(L * q, -W * 0.03);
+      ctx.lineTo(L * (q + 0.14), -W * 0.52);
+      ctx.moveTo(L * q, W * 0.02);
+      ctx.lineTo(L * (q + 0.12), W * 0.46);
+    }
     ctx.stroke();
     ctx.restore();
-    // 毒光在水面上的反光
+  }
+  // 睡蓮葉（肩上的披肩、水面上的葉子）：圓葉＋一道缺口＋放射葉脈
+  function frPad(ctx, x, y, rx, ry, rot, col, colS, vein) {
     ctx.save();
-    ctx.scale(1, 0.22);
-    glow(ctx, 0, 0, rx * 0.9, gcol, (0.3 + (rage ? 0.15 : 0)) * k);
-    ctx.restore();
-    // 浮萍
-    for (let i = 0; i < 6; i++) {
-      const x = (hash(i + 31) - 0.5) * rx * 1.6 + Math.sin(t * 0.6 + i) * 3;
-      const y = (hash(i + 37) - 0.5) * ry * 1.1;
-      A.shape(ctx, (c) => {
-        c.ellipse(x, y, 7 + hash(i) * 4, 2.6, 0, 0.3, TAU - 0.1);
-        c.lineTo(x, y);
-        c.closePath();
-      }, i % 2 ? '#5e7a30' : '#4a5e28', null, { lw: 1.4 });
-    }
-    // 冒泡、破掉
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    const pth = (c) => {
+      c.moveTo(0, 0);
+      c.ellipse(0, 0, rx, ry, 0, 0.32, TAU - 0.12);
+      c.closePath();
+    };
+    A.shape(ctx, pth, col, colS, { cel: [rx * 0.06, ry * 0.22], lw: 2.4 });
+    ctx.strokeStyle = rgba(vein, 0.7);
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
     for (let i = 0; i < 7; i++) {
-      const q = (t * 0.55 + hash(i + 51)) % 1;
-      const x = (hash(i + 52) - 0.5) * rx * 1.5;
-      const y = (hash(i + 53) - 0.5) * ry * 0.9;
-      const r = 2 + q * 6 * (0.6 + hash(i));
-      ctx.save();
-      ctx.globalAlpha *= q < 0.85 ? 0.9 : (1 - q) / 0.15 * 0.9;
-      ctx.strokeStyle = A.c(U.mix(gcol, '#ffffff', 0.3));
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.arc(x, y - r * 0.4, r, PI, TAU);
-      ctx.stroke();
-      ctx.fillStyle = rgba(gcol, 0.25);
-      ctx.fill();
-      ctx.restore();
+      const a = 0.6 + i * 0.8;
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * rx * 0.85, Math.sin(a) * ry * 0.85);
     }
-  }
-  // 沼面（前緣：蓋住身體根部的水面、漣漪）
-  function hyBogFront(ctx, rx, ry, t, gcol, cover) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(0, 0, rx, ry, 0, 0, PI);
-    ctx.lineTo(-rx, 0);
-    ctx.lineTo(-cover, -3);
-    ctx.quadraticCurveTo(0, -8, cover, -3);
-    ctx.lineTo(rx, 0);
-    ctx.closePath();
-    const g = ctx.createLinearGradient(0, -6, 0, ry);
-    g.addColorStop(0, rgba(U.mix(HY.bog, gcol, 0.3), 0.96));
-    g.addColorStop(1, rgba(HY.bogD, 1));
-    ctx.fillStyle = g;
-    ctx.fill();
-    ctx.restore();
-    ctx.strokeStyle = A.outline();
-    ctx.lineWidth = 2.6;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, rx, ry, 0, 0.05, PI - 0.05);
     ctx.stroke();
-    // 身體周圍的漣漪
-    for (let i = 0; i < 3; i++) {
-      const q = (t * 0.5 + i / 3) % 1;
-      ctx.strokeStyle = rgba(U.mix(gcol, '#ffffff', 0.35), 0.55 * (1 - q));
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(0, 1, cover * (0.95 + q * 0.3), 6 + q * 8, 0, 0.1, PI - 0.1);
-      ctx.stroke();
-    }
-  }
-  // 貼地的毒霧
-  function hyMist(ctx, w, t, gcol, a) {
-    for (let i = 0; i < 9; i++) {
-      const sp = (i % 2 ? 1 : -1) * (8 + hash(i + 71) * 10);
-      let x = ((hash(i + 72) * w * 2 + t * sp) % (w * 2) + w * 2) % (w * 2) - w;
-      const edge = 1 - Math.pow(Math.abs(x) / w, 3);
-      const y = -6 - hash(i + 73) * 16 + Math.sin(t + i) * 3;
-      ctx.save();
-      ctx.scale(1, 0.45);
-      glow(ctx, x, y / 0.45, 34 + hash(i) * 22, i % 3 ? '#b4f08a' : gcol, a * edge);
-      ctx.restore();
-    }
-  }
-  // 從沼裡竄出的小蛇頭（召喚）
-  function hyHatch(ctx, x, k, t, i, rage, gcol) {
-    if (k <= 0) return;
-    ctx.save();
-    ctx.translate(x, 0);
-    // 水花＋光柱
-    const cg = ctx.createLinearGradient(0, -110, 0, 0);
-    cg.addColorStop(0, rgba(gcol, 0));
-    cg.addColorStop(1, rgba(gcol, 0.45 * k));
-    ctx.fillStyle = cg;
-    ctx.fillRect(-20, -110, 40, 110);
-    A.ellipse(ctx, 0, 0, 26 * Math.min(1, k * 1.5), 7, HY.bog, HY.bogD, { lw: 2.2, hl: false });
-    const P = hyPal(rage, false);
-    const h = 58 * clamp(k * 1.3 - 0.15, 0, 1);
-    if (h > 4) {
-      const wob = Math.sin(t * 8 + i * 2) * 4;
-      const a = -0.7 + Math.sin(t * 6 + i) * 0.15;
-      hyNeck(ctx, 0, 6, 4 + wob, -h, a, 0.42, P, -6, 0.6, gcol, 90 + i);
-      hyHead(ctx, { x: 4 + wob, y: -h, a, s: 0.42, jaw: 0.7 + Math.sin(t * 10 + i) * 0.2, P, heat: 0.8, gcol, eyeCol: rage ? HY.eyeR : HY.eye, eg: 1.2, t, i: i + 20, spit: 0 });
-    }
-    // 濺起的水花
-    for (let j = 0; j < 5; j++) {
-      const q = (t * 1.6 + j / 5 + i * 0.3) % 1;
-      const a = -PI / 2 + (j - 2) * 0.5;
-      ctx.save();
-      ctx.globalAlpha *= (1 - q) * k;
-      ctx.fillStyle = A.c(j % 2 ? '#6a8a4a' : U.mix(gcol, '#ffffff', 0.3));
-      ctx.beginPath();
-      ctx.arc(Math.cos(a) * q * 30, -Math.abs(Math.sin(a)) * q * 44 + q * q * 30, 3.2 * (1 - q) + 1, 0, TAU);
-      ctx.fill();
-      ctx.restore();
-    }
     ctx.restore();
   }
-  // 各顆頭的站位：[頸根 x, 頸根 y, 頭 x, 頭 y, 朝向, 大小, 後排]
-  const HY_HEADS = [
-    [-46, -84, -104, -146, -2.55, 0.84, 1],
-    [-22, -94, -44, -204, -1.15, 0.9, 1],
-    [28, -94, 44, -226, -0.55, 0.92, 1],
-    [6, -88, 46, -160, 0.12, 1.12, 0],
-    [60, -64, 122, -104, 0.4, 0.94, 0],
-  ];
-  const HY_HEADS_R = [
-    [-66, -62, -152, -86, -2.85, 0.78, 1],
-    [44, -84, 104, -196, -0.3, 0.84, 1],
-  ];
+  // 三趾的手／蹼足：從 (x,y) 朝 ang 方向張開，toes = 趾長
+  function frToes(ctx, x, y, ang, toes, spread, web, P) {
+    const tp = [];
+    for (let i = 0; i < 3; i++) {
+      const a = ang + (i - 1) * spread;
+      tp.push([x + Math.cos(a) * toes, y + Math.sin(a) * toes * 0.7, a]);
+    }
+    if (web) {
+      A.shape(ctx, (c) => {
+        c.moveTo(x, y);
+        c.lineTo(tp[0][0], tp[0][1]);
+        c.quadraticCurveTo(lerp(x, (tp[0][0] + tp[1][0]) / 2, 0.75), lerp(y, (tp[0][1] + tp[1][1]) / 2, 0.75), tp[1][0], tp[1][1]);
+        c.quadraticCurveTo(lerp(x, (tp[1][0] + tp[2][0]) / 2, 0.75), lerp(y, (tp[1][1] + tp[2][1]) / 2, 0.75), tp[2][0], tp[2][1]);
+        c.closePath();
+      }, U.mix(P.skinS, P.belly, 0.25), null, { lw: 2 });
+    }
+    tp.forEach(([tx, ty]) => {
+      limb(ctx, (c) => {
+        c.moveTo(x, y);
+        c.lineTo(tx, ty);
+      }, 10, P.skin);
+    });
+    tp.forEach(([tx, ty]) => A.ellipse(ctx, tx, ty, 4.4, 3.8, U.mix(P.skin, P.belly, 0.45), P.skin, { lw: 2, hl: false }));
+  }
+  // 香蒲權杖：蘆葦桿＋金環＋香蒲穗
+  function frSceptre(ctx, x0, y0, x1, y1, P, t, glowA) {
+    const L = Math.hypot(x1 - x0, y1 - y0);
+    const a = Math.atan2(y1 - y0, x1 - x0);
+    ctx.save();
+    ctx.translate(x0, y0);
+    ctx.rotate(a);
+    limb(ctx, (c) => {
+      c.moveTo(0, 0);
+      c.lineTo(L * 0.8, 0);
+    }, 9, FR.reed);
+    ctx.strokeStyle = rgba('#e8f0a0', 0.6);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(4, -1.4);
+    ctx.lineTo(L * 0.78, -1.4);
+    ctx.stroke();
+    // 香蒲穗
+    if (glowA > 0) glow(ctx, L * 0.88, 0, 26, P.gem, glowA);
+    A.shape(ctx, (c) => A.roundRect(c, L * 0.76, -7.5, L * 0.22, 15, 7.5), FR.cat, FR.catS, { cel: [0, 3], lw: 2.4 });
+    ctx.fillStyle = rgba('#c89a6a', 0.7);
+    ctx.fillRect(L * 0.79, -5, L * 0.16, 2);
+    limb(ctx, (c) => {
+      c.moveTo(L * 0.97, 0);
+      c.lineTo(L * 1.04, 0);
+    }, 5, FR.reedS);
+    // 金環＋寶石
+    [0.5, 0.74].forEach((q, i) => {
+      A.shape(ctx, (c) => A.roundRect(c, L * q - 3, -6.5, 6 + i * 2, 13, 2), FR.gold, FR.goldS, { cel: [0, 3], lw: 2 });
+    });
+    A.ellipse(ctx, L * 0.745 + 1, 0, 2.6, 2.6, P.gem, null, { lw: 1.4, hl: false });
+    // 纏在桿上的小葉
+    frLeaf(ctx, L * 0.7, 0, -0.8 + Math.sin(t * 2) * 0.1, 18, 6, '#6ab83a', '#3e7a2e');
+    ctx.restore();
+  }
+  // 蘆葦／香蒲一叢（沼的邊上）
+  function frReeds(ctx, x, y, n, h, t, seed) {
+    for (let i = 0; i < n; i++) {
+      const bx = x + (i - (n - 1) / 2) * 9 + hash(seed + i) * 4;
+      const hh = h * (0.7 + hash(seed + i + 1) * 0.45);
+      const sw = Math.sin(t * 1.6 + seed + i) * 4 + (hash(seed + i + 2) - 0.5) * 16;
+      limb(ctx, (c) => {
+        c.moveTo(bx, y);
+        c.quadraticCurveTo(bx + sw * 0.3, y - hh * 0.5, bx + sw, y - hh);
+      }, 6, i % 2 ? FR.reedS : FR.reed);
+      if (i % 2 === 0) A.shape(ctx, (c) => A.roundRect(c, bx + sw * 0.92 - 4, y - hh - 4, 8, 20, 4), FR.cat, FR.catS, { cel: [2, 0], lw: 2 });
+    }
+  }
   function fb_shroom(ctx, m) {
     const S = atk(m);
-    const { fx, ph, t, rage, dead } = S;
-    const K = (m.h || 190) / 190;
-    const kind = S.kind;
+    const { fx, ph, t, rage, dead, kind } = S;
+    const K = (m.h || 170) / 170;
+    const P = frPal(rage);
     const breath = amt(fx.breath);
-    const breathMove = breath > 0 || kind === 'breath';
-    const firing = breathMove && (ph === 'strike' || !!fx.breathing || breath >= 0.999);
-    const charging = breathMove && !firing && !!ph;
-    const jump = !!fx.jump;
+    const breathMove = !dead && (breath > 0 || kind === 'breath');
+    const firing = breathMove && (ph === 'strike' || breath >= 0.999);
+    const charging = breathMove && !firing;
+    const jump = !dead && !!fx.jump;
     const hover = Math.max(0, num(m.hover, 0));
+    const jumpMove = /jump|slam|leap/.test(kind);
+    const crouch = !dead && !jump && jumpMove && ph === 'wind';
+    const landed = !dead && !jump && jumpMove && ph === 'strike';
     const sumK = amt(fx.summon);
-    const summon = !dead && (sumK > 0 || /summon|call/.test(kind));
-    const jumpPrep = !jump && ph === 'wind' && /jump|slam|leap|quake/.test(kind);
-    const landed = !jump && ph === 'strike' && /jump|slam|leap|quake/.test(kind);
-    const roar = !dead && (summon || (ph === 'wind' && !breathMove && !jumpPrep && !jump));
-    const walk = S.walk && !ph && !jump && !breathMove;
-    const hurt = S.hurt && !dead;
+    const summon = !dead && (sumK > 0 || (kind === 'summon' && ph === 'wind'));
+    const walk = S.walk && !ph && !dead;
+    const hurt = S.hurt && !dead && !ph;
     const sp = dead ? 0 : clamp(num(fx.spawn, 0), 0, 1);
     const rise = sp * sp * (3 - 2 * sp);
+    const blink = !dead && (t % 3.7 < 0.14 || (t + 0.3) % 11 < 0.12);
+    const croak = summon ? Math.max(0, Math.sin(t * 13)) : 0;
 
-    const gcol = rage ? '#b8ff2a' : HY.venom;
-    const hotC = rage ? HY.crim : HY.venom;
-    const eyeCol = rage ? HY.eyeR : HY.eye;
-    const heat = dead ? 0 : clamp(0.55 + Math.sin(t * 3) * 0.15 + (rage ? 0.45 : 0) + (charging ? breath * 0.4 : 0) + (firing || roar ? 0.35 : 0), 0, 1.3);
-
-    // ── 身體姿勢 ──
-    let sink = dead ? 22 : walk ? Math.sin(t * 5) * 2.5 : Math.sin(t * 2) * 2;
-    let bsx = 1 + Math.sin(t * 2) * 0.012;
-    let bsy = 1 - Math.sin(t * 2) * 0.012;
-    let swayK = walk ? 1.4 : rage ? 1.3 : 1;
-    if (jumpPrep) {
-      sink = 12 + Math.sin(t * 40) * 1.2;
-      bsx = 1.08;
-      bsy = 0.84;
+    // ── 姿勢 ──
+    let lift = 0;
+    let bsx = 1 + Math.sin(t * 2.2) * 0.012;
+    let bsy = 1 - Math.sin(t * 2.2) * 0.012;
+    let lean = 0;
+    let mouthO = 0;
+    let sacR = 7 + Math.sin(t * 2.2) * 2;
+    let lid = 0.3;
+    let tilt = 0;
+    let wide = false;
+    let armUp = 0;
+    if (walk) {
+      const hp = Math.max(0, Math.sin(t * 7));
+      lift = -hp * 7;
+      bsy = 1 + hp * 0.05 - (1 - hp) * 0.03;
+      bsx = 1 - hp * 0.03 + (1 - hp) * 0.03;
     }
-    if (jump) {
-      sink = 0;
-      bsx = 0.94;
-      bsy = 1.1;
-    }
-    if (landed) {
-      sink = 8;
-      bsx = 1.1;
-      bsy = 0.86;
+    if (rage) {
+      lid = 0.36;
+      tilt = 0.32;
+      sacR += 3 + Math.sin(t * 5) * 2;
     }
     if (charging) {
-      bsy = 1 + breath * 0.05;
-      bsx = 1 - breath * 0.03;
+      lean = -0.16 * breath;
+      sacR = 12 + breath * 30 + Math.sin(t * 30) * breath * 1.2;
+      lid = lerp(lid, 0.55, breath);
+      bsy *= 1 + breath * 0.04;
+    }
+    if (firing) {
+      lean = 0.06;
+      mouthO = 0.95 + Math.sin(t * 20) * 0.05;
+      sacR = 14 + Math.sin(t * 16) * 3;
+      lid = 0.08;
+      wide = true;
+    }
+    if (crouch) {
+      bsx = 1.02;
+      bsy = 0.97;
+      lift = 2;
+      lid = 0.42;
+      tilt = 0.3;
+    }
+    if (jump) {
+      bsx = 0.94;
+      bsy = 1.07;
+      mouthO = 0.45;
+      lid = 0.05;
+      wide = true;
+      armUp = 1;
+    }
+    if (landed) {
+      bsx = 1.1;
+      bsy = 0.88;
+      lid = 0.4;
+      tilt = 0.25;
+    }
+    if (summon) {
+      sacR = 12 + Math.min(1, sumK * 1.5) * 20 + croak * 10;
+      mouthO = 0;
+      lid = croak > 0.3 ? 0.62 : 0.2;
+      lean = -0.05 * croak;
+      armUp = 0.35;
+    }
+    if (hurt) {
+      lean = -0.08;
+      mouthO = 0.35;
+      sacR = 5;
     }
     if (dead) {
-      bsx = 1.06;
+      bsx = 1.14;
       bsy = 0.72;
+      lift = 4;
+      mouthO = 0.3;
+      sacR = 0;
     }
-    const shake = jumpPrep || (charging && breath > 0.6) || roar ? Math.sin(t * 55) * 1.5 : 0;
-    const bodyC = hyPal(rage, false);
+    if (blink && !firing) lid = 1;
+    const shake = crouch || (charging && breath > 0.6) || (summon && croak > 0.5) ? Math.sin(t * 55) * 1.4 : 0;
+    const gemA = dead ? 0 : (rage ? 0.75 : 0.45) + Math.sin(t * 3) * 0.15 + (summon ? 0.3 : 0);
+    const wartA = dead ? 0 : (rage ? 0.85 : 0.4) + Math.sin(t * 2.4) * 0.12 + (charging ? breath * 0.4 : 0) + (summon ? 0.4 : 0);
+    // 後背傘菇：召喚時發光、搖晃、最後彈出去
+    const nPop = rage ? 3 : 2;
+    const popK = summon ? clamp((sumK - 0.72) / 0.28, 0, 1) : 0;
+    const mushGlow = summon ? clamp(sumK * 1.6, 0, 1) : 0;
+    const MUSH = [[-90, -104, 1.3, -0.6], [100, -110, 1.15, 0.6], [-70, -122, 1.0, -0.3]];
 
     ctx.save();
     ctx.scale(K, K);
+    if (!dead) glow(ctx, 0, -70, 170, rage ? '#b06aff' : '#8cff6a', (rage ? 0.2 : 0.1) + Math.sin(t * 2) * 0.03);
 
-    // ── 氣場＋往上飄的毒泡 ──
-    if (!dead) {
-      glow(ctx, 0, -120, 190 + (rage ? 40 : 0), rage ? HY.crim : '#4aff6a', (rage ? 0.22 : 0.14) + Math.sin(t * 3) * 0.03);
-      if (rage) glow(ctx, 0, -60, 150, HY.venom, 0.14);
-      const n = rage ? 16 : 9;
-      for (let i = 0; i < n; i++) {
-        const q = (t * 0.3 + hash(i + 7)) % 1;
-        const x = (hash(i + 3) - 0.5) * 260 + Math.sin(t * 1.7 + i) * 12;
-        const y = -20 - q * 240;
-        const hc = i % 3 === 0 && rage ? HY.crim : gcol;
-        ctx.globalAlpha = Math.sin(q * PI) * 0.85 * (1 - sp);
-        glow(ctx, x, y, 9 + hash(i) * 4, hc, 0.8);
-        ctx.strokeStyle = A.c(U.mix(hc, '#ffffff', 0.5));
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.arc(x, y, 2.4 + hash(i + 1) * 2, 0, TAU);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    // ── 沼（永遠在地面上：跳起時要把 hover 扣回來）──
-    const BRX = 140;
-    const BRY = 22;
+    // ── 沼（永遠貼地：跳起時把 hover 扣回來）──
     const poolK = sp > 0 ? clamp((1 - sp) * 1.6 + 0.35, 0, 1) : 1;
     ctx.save();
     ctx.translate(0, hover);
     ctx.scale(poolK, poolK);
-    // 後面的蘆葦與枯枝
-    hyReeds(ctx, -118, -4, 5, 70, t, 3);
-    hySnag(ctx, -96, -4, -150, -96, 12, -0.9);
-    hyReeds(ctx, 104, -6, 3, 54, t, 11);
-    hyBogBack(ctx, BRX, BRY, t, gcol, 1, rage);
+    frReeds(ctx, -150, -4, 5, 74, t, 3);
+    frReeds(ctx, 150, -6, 3, 58, t, 11);
+    A.shape(ctx, (c) => c.ellipse(0, 2, 186, 28, 0, 0, TAU), FR.bank, FR.bankS, { shadeY: 12, lw: 2.6 });
+    ctx.fillStyle = A.c(FR.water);
+    ctx.beginPath();
+    ctx.ellipse(0, 1, 176, 22, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = A.c(FR.waterD);
+    ctx.beginPath();
+    ctx.ellipse(8, 4, 150, 15, 0, 0, TAU);
+    ctx.fill();
+    // 水面漣漪
+    ctx.strokeStyle = rgba(FR.waterL, 0.55);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const q = (t * 0.4 + i / 3) % 1;
+      const rx = 150 + q * 22;
+      const ry = 17 + q * 4;
+      [PI * 1.08, PI * 1.62].forEach((a0) => {
+        ctx.moveTo(Math.cos(a0) * rx, 2 + Math.sin(a0) * ry);
+        ctx.ellipse(0, 2, rx, ry, 0, a0, a0 + PI * 0.3);
+      });
+    }
+    ctx.stroke();
+    // 國王的大睡蓮葉寶座
+    const padW = jump ? Math.sin(t * 18) * 2 : landed ? 3 : 0;
+    frPad(ctx, 0, 2 + padW * 0.3, 140, 19 - padW, 0.02, P.leaf, P.leafS, FR.padV);
     ctx.restore();
 
-    // ── 本體（從沼裡升起時往下沉、裁切在水面以上）──
+    // ── 本體 ──
     ctx.save();
     if (rise > 0) {
       ctx.beginPath();
-      ctx.rect(-600, -800, 1200, 800);
+      ctx.rect(-600, -900, 1200, 900);
       ctx.clip();
-      ctx.translate(0, rise * 250);
+      ctx.translate(0, rise * 200);
     }
-    ctx.translate(shake, 0);
+    ctx.translate(shake, lift);
+    ctx.translate(-10, 0);
+    ctx.rotate(lean);
+    ctx.translate(10, 0);
+    ctx.scale(bsx, bsy);
 
-    // 竄起時：整個身體離開沼面，尾巴捲在下面、泥水一路往下淌
-    if (jump && hover > 4) {
-      const cw = Math.sin(t * 7) * 6;
-      const fnT = cb(-70, -4, -40, 70 + cw, 40, 80 - cw, 70, 30);
-      const twf = (q) => 58 - q * 46;
-      A.shape(ctx, (c) => taper(c, fnT, twf, 22), bodyC.sc, bodyC.scS, { cel: [4, 4], lw: 3 });
-      finish(ctx, (c) => taper(c, fnT, twf, 22), [-100, -10, 80, 90], { rim: '#eaffc0', rimA: 0.2, rimW: 5, dark: '#050c06', darkA: 0.35, tex: bodyC.scD, texA: 0.3, seed: 3, lw: 3 });
+    // 後面的葉披風（從兩肩後面散開）
+    const cw = Math.sin(t * 1.8) * 0.04;
+    frLeaf(ctx, -60, -96, PI - 0.3 + cw, 82, 22, P.leaf, P.leafS);
+    frLeaf(ctx, -52, -86, PI + 0.35 + cw, 78, 20, P.leafS, U.mix(P.leafS, '#0a2010', 0.3));
+    frLeaf(ctx, 70, -98, -0.28 - cw, 80, 22, P.leaf, P.leafS);
+    frLeaf(ctx, 64, -86, 0.4 - cw, 74, 20, P.leafS, U.mix(P.leafS, '#0a2010', 0.3));
+    frLeaf(ctx, -30, -110, PI + 1.0, 60, 18, P.leaf, P.leafS);
+
+    // 背上的傘菇（在頭後面冒出來）
+    MUSH.forEach(([x, y, s, r], i) => {
+      const pop = i < nPop ? popK : 0;
+      if (pop > 0) return;
+      const wob = summon ? Math.sin(t * 30 + i * 2) * 0.12 * mushGlow : Math.sin(t * 1.6 + i) * 0.04;
+      frMush(ctx, x, y, s * (dead ? 0.9 : 1) + (summon && i < nPop ? mushGlow * 0.12 : 0), r + wob + (dead ? r * 0.8 : 0), i < nPop ? mushGlow : 0);
+    });
+
+    // 後腿（跳起時伸直往下垂；平常摺在兩側）
+    if (jump) {
+      [-1, 1].forEach((s) => {
+        const dang = Math.sin(t * 9 + s) * 3;
+        const hip = [s * 62, 0];
+        const knee = [s * 108, 34 + dang];
+        const ank = [s * 84, 78 + dang];
+        const thigh = qb(hip[0], hip[1], s * 100, 4, knee[0], knee[1]);
+        const shin = qb(knee[0], knee[1], s * 108, 64, ank[0], ank[1]);
+        A.shape(ctx, (c) => taper(c, shin, (q) => 24 - q * 10, 12), P.skin, P.skinS, { cel: [s * 3, 3], lw: 2.8 });
+        frToes(ctx, ank[0], ank[1] - 2, PI / 2 + s * 0.25, 26, 0.42, true, P);
+        const tw = (q) => 48 - q * 20;
+        A.shape(ctx, (c) => taper(c, thigh, tw, 14), P.skin, P.skinS, { cel: [s * 4, 4], lw: 3 });
+        ctx.save();
+        ctx.beginPath();
+        taper(ctx, thigh, tw, 14);
+        ctx.clip();
+        ctx.strokeStyle = A.c(P.spot);
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        [0.35, 0.68].forEach((q) => {
+          const a1 = along(thigh, q, 26);
+          const a2 = along(thigh, q + 0.06, -26);
+          ctx.moveTo(a1[0], a1[1]);
+          ctx.lineTo(a2[0], a2[1]);
+        });
+        ctx.stroke();
+        ctx.restore();
+      });
+    } else {
+      [-1, 1].forEach((s) => {
+        const fx0 = s * (crouch ? 112 : 104);
+        frToes(ctx, fx0, -2, s > 0 ? -0.05 : PI + 0.05, 30, 0.38, true, P);
+      });
+    }
+
+    // 權杖（在右手外側）
+    const scGlow = dead ? 0 : (rage ? 0.35 : 0.18) + (summon ? 0.3 : 0);
+    let hand = null;
+    if (!dead) {
+      if (armUp >= 1) hand = [138, -118];
+      else if (armUp > 0) hand = [134, -80 - armUp * 30];
+      else hand = [128, -58];
+      const bx = hand[0] + (armUp >= 1 ? 26 : 6);
+      const by = armUp >= 1 ? hand[1] + 50 : 4;
+      const dl = Math.hypot(hand[0] - bx, hand[1] - by) || 1;
+      frSceptre(ctx, bx, by, bx + ((hand[0] - bx) / dl) * 168, by + ((hand[1] - by) / dl) * 168, P, t, scGlow);
+    }
+
+    // ── 身體 ──
+    const bodyP = jump ? (c) => frBody(c, 44) : frBody;
+    A.shape(ctx, bodyP, P.skin, P.skinS, { cel: [9, 8], lw: 3.4 });
+    ctx.save();
+    ctx.beginPath();
+    bodyP(ctx);
+    ctx.clip();
+    // 深色斑紋
+    ctx.fillStyle = A.c(P.spot);
+    ctx.globalAlpha *= 0.55;
+    ctx.beginPath();
+    [[-70, -110, 12, 7, 0.3], [-86, -70, 9, 12, 0.2], [-50, -122, 7, 4, 0], [30, -126, 10, 5, -0.1], [78, -114, 8, 6, 0.4], [98, -66, 8, 11, -0.2], [-100, -36, 8, 12, 0.1], [-62, -88, 6, 4, 0.5], [102, -30, 7, 10, 0]].forEach(([x, y, rx, ry, r]) => {
+      ctx.moveTo(x + rx, y);
+      ctx.ellipse(x, y, rx, ry, r, 0, TAU);
+    });
+    ctx.fill();
+    ctx.globalAlpha /= 0.55;
+    // 背側的淺色皮褶（從眼後沿著身側往下）
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-56, -122);
+    ctx.bezierCurveTo(-84, -112, -100, -84, -104, -44);
+    ctx.moveTo(84, -122);
+    ctx.bezierCurveTo(106, -110, 116, -86, 114, -46);
+    ctx.strokeStyle = rgba(P.skinS, 0.8);
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    ctx.strokeStyle = rgba(P.stripe, 0.75);
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    // 肚子與下巴
+    A.shape(ctx, (c) => c.ellipse(16, -30, 84, 50, 0, 0, TAU), P.belly, P.bellyS, { cel: [8, 7], lw: 2.6 });
+    ctx.strokeStyle = rgba(P.bellyS, 0.9);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const y = -68 + i * 7;
+      ctx.moveTo(-26 + i * 6, y);
+      ctx.quadraticCurveTo(16, y + 5, 58 - i * 6, y);
+    }
+    ctx.stroke();
+    finish(ctx, bodyP, [-116, -140, 124, 30], { rim: P.rim, rimA: 0.24, rimW: 6, lite: '#fffbe0', liteA: 0.16, dark: '#08140a', darkA: rage ? 0.22 : 0.3, bounce: rage ? '#c890ff' : '#8cff7a', bounceA: rage ? 0.18 : 0.14, tex: P.spot, texA: 0.3, texN: 26, texR: 2, seed: 5, lw: 0 });
+    ctx.restore();
+    ctx.beginPath();
+    bodyP(ctx);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 3.4;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // 疣：小凸點＋會發光的符文疣
+    const WARTS = [[-76, -100, 5, 1], [-92, -86, 3.6, 0], [-50, -112, 3.4, 0], [74, -112, 4.4, 1], [100, -92, 3.4, 0], [-86, -52, 4.2, 1], [96, -48, 4, 1], [-70, -76, 3, 0], [84, -74, 3, 0]];
+    WARTS.forEach(([x, y, r, rune]) => {
+      if (rune && wartA > 0) glow(ctx, x, y, r * 3.6, P.wart, wartA * 0.8);
+      A.ellipse(ctx, x, y, r, r * 0.85, rune ? U.mix(P.skin, P.wart, 0.35 + wartA * 0.4) : U.mix(P.skin, '#ffffff', 0.15), P.skinS, { lw: 1.6, hl: false });
+      if (rune) {
+        ctx.strokeStyle = A.c(U.mix(P.wart, '#ffffff', 0.4 * wartA));
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(x - r * 0.2, y - r * 0.6);
+        ctx.lineTo(x - r * 0.2, y + r * 0.55);
+        ctx.moveTo(x - r * 0.2, y - r * 0.2);
+        ctx.lineTo(x + r * 0.45, y - r * 0.55);
+        ctx.moveTo(x - r * 0.2, y + r * 0.1);
+        ctx.lineTo(x + r * 0.45, y + r * 0.45);
+        ctx.stroke();
+      }
+    });
+
+    // 頭頂和肩後的青苔
+    frMoss(ctx, -60, -124, 30, t, 3, P);
+    frMoss(ctx, 84, -122, 26, t, 7, P);
+    frMoss(ctx, -104, -64, 20, t, 11, P);
+    // 大腿（摺在兩側，帶深色橫紋）
+    if (!jump) {
+      [-1, 1].forEach((s) => {
+        const tx = s * (crouch ? 94 : 88);
+        const ty = crouch ? -28 : -26;
+        const rx = crouch ? 38 : 34;
+        const ry = crouch ? 28 : 25;
+        const rot = s * -0.42;
+        const pth = (c) => c.ellipse(tx, ty, rx, ry, rot, 0, TAU);
+        A.shape(ctx, pth, P.skin, P.skinS, { cel: [s * 5, 5], lw: 3 });
+        ctx.save();
+        ctx.beginPath();
+        pth(ctx);
+        ctx.clip();
+        ctx.strokeStyle = A.c(P.spot);
+        ctx.lineWidth = 5;
+        ctx.globalAlpha *= 0.7;
+        ctx.beginPath();
+        for (let k = -1; k <= 1; k += 2) {
+          ctx.moveTo(tx + k * 12 - s * 4, ty - ry);
+          ctx.quadraticCurveTo(tx + k * 12 + s * 6, ty, tx + k * 12 - s * 2, ty + ry);
+        }
+        ctx.stroke();
+        ctx.globalAlpha /= 0.7;
+        ctx.fillStyle = rgba(P.rim, 0.3);
+        ctx.beginPath();
+        ctx.ellipse(tx - s * 8, ty - ry * 0.45, rx * 0.5, ry * 0.2, rot, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // 肩上的睡蓮葉披肩＋金扣
+    frPad(ctx, -84, -94, 28, 14, -0.5, P.leaf, P.leafS, FR.padV);
+    frPad(ctx, 96, -96, 28, 14, PI + 0.5, P.leaf, P.leafS, FR.padV);
+    A.ellipse(ctx, -76, -90, 5.5, 5.5, FR.gold, FR.goldS, { lw: 2 });
+    A.ellipse(ctx, -76, -90, 2.4, 2.4, P.gem, null, { lw: 1.2, hl: false });
+    A.ellipse(ctx, 88, -92, 5.5, 5.5, FR.gold, FR.goldS, { lw: 2 });
+    A.ellipse(ctx, 88, -92, 2.4, 2.4, P.gem, null, { lw: 1.2, hl: false });
+
+    // 前臂
+    const armW = (q) => 20 - q * 7;
+    let la;
+    if (dead) la = [-58, -66, -96, -30, -118, -6];
+    else if (armUp >= 1) la = [-58, -70, -104, -86, -132, -118];
+    else if (armUp > 0) la = [-58, -70, -96, -70 - armUp * 20, -112, -80 - armUp * 40];
+    else if (crouch) la = [-58, -66, -86, -34, -62, -4];
+    else la = [-58, -68, -80, -38, -58, -6];
+    const lfn = qb(la[0], la[1], la[2], la[3], la[4], la[5]);
+    A.shape(ctx, (c) => taper(c, lfn, armW, 12), P.skin, P.skinS, { cel: [3, 3], lw: 2.8 });
+    frToes(ctx, la[4], la[5], la[5] > -20 ? PI * 0.62 : -PI * 0.65, 16, 0.5, false, P);
+    let ra;
+    if (dead) ra = [74, -66, 110, -30, 132, -6];
+    else ra = [74, -70, (74 + hand[0]) / 2 + 18, (hand[1] - 70) / 2 + 26, hand[0] - 8, hand[1]];
+    const rfn = qb(ra[0], ra[1], ra[2], ra[3], ra[4], ra[5]);
+    A.shape(ctx, (c) => taper(c, rfn, armW, 12), P.skin, P.skinS, { cel: [3, 3], lw: 2.8 });
+    if (dead) frToes(ctx, ra[4], ra[5], PI * 0.4, 16, 0.5, false, P);
+    else {
+      // 握住權杖的手指
+      [-7, 0, 7].forEach((dy, i) => A.ellipse(ctx, hand[0] + 2, hand[1] + dy - 2, 7.5 - i * 0.6, 4.6, P.skin, P.skinS, { lw: 2.2, hl: false }));
+    }
+
+    // 王冠（死掉時掉到地上，另外畫）
+    if (!dead) frCrown(ctx, 12, -143, 1.12, -0.1 + (crouch ? 0.06 : 0) + (jump ? -0.08 : 0), P, gemA, t);
+
+    // 眼睛
+    const eo = { lid, tilt, dead, shut: hurt, wide, look: 1, glowA: rage ? 0.55 + Math.sin(t * 4) * 0.1 : firing ? 0.3 : 0 };
+    frEye(ctx, -34, -128, 24, P, Object.assign({}, eo, { tilt: tilt, side: 1 }));
+    frEye(ctx, 54, -130, 27, P, Object.assign({}, eo, { tilt: -tilt, side: -1 }));
+
+    // 喉囊（從下巴鼓出來，嘴線蓋在它上緣）
+    if (sacR > 9) {
+      const sy = -90 + sacR * 0.86;
+      const rx = sacR * 1.5;
+      const sacP = (c) => c.ellipse(18, sy, rx, sacR, 0, 0, TAU);
+      A.shape(ctx, sacP, U.mix(P.belly, '#ffb89a', 0.45), U.mix(P.bellyS, '#d88870', 0.45), { cel: [sacR * 0.16, sacR * 0.2], lw: 2.8 });
+      ctx.strokeStyle = rgba(U.mix(P.bellyS, '#c08070', 0.3), 0.75);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(18, sy - sacR * 0.2, sacR * 0.95, 0.35, PI - 0.35);
+      ctx.moveTo(18 + Math.cos(0.55) * sacR * 0.7, sy + Math.sin(0.55) * sacR * 0.7 - sacR * 0.1);
+      ctx.arc(18, sy - sacR * 0.1, sacR * 0.7, 0.55, PI - 0.55);
+      ctx.stroke();
+      ctx.fillStyle = rgba('#ffffff', 0.55);
+      ctx.beginPath();
+      ctx.ellipse(18 - rx * 0.42, sy - sacR * 0.3, rx * 0.26, sacR * 0.2, -0.45, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = rgba('#ffffff', 0.85);
+      ctx.beginPath();
+      ctx.arc(18 - rx * 0.62, sy - sacR * 0.02, Math.max(1.5, sacR * 0.07), 0, TAU);
+      ctx.fill();
+    }
+    // 嘴（得意的大弧線；張開時是深色的大嘴＋舌頭）
+    if (mouthO > 0.02) {
+      const o = mouthO;
+      const mouthPath = (c) => {
+        c.moveTo(-74, -90);
+        c.quadraticCurveTo(14, -74 - o * 8, 98, -92);
+        c.quadraticCurveTo(18, -66 + o * 50, -74, -90);
+        c.closePath();
+      };
+      A.shape(ctx, mouthPath, FR.mouth, FR.mouthD, { shadeY: -80, lw: 3 });
       ctx.save();
       ctx.beginPath();
-      taper(ctx, fnT, twf, 22);
+      mouthPath(ctx);
       ctx.clip();
-      ctx.strokeStyle = A.c(bodyC.bellyS);
-      ctx.fillStyle = A.c(bodyC.belly);
-      ctx.beginPath();
-      taper(ctx, (q) => {
-        const p = along(fnT, q, twf(q) * 0.28);
-        return [p[0], p[1]];
-      }, (q) => twf(q) * 0.44, 16);
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let q = 0.05; q < 1; q += 0.08) {
-        const a1 = along(fnT, q, twf(q) * 0.08);
-        const a2 = along(fnT, q, twf(q) * 0.5);
-        ctx.moveTo(a1[0], a1[1]);
-        ctx.lineTo(a2[0], a2[1]);
-      }
-      ctx.stroke();
+      A.shape(ctx, (c) => c.ellipse(dead ? 30 : 18, -72 + o * 26, 34, 12 + o * 6, 0, 0, TAU), FR.tongue, FR.tongueS, { cel: [0, 4], lw: 2 });
       ctx.restore();
-      // 從身上往下淌、拉成細線的泥水與毒液
-      for (let i = 0; i < 9; i++) {
-        const x = -90 + i * 22 + Math.sin(i * 3) * 6;
-        const q = (t * 1.3 + hash(i + 60)) % 1;
-        const L = 20 + hash(i + 61) * 40;
-        ctx.strokeStyle = rgba(i % 3 ? '#3a4a2a' : gcol, 0.55);
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
-        ctx.moveTo(x, 8);
-        ctx.lineTo(x, 8 + L * (0.6 + q * 0.4));
-        ctx.stroke();
-        ctx.fillStyle = rgba(i % 3 ? '#4a5a34' : gcol, 1 - q);
-        ctx.beginPath();
-        ctx.ellipse(x, 14 + L + q * hover * 0.8, 3, 5, 0, 0, TAU);
-        ctx.fill();
-      }
-    }
-
-    // 頭的位置（每顆各自擺動＋各招的姿勢）
-    const defs = rage ? HY_HEADS.concat(HY_HEADS_R) : HY_HEADS;
-    const heads = defs.map((d, i) => {
-      const ph0 = i * 1.7 + 0.4;
-      let [bx, by, hx, hy, a, s, back] = d;
-      hx += Math.sin(t * 1.3 * swayK + ph0) * 7;
-      hy += Math.cos(t * 1.1 * swayK + ph0 * 1.3) * 6;
-      a += Math.sin(t * 1.5 * swayK + ph0) * 0.1;
-      let jaw = (rage ? 0.35 : 0.08) + Math.max(0, Math.sin(t * 1.9 + ph0)) * (rage ? 0.3 : 0.14);
-      const fwdA = 0.28 + (i % 3 - 1) * 0.12;
-      if (charging) {
-        const k = breath;
-        hx = lerp(hx, hx * 0.7 - 34, k);
-        hy = lerp(hy, hy - 24 - (back ? 8 : 0), k);
-        a = lerp(a, -1.25 + (i % 3 - 1) * 0.15, k);
-        jaw = lerp(jaw, 0.85, k);
-      }
-      if (firing) {
-        hx = hx * 0.55 + 70 + i * 6;
-        hy = hy * 0.72 + 30;
-        a = fwdA;
-        jaw = 1;
-      }
-      if (jumpPrep) {
-        hx = hx * 0.8 + 6;
-        hy = hy * 0.72 + 26;
-        a = a * 0.4 + 0.25;
-        jaw = 0.6;
-      }
-      if (jump) {
-        hx = hx * 1.08;
-        hy = hy - 18;
-        a = lerp(a, -1.3, 0.55);
-        jaw = 1;
-      }
-      if (landed) {
-        hx = hx * 0.6 + 60 + i * 10;
-        hy = hy * 0.45 + 12;
-        a = 0.7 + (i % 2) * 0.2;
-        jaw = 0.9;
-      }
-      if (roar) {
-        hy -= 12;
-        a = lerp(a, -1.2, 0.5);
-        jaw = 1;
-      }
-      if (hurt && !ph) {
-        hx -= 10;
-        hy -= 4;
-        a -= 0.28 * (Math.cos(a) < 0 ? -1 : 1);
-        jaw = Math.max(jaw, 0.6);
-      }
       if (dead) {
-        hx = -110 + i * (230 / (defs.length - 1)) + Math.sin(i * 2) * 6;
-        hy = -16 - (i % 2) * 8;
-        a = hx < 0 ? -PI + 0.25 : 0.25;
-        jaw = 0.35;
-      }
-      by = by * bsy + sink;
-      bx *= bsx;
-      if (!dead) hy += sink * 0.6;
-      const sway = Math.sin(t * 1.2 * swayK + ph0) * 10 - (hx > bx ? 8 : -8);
-      return { i, bx, by, hx, hy, a, s, back, jaw, sway };
-    });
-
-    const drawHead = (h) => {
-      const P = hyPal(rage, h.back);
-      hyNeck(ctx, h.bx, h.by + 16, h.hx, h.hy, h.a, h.s, P, h.sway, heat, gcol, h.i * 7);
-      const spit = charging ? breath : firing ? 1 : 0;
-      const eg = 0.95 + Math.sin(t * 5 + h.i) * 0.1 + (rage ? 0.35 : 0) + spit * 0.4 + (roar ? 0.3 : 0);
-      h.out = hyHead(ctx, { x: h.hx, y: h.hy, a: h.a, s: h.s * 1.2, jaw: h.jaw, P, heat, gcol: hotC, eyeCol, eg, t, i: h.i, dead, hurt, spit });
-    };
-
-    // 後排的頸與頭
-    heads.filter((h) => h.back).forEach(drawHead);
-
-    // ── 身體：沼裡隆起的鱗甲巨軀 ──
-    ctx.save();
-    ctx.translate(0, sink);
-    ctx.scale(bsx, bsy);
-    // 尾巴：在後面從水裡拱起一圈
-    const tw = Math.sin(t * 1.6) * 6;
-    const fnTail = cb(-80, 2, -120, -74 + tw, -176, -58 - tw, -184, 4);
-    if (!(jump && hover > 4)) A.shape(ctx, (c) => taper(c, fnTail, (q) => 40 - q * 26, 20), bodyC.sc, bodyC.scS, { cel: [3, 3], lw: 3 });
-    if (!(jump && hover > 4)) finish(ctx, (c) => taper(c, fnTail, (q) => 40 - q * 26, 20), [-190, -80, -76, 6], { rim: '#eaffc0', rimA: 0.2, rimW: 4, dark: '#050c06', darkA: 0.35, lw: 3 });
-    for (let k = 0; k < (jump && hover > 4 ? 0 : 5); k++) {
-      const q = 0.15 + k * 0.16;
-      const p0 = along(fnTail, q - 0.04, -(40 - q * 26) * 0.42);
-      const p1 = along(fnTail, q + 0.02, -(40 - q * 26) * 0.5 - 12);
-      const p2 = along(fnTail, q + 0.05, -(40 - q * 26) * 0.42);
-      A.shape(ctx, (c) => {
-        c.moveTo(p0[0], p0[1]);
-        c.lineTo(p1[0], p1[1]);
-        c.lineTo(p2[0], p2[1]);
-        c.closePath();
-      }, bodyC.fin, null, { lw: 2 });
-    }
-    // 背脊骨刺（先畫，被身體蓋住根部）
-    const top1 = cb(-116, 4, -114, -44, -84, -96, -20, -102);
-    const top2 = cb(-20, -102, 44, -106, 92, -70, 104, -20);
-    [[top1, [0.25, 0.45, 0.62, 0.8, 0.95]], [top2, [0.12, 0.3, 0.48, 0.66]]].forEach(([fn, qs], j) => {
-      qs.forEach((q, k) => {
-        const L = 20 + hash(j * 5 + k) * 10;
-        const p0 = along(fn, q - 0.07, 0);
-        const p2 = along(fn, q + 0.07, 0);
-        const pm = along(fn, q, -L);
-        const bend = along(fn, q - 0.03, -L * 0.6);
+        // 吐出來的舌頭
         A.shape(ctx, (c) => {
-          c.moveTo(p0[0], p0[1]);
-          c.quadraticCurveTo(bend[0], bend[1], pm[0] - 6, pm[1]);
-          c.lineTo(p2[0], p2[1]);
+          c.moveTo(34, -66);
+          c.quadraticCurveTo(38, -46, 50, -44);
+          c.quadraticCurveTo(60, -46, 56, -64);
           c.closePath();
-        }, bodyC.fin, bodyC.finS, { cel: [2, 2], lw: 2.4 });
-      });
-    });
-    const bodyPath = (c) => {
-      c.moveTo(-116, 4);
-      c.bezierCurveTo(-114, -44, -84, -96, -20, -102);
-      c.bezierCurveTo(44, -106, 92, -70, 104, -20);
-      if (jump) {
-        c.quadraticCurveTo(110, 18, 64, 26);
-        c.quadraticCurveTo(0, 38, -70, 24);
-        c.quadraticCurveTo(-112, 16, -116, 4);
-      } else {
-        c.quadraticCurveTo(110, 2, 100, 10);
-        c.lineTo(-110, 10);
+        }, FR.tongue, FR.tongueS, { shadeY: -52, lw: 2.2 });
       }
-      c.closePath();
-    };
-    A.shape(ctx, bodyPath, bodyC.sc, bodyC.scS, { cel: [8, 8], lw: 3.4 });
-    const bodyOutline = () => {
-      ctx.beginPath();
-      bodyPath(ctx);
+    } else {
       ctx.strokeStyle = A.outline();
       ctx.lineWidth = 3.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-74, -90);
+      ctx.quadraticCurveTo(14, -66, 98, -92);
+      // 得意的嘴角
+      ctx.moveTo(-74, -90);
+      ctx.quadraticCurveTo(-80, -93, -80, -99);
+      ctx.moveTo(98, -92);
+      ctx.quadraticCurveTo(105, -95, 104, -101);
       ctx.stroke();
-    };
-    ctx.save();
-    ctx.beginPath();
-    bodyPath(ctx);
-    ctx.clip();
-    // 鱗片
-    ctx.strokeStyle = A.c(bodyC.scD);
-    ctx.lineWidth = 2;
-    ctx.globalAlpha *= 0.7;
-    ctx.beginPath();
-    // 順著隆起弧度排的鱗片（越往背脊越大）
-    for (let r = 0; r < 10; r++) {
-      const sc = 10 - r * 0.45;
-      const y0 = -100 + r * 11.5;
-      for (let c = 0; c < 17; c++) {
-        const x = -128 + c * sc * 1.7 + (r % 2) * sc * 0.85;
-        const y = y0 + Math.pow(x / 115, 2) * 22;
-        ctx.moveTo(x + sc, y);
-        ctx.arc(x, y, sc, 0, PI);
-      }
+      ctx.strokeStyle = rgba(P.rim, 0.45);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-50, -91);
+      ctx.quadraticCurveTo(14, -76, 76, -94);
+      ctx.stroke();
     }
-    ctx.stroke();
-    ctx.strokeStyle = A.c(U.mix(bodyC.sc, '#ffffff', 0.25));
-    ctx.lineWidth = 1.4;
+    // 鼻孔
+    ctx.fillStyle = A.c(U.mix(P.skinS, '#101a08', 0.5));
     ctx.beginPath();
-    for (let r = 0; r < 5; r++) {
-      const y = -94 + r * 12;
-      for (let c = 0; c < 7; c++) {
-        const x = -100 + c * 16 + (r % 2) * 8;
-        ctx.moveTo(x - 5, y + 2);
-        ctx.arc(x, y + 2, 5, PI * 1.05, PI * 1.5);
-      }
-    }
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    // 腹甲（朝前的胸口）
-    A.shape(ctx, (c) => {
-      c.moveTo(56, -86);
-      c.quadraticCurveTo(100, -70, 108, -10);
-      c.lineTo(108, 12);
-      c.lineTo(48, 12);
-      c.quadraticCurveTo(64, -40, 56, -86);
-      c.closePath();
-    }, bodyC.belly, bodyC.bellyS, { cel: [5, 4], lw: 2.6 });
-    ctx.strokeStyle = A.c(bodyC.bellyS);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let k = 0; k < 7; k++) {
-      const y = -74 + k * 12;
-      ctx.moveTo(60 + k * 1.2, y);
-      ctx.quadraticCurveTo(84, y + 5, 108, y - 2 + k);
-    }
-    ctx.stroke();
-    finish(ctx, bodyPath, [-116, -106, 110, 12], { rim: '#eaffc0', rimA: 0.2, rimW: 6, dark: '#050c06', darkA: 0.42, bounce: gcol, bounceA: 0.22 + (rage ? 0.1 : 0), tex: bodyC.scD, texA: 0.3, seed: 7, lw: 0 });
-    // 發光的毒裂紋
-    hotLines(ctx, (c) => {
-      crack(c, -70, -52, -0.5, 40, 3, 11);
-      crack(c, -30, -74, 0.4, 36, 3, 17);
-      crack(c, 10, -40, -0.9, 34, 3, 23);
-      crack(c, -88, -20, 0.2, 30, 2, 29);
-      if (rage) {
-        crack(c, 30, -80, 0.8, 30, 3, 37);
-        crack(c, -50, -10, -0.3, 40, 3, 41);
-      }
-    }, hotC, heat, 2.8);
-    if (rage) {
-      hotLines(ctx, (c) => {
-        crack(c, -10, -60, 2.6, 30, 3, 47);
-        crack(c, 40, -30, -2.2, 26, 2, 53);
-      }, HY.venom, heat, 2.2);
-    }
-    ctx.restore();
-    bodyOutline();
-    // 垂掛的水草（從背上垂下、滴水）
-    [[-88, -70, 30], [-52, -94, 42], [-4, -100, 26], [38, -94, 36]].forEach(([x, y, L], k) => {
-      const sw = Math.sin(t * 2 + k * 1.3) * 3;
-      A.shape(ctx, (c) => {
-        c.moveTo(x - 10, y - 2);
-        c.quadraticCurveTo(x, y - 6, x + 12, y);
-        c.quadraticCurveTo(x + 8 + sw, y + L * 0.5, x + 4 + sw, y + L);
-        c.lineTo(x + 1 + sw, y + L * 0.7);
-        c.lineTo(x - 2 + sw, y + L * 0.95);
-        c.quadraticCurveTo(x - 6, y + L * 0.4, x - 10, y - 2);
-        c.closePath();
-      }, HY.moss, HY.mossS, { shadeY: y + L * 0.5, lw: 2 });
-    });
-    // 插在背上的斷枝
-    hySnag(ctx, -60, -80, -84, -142, 10, 0.9);
-    hySnag(ctx, 22, -96, 36, -128, 8, 0);
-    ctx.restore();
+    ctx.ellipse(8, -104, 2.6, 1.6, 0.3, 0, TAU);
+    ctx.ellipse(30, -105, 2.6, 1.6, -0.3, 0, TAU);
+    ctx.fill();
 
-    // 前排的頸與頭
-    heads.filter((h) => !h.back).forEach(drawHead);
-
-    // 毒牙滴毒液
-    if (!dead) {
-      heads.forEach((h) => {
-        if (!h.out) return;
-        const f = h.out.fang;
-        hyDrip(ctx, f[0], f[1], t, h.i * 3.1 + 1, gcol, 0.9);
-        if (charging || rage) hyDrip(ctx, f[0] + 3, f[1], t * 1.3, h.i * 5.7 + 2, gcol, 0.8);
-      });
+    // 叫聲的聲波
+    if (summon && sumK < 0.95) {
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 3; i++) {
+        const q = (t * 1.8 + i / 3) % 1;
+        const r = sacR + 10 + q * 60;
+        ctx.strokeStyle = rgba(rage ? '#ffd0a0' : '#eaffc0', 0.8 * (1 - q));
+        ctx.lineWidth = 4 * (1 - q) + 1;
+        ctx.beginPath();
+        ctx.arc(18, -58 + sacR * 0.5, r, -0.7, 0.7);
+        ctx.moveTo(18 + Math.cos(PI - 0.7) * r, -58 + sacR * 0.5 + Math.sin(PI - 0.7) * r);
+        ctx.arc(18, -58 + sacR * 0.5, r, PI - 0.7, PI + 0.7);
+        ctx.stroke();
+      }
     }
-    // 吐息蓄力：嘴裡凝聚的毒球
-    if (charging && !dead) {
-      heads.forEach((h) => {
-        const p = h.out.mouth;
-        const r = 2 + breath * 4.5 * h.s;
-        glow(ctx, p[0], p[1], r * 3.2, gcol, 0.8);
-        A.ellipse(ctx, p[0], p[1], r, r, U.mix(gcol, '#ffffff', 0.4), gcol, { lw: 1.8, hl: false });
-      });
+    // 吐息：蓄力時嘴角漏出沼氣；噴發時一大團往前滾
+    const gasC = rage ? FR.gasP : FR.gas;
+    if (charging && breath > 0.45) {
+      const k = (breath - 0.45) / 0.55;
+      for (let i = 0; i < 3; i++) {
+        const q = (t * 1.4 + i / 3) % 1;
+        ctx.globalAlpha = (1 - q) * k * 0.8;
+        ctx.fillStyle = A.c(U.mix(gasC, '#ffffff', 0.3));
+        ctx.beginPath();
+        ctx.arc(102 + q * 16, -96 - q * 22, 4 + q * 6, 0, TAU);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (firing) {
+      glow(ctx, 70, -80, 44, U.mix(gasC, '#ffffff', 0.4), 0.8);
+      for (let j = 0; j < 6; j++) {
+        const q = (t * 1.6 + j / 6) % 1;
+        const x = 90 + q * 170;
+        const y = -80 + q * 30 + Math.sin(j * 2.1 + t * 3) * 10;
+        const r = 12 + q * 22;
+        ctx.globalAlpha = Math.min(1, (1 - q) * 1.4) * 0.85;
+        puff(ctx, x, y, r, j % 2 ? U.mix(gasC, '#c8f0a0', 0.3) : U.mix(FR.gasP, gasC, rage ? 0.1 : 0.55), j % 2 ? U.mix(gasC, '#2a4a20', 0.3) : '#5a4a6a');
+      }
+      ctx.globalAlpha = 1;
     }
     ctx.restore(); // 本體
 
-    // ── 沼的前緣、毒霧（在地面）──
+    // ── 沼的前緣：小睡蓮葉、蓮花、前排蘆葦、水花 ──
     ctx.save();
     ctx.translate(0, hover);
     ctx.scale(poolK, poolK);
-    hyBogFront(ctx, BRX, BRY, t, gcol, jump && hover > 4 ? 40 : 110 * bsx);
-    hyReeds(ctx, 124, 12, 4, 46, t, 21);
-    hySnag(ctx, -132, 14, -160, -30, 9, 0.8);
-    hyReeds(ctx, -76, 16, 3, 30, t, 27);
-    if (!dead) hyMist(ctx, 170, t, gcol, (rage ? 0.42 : 0.34) + (firing ? 0.1 : 0));
-    // 竄起／落地／升起的水花
-    const splash = jump ? 1 : landed ? 1 : sp > 0 ? sp : 0;
+    frPad(ctx, -150, 10, 22, 7, 0.3, '#5eaa4e', '#3c7a36', FR.padV);
+    frPad(ctx, 128, 16, 26, 8, 2.6, '#5eaa4e', '#3c7a36', FR.padV);
+    // 蓮花
+    const lx = -150;
+    const ly = 4;
+    for (let i = 0; i < 5; i++) {
+      const a = -PI / 2 + (i - 2) * 0.5;
+      A.shape(ctx, (c) => {
+        c.moveTo(lx, ly);
+        c.quadraticCurveTo(lx + Math.cos(a - 0.4) * 10, ly + Math.sin(a - 0.4) * 10, lx + Math.cos(a) * 15, ly + Math.sin(a) * 13);
+        c.quadraticCurveTo(lx + Math.cos(a + 0.4) * 10, ly + Math.sin(a + 0.4) * 10, lx, ly);
+        c.closePath();
+      }, FR.lotus, FR.lotusS, { shadeY: ly - 3, lw: 1.8 });
+    }
+    A.ellipse(ctx, lx, ly - 3, 3.4, 2.6, FR.flowerC, null, { lw: 1.4, hl: false });
+    frReeds(ctx, 170, 14, 3, 44, t, 21);
+    frReeds(ctx, -178, 16, 2, 34, t, 27);
+    // 水泡
+    if (!dead) {
+      for (let i = 0; i < 4; i++) {
+        const q = (t * 0.7 + hash(i + 40)) % 1;
+        const x = -120 + hash(i + 41) * 240;
+        ctx.strokeStyle = rgba(rage ? '#d8b0ff' : '#c8f0b0', 0.8 * (1 - q));
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(x, 10 - q * 10, 2 + q * 3, 0, TAU);
+        ctx.stroke();
+      }
+    }
+    // 跳起／落地／浮上來的水花與漣漪
+    const splash = jump ? 1 - Math.min(1, hover / 160) : landed ? 1 : sp > 0 ? Math.min(1, sp * 2) : 0;
     if (splash > 0) {
       for (let i = 0; i < 12; i++) {
         const q = (t * 1.5 + hash(i + 90)) % 1;
-        const x = (hash(i + 91) - 0.5) * (jump ? 120 : 240);
+        const x = (hash(i + 91) - 0.5) * 260;
         const vy = 60 + hash(i + 92) * 70;
         ctx.globalAlpha = (1 - q) * splash;
-        ctx.fillStyle = A.c(i % 3 ? '#4a5e34' : U.mix(gcol, '#ffffff', 0.2));
+        ctx.fillStyle = A.c(i % 3 ? '#9ac8b0' : '#6a5a3a');
         ctx.beginPath();
         ctx.ellipse(x * (0.7 + q * 0.5), -vy * q + 80 * q * q, 4 * (1 - q) + 2, 5 * (1 - q) + 2, 0, 0, TAU);
         ctx.fill();
       }
       ctx.globalAlpha = 1;
-      if (landed || sp > 0) {
-        for (let i = 0; i < 2; i++) {
-          const q = (t * 1.2 + i * 0.5) % 1;
-          ctx.strokeStyle = rgba(U.mix(gcol, '#ffffff', 0.4), 0.7 * (1 - q) * splash);
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.ellipse(0, 0, BRX * (0.6 + q * 0.6), BRY * (0.6 + q * 0.6), 0, 0, TAU);
-          ctx.stroke();
-        }
+      for (let i = 0; i < 2; i++) {
+        const q = (t * 1.2 + i * 0.5) % 1;
+        ctx.strokeStyle = rgba('#d8f0e0', 0.7 * (1 - q) * splash);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 2, 150 * (0.6 + q * 0.6), 20 * (0.6 + q * 0.6), 0, 0, TAU);
+        ctx.stroke();
       }
+    }
+    // 死掉：王冠掉在葉子上、權杖倒在一旁
+    if (dead) {
+      frSceptre(ctx, 40, 8, 196, -2, P, t, 0);
+      frCrown(ctx, -122, 2, 0.8, -0.5, P, 0, t);
     }
     ctx.restore();
 
-    // ── 召喚：沼裡冒出小蛇頭 ──
-    if (summon) {
-      const k = sumK || 0.3;
-      const n = rage ? 3 : 2;
-      for (let i = 0; i < n; i++) {
-        const x = (i - (n - 1) / 2) * 120 + 90;
-        const kk = clamp(k * 1.4 - i * 0.18, 0, 1);
-        hyHatch(ctx, x, kk, t, i, rage, gcol);
+    // ── 召喚：傘菇從背上彈出去、落到地上 ──
+    if (popK > 0) {
+      for (let i = 0; i < nPop; i++) {
+        const [x0, y0, s, r0] = MUSH[i];
+        const tx = (i - (nPop - 1) / 2) * 120 + 90;
+        const q = popK;
+        const x = lerp(x0, tx, q);
+        const y = lerp(y0, 0, q) - Math.sin(q * PI) * 200;
+        frMush(ctx, x, y, s * (1 + q * 0.2), r0 + q * TAU * (i % 2 ? -1 : 1), 1 - q * 0.5);
       }
     }
-
-    // ── 吐息：每顆頭往前噴出一道毒霧 ──
-    if (firing && !dead) {
-      heads.forEach((h) => {
-        const p = h.out.mouth;
-        const a = h.out.a;
-        for (let j = 0; j < 7; j++) {
-          const q = (t * 1.7 + j / 7 + h.i * 0.13) % 1;
-          const d = 12 + q * 190;
-          const x = p[0] + Math.cos(a) * d;
-          const y = p[1] + Math.sin(a) * d + q * q * 50;
-          const r = 7 + q * 26 * h.s;
-          ctx.globalAlpha = (1 - q) * 0.75;
-          glow(ctx, x, y, r * 1.5, gcol, 0.6);
-          if (j % 2 === 0) puff(ctx, x, y, r * 0.8, U.mix('#a8e878', gcol, 0.2), '#5e9a48');
-        }
-        ctx.globalAlpha = 1;
-        glow(ctx, p[0], p[1], 22, U.mix(gcol, '#ffffff', 0.5), 0.9);
-      });
+    // 暴走：身上冒出的紫綠沼氣
+    if (rage && !dead) {
+      for (let i = 0; i < 6; i++) {
+        const q = (t * 0.35 + hash(i + 70)) % 1;
+        const x = -90 + i * 36 + Math.sin(t * 1.3 + i) * 8;
+        const y = -90 - q * 110;
+        ctx.globalAlpha = Math.sin(q * PI) * 0.35;
+        ctx.fillStyle = A.c(i % 2 ? '#b89ad8' : '#a8d890');
+        ctx.beginPath();
+        ctx.arc(x, y, 8 + q * 16, 0, TAU);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
@@ -4980,7 +5030,7 @@
 
   // ═════════════════════════ 出現演出（m.fx.spawn：1 → 0） ═════════════════════════
   // 從地面的魔法陣裡升起：把本體往下推、只畫地面以上的部分，腳下一圈發光法陣。
-  const SPAWN_COL = { fb_shroom: '#8cff5a', fb_kraken: '#7dffc0', fb_balrog: '#ff7a1e', fb_zakum: '#7ad8ff', fb_voiddragon: '#b06aff' };
+  const SPAWN_COL = { fb_shroom: '#9ae05a', fb_kraken: '#7dffc0', fb_balrog: '#ff7a1e', fb_zakum: '#7ad8ff', fb_voiddragon: '#b06aff' };
   function withSpawn(art, H, draw) {
     return function (ctx, m) {
       const sp = clamp(num(m.fx && m.fx.spawn, 0), 0, 1);
@@ -5231,7 +5281,7 @@
       c.closePath();
     }, col, colS, { lw: 2.4, shadeY: y + r * 0.18 });
   }
-  // 毒霧吐息（九頭蛇）：地上一團翻滾的沼綠毒霧＋往上冒的毒泡（z.r 半徑）
+  // 沼氣吐息（苔冠蛙王的嗝）：地上一團翻滾的沼綠＋泥紫沼氣＋往上冒的氣泡（z.r 半徑）
   function fb_sporebreath(ctx, z, t) {
     const f = zfade(z, 5, 2);
     if (f <= 0) return;
@@ -5243,7 +5293,7 @@
     ctx.globalAlpha *= f;
     ctx.save();
     ctx.scale(1, 0.3);
-    glow(ctx, 0, 0, r * 1.2, '#8cff5a', 0.35);
+    glow(ctx, 0, 0, r * 1.2, '#9ae05a', 0.3);
     ctx.restore();
     ctx.save();
     ctx.globalAlpha *= 0.72;
@@ -5252,21 +5302,26 @@
       const a = (i / n) * TAU + zt * 0.4;
       const x = Math.cos(a) * r * 0.62 * grow + Math.sin(t * 1.3 + i) * 8;
       const y = -30 - Math.abs(Math.sin(a)) * 26 + Math.sin(t * 2 + i * 1.7) * 6;
-      puff(ctx, x, y, r * 0.3 * grow * (0.8 + hash(i) * 0.4), i % 3 ? '#8ad05a' : '#4a9a6a', i % 3 ? '#5a9a3a' : '#2e6a44');
+      puff(ctx, x, y, r * 0.3 * grow * (0.8 + hash(i) * 0.4), i % 3 ? '#94c86a' : '#8a72a8', i % 3 ? '#5e8e44' : '#5a4a74');
     }
-    puff(ctx, 0, -46, r * 0.36 * grow, '#a8e06a', '#6aa84a');
+    puff(ctx, 0, -46, r * 0.36 * grow, '#a8d878', '#6a9a4a');
     ctx.restore();
-    // 往上飄的孢子
+    // 往上冒的沼氣泡
+    ctx.lineWidth = 1.6;
     for (let i = 0; i < 14; i++) {
       const q = (t * 0.6 + hash(i + 140)) % 1;
       const x = (hash(i + 141) - 0.5) * r * 1.8 + Math.sin(t * 2 + i) * 10;
       const y = -10 - q * 150;
+      const br = 2.4 + hash(i + 142) * 3.5;
       ctx.globalAlpha = f * Math.sin(q * PI);
-      glow(ctx, x, y, 8, '#c8ff6a', 0.8);
-      ctx.fillStyle = A.c('#f0ffc0');
+      ctx.fillStyle = rgba(i % 3 ? '#c8f0a0' : '#c8a8f0', 0.35);
+      ctx.strokeStyle = A.c(i % 3 ? '#e4ffc8' : '#e4d0ff');
       ctx.beginPath();
-      ctx.arc(x, y, 2.4, 0, TAU);
+      ctx.arc(x, y, br, 0, TAU);
       ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = A.c('#ffffff');
+      ctx.fillRect(x - br * 0.5, y - br * 0.5, 1.4, 1.4);
     }
     ctx.restore();
   }
@@ -5598,7 +5653,7 @@
   A.PROJ_DRAW = A.PROJ_DRAW || {};
   A.ZONE_DRAW = A.ZONE_DRAW || {};
   Object.assign(A.MONSTER_DRAW, {
-    fb_shroom, // 毒沼九頭蛇：出現動畫（從沼裡升起）自己畫
+    fb_shroom, // 苔冠蛙王：出現動畫（從沼裡浮上來）自己畫
     fb_kraken: withSpawn('fb_kraken', 170, fb_kraken),
     fb_balrog: withSpawn('fb_balrog', 260, fb_balrog),
     fb_zakum: withSpawn('fb_zakum', 300, fb_zakum),
