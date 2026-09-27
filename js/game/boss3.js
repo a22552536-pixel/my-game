@@ -276,6 +276,321 @@
     return b.deadT > 2.4;
   }
 
+  // ═════════════════ 召喚野外魔王（霜靈一次、時間不限次數）═════════════════
+  // 召喚出來的野外魔王是一般的 G.world.monsters 成員，沿用 js/game/fieldboss.js 的招式、出現動畫（m.fx.spawn）、
+  // 控制免疫、身體碰撞與 50% 暴走；但是：
+  //   · m.illusion = true：打倒不給經驗、掉落、任務與圖鑑，也不會走 G.fieldBoss.onKilled（不記冷卻旗標、不慢動作、不存檔）；
+  //   · 不走 G.fieldBoss.spawn：沒有「出現了！」大字、沒有地圖提示；等級、血量改用該章野外魔王的數值 × SUM_HP；
+  //   · 章節 Boss 倒下的第一幀全部崩解消失（在劇情、儀式之前）；
+  //   · 位置夾在場地牆內，千手冰像（不會動）放在場地邊緣，不擋路。
+  // 預警：Boss 擺出施法姿勢，地面出現召喚陣（zone kind 'bs_sigil'），1.2 秒後魔王從陣中升起。
+  const FB_IDS = ['fb_shroom', 'fb_kraken', 'fb_balrog', 'fb_zakum', 'fb_voiddragon'];
+  const SUM_RISE = 1.2; // 召喚陣 → 魔王升起
+  const SUM_CAST = 1.4; // Boss 施法姿勢的長度
+  const SUM_HP = { frostSpirit: 0.4, timeItself: 0.3 }; // 該章野外魔王正常最大血量的幾成
+  const SUM_FROST_AT = 0.65; // 霜靈：血量 ≤ 65% 時（第一階段中段）召喚一次
+  const SUM_TIME = { first: 14, cap: [1, 2], cd: [22, 16] }; // 時間：開打 14 秒後才會召喚；同時存在上限、冷卻（第一／第二階段）
+  const Sum = (Kit.fbSummon = {
+    list(b) {
+      return G.world.monsters.filter((m) => m.summoner === b && !m.dead);
+    },
+    // 還活著的＋召喚陣上等著升起的
+    count(b) {
+      return this.list(b).length + (b.sumPend ? b.sumPend.length : 0);
+    },
+    // 該章野外魔王（霜靈 → 千手冰像、時間 → 星蝕魔龍）的等級與正常最大血量
+    ref(b) {
+      const D = G.data;
+      const region = G.world.map && G.world.map.region;
+      const id = D.fieldBosses && D.fieldBosses[region + '-4'];
+      const d = id && D.monsters[id];
+      const lv = d ? d.lv : b.level - 1;
+      return { lv, hp: D.balance.monsterHp(lv) * (d ? d.hpMul : 60) };
+    },
+    pickType(b) {
+      const alive = this.list(b).map((m) => m.id).concat((b.sumPend || []).map((p) => p.id));
+      let pool = FB_IDS.filter((id) => G.data.monsters[id] && alive.indexOf(id) < 0);
+      if (pool.length > 1 && b.sumLast) pool = pool.filter((id) => id !== b.sumLast);
+      return pool.length ? U.pick(pool) : null;
+    },
+    pickX(b, id) {
+      const map = G.world.map;
+      const P = G.player;
+      const d = G.data.monsters[id];
+      const half = d.w / 2;
+      const lo = half + 40;
+      const hi = map.w - half - 40;
+      const others = this.list(b).map((m) => m.x).concat((b.sumPend || []).map((p) => p.x));
+      if (d.speed === 0) {
+        // 不會動的千手冰像：放在場地邊緣（優先右邊，左邊有出口傳送門），離玩家遠的那一邊
+        const r = hi - 20;
+        const l = lo + 60;
+        const rOk = Math.abs(P.x - r) > 420 && others.every((x) => Math.abs(x - r) > 260);
+        return rOk ? r : l;
+      }
+      // 離玩家 420～760（在畫面裡、但不貼臉）、不跟章節 Boss 或其他召喚物疊在一起；找不到就逐步放寬
+      const tiers = [[420, 760, 300, 280], [360, 900, 160, 200], [300, 1400, 0, 120]];
+      for (const [d0, d1, db, dO] of tiers) {
+        const ok = [];
+        for (let x = lo; x <= hi; x += 40) {
+          const dp = Math.abs(x - P.x);
+          if (dp < d0 || dp > d1 || Math.abs(x - b.x) < db || others.some((o) => Math.abs(o - x) < dO)) continue;
+          ok.push(x);
+        }
+        if (ok.length) return U.pick(ok);
+      }
+      return P.x < map.w / 2 ? hi : lo;
+    },
+    // 開始施法：Boss 擺姿勢（pose 是美術認得的狀態名），地面出現召喚陣
+    cast(b, style, pose, line, lineColor) {
+      const id = this.pickType(b);
+      if (!id) return false;
+      const x = this.pickX(b, id);
+      const gy = G.world.map.platforms[0][2];
+      const d = G.data.monsters[id];
+      b.sumPend = b.sumPend || [];
+      b.sumPend.push({ id, x, t: SUM_RISE });
+      b.sumLast = id;
+      b.sumN = (b.sumN || 0) + 1;
+      b.sumCastT = b.fightT;
+      b.sumCast = { pose };
+      b.vx = 0;
+      b.setState(pose, SUM_CAST);
+      if (line) b.say(line, lineColor);
+      G.world.zones.push({ kind: 'bs_sigil', style, x, y: gy, r: Math.max(110, d.w * 0.55), t: 0, life: SUM_RISE + 0.7, visual: true, sum: true, seed: Math.random() * 6 });
+      G.audio.play(style === 'time' ? 'portal' : 'bossWarn');
+      G.fx.ring(x, gy - 10, style === 'time' ? 'rgba(200,176,255,0.9)' : 'rgba(170,225,255,0.9)', 160, 0.5, 5);
+      return true;
+    },
+    // 施法中：回傳 true 表示這一幀由召喚接管（呼叫端跳過一般的狀態機）
+    castStep(b) {
+      if (!b.sumCast) return false;
+      if (b.state !== b.sumCast.pose) {
+        b.sumCast = null; // 被第二階段變身之類的打斷
+        return false;
+      }
+      b.vx = 0;
+      if (b.stateT <= 0) {
+        b.sumCast = null;
+        b.setState('recover', 0.5 * b.cd());
+      }
+      return true;
+    },
+    rise(b, id, x) {
+      const W = G.world;
+      const d = G.data.monsters[id];
+      const Bl = G.data.balance;
+      const ref = this.ref(b);
+      const m = new G.Monster(id, 0, x, { noVariant: true });
+      m.fieldBoss = true;
+      m.illusion = true; // 不給經驗／掉落、不記野外魔王旗標（見上）
+      m.summoned = true;
+      m.summoner = b;
+      m.shiny = false;
+      const FB = G.fieldBoss;
+      const s = FB && FB.fallbackScale ? FB.fallbackScale(d) : 1;
+      if (s !== 1) {
+        m.scale = s;
+        m.w = d.w / s;
+        m.h = d.h / s;
+      }
+      m.halfW = d.w / 2;
+      m.level = ref.lv;
+      m.maxHp = m.hp = Math.max(1, Math.round(ref.hp * (SUM_HP[b.id] || 0.33)));
+      m.atk = Math.round(Bl.monsterAtk(ref.lv) * (d.atkMul || 1));
+      m.armor = Bl.monsterDef(ref.lv);
+      m.exp = 0;
+      m.touchCd = 99;
+      m.fbTouch = 1.5;
+      m.aggroT = 30;
+      m.fbCd = 2;
+      m.hpShowT = 1;
+      m.dir = U.sign(G.player.x - x) || 1;
+      m.fx.spawn = 1; // 出現動畫 1 → 0（1.2 秒），這段時間不出招
+      W.monsters.push(m);
+      const my = m.y - m.h * m.scale * 0.5;
+      const time = b.id === 'timeItself';
+      G.fx.shake(7, 0.4);
+      G.audio.play('roar');
+      G.fx.ring(x, my, time ? 'rgba(200,176,255,0.9)' : 'rgba(170,225,255,0.9)', 200, 0.5, 7);
+      G.fx.burst(x, m.y - 10, time ? ['#c8b0ff', '#fff3a8', '#1a0a2a', '#ffffff'] : ['#ffffff', '#bfe8ff', '#6a2a9a'], 30, 380, { angle: -Math.PI / 2, spread: 1.2, life: 0.8 });
+      G.fx.text(x, m.y - m.h * m.scale - 40, '召喚：' + d.name, time ? '#e8dcff' : '#dff4ff', 22, 1.6);
+      if ((b.sumN || 0) <= 1) G.hud.toast(b.def.name + '召來了野外魔王「' + d.name + '」！打倒沒有獎勵；' + b.def.name + '倒下時會一起消失', time ? '#e8dcff' : '#bfe8ff');
+      return m;
+    },
+    // 每幀（由 Boss 的 update 呼叫，Boss 死後也呼叫）
+    tick(b, dt) {
+      const map = G.world.map;
+      if (b.sumPend && b.sumPend.length) {
+        for (let i = b.sumPend.length - 1; i >= 0; i--) {
+          const p = b.sumPend[i];
+          p.t -= dt;
+          if (p.t > 0) continue;
+          b.sumPend.splice(i, 1);
+          if (!b.dead) this.rise(b, p.id, p.x);
+        }
+      }
+      let n = 0;
+      for (const m of G.world.monsters) {
+        if (m.summoner !== b) continue;
+        if (m.dead) {
+          // 被打倒（或崩解）的那一幀：記下時間（時間的召喚冷卻從這裡重新算）
+          if (!m.sumGone) {
+            m.sumGone = true;
+            b.sumDeadT = b.fightT;
+          }
+          continue;
+        }
+        n++;
+        m.hpShowT = Math.max(m.hpShowT, 0.5); // 一直顯示自己的小血條（章節 Boss 的大血條不變）
+        const lo = m.halfW + 20;
+        const hi = map.w - m.halfW - 20;
+        if (m.x < lo || m.x > hi) {
+          m.x = U.clamp(m.x, lo, hi);
+          if (m.vx * (m.x - map.w / 2) > 0) m.vx = 0;
+        }
+      }
+      // 最後一隻召喚物倒下：把野外魔王的殘留招式（投射物、地面區域、震波、延遲的攻擊）一起清掉
+      if (b.sumHad && !n && !(b.sumPend && b.sumPend.length)) this.clearLeftovers();
+      b.sumHad = n > 0;
+    },
+    clearLeftovers() {
+      const W = G.world;
+      for (let i = W.projectiles.length - 1; i >= 0; i--) if (W.projectiles[i].fb) W.projectiles.splice(i, 1);
+      for (let i = W.zones.length - 1; i >= 0; i--) if (W.zones[i].fb) W.zones.splice(i, 1);
+      // fieldboss.js 內部的延遲計時與震波（這張地圖不是野外魔王地圖，只有召喚物會用到）
+      if (G.fieldBoss && G.fieldBoss.reset) G.fieldBoss.reset();
+    },
+    // Boss 倒下：召喚陣取消、召喚物崩解（0.5 秒淡出，不給任何東西）
+    despawnAll(b) {
+      if (b.sumPend) b.sumPend.length = 0;
+      b.sumCast = null;
+      const W = G.world;
+      for (let i = W.zones.length - 1; i >= 0; i--) if (W.zones[i].sum) W.zones.splice(i, 1);
+      let any = false;
+      for (const m of W.monsters) {
+        if (m.summoner !== b || m.dead) continue;
+        any = true;
+        m.sumDespawn = true;
+        m.dead = true;
+        m.deadT = 0.0001;
+        m.vx = 0;
+        m.fbAct = null;
+        m.sucked = false;
+        const cy = m.y - (m.hover || 0) - m.h * m.scale * 0.5;
+        G.fx.burst(m.x, cy, ['#e8e0ff', '#9a8e84', '#6e645c', '#ffffff'], 26, 300, { grav: 500, life: 0.9, shape: 'square', size: 5 });
+        G.fx.ring(m.x, cy, 'rgba(232,224,255,0.8)', 140, 0.45, 5);
+      }
+      if (any) this.clearLeftovers();
+    },
+  });
+
+  // 召喚陣的美術：霜靈是冰晶六芒陣、時間是倒轉的錶盤＋時空裂縫
+  G.art.ZONE_DRAW = G.art.ZONE_DRAW || {};
+  G.art.ZONE_DRAW.bs_sigil = function (ctx, z, t) {
+    const k = U.clamp(z.t / SUM_RISE, 0, 1); // 0 → 1：蓄力
+    const out = z.t > SUM_RISE ? U.clamp((z.t - SUM_RISE) / (z.life - SUM_RISE), 0, 1) : 0; // 升起後淡出
+    const a = Math.min(1, z.t * 5) * (1 - out);
+    if (a <= 0) return;
+    const time = z.style === 'time';
+    const r = z.r * (0.55 + 0.45 * Math.min(1, z.t * 3));
+    const main = time ? '200,176,255' : '170,225,255';
+    const hot = time ? '255,243,168' : '255,255,255';
+    ctx.save();
+    ctx.translate(z.x, z.y);
+    ctx.globalAlpha = a;
+    // 光柱（快升起時變亮）
+    const beamH = 60 + 260 * k;
+    const g = ctx.createLinearGradient(0, 0, 0, -beamH);
+    g.addColorStop(0, 'rgba(' + main + ',' + (0.1 + 0.35 * k).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(' + main + ',0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-r * 0.8, -beamH, r * 1.6, beamH);
+    ctx.save();
+    ctx.scale(1, 0.26);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(' + main + ',' + (0.55 + 0.4 * k).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, TAU);
+    ctx.stroke();
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.82, 0, TAU);
+    ctx.stroke();
+    if (time) {
+      // 錶盤刻度＋逆時針飛轉的指針
+      for (let i = 0; i < 12; i++) {
+        const an = (i / 12) * TAU;
+        const l = i % 3 === 0 ? 0.16 : 0.08;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(an) * r * 0.82, Math.sin(an) * r * 0.82);
+        ctx.lineTo(Math.cos(an) * r * (0.82 - l), Math.sin(an) * r * (0.82 - l));
+        ctx.stroke();
+      }
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(' + hot + ',' + (0.6 + 0.4 * k).toFixed(3) + ')';
+      ctx.lineWidth = 6;
+      const h1 = -t * (3 + k * 10) + z.seed;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(h1) * r * 0.62, Math.sin(h1) * r * 0.62);
+      ctx.stroke();
+      ctx.lineWidth = 4;
+      const h2 = -t * (0.6 + k * 2) + z.seed * 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(h2) * r * 0.42, Math.sin(h2) * r * 0.42);
+      ctx.stroke();
+    } else {
+      // 冰晶六芒陣（慢慢轉）
+      ctx.rotate(t * 0.7 + z.seed);
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a1 = (i / 6) * TAU;
+        const a2 = a1 + (TAU / 6) * 2;
+        ctx.moveTo(Math.cos(a1) * r * 0.8, Math.sin(a1) * r * 0.8);
+        ctx.lineTo(Math.cos(a2) * r * 0.8, Math.sin(a2) * r * 0.8);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+    // 時間：陣中央的直立時空裂縫；霜靈：陣上飄起的冰晶
+    if (time) {
+      const hh = 40 + 200 * k;
+      const w = 6 + 16 * k;
+      ctx.fillStyle = 'rgba(26,10,42,' + (0.5 + 0.4 * k).toFixed(3) + ')';
+      ctx.strokeStyle = 'rgba(' + hot + ',0.9)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -4);
+      ctx.quadraticCurveTo(w, -hh * 0.5, 0, -hh);
+      ctx.quadraticCurveTo(-w, -hh * 0.5, 0, -4);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(' + hot + ',0.85)';
+      for (let i = 0; i < 7; i++) {
+        const ph = (t * 0.9 + i / 7 + z.seed) % 1;
+        const x = Math.sin(i * 2.3 + z.seed) * r * 0.7;
+        const y = -ph * (80 + 180 * k);
+        const s = 3 + 3 * (1 - ph);
+        ctx.fillRect(x - s / 2, y - s / 2, s, s);
+      }
+    }
+    // 快升起時的「！」
+    if (k > 0.45 && k < 1) {
+      ctx.globalAlpha = a * (0.6 + 0.4 * Math.sin(t * 20));
+      ctx.font = 'bold 34px ' + (G.art.NUMFONT || 'sans-serif');
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = time ? '#2a0a3a' : '#0a2a4a';
+      ctx.strokeText('!', 0, -beamH - 6);
+      ctx.fillStyle = time ? '#fff3a8' : '#ffffff';
+      ctx.fillText('!', 0, -beamH - 6);
+    }
+    ctx.restore();
+  };
+
   // ═════════════════ 霜靈 ═════════════════
   const FCOL = ['#dff4ff', '#8fd8ff', '#ffffff', '#b8c8ff'];
 
@@ -301,11 +616,16 @@
     const P = G.player;
     const map = G.world.map;
     const frozen = this.tick(dt);
+    Sum.tick(this, dt);
     this.bellSwing *= Math.pow(0.25, dt);
     // 暴風雪濃度
     const wantBliz = this.state === 'blizzard' ? 1 : this.state === 'blizzardPrep' ? this.prog() * 0.5 : 0;
     this.bliz += (wantBliz - this.bliz) * Math.min(1, dt * 2.2);
     if (this.dead) {
+      if (!this.sumCleared) {
+        this.sumCleared = true;
+        Sum.despawnAll(this);
+      }
       this.bliz = Math.max(0, this.bliz - dt);
       return deadUpdate(this, dt, ['#ffffff', '#dff4ff', '#8fd8ff']);
     }
@@ -320,6 +640,14 @@
     const spd = this.spd();
     const dx = P.x - this.x;
     this.stateT -= dt;
+    // 召喚野外魔王的施法姿勢（仰頭、鹿角發光、搖鐘）
+    if (Sum.castStep(this)) {
+      this.bellSwing = Math.max(this.bellSwing, 0.7);
+      if (Math.random() < 0.4) G.fx.burst(this.x + U.rand(-50, 50), this.y - this.h, ['#ffffff', '#bfe8ff'], 1, 120, { angle: -Math.PI / 2, spread: 0.7, life: 0.6 });
+      this.phys(dt);
+      this.touch(0.45);
+      return false;
+    }
 
     switch (this.state) {
       case 'intro':
@@ -529,6 +857,14 @@
         : { toll: 18, spikes: 18, rain: 12, charge: 15, stomp: 12, blizzard: 16, summon: adds < 2 ? 7 : 0 };
       pick = this.pick(table, { blizzard: 20, summon: 18, rain: 6, charge: 6 });
     } else this.pickT[pick] = this.fightT;
+    // 召喚野外魔王：整場只有一次，血量第一次掉到 65% 以下時（被強制的招式優先）
+    if (!this.sumUsed && this.hp <= this.maxHp * SUM_FROST_AT && pick !== 'blizzard') {
+      this.sumUsed = true;
+      if (Sum.cast(this, 'frost', 'rainPrep', '山，替我守著。', '#dff4ff')) {
+        this.bellSwing = 1.4;
+        return;
+      }
+    }
     const f = this.fury ? 0.85 : 1;
     if (pick === 'toll') {
       this.ringsLeft = this.phase === 2 ? 1 : 0;
@@ -731,7 +1067,13 @@
     }
     this.updateEchoes(dt);
     this.ally.update(dt);
+    Sum.tick(this, dt);
     if (this.dead) {
+      // 召喚物在 Boss 倒下的第一幀崩解（在打倒劇情、儀式、結局之前）
+      if (!this.sumCleared) {
+        this.sumCleared = true;
+        Sum.despawnAll(this);
+      }
       this.stopK = Math.max(0, this.stopK - dt * 2);
       return deadUpdate(this, dt, ['#ffffff', '#c8b0ff', '#fff3a8']);
     }
@@ -748,6 +1090,13 @@
     const spd = this.spd();
     const dx = P.x - this.x;
     this.stateT -= dt;
+    // 召喚野外魔王的施法姿勢（指針倒轉、錶盤發光）
+    if (Sum.castStep(this)) {
+      if (Math.random() < 0.4) G.fx.burst(this.x + U.rand(-60, 60), this.y - U.rand(120, this.h), ['#c8b0ff', '#fff3a8'], 1, 90, { grav: -60, life: 0.6 });
+      this.phys(dt);
+      this.touch(0.4);
+      return false;
+    }
 
     switch (this.state) {
       case 'intro':
@@ -920,6 +1269,17 @@
         : { sweep: 16, stab: 18, stop: 14, rewind: 12, echo: 14, clockwork: 16 };
       pick = this.pick(table, { clockwork: 18, stop: 14, rewind: 12, echo: 12 });
     } else this.pickT[pick] = this.fightT;
+    // 召喚野外魔王：不限次數、不限時間；同時存在最多 1 隻（第一階段）／2 隻（第二階段），
+    // 冷卻從上一次召喚或上一隻召喚物倒下開始算
+    if (pick !== 'clockwork' && this.sumReady()) {
+      const first = !this.sumSaid || this.sumSaid !== this.phase;
+      this.sumSaid = this.phase;
+      if (Sum.cast(this, 'time', 'rewindPrep', first ? '過去，醒來吧。' : null, '#e8dcff')) {
+        this.ghost = null;
+        if (first && this.ally) this.ally.shout(this.phase === 2 ? '又來？我幫你咬牠！' : '那是……野外的魔王？', 1.8);
+        return;
+      }
+    }
     const f = this.fury ? 0.85 : 1;
     const P = G.player;
     if (pick === 'sweep') {
@@ -950,6 +1310,13 @@
       this.warn(true);
       this.ally.offerBlock(['hour'], 1.0 + 4, '……這次換我保護你。');
     }
+  };
+
+  TimeItself.prototype.sumReady = function () {
+    const i = this.phase === 2 ? 1 : 0;
+    if (this.fightT < SUM_TIME.first || Sum.count(this) >= SUM_TIME.cap[i]) return false;
+    const last = Math.max(this.sumCastT == null ? -1e9 : this.sumCastT, this.sumDeadT == null ? -1e9 : this.sumDeadT);
+    return this.fightT - last >= SUM_TIME.cd[i];
   };
 
   TimeItself.prototype.handSweep = function () {
@@ -1288,7 +1655,16 @@
         if (this.mode === 'pounce' && !this.bit) this.bite();
       }
     }
-    if (this.mode === 'pounce' && !this.bit && this.vy > 0 && Math.abs(this.x - b.x) < b.w * 0.45) this.bite();
+    const tg = this.tgt && !this.tgt.dead ? this.tgt : b;
+    const tw = tg === b ? b.w : tg.halfW * 2;
+    if (this.mode === 'pounce' && !this.bit && this.vy > 0 && Math.abs(this.x - tg.x) < tw * 0.45) this.bite();
+  };
+
+  // 撲咬的目標：平常是 Boss；召喚出來的野外魔王靠近玩家時，約三分之一的機會改咬牠
+  Greymane.prototype.pickTarget = function () {
+    const P = G.player;
+    const near = Kit.fbSummon.list(this.b).filter((m) => (m.fx.spawn || 0) <= 0 && Math.abs(m.x - P.x) < 520);
+    return near.length && Math.random() < 0.35 ? U.pick(near) : null;
   };
 
   Greymane.prototype.onGround = function () {
@@ -1300,8 +1676,11 @@
     this.mode = 'pounce';
     this.modeT = 1.2;
     this.bit = false;
-    this.dir = U.sign(b.x - this.x) || this.dir;
-    const tx = b.x - this.dir * b.w * 0.2;
+    this.tgt = this.pickTarget();
+    const tg = this.tgt || b;
+    const tw = this.tgt ? this.tgt.halfW * 2 : b.w;
+    this.dir = U.sign(tg.x - this.x) || this.dir;
+    const tx = tg.x - this.dir * tw * 0.2;
     const T = 0.55;
     this.vx = (tx - this.x) / T;
     this.vy = -(0.5 * 2100 * T);
@@ -1316,7 +1695,21 @@
     this.vx = -this.dir * 180;
     this.vy = Math.min(this.vy, -420);
     this.y -= 1;
-    if (b.dead || b.state === 'transform') return;
+    if (b.dead) return;
+    const m = this.tgt;
+    this.tgt = null;
+    if (m && !m.dead) {
+      // 咬召喚物：最大血量的 3%（不會被擊退）
+      const dealt = m.takeDamage(Math.max(1, Math.round(m.maxHp * 0.03 * U.rand(0.9, 1.1))), this.dir, 0, false);
+      if (!dealt) return;
+      const hy = m.y - (m.hover || 0) - m.h * m.scale * 0.5;
+      G.fx.damage(m.x, m.y - (m.hover || 0) - m.h * m.scale - 10, dealt, 'normal', m.nextStack());
+      G.fx.slash(m.x, hy, this.dir, 40, '#e0e0ea', 'claw');
+      G.fx.burst(m.x, hy, ['#ffffff', '#c8c8d8', '#8a8a9a'], 10, 240);
+      G.audio.play('claw');
+      return;
+    }
+    if (b.state === 'transform') return;
     const dmg = Math.max(1, Math.round(b.maxHp * 0.0033 * U.rand(0.9, 1.1)));
     const dealt = b.takeDamage(dmg, this.dir);
     if (!dealt) return;
