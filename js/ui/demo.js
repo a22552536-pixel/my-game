@@ -156,7 +156,8 @@
         if (m.dead || m.demoHp === this.tough) continue;
         if (this.tough) {
           m.demoBase = m.demoBase || m.maxHp;
-          m.maxHp = m.fieldBoss ? m.demoBase * 4 : Math.max(m.demoBase * 40, 30000);
+          // 野外魔王保持遊戲中的真實血量（試的是實際手感）
+          m.maxHp = m.fieldBoss ? m.demoBase : Math.max(m.demoBase * 40, 30000);
           m.hp = m.maxHp;
         } else if (m.demoBase) {
           m.maxHp = m.demoBase;
