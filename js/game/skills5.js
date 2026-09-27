@@ -122,8 +122,9 @@
     // 放開被黑洞吸住的怪：把懸浮高度換回真正的位置，讓牠們自然落回平台
     releaseSucked(u) {
       (u.sucked || []).forEach((m) => {
-        if (!m.sucked) return;
+        if (!m.sucked || m.suckedBy !== u) return;
         m.sucked = false;
+        m.suckedBy = null;
         const lift = (m.hover || 0) - (m.baseHover || 0);
         m.hover = m.baseHover || 0;
         if (m.dead) return;
@@ -180,11 +181,13 @@
         G.fx.iaiDim = Math.max(G.fx.iaiDim, 0.3);
         // 黑洞引力：圓外約 1.15 倍半徑內的怪也會被捲進來，越近越快，吸離地面懸在圓心附近
         const pullR = R * 1.15;
-        G.combat.targets().filter((m) => !m.isBoss && !m.dead && U.dist(m.x, midY(m), u.x, u.y) < pullR).slice(0, S.targets * 2).forEach((m) => {
+        u.sucked = u.sucked || [];
+        // 同時有兩個黑洞時：每隻怪只屬於先抓到牠的那一個，另一個不碰
+        G.combat.targets().filter((m) => !m.isBoss && !m.dead && (!m.sucked || m.suckedBy === u) && U.dist(m.x, midY(m), u.x, u.y) < pullR).slice(0, S.targets * 2).forEach((m) => {
           if (!m.sucked) {
             m.sucked = true;
+            m.suckedBy = u;
             m.baseHover = m.hover || 0;
-            u.sucked = u.sucked || [];
             u.sucked.push(m);
           }
           const d = U.dist(m.x, midY(m), u.x, u.y);
@@ -813,6 +816,7 @@
   const reset = X.resetZones;
   X.resetZones = function () {
     reset();
+    ults.forEach((u) => u.kind === 'meidou' && X.releaseSucked && X.releaseSucked(u));
     ults.length = 0;
   };
 })();

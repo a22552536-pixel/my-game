@@ -44,6 +44,16 @@
   // 第一章 Boss：使用者 Lv11 還打不到半血就倒 → 招式不變，傷害再低一些
   if (D.monsters.queenShroom) D.monsters.queenShroom.atk = Math.round(D.monsters.queenShroom.atk * 0.7);
 
+  // ── 野外魔王要比章節 Boss 弱很多：血量約該章 Boss 的 30%、攻擊跟一般怪同級 ──
+  for (const mid in D.fieldBosses || {}) {
+    const fb = D.monsters[D.fieldBosses[mid]];
+    const region = D.maps[mid] && D.maps[mid].region;
+    const boss = region && D.monsters[D.story.chapters[region].boss];
+    if (!fb || !boss || !boss.hp) continue;
+    fb.hpMul = Math.max(8, (boss.hp * 0.3) / B.monsterHp(fb.lv));
+    fb.atkMul = 1.0;
+  }
+
   // ── 委託：需求等級、經驗（依新舊等級帶的比例）──
   for (const qid in D.quests) {
     const q = D.quests[qid];
