@@ -16,7 +16,7 @@
   add('umbrellagull', { name: '巫師海鷗', lv: 16, art: 'umbrellagull', behavior: 'aggressive', abilities: ['glide'], speed: 70, w: 52, h: 62, sight: 380, mat: 'rib' });
   add('alarmurchin', { name: '符文鸚鵡螺', lv: 17, art: 'alarmurchin', behavior: 'passive', abilities: ['alarm'], speed: 26, w: 50, h: 50, hpMul: 1.15, mat: 'spring' });
   add('kiteray', { name: '槍騎魟魚', lv: 18, art: 'kiteray', behavior: 'aggressive', abilities: ['kite'], speed: 80, w: 72, h: 44, sight: 460, mat: 'kitestring' });
-  add('blockcoral', { name: '珊瑚晶獸', lv: 20, art: 'blockcoral', behavior: 'passive', abilities: ['split'], speed: 30, w: 58, h: 64, hpMul: 1.2, mat: 'block' });
+  add('blockcoral', { name: '海坊主', lv: 20, art: 'blockcoral', behavior: 'passive', abilities: ['split'], speed: 30, w: 58, h: 64, hpMul: 1.2, mat: 'block' });
   add('stampstar', { name: '封印海星', lv: 22, art: 'stampstar', behavior: 'aggressive', abilities: ['stamp'], speed: 60, w: 60, h: 46, sight: 360, hpMul: 1.1, mat: 'ink' });
   add('accordioneel', { name: '蛇腹劍海鰻', lv: 24, art: 'accordioneel', behavior: 'aggressive', abilities: ['stretch'], speed: 70, w: 80, h: 40, sight: 320, hpMul: 1.1, atkMul: 1.1, mat: 'bellowskin' });
   add('musicturtle', { name: '豎琴海龜', lv: 25, art: 'musicturtle', behavior: 'passive', abilities: ['ranged', 'melody'], speed: 32, w: 70, h: 58, hpMul: 1.35, mat: 'comb',
@@ -63,7 +63,7 @@
     rib: { name: '巫師帽羽', price: 16, desc: '巫師海鷗帽子上的羽毛，拿在手上會輕輕往上飄。' },
     spring: { name: '鸚鵡螺碎殼', price: 19, desc: '符文鸚鵡螺炸開時崩下來的殼片，上面的符文還在發燙。' },
     kitestring: { name: '斷槍尖', price: 20, desc: '槍騎魟魚折斷的長槍槍尖，還綁著一小段飄帶。' },
-    block: { name: '珊瑚晶核', price: 21, desc: '珊瑚晶獸身體裡的晶核。敲成兩半，兩半都會自己長回來。' },
+    block: { name: '墨潮珠', price: 21, desc: '海坊主身上凝成的一顆黑水珠。捏碎了，會變成兩顆。' },
     ink: { name: '封印墨', price: 25, desc: '封印海星畫法陣用的紫色墨水，沾到哪裡就封住哪裡。' },
     bellowskin: { name: '劍鱗', price: 27, desc: '蛇腹劍海鰻身上的一節刀刃，薄得像魚鱗。' },
     comb: { name: '豎琴弦', price: 28, desc: '豎琴海龜的琴弦，撥一下會讓人想睡。' },

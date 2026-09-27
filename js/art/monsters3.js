@@ -2225,57 +2225,137 @@
     const uy = dy / d;
     return [hx + ux * a + bend * uy * h, hy + uy * a - bend * ux * h];
   }
-  // ── 珊瑚晶獸（id blockcoral）：圓滾滾的粉紅珊瑚小獸，頭和背上長出圓頭珊瑚枝，枝間夾著幾根魔法水晶；
-  //    半透明的珊瑚身體裡看得到一顆發光的晶核，晶核上有細細的裂紋（被打倒時會「喀啦」裂成兩隻小的）。四隻短腳。──
-  const CRL = { body: '#ff8fae', bodyS: '#d8587e', bodyL: '#ffd6e2', belly: '#ffe4ea', branch: '#ff9ab8', branchS: '#c8467a', branchL: '#ffe0ea', core: '#5af0e0', coreS: '#1aa8b0', coreL: '#e8fffc', leg: '#f27a9c', legF: '#c85a7e' };
-  // 圓頭珊瑚枝：主幹＋一根分叉，每個枝頭是一顆圓圓的小球
-  function coralKnob(ctx, x, y, ang, len, t, seed, far) {
-    const sw = Math.sin(t * 2.2 + seed) * 0.08;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(ang + sw);
-    const fk = len * 0.55;
-    const fa = seed % 2 ? 0.7 : -0.7;
-    const tips = [[0, -len], [Math.sin(fa) * fk * 0.8, -len * 0.45 - Math.cos(fa) * fk * 0.8]];
-    const br = (c) => { c.moveTo(0, 0); c.lineTo(0, -len); c.moveTo(0, -len * 0.45); c.lineTo(tips[1][0], tips[1][1]); };
-    limb(ctx, br, far ? 5.4 : 6.4, far ? CRL.branchS : CRL.branch);
-    if (!far) {
-      ctx.save();
-      ctx.translate(-0.8, -0.2);
-      ctx.beginPath();
-      br(ctx);
-      ctx.strokeStyle = A.c(CRL.branchL);
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      ctx.restore();
-    }
-    tips.forEach(([px, py], i) => rse(ctx, px, py, i ? 2.6 : 3.2, i ? 2.6 : 3.2, far ? CRL.branchS : CRL.branch, far ? '#9a2e5a' : CRL.branchS, far ? null : CRL.branchL, { lw: 1.8, hl: far ? false : undefined, rim: 0.8 }));
-    ctx.restore();
+  // ── 海坊主（id blockcoral）：從海裡升起的巨大光頭黑影。墨色的海水身體、濕亮的反光、深處一點幽青的光，
+  //    頭與肩一直有水流下來、滴落；下半身化成翻湧的浪，沒有腳。臉上只有兩顆發白光的眼睛（攻擊時裂開一道嘴）。
+  //    走路像湧浪一樣起伏；攻擊時身子前傾、浪升高、整個罩過來。倒下時身體撕成兩團水（split 分成兩隻 0.6× 的小海坊主）──
+  const UMI = { ink: '#1a2233', inkS: '#080c16', rim: '#4a7a9a', glow: '#2ad0c0', eye: '#eafff8', eyeG: '#7af0e0', wave: '#16323f', waveS: '#08161e', waveL: '#4a8e9e', foam: '#cfeef4' };
+  // 身體（圓頂光頭＋往下變寬的肩）：寬 w、高 h，底部在 y=0
+  function umiBody(ctx, w, h, t, lit, seed) {
+    const bodyP = (c) => {
+      // 寬寬往下斜的肩 → 收進去的脖子 → 圓圓的光頭
+      c.moveTo(-w, 0);
+      c.bezierCurveTo(-w * 1.04, -h * 0.3, -w * 0.9, -h * 0.46, -w * 0.62, -h * 0.56);
+      c.bezierCurveTo(-w * 0.66, -h * 0.9, -w * 0.3, -h, 0, -h);
+      c.bezierCurveTo(w * 0.3, -h, w * 0.66, -h * 0.9, w * 0.62, -h * 0.56);
+      c.bezierCurveTo(w * 0.9, -h * 0.46, w * 1.04, -h * 0.3, w, 0);
+      c.closePath();
+    };
+    rs(ctx, bodyP, UMI.ink, UMI.inkS, UMI.rim, {
+      cel: [w * 0.12, h * 0.05],
+      rim: 1.8,
+      lw: 2.6,
+      tex: (c) => {
+        // 深處的幽青光（慢慢脈動）
+        glow(c, w * 0.1, -h * 0.4, w * 0.85, UMI.glow, 0.22 + lit * 0.12);
+        // 濕亮的反光：頭頂一道長弧、左肩一條
+        c.strokeStyle = 'rgba(200,240,255,0.55)';
+        c.lineCap = 'round';
+        c.lineWidth = 2.2;
+        c.beginPath();
+        c.arc(0, -h * 0.74, h * 0.2, PI * 1.08, PI * 1.45);
+        c.stroke();
+        c.lineWidth = 1.3;
+        c.strokeStyle = 'rgba(200,240,255,0.35)';
+        c.beginPath();
+        c.moveTo(-w * 0.78, -h * 0.4);
+        c.quadraticCurveTo(-w * 0.86, -h * 0.2, -w * 0.84, -h * 0.05);
+        c.stroke();
+        // 從頭頂往下流的水（虛線往下移動）
+        c.save();
+        c.setLineDash([9, 14]);
+        c.lineDashOffset = -t * 16 - seed;
+        c.strokeStyle = 'rgba(140,210,230,0.4)';
+        c.lineWidth = 1.2;
+        c.beginPath();
+        [[-0.4, -0.95, -0.55], [-0.72, -0.55, -0.95], [0.7, -0.55, 0.92], [-0.1, -0.45, -0.2]].forEach(([k, y0, k1]) => {
+          c.moveTo(k * w * 0.62, h * y0);
+          c.quadraticCurveTo((k + k1) * w * 0.45, h * (y0 + 0.3), k1 * w, -h * 0.12);
+        });
+        c.stroke();
+        c.restore();
+        dot(c, -w * 0.3, -h * 0.78, 1.3, '#ffffff');
+      },
+    });
   }
-  // 魔法水晶：六角柱＋尖頂，左亮右暗
-  function crystalShard(ctx, x, y, h, w, ang, t, seed, lit) {
+  // 浪（底座）：前後兩層，浪頭有白沫。front＝前面那層
+  function umiWave(ctx, W, top, t, front, hgt) {
+    const n = 7;
+    const yAt = (i) => top - hgt * (0.55 + 0.45 * Math.sin(t * 3.2 + i * 1.3 + (front ? 0 : 1.7)));
+    // 兩端捲下來貼到地上的一道湧浪
+    const xAt = (i) => -W * 0.8 + (i / n) * 1.6 * W;
+    const path = (c) => {
+      c.moveTo(-W, 1);
+      c.quadraticCurveTo(-W * 1.02, yAt(0) + 1, xAt(0), yAt(0));
+      for (let i = 1; i <= n; i++) {
+        const px = (xAt(i - 1) + xAt(i)) / 2;
+        c.quadraticCurveTo(px + 1.5, Math.min(yAt(i), yAt(i - 1)) - 2.2, xAt(i), yAt(i));
+      }
+      c.quadraticCurveTo(W * 1.02, yAt(n) + 1, W, 1);
+      c.closePath();
+    };
+    rs(ctx, path, front ? UMI.wave : UMI.waveS, front ? UMI.waveS : '#040a10', front ? UMI.waveL : null, {
+      cel: [0, 2.4],
+      rim: 1.4,
+      lw: 2.2,
+      tex: (c) => {
+        glow(c, 0, top, W * 0.7, UMI.glow, front ? 0.18 : 0.1);
+      },
+    });
+    if (!front) return;
+    // 浪頭的白沫
+    ctx.fillStyle = A.c(UMI.foam);
+    ctx.beginPath();
+    for (let i = 1; i < n; i++) {
+      const x = xAt(i);
+      const y = yAt(i);
+      for (let k = 0; k < 3; k++) {
+        const r = 1.1 - k * 0.3;
+        const fx2 = x - 2 + k * 2.2 + Math.sin(t * 5 + i + k) * 0.6;
+        c2(ctx, fx2, y - 0.5 + k * 0.4, r);
+      }
+    }
+    ctx.fill();
+  }
+  function c2(ctx, x, y, r) {
+    ctx.moveTo(x + r, y);
+    ctx.arc(x, y, r, 0, TAU);
+  }
+  // 發白光的眼睛（沒有瞳孔）
+  function umiEye(ctx, x, y, rx, ry, kind, a) {
+    if (kind === 'x' || kind === 'hurt' || kind === 'closed') {
+      glow(ctx, x, y, rx * 3, UMI.eyeG, 0.35);
+      ctx.strokeStyle = A.c(UMI.eye);
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      if (kind === 'x') {
+        ctx.moveTo(x - rx, y - ry * 0.8); ctx.lineTo(x + rx, y + ry * 0.8);
+        ctx.moveTo(x + rx, y - ry * 0.8); ctx.lineTo(x - rx, y + ry * 0.8);
+      } else if (kind === 'hurt') {
+        ctx.moveTo(x - rx, y - ry * 0.7); ctx.lineTo(x + rx * 0.6, y); ctx.lineTo(x - rx, y + ry * 0.7);
+      } else {
+        ctx.moveTo(x - rx, y); ctx.quadraticCurveTo(x, y + ry * 0.6, x + rx, y);
+      }
+      ctx.stroke();
+      return;
+    }
+    glow(ctx, x, y, rx * 3.4, UMI.eyeG, 0.55 * a);
     ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(ang);
-    glow(ctx, 0, -h * 0.6, h * 0.9, CRL.core, 0.35 + lit * 0.4);
-    const pts = [[-w, 0], [-w, -h * 0.7], [0, -h], [w, -h * 0.7], [w, 0]];
-    A.shape(ctx, (c) => poly(c, pts), U.mix('#7af4ec', '#e8ffff', lit * 0.5), null, { lw: 1.7, hl: false });
-    ctx.fillStyle = A.c('#d8fffa');
+    ctx.fillStyle = A.c(UMI.eye);
     ctx.beginPath();
-    poly(ctx, [[-w + 0.7, -0.5], [-w + 0.7, -h * 0.68], [0, -h + 1], [-w * 0.1, -h * 0.5], [-w * 0.2, -0.5]]);
+    ctx.ellipse(x, y, rx, ry, 0, 0, TAU);
     ctx.fill();
-    ctx.fillStyle = A.c(CRL.coreS);
-    ctx.beginPath();
-    poly(ctx, [[w * 0.35, -0.5], [w * 0.35, -h * 0.55], [w - 0.6, -h * 0.68], [w - 0.6, -0.5]]);
-    ctx.fill();
-    ctx.beginPath();
-    poly(ctx, pts);
-    ctx.strokeStyle = A.outline();
-    ctx.lineWidth = 1.7;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-    const tw = Math.max(0, Math.sin(t * 2.3 + seed * 1.7));
-    if (tw > 0.85) sparkle(ctx, -w * 0.3, -h * 0.75, 1.5 + (tw - 0.85) * 18, '#ffffff');
+    if (kind === 'angry') {
+      // 眼睛上緣被壓成斜的
+      ctx.fillStyle = A.c(UMI.ink);
+      ctx.beginPath();
+      ctx.moveTo(x - rx * 1.4, y - ry * 1.4);
+      ctx.lineTo(x + rx * 1.4, y - ry * 1.4);
+      ctx.lineTo(x + rx * 1.4, y - ry * 0.1);
+      ctx.lineTo(x - rx * 1.4, y - ry * 0.8);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
   function blockcoral(ctx, m) {
@@ -2284,139 +2364,80 @@
     const hurt = m.hurtT > 0;
     const dead = !!m.dead;
     const walk = walking(m) && !dead;
-    const gait = t * 8;
-    const bob = walk ? Math.abs(Math.sin(gait)) * 1.8 : Math.sin(t * 2.4) * 0.7;
-    const charge = ph === 'wind' ? 1 : 0;
-    const beat = 0.5 + 0.5 * Math.sin(t * 3.2);
-    let lean = walk ? Math.sin(gait) * 0.03 : 0;
-    let push = 0;
-    if (ph === 'wind') { lean = -0.12; push = -2; }
-    else if (ph === 'strike') { lean = 0.14; push = 4; }
-    if (hurt) lean += Math.sin(t * 45) * 0.05;
-    if (dead) lean = 0.25;
-    const cx = 0;
-    const cy = -27;
-
-    // 腳：四隻短短圓圓的腳，斜對角一起抬（遠側顏色深、小一點）
-    const leg = (x, o, far) => {
-      const p = gait + o;
-      const lift = walk ? Math.max(0, Math.sin(p)) * 3 : 0;
-      const fx2 = x + (walk ? -Math.cos(p) * 2.5 : 0) + push * 0.3;
-      const w = far ? 5.2 : 6.2;
-      seg(ctx, x, cy + 11 - bob, fx2, -3.2 - lift, w, w * 0.92, far ? CRL.legF : CRL.leg, far ? '#8a2e52' : CRL.bodyS, far ? null : CRL.bodyL);
-      rse(ctx, fx2 + 1, -2.2 - lift, w * 1.1, 2.4, far ? CRL.legF : CRL.belly, far ? '#8a2e52' : '#e8a8b8', null, { lw: 1.8, hl: false });
-      if (!far) {
-        ctx.strokeStyle = A.outline();
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(fx2 + 1.5, -3.6 - lift);
-        ctx.lineTo(fx2 + 1.5, -1.2 - lift);
-        ctx.moveTo(fx2 + 4, -3.4 - lift);
-        ctx.lineTo(fx2 + 4, -1.4 - lift);
-        ctx.stroke();
-      }
-    };
-    leg(-6, PI, true);
-    leg(14, 0, true);
-    leg(-12, 0, false);
-    leg(9, PI, false);
-
-    ctx.save();
-    ctx.translate(push, -bob);
-    ctx.translate(cx, cy + 10);
-    ctx.rotate(lean);
-    ctx.translate(-cx, -cy - 10);
-
-    // 背後（遠側）的珊瑚枝與水晶
-    coralKnob(ctx, -16, cy - 9, -0.95, 11, t, 3, true);
-    crystalShard(ctx, -8, cy - 14, 13, 3, -0.35, t, 1, charge);
-    coralKnob(ctx, 5, cy - 15, 0.35, 12, t, 6, true);
-
-    // 身體：半透明的珊瑚，看得到裡面的晶核
-    const coreX = cx - 5;
-    const coreY = cy + 1;
-    const body = (c) => c.ellipse(cx, cy, 23, 18, 0, 0, TAU);
-    rs(ctx, body, CRL.body, CRL.bodyS, CRL.bodyL, {
-      cel: [3, 3.5],
-      rim: 1.8,
-      sheen: [cx - 8, cy - 9, 11, 0.35],
-      tex: (c) => {
-        // 淺色的肚子
-        c.fillStyle = A.c(CRL.belly);
-        c.beginPath();
-        c.ellipse(cx + 3, cy + 12, 16, 7, 0, 0, TAU);
-        c.fill();
-        // 透光的「窗」：晶核附近的珊瑚比較薄，透出青光
-        const g = c.createRadialGradient(coreX, coreY, 1, coreX, coreY, 13);
-        g.addColorStop(0, 'rgba(255,255,255,0.55)');
-        g.addColorStop(1, 'rgba(255,255,255,0)');
-        c.fillStyle = g;
-        c.beginPath();
-        c.arc(coreX, coreY, 13, 0, TAU);
-        c.fill();
-        glow(c, coreX, coreY, 15 + beat * 4 + charge * 6, CRL.core, 0.8 + beat * 0.2 + charge * 0.2);
-        glow(c, coreX, coreY, 7, '#ffffff', 0.5 + beat * 0.2);
-        // 晶核（多面寶石），上面一道細細的裂紋把它分成兩半
-        const gp = [[coreX, coreY - 6.5], [coreX + 5.5, coreY - 2], [coreX + 3.6, coreY + 5], [coreX - 3.6, coreY + 5], [coreX - 5.5, coreY - 2]];
-        c.save();
-        c.globalAlpha *= 0.9;
-        c.fillStyle = A.c(U.mix('#5af0e8', '#e8ffff', beat * 0.3 + charge * 0.35));
-        c.beginPath();
-        poly(c, gp);
-        c.fill();
-        c.fillStyle = A.c('#b8fff8');
-        c.beginPath();
-        poly(c, [gp[0], gp[4], [coreX - 1.8, coreY], [coreX, coreY - 1.4]]);
-        c.fill();
-        c.fillStyle = A.c(CRL.coreS);
-        c.beginPath();
-        poly(c, [gp[1], gp[2], [coreX, coreY + 1.6], [coreX + 1.4, coreY - 0.8]]);
-        c.fill();
-        c.strokeStyle = A.c('#1a6a78');
-        c.lineWidth = 1.2;
-        c.lineJoin = 'round';
-        c.beginPath();
-        poly(c, gp);
-        c.stroke();
-        // 裂紋（亮白的細線，從上到下鋸齒狀貫穿）
-        c.strokeStyle = A.c('#ffffff');
-        c.lineWidth = 0.9;
-        c.beginPath();
-        c.moveTo(coreX + 0.5, coreY - 6.5);
-        c.lineTo(coreX - 0.8, coreY - 3);
-        c.lineTo(coreX + 1, coreY - 0.5);
-        c.lineTo(coreX - 0.6, coreY + 2.5);
-        c.lineTo(coreX + 0.4, coreY + 5);
-        c.moveTo(coreX - 0.8, coreY - 3);
-        c.lineTo(coreX - 3, coreY - 3.8);
-        c.moveTo(coreX + 1, coreY - 0.5);
-        c.lineTo(coreX + 3.2, coreY + 0.6);
-        c.stroke();
-        c.restore();
-        // 一層薄薄的粉紅珊瑚蓋在晶核上（半透明的感覺）
-        c.fillStyle = 'rgba(255,150,180,0.12)';
-        c.beginPath();
-        c.arc(coreX, coreY, 8, 0, TAU);
-        c.fill();
-        // 珊瑚的小孔與白斑
-        speckle(c, cx + 2, cy - 4, 36, 22, 10, 0.9, '#c84872', 71, 0.55);
-        speckle(c, cx - 2, cy - 8, 30, 12, 6, 1.1, '#ffe6ee', 83, 0.8);
-      },
-    });
-
-    // 前面的珊瑚枝與水晶（頭頂）
-    coralKnob(ctx, -3, cy - 16, -0.25, 15, t, 1, false);
-    crystalShard(ctx, 3, cy - 16, 11, 2.8, 0.2, t, 2, charge);
-    coralKnob(ctx, 10, cy - 14, 0.55, 11, t, 8, false);
-    crystalShard(ctx, -13, cy - 12, 8, 2.3, -0.7, t, 4, charge);
-
-    // 臉（身體前半，大大的眼睛）
+    const sw = t * (walk ? 4 : 1.6);
+    const rise = Math.sin(sw) * (walk ? 2.6 : 1.6);
+    const wind = ph === 'wind';
+    const strike = ph === 'strike';
+    const loom = strike ? 1 : wind ? 0.5 : 0;
+    const lit = 0.5 + 0.5 * Math.sin(t * 2.1);
     let kind = eyeKind(m);
-    if (kind === 'normal' && ph === 'wind') kind = 'angry';
-    eyes2(ctx, cx + 8, cy - 3, 10, 4, 5, kind, '#2ab8c8', CRL.body);
-    mouth2(ctx, cx + 13.5, cy + 5, hurt ? 'open' : ph === 'strike' ? 'open' : ph === 'wind' ? 'grit' : 'smile', 0.8);
-    A.blush(ctx, cx + 3, cy + 3, 2.6);
-    A.blush(ctx, cx + 19, cy + 2, 2.2);
+    if (kind === 'normal' && (wind || strike)) kind = 'angry';
+    const W = 23;
+    const H = 58 + loom * 6;
+    const base = -9 - loom * 3;
+    ctx.save();
+    if (hurt) ctx.translate(Math.sin(t * 50) * 1.3, 0);
+
+    // 後面的浪
+    umiWave(ctx, 28, -8 - loom * 3, t, false, 5 + loom * 3);
+
+    if (dead) {
+      // 倒下：身體撕成兩團水，中間噴出水花
+      [[-1, -0.35], [1, 0.35]].forEach(([s, r]) => {
+        ctx.save();
+        ctx.translate(s * 10, base + 4);
+        ctx.rotate(r);
+        umiBody(ctx, W * 0.62, H * 0.6, t, lit, s * 5);
+        umiEye(ctx, s * 1 + 3, -H * 0.42, 2.4, 1.8, 'x', 1);
+        ctx.restore();
+      });
+      ctx.fillStyle = A.c(UMI.foam);
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) c2(ctx, Math.sin(i * 2.1) * 4, base - 10 - i * 5, 1.8 - i * 0.2);
+      ctx.fill();
+    } else {
+      ctx.save();
+      ctx.translate(0, base - rise);
+      // 攻擊時往前傾、罩過來
+      ctx.rotate(loom * 0.16 - (wind ? 0.08 : 0) + (walk ? Math.sin(sw - 0.6) * 0.03 : 0));
+      ctx.scale(1 + loom * 0.05, 1);
+      umiBody(ctx, W, H, t, lit, 0);
+      // 從肩膀滴下去的水滴
+      for (let i = 0; i < 4; i++) {
+        const q = (t * 0.9 + i * 0.27) % 1;
+        const x = (i % 2 ? 1 : -1) * W * (0.72 + (i > 1 ? 0.2 : 0));
+        ctx.save();
+        ctx.globalAlpha *= 1 - q;
+        A.shape(ctx, (c) => { c.moveTo(x, -H * 0.45 + q * H * 0.4 - 3); c.quadraticCurveTo(x + 2, -H * 0.45 + q * H * 0.4 + 1, x, -H * 0.45 + q * H * 0.4 + 1.6); c.quadraticCurveTo(x - 2, -H * 0.45 + q * H * 0.4 + 1, x, -H * 0.45 + q * H * 0.4 - 3); c.closePath(); }, '#6ab8cc', null, { lw: 1, hl: false });
+        ctx.restore();
+      }
+      // 眼睛（偏向前面＝右邊）與攻擊時裂開的嘴
+      const ex = 3;
+      const ey = -H * 0.78;
+      umiEye(ctx, ex, ey, 2.8, 3.8, kind, 0.8 + lit * 0.2);
+      umiEye(ctx, ex + 9.5, ey + 0.5, 2.5, 3.5, kind, 0.8 + lit * 0.2);
+      if (strike || wind || hurt) {
+        const o = strike ? 1 : hurt ? 0.6 : 0.35;
+        ctx.save();
+        glow(ctx, ex + 5.5, ey + 10, 8 * o + 3, UMI.glow, 0.5 * o);
+        ctx.fillStyle = A.c('#02060a');
+        ctx.beginPath();
+        ctx.ellipse(ex + 5.5, ey + 10, 6, 1 + o * 3.2, 0, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = A.c(UMI.eyeG);
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.globalAlpha *= 0.4;
+        line(ctx, [[ex + 1, ey + 10], [ex + 10, ey + 10.4]], '#5a8a9a', 1.1);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+    // 前面的浪（蓋住身體下半）
+    umiWave(ctx, 27, -3 - loom * 3, t + 0.7, true, 7 + loom * 5);
     ctx.restore();
   }
 
@@ -3662,17 +3683,31 @@
       ctx.restore();
       sparkle(ctx, -11, -12, 3, '#ffffff');
     },
-    // 珊瑚晶核：粉紅珊瑚包著的一顆青色晶核，晶核中間一道裂紋，旁邊冒出圓頭珊瑚枝與小水晶
+    // 墨潮珠：一顆黑色的水珠珍珠，表面有青色的光澤與一點高光
     block(ctx) {
-      glow(ctx, 0, 1, 18, '#5af0e0', 0.6);
-      coralKnob(ctx, -8, -6, -0.6, 9, 0, 1, false);
-      crystalShard(ctx, 7, -7, 9, 2.4, 0.5, 0, 3, 0);
-      A.shape(ctx, (c) => c.ellipse(0, 3, 13, 11, 0, 0, TAU), CRL.body, CRL.bodyS, { cel: [3, 3], hl: [-6, -3, 2.6, 1.5] });
-      glow(ctx, 0, 3, 10, '#ffffff', 0.5);
-      const gp = [[0, -4], [6, 0.5], [4, 8.5], [-4, 8.5], [-6, 0.5]];
-      A.shape(ctx, (c) => poly(c, gp), '#6af4ec', '#2ab8b8', { cel: [1.6, 1.6], lw: 1.8, hl: false });
-      line(ctx, [[0.5, -4], [-0.8, -0.5], [1, 2], [-0.6, 5.5], [0.4, 8.5]], '#ffffff', 1);
-      dot(ctx, -2.4, -0.6, 1.3, '#ffffff');
+      glow(ctx, 0, 0, 18, '#2ad0c0', 0.45);
+      const g = ctx.createRadialGradient(-4, -5, 1, 0, 0, 13);
+      g.addColorStop(0, A.c('#3a5a70'));
+      g.addColorStop(0.5, A.c('#141c2c'));
+      g.addColorStop(1, A.c('#05080e'));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, 12.5, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(90,240,220,0.7)';
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(0, 0, 9.5, PI * 0.15, PI * 0.6);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, 12.5, 0, TAU);
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      A.ellipse(ctx, -4.5, -5, 3.2, 1.8, '#ffffff', null, { noStroke: true, hl: false, rot: -0.6 });
+      dot(ctx, 4.5, 5.5, 1, '#9af8ec');
+      sparkle(ctx, 11, -11, 3, '#bff8f0');
     },
     // 封印墨：圓墨水瓶，紫墨發光，瓶身貼著法陣標籤
     ink(ctx) {
