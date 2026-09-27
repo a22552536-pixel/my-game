@@ -4148,6 +4148,116 @@
   function ghostFire(ctx, x, y, w, h, t, seed, a) {
     spiritFlame(ctx, x, y, w, h, Math.sin(t * 7 + seed) * w * 0.6 - w * 0.4, '#5fd0c4', AR.fireL, null, a);
   }
+  // 鬼火的眼：一顆會閃的小火球——柔光、亮白的芯、上面冒出一個小小的火尖。k 是亮度（格擋／居合時變旺、收招時變暗）
+  function ghostEye(ctx, x, y, r, t, seed, k, a) {
+    a = a == null ? 1 : a;
+    if (!(a > 0) || !(k > 0)) return;
+    const fl = 1 + Math.sin(t * 11 + seed * 2.3) * 0.1 + Math.sin(t * 17.3 + seed) * 0.06;
+    const rr = r * fl * (0.62 + 0.38 * k);
+    ctx.save();
+    ctx.globalAlpha *= Math.min(1, a) * Math.min(1, 0.35 + 0.65 * k);
+    glowH(ctx, x, y, rr * (2.4 + k * 1.2), '#5fd0c4', Math.min(1, 0.36 * k * k));
+    // 火尖（往上、左右擺動）
+    const sw = Math.sin(t * 9 + seed * 1.7) * rr * 0.5;
+    ctx.fillStyle = A.c('#5fd0c4');
+    ctx.beginPath();
+    ctx.moveTo(x - rr * 0.8, y - rr * 0.3);
+    ctx.quadraticCurveTo(x - rr * 0.4, y - rr * 1.4, x + sw, y - rr * (2 + 0.3 * k + Math.sin(t * 13 + seed) * 0.3));
+    ctx.quadraticCurveTo(x + rr * 0.5, y - rr * 1.3, x + rr * 0.8, y - rr * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, rr, 0, TAU);
+    ctx.fill();
+    // 亮白的芯
+    ctx.fillStyle = A.c(AR.fireL);
+    ctx.beginPath();
+    ctx.arc(x - rr * 0.12, y - rr * 0.1, rr * (0.45 + 0.1 * Math.min(1.3, k)), 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+  // 鬼火的手（靈體的手）：半透明的淡青拳頭包住刀柄、隱約看得出手指，手腕處拖出一縷慢慢淡去的火尾接進籠手。
+  //   (hx,hy) 是手的位置；ang/flip 是刀柄的方向（與太刀一致）；cx 是拳頭中心在刀柄上的位置（刀柄往 -x）；
+  //   wx,wy 是手腕要接去的方向（世界座標）；k 是亮度
+  function spiritHand(ctx, hx, hy, ang, flip, cx, wx, wy, t, seed, k) {
+    if (!(k > 0)) return;
+    const a = Math.min(1, 0.5 + 0.28 * k);
+    const ca = Math.cos(ang);
+    const sa = Math.sin(ang);
+    const px = hx + ca * cx;
+    const py = hy + sa * cx;
+    ctx.save();
+    // 柔光
+    glowH(ctx, px, py, 7 + 3 * k, '#5fd0c4', 0.28 * k);
+    // 手腕的火尾：從拳頭往籠手的方向，漸細、搖曳、淡出
+    const wl = Math.hypot(wx, wy) || 1;
+    const ux = wx / wl;
+    const uy = wy / wl;
+    const L = 13;
+    const s = Math.sin(t * 6 + seed) * 2;
+    const bx = px + ux * 2;
+    const by = py + uy * 2;
+    const ex = px + ux * L - uy * s;
+    const ey = py + uy * L + ux * s;
+    const g = ctx.createLinearGradient(bx, by, ex, ey);
+    const rgb = U.hexToRgb(A.c('#5fd0c4')).join(',');
+    g.addColorStop(0, 'rgba(' + rgb + ',' + a.toFixed(3) + ')');
+    g.addColorStop(0.45, 'rgba(' + rgb + ',' + (0.6 * a).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(' + rgb + ',0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(bx + uy * 3.4, by - ux * 3.4);
+    ctx.quadraticCurveTo(px + ux * 6 + uy * 2.6 + -uy * s * 0.5, py + uy * 6 - ux * 2.6 + ux * s * 0.5, ex, ey);
+    ctx.quadraticCurveTo(px + ux * 6 - uy * 2.2 - uy * s * 0.5, py + uy * 6 + ux * 2.2 + ux * s * 0.5, bx - uy * 3.4, by + ux * 3.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.quadraticCurveTo(px + ux * 6 - uy * s * 0.5, py + uy * 6 + ux * s * 0.5, px + ux * (L + 3) - uy * s * 1.3, py + uy * (L + 3) + ux * s * 1.3);
+    ctx.stroke();
+    // 拳頭（在刀柄的座標系裡畫）
+    ctx.translate(hx, hy);
+    ctx.rotate(ang);
+    if (flip) ctx.scale(1, -1);
+    ctx.globalAlpha *= a;
+    const fist = (c) => {
+      c.moveTo(cx - 3.8, -2.2);
+      c.quadraticCurveTo(cx - 3.6, -4.6, cx - 0.6, -4.4); // 拇指那側（上）
+      c.quadraticCurveTo(cx + 3.4, -4.2, cx + 3.9, -1.2);
+      c.lineTo(cx + 4.1, 2.6);
+      c.quadraticCurveTo(cx + 3.8, 5.2, cx + 0.4, 5);
+      c.quadraticCurveTo(cx - 3.4, 5, cx - 4, 2.4);
+      c.closePath();
+    };
+    ctx.fillStyle = A.c('#7fe0d4');
+    ctx.beginPath();
+    fist(ctx);
+    ctx.fill();
+    // 亮面（上半、拇指）
+    ctx.fillStyle = A.c(AR.fireL);
+    ctx.globalAlpha *= 0.75;
+    ctx.beginPath();
+    ctx.ellipse(cx - 0.2, -2.6, 2.8, 1.2, 0, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha /= 0.75;
+    // 淡淡的外框＋手指的分隔（繞過刀柄的幾道短線）
+    ctx.strokeStyle = A.c('#2f9c95');
+    ctx.lineWidth = 0.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    fist(ctx);
+    ctx.moveTo(cx - 1.4, 0.6);
+    ctx.quadraticCurveTo(cx - 1.8, 2.8, cx - 1.3, 4.6);
+    ctx.moveTo(cx + 0.7, 0.6);
+    ctx.quadraticCurveTo(cx + 0.3, 2.8, cx + 0.8, 4.8);
+    ctx.moveTo(cx + 2.6, 0.4);
+    ctx.quadraticCurveTo(cx + 2.4, 2.6, cx + 2.8, 4.2);
+    ctx.stroke();
+    ctx.restore();
+  }
   // 一片小札板（赤漆）：一排排往下疊的小札，每排上緣一道亮邊、下緣一道暗邊，並在下一排的上端投下一道影；
   //   每排用深靛／黑的絲繩縅起，露出一個個十字結；部分繩子斷掉；可選霜與縫裡的雪
   function lamellar(ctx, P, x0, y0, w, h, rows, seed, frost, black) {
@@ -4372,6 +4482,10 @@
         const q = (t * 0.7 + i / 4) % 1;
         ghostFire(ctx, -16 + i * 11 + Math.sin(t * 2 + i) * 4, -18 - q * 40, 3 * (1 - q * 0.5), 9 * (1 - q * 0.4), t, i, (1 - q) * 0.8);
       }
+      // 兩顆鬼火的眼從頭盔裡飄出來、往上散去
+      const qe = (t * 0.45) % 1;
+      ghostEye(ctx, -3 - qe * 6 + Math.sin(t * 2.2) * 2, -24 - qe * 34, 1.7 * (1 - qe * 0.4), t, 1, 0.9, (1 - qe) * 0.9);
+      ghostEye(ctx, 4 + qe * 7 + Math.sin(t * 2.2 + 1.3) * 2, -26 - qe * 38, 1.8 * (1 - qe * 0.4), t, 2, 0.9, (1 - qe) * 0.9);
       ctx.restore();
       return;
     }
@@ -4544,8 +4658,16 @@
     A.shape(ctx, (c) => { c.moveTo(-10, -1); c.lineTo(-18, -6); c.lineTo(-17, 2); c.closePath(); }, AR.lac, AR.lacS, { lw: 1.6, shadeY: 0 });
     goldStud(ctx, -15, -1.5, 1);
     A.shape(ctx, (c) => { c.moveTo(-9, 0); c.lineTo(12, -1); c.lineTo(12, 2); c.lineTo(-9, 2.5); c.closePath(); }, AR.blk, AR.blkS, { lw: 1.6 });
-    // 面：兜的眉庇下面一片純黑，沒有眼、沒有嘴、沒有任何五官
-    A.shape(ctx, (c) => { c.moveTo(-7, 2.5); c.lineTo(11, 2); c.quadraticCurveTo(13, 10, 9, 15); c.quadraticCurveTo(2, 17, -3, 15); c.quadraticCurveTo(-8, 10, -7, 2.5); c.closePath(); }, '#040509', null, { lw: 1.6 });
+    // 面：兜的眉庇下面一片純黑，沒有嘴、沒有任何五官——只浮著兩顆鬼火的眼
+    const faceP = (c) => { c.moveTo(-7, 2.5); c.lineTo(11, 2); c.quadraticCurveTo(13, 10, 9, 15); c.quadraticCurveTo(2, 17, -3, 15); c.quadraticCurveTo(-8, 10, -7, 2.5); c.closePath(); };
+    A.shape(ctx, faceP, '#040509', null, { lw: 1.6 });
+    ctx.save();
+    ctx.beginPath();
+    faceP(ctx);
+    ctx.clip();
+    ghostEye(ctx, -1.3, 8.4, 1.6, t, 1, fireK);
+    ghostEye(ctx, 5.7, 8.2, 1.7, t, 2, fireK);
+    ctx.restore();
     if (fireK > 1.05) glowH(ctx, 1, -18, 20, P4.goldL, 0.2);
     ctx.save();
     ctx.translate(1, -6);
@@ -4688,8 +4810,15 @@
       puff(ctx, hand[0] + Math.cos(bladeA) * 86, -1 - q * 3, 1.5 + q * 2.5, '#ffffff', (1 - q) * 0.8);
     }
     // 手的位置：鬼火（沒有手）
-    ghostFire(ctx, hand[0] - 1, hand[1] + 2, 2.6, 6.5, t, 7, 0.9 * fireK);
-    if (hand2) ghostFire(ctx, hand2[0], hand2[1] + 2, 2.4, 6, t, 8, 0.9 * fireK);
+    // 手的位置：鬼火凝成的靈體之手，握著刀柄（格擋時兩手握）
+    if (hand2) {
+      const dx = hand2[0] - hand[0];
+      const dy = hand2[1] - hand[1];
+      const along = dx * Math.cos(bladeA) + dy * Math.sin(bladeA);
+      spiritHand(ctx, hand[0], hand[1], bladeA, flipBlade, along - 1, -12 - hand2[0], -72 - hand2[1], t, 8, fireK);
+    }
+    const wd = Math.hypot(el[0] - hand[0], el[1] - hand[1]) > 5 ? el : sh0;
+    spiritHand(ctx, hand[0], hand[1], bladeA, flipBlade, -4.6, wd[0] - hand[0], wd[1] - hand[1], t, 7, fireK);
     // 守備：前方一道淡青的結界弧
     if (guarding) {
       ctx.save();
