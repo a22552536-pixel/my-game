@@ -50,3 +50,11 @@
 - 本機：`python3 -m http.server 8765` 後用 Playwright 跑（scratchpad 裡有 tut4/epi/ch23/flow/mats/test2 等腳本；新 session 沒有的話自己寫：載入頁面、檢查 console 沒有錯誤、跑過地圖載入）。
 - 語法檢查：`for f in js/*/*.js js/*.js; do node --check $f; done`
 - commit 訊息不要寫模型名稱。
+
+## 待辦（中斷後從這裡接著做）
+- 千手冰像招式重做：全部改成手的攻擊（從上砸、橫掃、斜刺、合掌、狂暴千手連擊），拿掉冰光束與冰晶雨；
+  使用者追加「更多、更快，像百式觀音」（每招更多掌、間隔更短、招與招幾乎不停，單掌預警 ≥0.35 秒且一定有安全空隙）。
+  只動 js/game/fieldboss.js 的 zakumMoves 與 js/art/fieldboss.js 的 fb_zakum／手掌特效。還沒提交。
+- 試玩練功場切到第二～五章時地面還是舊版（ground.js 的 THEME_GROUND 只對應第一章），等使用者決定要不要補。
+- 專案根目錄的 undefined/ 是測試腳本寫錯路徑留下的截圖，確認後刪掉（不要提交）。
+- 設計規則：主角線與章節 Boss 的原畫風是定案，不做風格升級；怪物大修用「舊版底子＋新結構」，不換材質語言。
