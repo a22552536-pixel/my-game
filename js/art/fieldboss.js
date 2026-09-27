@@ -1,5 +1,5 @@
 // 野外魔王（規格：docs/SPEC-fieldboss.md）的美術：苔冠鱷王、沉船海魔、赤焰炎魔、千手冰像、星蝕魔龍，
-// 以及牠們的投射物（fb_anchor / fb_meteor / fb_voidorb）與地面區域（fb_tentacle / fb_inkcloud / fb_armslam）。
+// 以及牠們的投射物（fb_anchor / fb_meteor / fb_voidorb / fb_palm）與地面區域（fb_tentacle / fb_inkcloud / fb_armslam / fb_palmhit）。
 // 楓之谷巴洛古、殘暴炎魔那種暗黑奇幻：巨大的剪影、犄角、翅膀、鎖鏈、發光裂紋與眼睛，
 // 但仍是本作的畫法：平塗、深棕描邊（A.shape / A.outline）、右下月牙陰影、左上高光，顏色一律經過 A.c()。
 // 原點在腳底中央、面向右（+x）；翻轉、閃白、飛行高度由 A.drawMonster 處理。每個 save() 都只對應一個 restore()。
@@ -4549,10 +4549,10 @@
   // 層層疊起的身軀：兩層石肩甲、金邊胸甲＋金項鍊、腹部的日輪浮雕與橫紋帶、腰帶下一圈石裙甲與結冰的垂布。
   // 八隻細長的石臂：正面一對合掌；背後左右各三隻排成一圈手的光背（上：施無畏印、中：說法印、下：與願印），
   // 每隻都有肩球＋金環、臂釧、肘球＋金環、兩圈金手鐲，手是細長微翹的佛像手指；待機時依序擺動。
-  // 出招：fx.arm 那隻手舉起、掌心聚光 → 平掌砸下（殘影弧光）；光束從額頭的魔石射出。
+  // 出招（全部都是掌擊）：fx.arm（合掌時再加 fx.arm2）那隻手舉起、掌心聚光 → 往外出掌（殘影弧光），巨掌本身由投射物 fb_palm 畫；
+  // 千手連擊時 fx.gassho：正面合掌上舉、指尖一圈金冰光環、眾手掌心聚光。
   // 暴走：石頭轉為深藍、背後的冰晶光輪、全身符文與裂紋發亮、眼睛與魔石轉為白紫、雙眼怒睜、冰獠牙。
   // 手臂索引：js/game/fieldboss.js 以世界座標分邊（0～2 = 世界左側、3～5 = 世界右側），各自是上／中／下。
-  // 光束起點＝額頭魔石：頭在 (0, ZK_HY) 縮放 ZK_HS，魔石在頭座標 (0, −34) → 設計座標 y = ZK_HY − 34·ZK_HS。
   const ZK = {
     stone: '#8492a8', stoneS: '#5c687e', stoneD: '#3c465a', stoneL: '#a6b3c6', stoneLS: '#7a889e',
     stoneR: '#566286', stoneRS: '#394366', stoneRD: '#232a46', stoneRL: '#7684aa', stoneRLS: '#4e5a80',
@@ -4692,8 +4692,9 @@
   const ZK_FY = [-6.2, -2.1, 2.1, 6];
   const ZK_FL = [21, 23.5, 22, 17.5];
   const ZK_FW = [6.4, 6.8, 6.4, 5.4];
-  function zkPalm(ctx, mu, col, colS, heat, gcol) {
-    if (heat > 0) glow(ctx, 18, 0, 34, gcol, 0.5 * heat);
+  // noGlow：不畫掌心外圍的大光暈（飛掌自己畫一圈小的，省效能）
+  function zkPalm(ctx, mu, col, colS, heat, gcol, noGlow) {
+    if (heat > 0 && !noGlow) glow(ctx, 18, 0, 34, gcol, 0.5 * heat);
     const fingers = (c) => {
       for (let i = 0; i < 4; i++) {
         const cu = mu[i];
@@ -4752,25 +4753,30 @@
     }
     if (heat > 0.5) glow(ctx, 9, 0, 10, '#ffffff', 0.6 * (heat - 0.5));
   }
-  // 頭的位置與縮放（光束起點在 js/game/fieldboss.js 用同一組數字算）
+  // 頭的位置與縮放
   const ZK_HY = -240;
   const ZK_HS = 0.94;
   function fb_zakum(ctx, m) {
     const S = atk(m);
-    // 剛砸下的手臂（js/game/fieldboss.js：fx.hitArm、fx.hitT 0.45 → 0）：停在砸下的姿勢，再收回待機
-    const hitArm0 = m.dead ? -1 : Math.floor(num(m.fx && m.fx.hitArm, -1));
-    const hitK = hitArm0 >= 0 ? clamp(num(m.fx.hitT, 0) / 0.45, 0, 1) : 0;
-    const hitArm = hitK > 0 ? hitArm0 : -1;
+    // 剛出掌的手臂（js/game/fieldboss.js：fx.hitArm／hitArm2、fx.hitT 0.45 → 0）：停在出掌的姿勢，再收回待機
+    const hitK = m.dead ? 0 : clamp(num(m.fx && m.fx.hitT, 0) / 0.45, 0, 1);
+    const hitArm = hitK > 0 ? Math.floor(num(m.fx.hitArm, -1)) : -1;
+    const hitArm2 = hitK > 0 ? Math.floor(num(m.fx.hitArm2, -1)) : -1;
     const { fx, ph, t, rage, dead, kind } = S;
     const K = (m.h || 300) / 320;
     const armI = fx.arm != null && fx.arm >= 0 ? Math.floor(num(fx.arm, -1)) : -1;
+    // 合掌時左右兩隻手同時舉（fx.arm2）
+    const arm2 = fx.arm2 != null && fx.arm2 >= 0 ? Math.floor(num(fx.arm2, -1)) : -1;
+    const isAct = (i) => i >= 0 && (i === armI || i === arm2);
+    const isHit = (i) => i >= 0 && (i === hitArm || i === hitArm2);
     const slam = amt(fx.slam);
     // 砸下去的瞬間 fx.slam = 1（之後很快退回），預警時最多 0.7
     const slamDown = armI >= 0 && (ph === 'strike' || ph === 'recover' || slam > 0.72);
-    const beam = amt(fx.beam);
-    const beamFire = !!fx.beamFire || (beam > 0 && (ph === 'strike' || (!ph && beam >= 0.999)));
-    const beamCharge = (beam > 0 || kind === 'beam') && !beamFire;
-    const shard = /shard|crystal|rain/.test(kind) || !!fx.shard || (ph === 'wind' && armI < 0 && !beam && !kind);
+    // 千手連擊：正面合掌的手發光（0..1）；fx.palm＝掌擊招式進行中
+    const gassho = m.dead ? 0 : amt(fx.gassho);
+    const palmOn = !!fx.palm;
+    // 出掌期間（0..1 平滑）：背後的手快速擺動、光背上閃現靈體的掌
+    const palmK = m.dead ? 0 : amt(fx.palmK, palmOn ? 1 : 0);
     const hurt = S.hurt;
     const stone = rage ? ZK.stoneR : ZK.stone;
     const stoneS = rage ? ZK.stoneRS : ZK.stoneS;
@@ -4780,8 +4786,8 @@
     const gold = rage ? ZK.goldR : ZK.gold;
     const goldS = rage ? ZK.goldRS : ZK.goldS;
     const gcol = rage ? ZK.glowR : ZK.glow;
-    const heat = dead ? 0 : clamp(0.55 + Math.sin(t * 2.2) * 0.15 + (rage ? 0.5 : 0) + beam * 0.4 + (shard ? 0.3 : 0), 0, 1.4);
-    const rumble = beamCharge || (armI >= 0 && !slamDown) || shard ? Math.sin(t * 45) * 1.4 : 0;
+    const heat = dead ? 0 : clamp(0.55 + Math.sin(t * 2.2) * 0.15 + (rage ? 0.5 : 0) + gassho * 0.35, 0, 1.4);
+    const rumble = (armI >= 0 && !slamDown) || gassho > 0.5 ? Math.sin(t * 45) * 1.4 : 0;
     const breathe = dead ? 8 : Math.sin(t * 1.2) * 2;
     const hy0 = ZK_HY + breathe;
 
@@ -4857,28 +4863,28 @@
       const sw = t * 1.15 - lvl * 0.9 - (i >= 3 ? 0.45 : 0);
       let r = T.r + Math.sin(sw) * 5;
       let a = T.a + Math.sin(sw - 0.7) * 0.05;
+      let hs = 0;
+      if (palmK > 0) {
+        // 出掌期間：眾手快速地一波波擺動（千手的感覺）
+        const f = t * 9 + i * 1.7;
+        r += Math.sin(f) * 10 * palmK;
+        a += Math.sin(f * 0.9 + 1) * 0.1 * palmK;
+        hs = Math.sin(f + 2) * 0.22 * palmK;
+      }
       let w = onRing(r, a);
       // 手的方向：沿著半徑往外（再依層微調）
-      let ha = a - PI / 2 + T.tw + Math.sin(sw - 1.5) * 0.12;
+      let ha = a - PI / 2 + T.tw + Math.sin(sw - 1.5) * 0.12 + hs;
       let mu = T.mu[i >= 3 ? 1 : 0];
       let hot = 0;
-      if (beamCharge || beamFire) {
-        // 眾手往外張開一點、掌心聚光
-        const k = beamFire ? 1 : clamp(beam * 1.4, 0, 1);
-        w = onRing(r + 10 * k, a - 0.1 * k);
-        ha -= 0.12 * k;
-        hot = 0.45 * k;
+      if (gassho > 0) {
+        // 千手連擊：眾手往外張開一點、掌心聚光
+        w = onRing(r + 10 * gassho, a - 0.08 * gassho);
+        ha -= 0.1 * gassho;
+        hot = 0.4 * gassho;
       }
-      if (shard) {
-        // 眾手托天
-        w = onRing([186, 190, 170][lvl], [0.34, 0.8, 1.3][lvl] + Math.sin(t * 6 + i) * 0.03);
-        ha = -PI / 2 + [0.1, 0.35, 0.6][lvl];
-        mu = ZK_MUDRA.abhaya;
-        hot = 0.7;
-      }
-      // 平掌砸下的位置（往外下方、掌心朝下）
-      const DW = [[130 + lvl * 14, -62 + lvl * 12], 1.25];
-      if (i === hitArm && !(i === armI && slamDown && hitK < 0.9)) {
+      // 出掌的位置（往外推出去：上層往外下方砸、中層往外平推、下層貼地往外掃）
+      const DW = [[130 + lvl * 14, -62 + lvl * 12], [1.25, 0.6, 0.2][lvl]];
+      if (isHit(i) && !(isAct(i) && slamDown && hitK < 0.9)) {
         // 砸下 → 收回：前 45% 停在砸下的位置，之後緩緩回到待機姿勢
         const q = hitK > 0.55 ? 1 : hitK / 0.55;
         const e = q * q * (3 - 2 * q);
@@ -4886,14 +4892,14 @@
         ha = lerp(ha, DW[1], e);
         mu = ZK_MUDRA.strike;
         hot = e;
-      } else if (i === armI && !dead) {
+      } else if (isAct(i) && !dead) {
         if (slamDown) {
           w = DW[0];
           ha = DW[1];
           hot = 1;
         } else {
-          // 出招中（kind = 'arm'）slam 是 0 就是還沒開始舉；沒有招式資訊時（圖鑑等）給一個舉到一半的姿勢
-          const k = clamp((slam > 0 ? slam : kind === 'arm' ? 0 : 0.4) / 0.7, 0, 1);
+          // 出招中（fx.palm）slam 是 0 就是還沒開始舉；沒有招式資訊時（圖鑑等）給一個舉到一半的姿勢
+          const k = clamp((slam > 0 ? slam : palmOn || kind ? 0 : 0.4) / 0.7, 0, 1);
           const up = [T.s[0] + 18, T.s[1] - (T.L[0] + T.L[1]) * 0.92];
           w = [lerp(w[0], up[0], k), lerp(w[1], up[1], k)];
           ha = lerp(ha, -PI / 2 + 0.05, k);
@@ -4915,7 +4921,7 @@
       const T = TIER[lvl];
       const P = armPose(i);
       const [L1, L2] = T.L;
-      const down = !dead && ((i === armI && slamDown) || (i === hitArm && hitK > 0.6));
+      const down = !dead && ((isAct(i) && slamDown) || (isHit(i) && hitK > 0.6));
       ctx.save();
       ctx.scale(side, 1);
       const sx = T.s[0];
@@ -4935,13 +4941,13 @@
       P.a1 = a1;
       P.wr = P.ha - fa;
       // 後層比較暗（深度）；正在出招的手臂不壓暗
-      const dim = i === armI || i === hitArm ? 0 : T.dim;
+      const dim = isAct(i) || isHit(i) ? 0 : T.dim;
       const col = U.mix(stone, stoneD, dim * 0.8);
       const colS = U.mix(stoneS, stoneD, dim);
       const colL = U.mix(stoneL, stoneS, dim);
       const colLS = U.mix(stoneLS, stoneD, dim);
       // 出招的那隻手多一圈大光暈（其他手只有掌心的小光）
-      if (P.hot > 0 && !dead && (i === armI || i === hitArm)) glow(ctx, hx + Math.cos(fa + P.wr) * 20, hy + Math.sin(fa + P.wr) * 20, 62, gcol, 0.5 * P.hot);
+      if (P.hot > 0 && !dead && (isAct(i) || isHit(i))) glow(ctx, hx + Math.cos(fa + P.wr) * 20, hy + Math.sin(fa + P.wr) * 20, 62, gcol, 0.5 * P.hot);
       // 平掌砸下：揮過的弧光＋兩道殘影
       if (down) {
         ctx.lineCap = 'round';
@@ -5008,7 +5014,22 @@
       ctx.restore();
     };
     // 上 → 中 → 下（上層在最後面）；正在出招／剛砸下的手臂留到頭之後畫在最前面
-    [0, 3, 1, 4, 2, 5].filter((i) => i !== armI && i !== hitArm).forEach(drawArm);
+    // 光背上一閃一閃往外推出去的靈體掌（出掌期間 4 隻、千手連擊再加 4 隻；省效能模式減半）
+    const ghostN = dead ? 0 : Math.round((palmK * 4 + gassho * 4) * (G.lowFx ? 0.5 : 1));
+    const ghostCol = rgba(gcol, 1);
+    for (let i = 0; i < ghostN; i++) {
+      const q = (t * 2.3 + hash(i + 520)) % 1;
+      const a = (i % 2 ? 1 : -1) * (0.25 + ((i >> 1) / 4) * 1.35 + hash(i + 530) * 0.2);
+      const rr = 150 + q * 90;
+      ctx.save();
+      ctx.translate(ZC[0] + Math.sin(a) * rr, ZC[1] - Math.cos(a) * rr);
+      ctx.rotate(a - PI / 2);
+      ctx.globalAlpha *= Math.sin(q * PI) * 0.5;
+      ctx.scale(1.7, 1.7 * (a < 0 ? -1 : 1));
+      ghostPalm(ctx, ghostCol);
+      ctx.restore();
+    }
+    [0, 3, 1, 4, 2, 5].filter((i) => !isAct(i) && !isHit(i)).forEach(drawArm);
 
     // ── 身軀（石像）──
     ctx.save();
@@ -5145,7 +5166,7 @@
     ctx.translate(dc[0], dc[1]);
     ctx.scale(0.72, 0.72);
     ctx.translate(-dc[0], -dc[1]);
-    glow(ctx, dc[0], dc[1], 54, gcol, 0.3 * heat + (shard ? 0.3 : 0));
+    glow(ctx, dc[0], dc[1], 54, gcol, 0.3 * heat + gassho * 0.3);
     A.ellipse(ctx, dc[0], dc[1], 30, 30, stoneS, stoneD, { lw: 3, hl: false });
     A.ellipse(ctx, dc[0], dc[1], 23, 23, gold, goldS, { lw: 2.6, hl: [-8, -150, 6, 3] });
     ctx.strokeStyle = A.c(goldS);
@@ -5346,8 +5367,8 @@
     }, rage ? ZK.gemR : ZK.iceD, null, { lw: 1.6 });
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.fillRect(-3, -180, 2, 5);
-    // 正面合掌的一對手（放光束／灑冰晶時上舉、掌間發光）
-    const gUp = (beamFire ? 1 : beamCharge ? beam : 0) * 12 + (shard ? 8 : 0);
+    // 正面合掌的一對手（千手連擊時上舉、掌間發光）
+    const gUp = gassho * 10;
     [-1, 1].forEach((sd) => {
       ctx.save();
       ctx.scale(sd, 1);
@@ -5397,8 +5418,32 @@
       ctx.restore();
     });
     if (!dead && (gUp > 0 || rage)) {
-      const k = Math.max(gUp / 12, rage ? 0.4 : 0);
+      const k = Math.max(gassho, rage ? 0.4 : 0);
       glow(ctx, 0, -146 - gUp, 26 + k * 16, gcol, 0.5 * k);
+    }
+    // 千手連擊：合掌的指尖亮起一圈旋轉的金冰光環
+    if (!dead && gassho > 0) {
+      const gy0 = -150 - gUp;
+      glow(ctx, 0, gy0, 60, '#ffe7a0', 0.35 * gassho);
+      ctx.save();
+      ctx.translate(0, gy0);
+      ctx.scale(1, 0.9);
+      ctx.rotate(t * 1.6);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = rgba(gold, 0.85 * gassho);
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        ctx.moveTo(Math.cos((i * TAU) / 3) * 34, Math.sin((i * TAU) / 3) * 34);
+        ctx.arc(0, 0, 34, (i * TAU) / 3, (i * TAU) / 3 + 1.5);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = rgba('#e8f8ff', 0.8 * gassho);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, 25 + Math.sin(t * 8) * 2, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
     }
     ctx.restore();
 
@@ -5574,9 +5619,9 @@
     }, stone, stoneS, { lw: 2.8, shadeY: 2 });
     // 眼窩＋冰藍光的眼
     // 平常半闔著眼（暗、細）；出招時睜開一些；暴走時怒睜
-    const acting = beamCharge || beamFire || shard || armI >= 0 || hitArm >= 0;
+    const acting = palmOn || armI >= 0 || hitArm >= 0 || gassho > 0;
     const eo = rage || hurt ? 1 : acting ? 0.75 : 0.4;
-    const eg = dead ? 0 : (0.9 + Math.sin(t * 4) * 0.1 + (rage ? 0.4 : 0) + beam * 0.8) * (0.45 + eo * 0.55);
+    const eg = dead ? 0 : (0.9 + Math.sin(t * 4) * 0.1 + (rage ? 0.4 : 0) + gassho * 0.4) * (0.45 + eo * 0.55);
     const ecol = rage ? '#eef4ff' : gcol;
     [-1, 1].forEach((sd) => {
       const x = 21 * sd;
@@ -5596,8 +5641,8 @@
         ctx.stroke();
         return;
       }
-      glow(ctx, x, 2, 22 + beam * 20, rage ? ZK.violet : gcol, (rage ? 0.55 : 0.75) * eg);
-      const eh = hurt ? 1.5 : (3.6 + beam * 2 + (rage ? 1.2 : 0)) * eo;
+      glow(ctx, x, 2, 22 + gassho * 10, rage ? ZK.violet : gcol, (rage ? 0.55 : 0.75) * eg);
+      const eh = hurt ? 1.5 : (3.6 + gassho + (rage ? 1.2 : 0)) * eo;
       ctx.fillStyle = A.c(ecol);
       ctx.beginPath();
       ctx.moveTo(x - 12 * sd, 2 - eh * 0.3);
@@ -5650,7 +5695,7 @@
     ctx.ellipse(6, 24, 3, 2, -0.3, 0, TAU);
     ctx.fill();
     // 嘴：往下撇的石嘴、方牙、冰獠牙；出招時張開發光
-    const mOpen = dead ? 2 : beamFire ? 14 : shard ? 11 : beamCharge ? 7 : hurt ? 9 : rage ? 8 : armI >= 0 ? 5 : 1.5;
+    const mOpen = dead ? 2 : gassho > 0.5 ? 9 : hurt ? 9 : rage ? 8 : armI >= 0 ? 5 : 1.5;
     const fangs = !dead && (rage || mOpen > 4);
     // 下巴垂下的冰柱鬍
     [[-18, 12], [-8, 22], [2, 26], [12, 18], [20, 10]].forEach(([x, h]) => {
@@ -5693,7 +5738,7 @@
     });
     // 額頭的藍色魔石（金框＋爪座）
     const gemC = rage ? ZK.gemR : ZK.gem;
-    const gp = dead ? 0 : 0.7 + Math.sin(t * (rage ? 7 : 3)) * 0.3 + (shard ? 0.5 : 0) + beam * 0.3;
+    const gp = dead ? 0 : 0.7 + Math.sin(t * (rage ? 7 : 3)) * 0.3 + gassho * 0.4;
     glow(ctx, 0, -32, 30 + gp * 12, gemC, (rage ? 0.5 : 0.7) * gp);
     A.shape(ctx, (c) => {
       c.moveTo(0, -56);
@@ -5729,9 +5774,13 @@
     }
     ctx.restore();
 
-    // 正在出招／剛砸下的手臂（畫在最前面）
-    if (hitArm >= 0 && hitArm < 6 && hitArm !== armI) drawArm(hitArm);
-    if (armI >= 0 && armI < 6) drawArm(armI);
+    // 正在出招／剛出掌的手臂（畫在最前面）
+    [hitArm, hitArm2].forEach((i) => {
+      if (i >= 0 && i < 6 && !isAct(i)) drawArm(i);
+    });
+    [arm2, armI].forEach((i) => {
+      if (i >= 0 && i < 6) drawArm(i);
+    });
 
     // ── 地上的雪堆（半埋著）──
     const mound = (c) => {
@@ -5781,56 +5830,6 @@
       iceCrystal(ctx, 0, -30, 40, 9, 0, '#e6f7ff', ZK.iceS);
     }
 
-    // ── 灑冰晶：頭上凝聚、尖端朝下的冰錐 ──
-    if (shard && !dead) {
-      const gy = hy0 - 150;
-      glow(ctx, 0, gy, 150, gcol, 0.3);
-      for (let i = 0; i < 7; i++) {
-        const a = t * 1.2 + (i / 7) * TAU;
-        const x = Math.cos(a) * 150;
-        const y = gy + Math.sin(a) * 26;
-        glow(ctx, x, y, 26, gcol, 0.6);
-        iceCrystal(ctx, x, y - 20, 42, 9, PI, i % 2 ? ZK.ice : '#e6f7ff', ZK.iceS);
-      }
-    }
-    // ── 雙眼冰光束 ──
-    // 光束本身由地面區域 fb_beam 畫（瞄準玩家、可能是斜的）；這裡只畫眼睛蓄力與發射時的強光
-    if (!dead && (beam > 0 || beamFire)) {
-      const ey = hy0 - 34 * ZK_HS;
-      const k = beamFire ? 1 : beam;
-      [-20, 20].forEach((x) => glow(ctx, x, hy0 + 2 * ZK_HS, 14 + k * 12, gcol, 0.5 + k * 0.4));
-      [0].forEach((x) => {
-        glow(ctx, x, ey, 26 + k * 30 + (beamFire ? 20 : 0), gcol, 0.6 + k * 0.3);
-        glow(ctx, x, ey, 12 + k * 10, '#ffffff', 0.5 + k * 0.5);
-        if (beamFire) {
-          ctx.save();
-          ctx.translate(x, ey);
-          ctx.rotate(t * 3);
-          ctx.fillStyle = rgba('#ffffff', 0.85);
-          for (let i = 0; i < 4; i++) {
-            ctx.rotate(PI / 2);
-            ctx.beginPath();
-            ctx.moveTo(-3, 0);
-            ctx.lineTo(0, -34 - Math.sin(t * 30 + i) * 6);
-            ctx.lineTo(3, 0);
-            ctx.closePath();
-            ctx.fill();
-          }
-          ctx.restore();
-        }
-      });
-      if (!beamFire) {
-        for (let i = 0; i < 12; i++) {
-          const a = (i / 12) * TAU + t * 4;
-          const r = 80 * (1 - ((t * 2 + i / 12) % 1));
-          const x = 0;
-          ctx.fillStyle = A.c('#e8f8ff');
-          ctx.beginPath();
-          ctx.arc(x + Math.cos(a) * r, ey + Math.sin(a) * r, 2.5, 0, TAU);
-          ctx.fill();
-        }
-      }
-    }
     // 精修：飄落的雪花、冰晶閃光
     if (!dead) {
       ctx.fillStyle = rgba('#ffffff', 0.85);
@@ -7149,6 +7148,288 @@
     ctx.restore();
   }
 
+  // ── 千手冰像的掌擊（js/game/fieldboss.js 的 palm()）──
+  // 空中的金冰光環：垂直於飛行方向的一個扁環（掌從這裡化出）。k＝成形進度 0..1、a＝不透明度
+  function palmGate(ctx, x, y, ang, R, k, t, a, gcol, lo) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.globalAlpha *= a;
+    if (!lo) glow(ctx, 0, 0, R, gcol, 0.2 + 0.25 * k);
+    ctx.scale(0.36, 1);
+    ctx.lineCap = 'round';
+    // 往外擴散的漣漪
+    const q = (t * 1.8) % 1;
+    ctx.strokeStyle = rgba('#e8f8ff', 0.6 * (1 - q));
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(0, 0, R * (0.55 + q * 0.75), 0, TAU);
+    ctx.stroke();
+    // 環裡的冰光（越接近出掌越亮）
+    ctx.fillStyle = rgba(gcol, 0.2 + 0.35 * k);
+    ctx.beginPath();
+    ctx.arc(0, 0, R * 0.86, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = A.c(ZK.gold);
+    ctx.lineWidth = 7;
+    ctx.stroke();
+    ctx.strokeStyle = rgba('#fff4c8', 0.9);
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, R, PI * 1.1, PI * 1.6);
+    ctx.stroke();
+    // 環上旋轉的符文刻度
+    ctx.strokeStyle = A.c(ZK.goldS);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const b = t * 2.2 + (i / 8) * TAU;
+      ctx.moveTo(Math.cos(b) * (R - 9), Math.sin(b) * (R - 9));
+      ctx.lineTo(Math.cos(b) * (R + 9), Math.sin(b) * (R + 9));
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  // 靈體掌的剪影（殘影、光背上閃現的掌；便宜：三筆粗線）：原點在手腕、手指朝 +x
+  function ghostPalm(ctx, col) {
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(1, 0);
+    ctx.lineTo(15, 0);
+    ctx.lineWidth = 16;
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const y = ZK_FY[i];
+      ctx.moveTo(16, y);
+      ctx.lineTo(16 + ZK_FL[i] * 0.95, y + (i - 1.5) * 1.2);
+    }
+    ctx.moveTo(4, -6);
+    ctx.lineTo(12, -15);
+    ctx.lineWidth = 5.6;
+    ctx.stroke();
+  }
+  // 手腕後面一小截實體前臂（兩圈金手鐲＋魔石）：原點在手腕、前臂朝 +x（往光環那邊）
+  function palmStub(ctx, rage) {
+    A.shape(ctx, (c) => {
+      c.moveTo(-1, -7.6);
+      c.lineTo(30, -10.5);
+      c.lineTo(30, 10.5);
+      c.lineTo(-1, 7);
+      c.closePath();
+    }, rage ? ZK.stoneR : ZK.stone, rage ? ZK.stoneRS : ZK.stoneS, { lw: 2.2, shadeY: 3 });
+    const gold = rage ? ZK.goldR : ZK.gold;
+    const goldS = rage ? ZK.goldRS : ZK.goldS;
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    ctx.moveTo(6, -9);
+    ctx.lineTo(6, 8.8);
+    ctx.moveTo(12, -9.6);
+    ctx.lineTo(12, 9.4);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 5.4;
+    ctx.stroke();
+    ctx.strokeStyle = A.c(goldS);
+    ctx.lineWidth = 3.4;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(6, -8);
+    ctx.lineTo(6, 2);
+    ctx.moveTo(12, -8.6);
+    ctx.lineTo(12, 2);
+    ctx.strokeStyle = A.c(gold);
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.fillStyle = A.c(rage ? ZK.gemR : ZK.gem);
+    ctx.beginPath();
+    ctx.arc(21, 0, 2.2, 0, TAU);
+    ctx.fill();
+  }
+  // 飛掌（投射物 fb_palm）：原點＝掌心（p.x, p.y）。p.ox/oy＝光環（世界座標）、p.rot＝手指朝向、p.ang＝飛行方向、p.flip、p.sz、
+  // p.t < p.warn：在光環裡成形（半透明、慢慢長大）；之後飛到 p.tx/ty；p.hitAt 打到後停一下淡出。
+  // 手腕後面是一小截實體前臂（朝光環那邊；合掌時手掌直立、前臂從側面伸過來），再往後是淡回光環的靈體前臂；飛行中有殘影與速度線。
+  function fb_palm(ctx, p, t) {
+    const S = num(p.sz, 4);
+    const warnT = Math.max(0.05, num(p.warn, 1));
+    const pt = num(p.t, 0);
+    const hitAt = num(p.hitAt, warnT + 0.2);
+    const life = num(p.life, hitAt + 0.4);
+    const lo = !!G.lowFx;
+    const rot = num(p.rot, 0);
+    const ang = num(p.ang, rot);
+    const flip = p.flip < 0 ? -1 : 1;
+    const rage = !!p.rage;
+    const gcol = rage ? ZK.glowR : ZK.glow;
+    const gx = num(p.ox, p.x) - p.x;
+    const gy = num(p.oy, p.y) - p.y;
+    const form = clamp(pt / warnT, 0, 1);
+    const R = 26 + S * 11;
+    const cr = Math.cos(rot);
+    const sr = Math.sin(rot);
+    // 光環：預警期間亮著，出掌後 0.45 秒內消失
+    const gateA = pt < warnT ? clamp(pt * 6, 0, 1) : clamp(1 - (pt - warnT) / 0.45, 0, 1);
+    if (gateA > 0) palmGate(ctx, gx, gy, ang, R, form, t, gateA, gcol, lo);
+    const palm = (s, heat, glowOn) => {
+      // 手腕、前臂方向（朝光環；太近就沿手臂直直往後）
+      const wx = -cr * 18 * s;
+      const wy = -sr * 18 * s;
+      const L0 = Math.hypot(gx - wx, gy - wy);
+      const ua = L0 > 40 * s ? Math.atan2(gy - wy, gx - wx) : ang + PI;
+      ctx.save();
+      ctx.translate(wx, wy);
+      ctx.rotate(ua);
+      ctx.scale(s, s);
+      palmStub(ctx, rage);
+      ctx.restore();
+      ctx.save();
+      ctx.rotate(rot);
+      ctx.scale(s, s * flip);
+      ctx.translate(-18, 0);
+      zkPalm(ctx, ZK_MUDRA.strike, rage ? ZK.stoneRL : ZK.stoneL, rage ? ZK.stoneRLS : ZK.stoneLS, heat, gcol, !glowOn);
+      ctx.restore();
+      return { wx, wy, ua };
+    };
+    if (pt < warnT) {
+      // 成形：從環裡探出來的半透明掌（越來越實）
+      ctx.save();
+      ctx.translate(gx - cr * R * 0.25 * (1 - form), gy - sr * R * 0.25 * (1 - form));
+      ctx.globalAlpha *= 0.15 + form * form * 0.7;
+      palm(S * (0.6 + 0.4 * form), 0.3 + form * 0.5, false);
+      ctx.restore();
+      return;
+    }
+    const fade = pt > hitAt ? clamp((life - pt) / Math.max(0.1, life - hitAt), 0, 1) : 1;
+    if (fade <= 0) return;
+    const flying = pt < hitAt;
+    ctx.save();
+    ctx.globalAlpha *= fade;
+    // 靈體前臂：前臂末端 → 光環，越往後越淡、越細
+    const wx0 = -cr * 18 * S;
+    const wy0 = -sr * 18 * S;
+    const L0 = Math.hypot(gx - wx0, gy - wy0);
+    const ua0 = L0 > 40 * S ? Math.atan2(gy - wy0, gx - wx0) : ang + PI;
+    const ex = wx0 + Math.cos(ua0) * 26 * S;
+    const ey = wy0 + Math.sin(ua0) * 26 * S;
+    const dx = gx - ex;
+    const dy = gy - ey;
+    const L = Math.hypot(dx, dy);
+    if (L > 8 && (gx - ex) * Math.cos(ua0) + (gy - ey) * Math.sin(ua0) > 0) {
+      const nx = -dy / L;
+      const ny = dx / L;
+      const w0 = 9.5 * S;
+      const w1 = 4 * S;
+      const g = ctx.createLinearGradient(ex, ey, gx, gy);
+      g.addColorStop(0, rgba(gcol, 0.6));
+      g.addColorStop(0.55, rgba(gcol, 0.2));
+      g.addColorStop(1, rgba(gcol, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(ex + nx * w0, ey + ny * w0);
+      ctx.lineTo(gx + nx * w1, gy + ny * w1);
+      ctx.lineTo(gx - nx * w1, gy - ny * w1);
+      ctx.lineTo(ex - nx * w0, ey - ny * w0);
+      ctx.closePath();
+      ctx.fill();
+      // 中心的白芯＋一圈圈往後淡的金臂環
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = S * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + dx * 0.45, ey + dy * 0.45);
+      ctx.stroke();
+      if (!lo) {
+        ctx.strokeStyle = rgba(ZK.gold, 0.55);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 1; i <= 3; i++) {
+          const q = Math.min(0.5, (i * 70) / L);
+          const cx = ex + dx * q;
+          const cy = ey + dy * q;
+          const w = w0 + (w1 - w0) * q;
+          ctx.moveTo(cx + nx * w, cy + ny * w);
+          ctx.lineTo(cx - nx * w, cy - ny * w);
+        }
+        ctx.stroke();
+      }
+    }
+    // 殘影＋速度線（飛行中）
+    const ca = Math.cos(ang);
+    const sa = Math.sin(ang);
+    if (flying) {
+      const n = lo ? 1 : 3;
+      const col = rgba(gcol, 1);
+      for (let i = n; i >= 1; i--) {
+        ctx.save();
+        ctx.translate(-ca * i * 12 * S, -sa * i * 12 * S);
+        ctx.rotate(rot);
+        ctx.globalAlpha *= 0.4 - i * 0.1;
+        ctx.scale(S, S * flip);
+        ctx.translate(-18, 0);
+        ghostPalm(ctx, col);
+        ctx.restore();
+      }
+      ctx.strokeStyle = rgba('#e8f8ff', 0.75);
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = -2; i <= 2; i++) {
+        const o = i * 5 * S;
+        const b = 14 * S + Math.abs(i) * 4 * S;
+        ctx.moveTo(-sa * o - ca * b, ca * o - sa * b);
+        ctx.lineTo(-sa * o - ca * (b + 16 * S), ca * o - sa * (b + 16 * S));
+      }
+      ctx.stroke();
+    }
+    // 掌（＋一圈小光暈；省效能模式不畫）
+    if (!lo) glow(ctx, cr * 4 * S, sr * 4 * S, 17 * S, gcol, flying ? 0.35 : 0.22);
+    palm(S, flying ? 1 : 0.7, false);
+    // 打到的瞬間：指尖一團白光
+    const hk = pt - hitAt;
+    if (hk >= 0 && hk < 0.14) glow(ctx, cr * 20 * S, sr * 20 * S, 12 * S, '#ffffff', 0.8 * (1 - hk / 0.14));
+    ctx.restore();
+  }
+  // 掌打到地面（fb_palmhit）：擴散的冰環、地上冒出的冰刺、發光裂痕
+  function fb_palmhit(ctx, z, t) {
+    const life = z.life || 0.65;
+    const zt = z.t || 0;
+    const r = z.r || 100;
+    const f = clamp((life - zt) * 5, 0, 1);
+    if (f <= 0) return;
+    const q = clamp(zt / 0.45, 0, 1);
+    const gcol = z.rage ? ZK.glowR : ZK.glow;
+    ctx.save();
+    ctx.translate(z.x, z.y);
+    ctx.globalAlpha *= f;
+    ctx.save();
+    ctx.scale(1, 0.28);
+    ctx.strokeStyle = rgba('#e8f8ff', 1 - q);
+    ctx.lineWidth = 10 * (1 - q) + 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * (0.5 + q * 0.9), 0, TAU);
+    ctx.stroke();
+    glow(ctx, 0, 0, r * 1.3, gcol, 0.6 * (1 - q));
+    ctx.restore();
+    const n = G.lowFx ? 4 : 7;
+    for (let i = 0; i < n; i++) {
+      const u = n > 1 ? i / (n - 1) - 0.5 : 0;
+      const x = u * r * 1.8 + (hash(i + 170) - 0.5) * 12;
+      const h = (22 + hash(i + 171) * 30) * Math.min(1, q * 4) * (r / 100) * (Math.abs(u) < 0.1 ? 0.5 : 1);
+      iceCrystal(ctx, x, 2, h, 6 + hash(i) * 4, u * 1.0, ZK.ice, ZK.iceS);
+    }
+    hotLines(ctx, (c) => {
+      crack(c, -10, -1, PI, r * 0.9, 3, 180);
+      crack(c, 10, -1, 0, r * 0.9, 3, 181);
+    }, gcol, 0.8 * (1 - q), 2);
+    ctx.restore();
+  }
+
   // ═════════════════════════ 投射物（原點已經在 p.x, p.y） ═════════════════════════
   // 甩出去的生鏽錨（拋物線）：一邊旋轉、後面拖著一截鏈子
   function fb_anchor(ctx, p, t) {
@@ -7279,6 +7560,6 @@
     fb_zakum: withSpawn('fb_zakum', 320, crisp(320, fb_zakum)),
     fb_voiddragon: withSpawn('fb_voiddragon', 250, crisp(250, fb_voiddragon)),
   });
-  Object.assign(A.PROJ_DRAW, { fb_anchor, fb_meteor, fb_voidorb });
-  Object.assign(A.ZONE_DRAW, { fb_warn, fb_warnline, fb_whipcrack, fb_beam, fb_sporebreath, fb_inkcloud, fb_tentacle, fb_armslam });
+  Object.assign(A.PROJ_DRAW, { fb_anchor, fb_meteor, fb_voidorb, fb_palm });
+  Object.assign(A.ZONE_DRAW, { fb_warn, fb_warnline, fb_whipcrack, fb_beam, fb_sporebreath, fb_inkcloud, fb_tentacle, fb_armslam, fb_palmhit });
 })();

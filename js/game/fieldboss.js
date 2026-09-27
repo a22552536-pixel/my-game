@@ -2,11 +2,12 @@
 // 資料在 js/data/fieldboss.js。魔王是一般的 G.world.monsters 成員（不走 G.world.boss，不會觸發章節劇情）：
 //   - 不在重生清單（沒有 m.spawn）、離開地圖就消失（world.load 清空怪物）；
 //   - 冷卻（遊戲時間 6 分鐘）記在 world.flags.fieldBoss[id] = 可以再出現的 playTime，跟著存檔走；
-//   - 能力掛在 G.mobAbil（fbShroom / fbKraken / fbBalrog / fbZakum / fbVoid），每招都有 0.8～1.5 秒預警。
-// 表現旗標（美術 js/art/fieldboss.js 讀）：m.fx.rage（第二階段）、以及各魔王在規格表列的 breath / jump / slam / ink / whip / fly / arm / beam，
-// 另外 m.fx.beamFire（冰光束、虛空吐息正在發射）、m.fx.summon（0..1 菇魔召喚蓄力）、m.fx.throw（0..1 海魔甩錨蓄力）、m.fx.spawn（0..1 剛出現）。
+//   - 能力掛在 G.mobAbil（fbShroom / fbKraken / fbBalrog / fbZakum / fbVoid），每招都有預警（0.8～1.5 秒；千手冰像暴走連擊的單掌 0.65 秒）。
+// 表現旗標（美術 js/art/fieldboss.js 讀）：m.fx.rage（第二階段）、以及各魔王在規格表列的 breath / jump / slam / ink / whip / fly / arm（千手冰像另有 arm2 / hitArm / hitArm2 / hitT / palm / gassho）/ beam，
+// 另外 m.fx.beamFire（虛空吐息正在發射）、m.fx.summon（0..1 菇魔召喚蓄力）、m.fx.throw（0..1 海魔甩錨蓄力）、m.fx.spawn（0..1 剛出現）。
 // 地面區域 kind：fb_warn（預警圓）、fb_warnline（預警線段 x1,y1,x2,y2,w）、fb_beam（光束 x1,y1,x2,y2,w,color）、fb_sporebreath、fb_tentacle、
-// fb_inkcloud、fb_armslam；投射物 kind：fb_anchor、fb_meteor（p.style = 'fire' | 'star'）、fb_voidorb，另外借用既有的 icicle、firetrail、quake。
+// fb_inkcloud、fb_armslam（舊的砸地，已不用）、fb_palmhit（千手冰像的掌打到地面）；投射物 kind：fb_anchor、fb_meteor（p.style = 'fire' | 'star'）、fb_voidorb、
+// fb_palm（千手冰像的飛掌，owner 'fx'，判定自己算），另外借用既有的 icicle、firetrail、quake。
 (function () {
   'use strict';
   const U = G.util;
@@ -518,94 +519,401 @@
     },
   ];
 
-  // ═════ 千手冰像（4-4）：手臂砸地、雙眼冰光束、灑下冰晶 ═════
+  // ═════ 千手冰像（4-4）：百手掌擊（每一招都是掌：從冰像的光背化出巨大的石掌，從不同角度打下來）═════
+  // 掌從空中的金冰光環化出（預警期間在環裡成形），然後沿直線打出去。每一掌是一個 owner:'fx' 的 fb_palm 投射物
+  // （js/art/fieldboss.js 畫；世界只推 p.t，位置與判定都在 onTick 裡自己算，一掌只打一次）：
+  //   p.style 'drop'（從天而降）| 'sweep'（貼地橫掃，跳得過）| 'thrust'（從斜上方刺下）| 'clap'（左右合掌）
+  //   p.ox/oy＝光環（掌從這裡化出）、p.x/y＝掌心、p.rot＝手指朝向、p.flip＝拇指那側翻面、p.sz＝掌的大小、
+  //   p.warn＝化出（預警）秒數、p.hitAt＝打到的時間、p.prog 0..1 飛行進度、p.gy＝地面、p.tx0／p.hw＝地上的落點與判定半寬（機器人測試用）
+  // 冰像的動作：fx.arm（正在舉的手）、fx.arm2（合掌時另一邊）、fx.slam 0..0.7 → 1、fx.hitArm／hitArm2／hitT（剛打出去）、
+  // fx.gassho 0..1（千手連擊時正面合掌發光）、fx.palm（出招中：睜眼）。手臂索引 0～2＝世界左側（上／中／下）、3～5＝世界右側。
+  const PALM_TIP = 22; // zkPalm 的掌心 → 指尖（× sz）
+  const PALM_WRIST = 18; // 掌心 → 手腕
+  const PALM_HW = 9.5; // 掌的半寬
+  const zkArm = (side, lvl) => (side < 0 ? 0 : 3) + lvl;
+  // 掌打得到的範圍＝會出招的範圍（engaged：離冰像 1000 px 內），站遠也躲不掉，只能看預警閃
+  const zkReach = (m, x) => mapClamp(U.clamp(x, m.x - 980, m.x + 980));
+  // 畫面（且在地圖內）的左右邊：橫掃的掌從這裡出來
+  const viewLR = () => {
+    const W = G.world.map.w;
+    const x0 = G.cam ? G.cam.x : G.player.x - 640;
+    return [Math.max(40, x0 + 40), Math.min(W - 40, x0 + (G.W || 1280) - 40)];
+  };
+  const viewTop = () => (G.cam ? G.cam.y : G.player.y - 520) + 140; // 光環別被上方的魔王血條擋住
+  // 測試用：每一掌有沒有碰到玩家（不管無敵時間），最多留 200 筆
+  const palmLog = [];
+  const logPalm = (pp) => {
+    palmLog.push({ style: pp.style, hit: !!pp.hit, fin: !!pp.fin, rage: pp.rage, x: Math.round(pp.tx0), hw: pp.hw, px: Math.round(G.player.x), py: Math.round(G.player.y - pp.gy), at: +G.player.t.toFixed(2) });
+    if (palmLog.length > 200) palmLog.shift();
+  };
+  function palmHit(m, pp, box, k, fromX) {
+    const P = G.player;
+    if (pp.hit || !P.alive() || !U.overlap(box, P.hitbox())) return false;
+    pp.hit = true;
+    hurtP(m, k, fromX == null ? pp.ox : fromX);
+    return true;
+  }
+  // 掌打到地面：冰屑、衝擊圈、短震動、地上的冰刺與裂痕（fb_palmhit）
+  let impactT = -9;
+  function palmImpact(x, y, big, rage) {
+    const lo = G.lowFx ? 0.5 : 1;
+    G.fx.burst(x, y - 8, ['#bfe9ff', '#7cc4ee', '#ffffff', '#d6b460'], Math.round((big ? 22 : 14) * lo), big ? 380 : 300, { angle: -Math.PI / 2, spread: 1.4 });
+    G.fx.ring(x, y - 10, 'rgba(210,244,255,0.85)', big ? 150 : 100, 0.32, 5);
+    // 震動與音效節流：連擊時一秒落好幾掌，不要一直狂震
+    const now = G.time || 0;
+    if (big || now - impactT > 0.2) {
+      impactT = now;
+      G.fx.shake(big ? 7 : 3, big ? 0.2 : 0.1);
+      G.audio.play('slam');
+    }
+    zone({ kind: 'fb_palmhit', x, y, r: big ? 130 : 90, life: 0.65, rage: !!rage });
+  }
+  // 同時在場上的掌最多幾隻（省效能模式更少）：超過就不出這一掌（連預警都不出，所以不會有看不到的判定）
+  const palmCap = () => (G.lowFx ? 12 : 18);
+  const palmCount = () => {
+    let n = 0;
+    for (const p of G.world.projectiles) if (p.kind === 'fb_palm') n++;
+    return n;
+  };
+  function palm(m, o) {
+    const p = {
+      kind: 'fb_palm', owner: 'fx', fb: true, t: 0, vx: 0, vy: 0, r: 0,
+      style: o.style, ox: o.ox, oy: o.oy, x: o.ox, y: o.oy, tx: o.tx, ty: o.ty, gy: o.gy,
+      ang: Math.atan2(o.ty - o.oy, o.tx - o.ox), rot: o.rot, flip: o.flip || 1, sz: o.sz || 4,
+      warn: o.warn, fly: o.fly, hitAt: o.warn + o.fly, life: o.warn + o.fly + (o.hold || 0.42),
+      rage: !!m.fx.rage, fin: !!o.fin, hw: o.hw || 0, tx0: o.tx0 == null ? o.tx : o.tx0, prog: 0, hit: false, launched: false, landed: false, seed: Math.random() * 6,
+    };
+    if (p.rot == null) p.rot = p.ang;
+    p.onTick = (pp) => {
+      if (pp.t < pp.warn) return;
+      const q = Math.min(1, (pp.t - pp.warn) / pp.fly);
+      const e = pp.style === 'sweep' ? q : q * q;
+      const x0 = pp.x;
+      const y0 = pp.y;
+      pp.x = pp.ox + (pp.tx - pp.ox) * e;
+      pp.y = pp.oy + (pp.ty - pp.oy) * e;
+      pp.prog = e;
+      if (!pp.launched) {
+        pp.launched = true;
+        G.audio.play('swing');
+      }
+      if (pp.landed) return;
+      if (o.during) o.during(pp, x0, y0);
+      if (q >= 1) {
+        pp.landed = true;
+        if (o.onLand) o.onLand(pp);
+        if (!o.noLog) logPalm(pp);
+      }
+    };
+    G.world.projectiles.push(p);
+    return p;
+  }
+  // 從天而降（正上方）：地上預警圓 r
+  function dropPalm(m, P2, o) {
+    if (palmCount() >= palmCap()) return null;
+    const gy = groundUnder(P2, m);
+    const tx = zkReach(m, o.x != null ? o.x : P2.x);
+    const r = o.r || 110;
+    const sz = 4.2 * (r / 110);
+    warn(tx, gy, r, o.warn + 0.05);
+    const oy = Math.min(gy - 300, Math.max(viewTop(), gy - 470));
+    const side = tx >= m.x ? 1 : -1;
+    palm(m, {
+      style: 'drop', ox: tx, oy, tx, ty: gy - PALM_TIP * sz, gy, rot: Math.PI / 2, flip: side, sz, hw: r, tx0: tx,
+      warn: o.warn, fly: 0.16, hold: 0.45, fin: o.fin,
+      onLand(pp) {
+        palmImpact(tx, gy, r > 120, pp.rage);
+        palmHit(m, pp, { x: tx - r, y: gy - 150, w: r * 2, h: 152 }, o.k, tx);
+      },
+    });
+    return { launch: o.warn, arm: zkArm(side, 0), after: 0.5 };
+  }
+  // 貼地橫掃：從畫面邊緣（dir = 1：從左邊往右）沿地面掃過去，判定只有離地 88 px（跳得過去、站在上層平台也打不到）
+  const SWEEP_H = 88;
+  // 光環至少在玩家後方 220 px（畫面邊緣離玩家太近、或鏡頭還沒跟上時，就從畫面外出來）
+  function sweepInfo(o, px) {
+    let [L, R] = viewLR();
+    L = Math.min(L, px - 220);
+    R = Math.max(R, px + 220);
+    const x0 = o.dir > 0 ? L : R;
+    const x1 = o.dir > 0 ? R + 260 : L - 260;
+    const speed = o.speed || 1400;
+    return { L, R, x0, x1, speed, fly: Math.abs(x1 - x0) / speed };
+  }
+  function sweepPalm(m, P2, o) {
+    if (palmCount() >= palmCap()) return null;
+    const gy = m.y;
+    const dir = o.dir;
+    const S = o.S || sweepInfo(o, P2.x); // 排程時算好的（連續橫掃的時間差要用同一組邊界）
+    const sz = 4.4;
+    const y = gy - PALM_HW * sz - 3;
+    warnLine(S.x0, y, dir > 0 ? S.R : S.L, y, SWEEP_H, o.warn + 0.05);
+    palm(m, {
+      style: 'sweep', ox: S.x0, oy: y, tx: S.x1, ty: y, gy, rot: dir > 0 ? 0 : Math.PI, flip: dir > 0 ? 1 : -1, sz,
+      warn: o.warn, fly: S.fly, hold: 0.2,
+      during(pp, px) {
+        const lead = PALM_TIP * sz;
+        const tail = PALM_WRIST * sz;
+        // 只算光環前方（預警帶上）的部分：剛好站在光環後面一點點的人不會被掌根掃到
+        const a = Math.max(Math.min(px, pp.x) - (dir > 0 ? tail : lead), dir > 0 ? S.x0 - 10 : -1e9);
+        const b = Math.min(Math.max(px, pp.x) + (dir > 0 ? lead : tail), dir < 0 ? S.x0 + 10 : 1e9);
+        if (b <= a) return;
+        if (palmHit(m, pp, { x: a, y: gy - SWEEP_H, w: b - a, h: SWEEP_H }, o.k, pp.x - dir * 20)) {
+          G.fx.burst(G.player.x, gy - 30, ['#bfe9ff', '#ffffff'], G.lowFx ? 6 : 12, 260, { angle: dir > 0 ? 0 : Math.PI, spread: 0.8 });
+        }
+        // 掌底刮起的雪
+        if (!G.lowFx && Math.random() < 0.5) G.fx.burst(pp.x - dir * tail, gy - 6, ['#f2f8ff', '#bfe9ff'], 2, 160, { angle: -Math.PI / 2 - dir * 0.6, spread: 0.6 });
+      },
+    });
+    return { launch: o.warn, arm: zkArm(-dir, 2), after: S.fly + 0.2 };
+  }
+  // 斜刺：從左上（from = −1）或右上（from = 1）朝目標直直刺下；預警線從光環連到落點
+  function thrustPalm(m, P2, o) {
+    if (palmCount() >= palmCap()) return null;
+    const gy = groundUnder(P2, m);
+    const tx = zkReach(m, o.x != null ? o.x : P2.x);
+    // 刺向玩家時，玩家若貼近地圖邊緣，光環一律放在牆那側：往遠離光環（空曠）的那邊躲就好
+    let s = o.from;
+    if (o.x == null && tx < 320) s = -1;
+    else if (o.x == null && tx > G.world.map.w - 320) s = 1;
+    const th = o.th || 0.7; // 跟垂直線的夾角
+    const top = viewTop();
+    const D = U.clamp((gy - top) / Math.cos(th), 360, 600);
+    const ox = tx + s * Math.sin(th) * D;
+    const oy = gy - Math.cos(th) * D;
+    const ty0 = gy - 4;
+    const a = Math.atan2(ty0 - oy, tx - ox);
+    const sz = 3.8;
+    const ex = tx - Math.cos(a) * PALM_TIP * sz;
+    const ey = ty0 - Math.sin(a) * PALM_TIP * sz;
+    const R = 11 * sz + 14;
+    warnLine(ox, oy, tx, ty0, 96, o.warn + 0.05);
+    const hw = o.r || 65;
+    warn(tx, gy, hw + 4, o.warn + 0.05);
+    palm(m, {
+      style: 'thrust', ox, oy, tx: ex, ty: ey, gy, rot: a, flip: s < 0 ? 1 : -1, sz, hw, tx0: tx,
+      warn: o.warn, fly: 0.2, hold: 0.42,
+      during(pp, px, py) {
+        const P = G.player;
+        if (pp.hit || !P.alive()) return;
+        // 掌心走過的線段（延伸到指尖）對玩家身上三個點
+        const fx2 = pp.x + Math.cos(a) * PALM_TIP * sz * 0.6;
+        const fy2 = pp.y + Math.sin(a) * PALM_TIP * sz * 0.6;
+        const hb = P.hitbox();
+        const cx = hb.x + hb.w / 2;
+        for (const yy of [hb.y + 8, hb.y + hb.h / 2, hb.y + hb.h - 6]) {
+          if (segDist(cx, yy, px, py, fx2, fy2) < R) {
+            pp.hit = true;
+            hurtP(m, o.k, ox);
+            break;
+          }
+        }
+      },
+      onLand(pp) {
+        palmImpact(tx, gy, false, pp.rage);
+        palmHit(m, pp, { x: tx - hw, y: gy - 72, w: hw * 2, h: 74 }, o.k, ox);
+      },
+    });
+    return { launch: o.warn, arm: zkArm(s, o.lvl != null ? o.lvl : 0), after: 0.5 };
+  }
+  // 合掌：左右兩隻直立的巨掌從兩側滑進來，在目標 x 拍在一起（判定只有正中 ±110）
+  function clapPalms(m, P2, o) {
+    if (palmCount() >= palmCap() - 1) return null;
+    const gy = groundUnder(P2, m);
+    const cx = zkReach(m, P2.x);
+    const sz = o.sz || 4.3;
+    const hw = PALM_HW * sz;
+    const yc = gy - 28 - PALM_WRIST * sz; // 手腕離地 28 px（前臂從側面伸過來，不會插進地裡）
+    const D = 400;
+    const HW = 105; // 合掌的判定：正中 ±105
+    warn(cx, gy, HW, o.warn + 0.05);
+    [-1, 1].forEach((s) => {
+      warnLine(cx + s * D, yc, cx + s * (HW + 2), yc, 34, o.warn + 0.05);
+      palm(m, {
+        style: 'clap', ox: cx + s * D, oy: yc, tx: cx + s * (hw + 1), ty: yc, gy, rot: -Math.PI / 2, flip: -s, sz, hw: HW, tx0: cx,
+        warn: o.warn, fly: 0.2, hold: 0.45, noLog: s > 0,
+        onLand: s > 0 ? null : (pp) => {
+          palmImpact(cx, gy, true, pp.rage);
+          G.fx.ring(cx, yc - 20, 'rgba(255,236,170,0.8)', 120, 0.3, 6);
+          palmHit(m, pp, { x: cx - HW, y: gy - 175, w: HW * 2, h: 177 }, o.k, cx);
+        },
+      });
+    });
+    return { launch: o.warn, arm: zkArm(-1, 1), arm2: zkArm(1, 1), after: 0.55 };
+  }
+  // 依時間表出掌，並驅動冰像的手臂：list = [{ at, fire(P2) → { launch（相對 at）, arm, arm2, after } }]
+  function palmRun(m, list, o) {
+    let k = 0;
+    const live = [];
+    let end = 0;
+    m.attackPhase = 'wind';
+    m.fx.palm = true;
+    return (t, dt, P2) => {
+      while (k < list.length && t >= list[k].at) {
+        const s = list[k++];
+        const r = s.fire(P2);
+        if (!r) continue;
+        if (!(o && o.quiet) || k === 1) G.audio.play('bossWarn');
+        live.push({ t0: t, launch: t + r.launch, arm: r.arm, arm2: r.arm2 == null ? -1 : r.arm2, done: false });
+        end = Math.max(end, t + r.launch + (r.after || 0.5));
+      }
+      for (const h of live) {
+        if (h.done || t < h.launch) continue;
+        h.done = true;
+        m.fx.hitArm = h.arm;
+        m.fx.hitArm2 = h.arm2;
+        m.fx.hitT = 0.45;
+        m.fx.slam = 1;
+      }
+      let next = null;
+      for (const h of live) if (!h.done && (!next || h.launch < next.launch)) next = h;
+      if (next) {
+        m.attackPhase = 'wind';
+        m.fx.arm = next.arm;
+        m.fx.arm2 = next.arm2;
+        m.fx.slam = Math.min(0.7, ((t - next.t0) / Math.max(0.1, next.launch - next.t0)) * 0.7);
+      } else {
+        m.attackPhase = 'strike';
+        m.fx.arm = -1;
+        m.fx.arm2 = -1;
+        m.fx.slam = Math.max(0, m.fx.slam - dt * 3);
+      }
+      if (o && o.tick) o.tick(t, dt);
+      if (k >= list.length && t > end) {
+        Object.assign(m.fx, { arm: -1, arm2: -1, slam: 0, palm: false, gassho: 0 });
+        return true;
+      }
+      return false;
+    };
+  }
+  const nearFloor = (m, P) => Math.abs(P.y - m.y) < 150;
+  // 橫掃的掌經過 x 的時間（出掌後幾秒）
+  const sweepPass = (S, x) => Math.abs(x - S.x0) / S.speed;
+  // 連續橫掃：dirs 依序出掌，每一掌經過玩家（排程時的位置）的時間至少比上一掌晚 gap 秒（跳起來落地再跳）
+  function sweepList(m, P, dirs, warnT, k, gap) {
+    const list = [];
+    let at = 0;
+    let lastPass = -9;
+    for (const dir of dirs) {
+      const S = sweepInfo({ dir }, P.x);
+      at = Math.max(at, lastPass + gap - warnT - sweepPass(S, P.x));
+      lastPass = at + warnT + sweepPass(S, P.x);
+      list.push({ at, fire: (P2) => sweepPalm(m, P2, { dir, S, warn: warnT, k }) });
+      at += 0.3;
+    }
+    return list;
+  }
+  // 千手連擊的一拍：一掌打在玩家當下的位置（正上方或陡斜，判定 ±r），另外 0～2 掌是 ±280 外的圍欄（斜刺、光環在更外側，
+  // 軌跡不會經過玩家）。中間那掌躲開 r + 17 px（約 0.36 秒）就好，躲開後的空位（77～203 px）一定不會被同一拍的圍欄蓋到。
+  function barrageBeat(m, P2, n, warnT, k, r) {
+    let first = null;
+    if (Math.random() < 0.5) first = dropPalm(m, P2, { warn: warnT, k, r });
+    else first = thrustPalm(m, P2, { from: U.pick([-1, 1]), th: U.rand(0.18, 0.35), warn: warnT, k, r, lvl: 0 });
+    const sides = n >= 3 ? [-1, 1] : [U.pick([-1, 1])];
+    for (const f of sides) {
+      const x = zkReach(m, P2.x + f * 280);
+      if (Math.abs(x - P2.x) < 250) continue; // 被地圖邊緣夾住：這一側不出
+      thrustPalm(m, P2, { x, from: f, th: U.rand(0.45, 0.75), warn: warnT, k, r, lvl: 1 });
+    }
+    return first;
+  }
   const zakumMoves = [
     {
-      id: 'arm', w: 3,
+      // 從天而降：連續 2 掌（暴走 3 掌），每掌瞄準玩家當下的位置
+      id: 'drop', w: 3,
       run(m, P) {
-        const n = m.fx.rage ? 2 : 1;
-        const hits = [];
-        let k = 0;
-        return (t, dt, P2) => {
-          // 每 0.7 秒舉起一隻手，預警 1.1 秒後砸下
-          while (k < n && t >= k * 0.7) {
-            const gy = groundUnder(P2, m);
-            const x = mapClamp(U.clamp(P2.x, m.x - 720, m.x + 720));
-            const side = x >= m.x ? 1 : -1;
-            const arm = (side > 0 ? 3 : 0) + U.randi(0, 2);
-            warn(x, gy, 110, 1.1);
-            G.audio.play('bossWarn');
-            hits.push({ at: k * 0.7 + 1.1, x, gy, arm, done: false });
-            k++;
-          }
-          m.attackPhase = 'wind';
-          let active = null;
-          for (const h of hits) {
-            if (!h.done && t < h.at) {
-              active = h;
-              break;
-            }
-          }
-          for (const h of hits) {
-            if (h.done || t < h.at) continue;
-            h.done = true;
-            zone({ kind: 'fb_armslam', x: h.x, y: h.gy, r: 110, arm: h.arm, dir: h.x >= m.x ? 1 : -1, life: 0.7 });
-            G.fx.shake(8, 0.25);
-            G.audio.play('slam');
-            G.fx.burst(h.x, h.gy - 10, ['#bfe9ff', '#7cc4ee', '#ffffff'], 22, 340, { angle: -Math.PI / 2, spread: 1.4 });
-            hitBox(m, { x: h.x - 110, y: h.gy - 150, w: 220, h: 152 }, 1.4, h.x);
-            m.fx.slam = 1;
-            // 美術用：剛砸下的那隻手臂停在砸下的姿勢、0.45 秒內收回（暴走時下一隻手同時在舉）
-            m.fx.hitArm = h.arm;
-            m.fx.hitT = 0.45;
-          }
-          if (active) {
-            m.fx.arm = active.arm;
-            m.fx.slam = Math.min(0.7, (1.1 - (active.at - t)) / 1.1 * 0.7);
-          } else if (m.fx.slam > 0) m.fx.slam = Math.max(0, m.fx.slam - dt * 3);
-          const last = hits.length ? hits[hits.length - 1].at : 0;
-          if (k >= n && t > last + 0.5) {
-            m.fx.arm = -1;
-            m.fx.slam = 0;
-            return true;
-          }
-          return false;
-        };
+        const rage = m.fx.rage;
+        const n = rage ? 3 : 2;
+        const gap = rage ? 0.25 : 0.3;
+        const W = rage ? 0.6 : 0.7;
+        const r = rage ? 95 : 100;
+        const list = [];
+        for (let i = 0; i < n; i++) list.push({ at: i * gap, fire: (P2) => dropPalm(m, P2, { warn: W, k: 0.9, r }) });
+        return palmRun(m, list);
       },
     },
     {
-      id: 'beam', w: 2.5,
-      ok: (m, P) => Math.abs(P.x - m.x) < 900,
+      // 貼地橫掃：左右各一掌（暴走 3 掌來回），經過玩家的時間至少差 0.95 秒（暴走 0.9 秒）
+      id: 'sweep', w: 2,
+      ok: nearFloor,
       run(m, P) {
-        return beamMove(m, P, {
-          // 額頭的藍魔石：js/art/fieldboss.js fb_zakum 的 (0, ZK_HY − 34·ZK_HS) = (0, −272) × (h / 320) → 離腳底 0.85·h
-          eye: () => ({ x: m.x, y: topY(m) + m.h * m.scale * 0.15 }),
-          len: 1000, w: 56, k: 1.45, color: '#9ae4ff', flag: 'beam', times: m.fx.rage ? 2 : 1,
+        const rage = m.fx.rage;
+        const d = U.pick([-1, 1]);
+        return palmRun(m, sweepList(m, P, rage ? [d, -d, d] : [d, -d], rage ? 0.7 : 0.8, 0.85, rage ? 0.9 : 0.95));
+      },
+    },
+    {
+      // 斜刺：左上／右上輪流，3～4 掌每 0.2 秒（暴走 4～5 掌每 0.15 秒），各自瞄準玩家當下的位置
+      id: 'thrust', w: 3,
+      run(m, P) {
+        const rage = m.fx.rage;
+        const n = rage ? U.randi(4, 5) : U.randi(3, 4);
+        const gap = rage ? 0.15 : 0.2;
+        const W = rage ? 0.5 : 0.55;
+        let s = U.pick([-1, 1]);
+        const list = [];
+        for (let i = 0; i < n; i++) {
+          const from = s;
+          list.push({ at: i * gap, fire: (P2) => thrustPalm(m, P2, { from, th: U.rand(0.45, 0.65), warn: W, k: 0.7, r: 65, lvl: i % 2 }) });
+          s = -s;
+        }
+        return palmRun(m, list);
+      },
+    },
+    {
+      // 合掌：2 次、間隔 0.45 秒（暴走 3 次），每次拍在玩家當下的位置
+      id: 'clap', w: 2,
+      run(m, P) {
+        const rage = m.fx.rage;
+        const n = rage ? 3 : 2;
+        const W = rage ? 0.75 : 0.8;
+        const list = [];
+        for (let i = 0; i < n; i++) list.push({ at: i * 0.45, fire: (P2) => clapPalms(m, P2, { warn: W, k: 0.9, sz: rage ? 4.6 : 4.3 }) });
+        return palmRun(m, list);
+      },
+    },
+    {
+      // 暴走限定：千手連擊。一共 14～20 掌：每 0.42 秒一拍（每拍 2～3 掌、各自預警 0.45 秒，見 barrageBeat），
+      // 中間可能插一次貼地橫掃（預警 0.7 秒；掃完、落地後 0.35 秒才接下一拍），最後停 0.3 秒、正中一記大掌（r 150、預警 0.9 秒）
+      id: 'barrage', w: 3,
+      ok: (m) => !!m.fx.rage,
+      run(m, P) {
+        const total = U.randi(14, 20);
+        const BEAT = 0.42;
+        const WARN = 0.45;
+        const list = [];
+        let at = 0.35;
+        let left = total - 1; // 最後一掌是正中的大掌
+        const sweepBeat = nearFloor(m, P) ? U.randi(2, 4) : -1;
+        say(m, '……千手。', '#bfe9ff');
+        for (let b = 0; left > 0; b++) {
+          if (b === sweepBeat) {
+            const dir = U.pick([-1, 1]);
+            const S = sweepInfo({ dir, speed: 1500 }, P.x);
+            // 光環位置在出掌當下才算（玩家這幾秒會移動）；時間表用排程時估的飛行時間
+            list.push({ at, fire: (P2) => sweepPalm(m, P2, { dir, speed: 1500, warn: 0.7, k: 0.6 }) });
+            at += 0.7 + S.fly + 0.35;
+            left--;
+            continue;
+          }
+          const n = Math.min(left, U.randi(2, 3));
+          list.push({ at, fire: (P2) => barrageBeat(m, P2, n, WARN, 0.6, 60) });
+          left -= n;
+          at += BEAT;
+        }
+        at += 0.3;
+        list.push({ at, fire: (P2) => dropPalm(m, P2, { warn: 0.9, k: 0.9, r: 150, fin: true }) });
+        return palmRun(m, list, {
+          quiet: true,
+          tick: (t) => {
+            m.fx.gassho = Math.min(1, t * 3);
+          },
         });
-      },
-    },
-    {
-      id: 'shards', w: 2,
-      run(m, P) {
-        m.attackPhase = 'wind';
-        m.fx.beam = 0;
-        say(m, '……', '#bfe9ff');
-        const n = m.fx.rage ? 9 : 6;
-        let k = 0;
-        return (t, dt, P2) => {
-          while (k < n && t >= 0.4 + k * 0.16) {
-            const gy = groundUnder(P2, m);
-            const x = mapClamp(k === 0 ? P2.x : P2.x + U.rand(-360, 360));
-            skyDrop(m, x, gy, { dx: 0, k: 1.05, r: 48, pr: 14, p: { kind: 'icicle' }, colors: ['#bfe9ff', '#7cc4ee', '#ffffff'], sound: 'rockHit' });
-            k++;
-          }
-          return t > 0.4 + n * 0.16 + 0.4;
-        };
       },
     },
   ];
 
-  // 光束（千手冰像的雙眼冰光、星蝕魔龍的虛空吐息）：蓄力 1.2 秒（預警線瞄準玩家當下的位置），發射 0.6 秒、只打一下
+  // 光束（星蝕魔龍的虛空吐息）：蓄力 1.2 秒（預警線瞄準玩家當下的位置），發射 0.6 秒、只打一下
   // 方向在蓄力開始時就決定；起點每一幀都跟著嘴／眼（魔龍懸空會上下飄），所以預警線、光束、判定三者永遠從同一點出發。
   // o.eye(k, fire, a)：k＝蓄力進度 0..1、fire＝是否發射中、a＝光束角度（世界座標），回傳 { x, y }
   // o.pose(a)（可省略）：依光束角度設定頭的姿勢旗標（例如 m.fx.beamTilt），讓美術把頭對準光束
@@ -824,12 +1132,17 @@
     },
     fbZakum: {
       init(m) {
-        Object.assign(m.fx, { arm: -1, slam: 0, beam: 0, beamFire: false, rage: false, hitArm: -1, hitT: 0 });
+        Object.assign(m.fx, { arm: -1, arm2: -1, slam: 0, rage: false, hitArm: -1, hitArm2: -1, hitT: 0, palm: false, gassho: 0 });
       },
       update(m, dt, P) {
         // 半埋在地裡：不移動，只轉向
         if (m.fx.hitT > 0) m.fx.hitT = Math.max(0, m.fx.hitT - dt);
+        // 美術：出掌期間背後的手快速擺動（0..1 平滑過渡）
+        m.fx.palmK = U.clamp((m.fx.palmK || 0) + (m.fx.palm ? dt * 4 : -dt * 2), 0, 1);
+        const was = !!m.fbAct;
         brain(m, dt, P, zakumMoves);
+        // 百式的節奏：兩招之間幾乎不停（一般 0.55～0.9 秒、暴走 0.3～0.5 秒）
+        if (was && !m.fbAct) m.fbCd = m.fx.rage ? U.rand(0.3, 0.5) : U.rand(0.55, 0.9);
         m.vx = 0;
         if (!m.fbAct && P.alive()) m.dir = U.sign(P.x - m.x) || m.dir;
         return true;
@@ -851,6 +1164,8 @@
   const FB = (G.fieldBoss = {
     enterT: 0,
     slowT: 0,
+    palmLog, // 測試用：千手冰像每一掌有沒有碰到玩家
+    zakumMoves, // 測試用：可以直接指定千手冰像出哪一招
     barFlash: 0,
     banner: null,
 
@@ -1314,6 +1629,18 @@
       },
     };
     const pdef = {
+      // 千手冰像的飛掌：預警時只畫光環，出掌後畫一塊石掌
+      fb_palm(ctx, p, t) {
+        ctx.strokeStyle = '#d6b460';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(p.ox - p.x, p.oy - p.y, 50, 0, Math.PI * 2);
+        ctx.stroke();
+        if (p.t < p.warn) return;
+        ctx.rotate(p.rot || 0);
+        ctx.fillStyle = '#a6b3c6';
+        ctx.fillRect(-18 * p.sz, -9.5 * p.sz, 40 * p.sz, 19 * p.sz);
+      },
       fb_anchor(ctx, p, t) {
         ctx.rotate(t * 10 * (p.dir || 1));
         ctx.strokeStyle = '#5a5048';
