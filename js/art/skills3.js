@@ -973,111 +973,252 @@
     ctx.translate(m.x, m.y);
 
     if (m.frozenT > 0) {
-      // 冰凍：幾根高低、傾斜不一的水晶柱擠成一團把怪物包住。半透明、看得到裡面；
-      // 每根柱子有受光面（左）、背光面（右）和斜切的頂面。形狀用位置當種子，同一隻怪每一格都一樣。
-      const bw = Math.max(w * 1.25, h * 0.8) + 8;
-      const bh = h * 1.22 + 12;
-      const a = m.frozenT < 0.5 ? 0.5 + 0.5 * Math.abs(Math.sin(t * 18)) : 1;
-      const rnd = (i) => {
-        const v = Math.sin(seed * 91.7 + i * 12.9898) * 43758.5453;
-        return v - Math.floor(v);
-      };
-      const n = Math.max(3, Math.min(6, Math.round(bw / 48) + 2));
-      const cols = [];
-      for (let i = 0; i < n; i++) {
-        const k = n === 1 ? 0.5 : i / (n - 1);
-        const mid = 1 - Math.abs(k - 0.5) * 2; // 中間的柱子最高
-        const cw = (bw / n) * (1.45 + rnd(i) * 0.6);
-        cols.push({
-          x: -bw / 2 + k * bw * 0.86 + bw * 0.07 + (rnd(i + 10) - 0.5) * 6,
-          cw,
-          ch: bh * (0.55 + mid * 0.5 + rnd(i + 20) * 0.18),
-          tilt: (k - 0.5) * 0.85 + (rnd(i + 30) - 0.5) * 0.3,
-          tip: (rnd(i + 40) - 0.35) * 0.5, // 頂端斜切的方向
-          back: i % 2 === 1,
-        });
+      // 冰凍：一團不規則的冰（包住身體的冰殼）＋從幾個生長點往外長的晶簇。
+      // 每根晶體的粗細、長度、角度、斷面數、頂端（尖、斜切、斷裂）都不同，大晶體旁再長小晶體。
+      // 形狀用位置當種子，同一隻怪每一格都一樣。
+      const bw = Math.max(w * 1.3, h * 0.8) + 14;
+      const bh = h * 1.12 + 12;
+      const hov = m.hover || 0;
+      const air = hov > 12; // 飛在空中：冰包住身體，不貼地
+      ctx.save();
+      ctx.translate(0, -hov);
+      if (!air) {
+        // 地面以下不畫（晶體的根埋進冰層裡）
+        ctx.beginPath();
+        ctx.rect(-bw * 2, -bh * 3, bw * 4, bh * 3 + 3);
+        ctx.clip();
       }
-      cols.sort((p, q) => (p.back === q.back ? 0 : p.back ? -1 : 1));
-      ctx.globalAlpha = a;
-      glow(ctx, 0, -bh * 0.5, Math.max(bw, bh) * 0.7, '170,225,255', 0.28);
+      const a = m.frozenT < 0.5 ? 0.5 + 0.5 * Math.abs(Math.sin(t * 18)) : 1;
+      let rs = Math.floor(Math.abs(seed * 1e4)) + 7;
+      const R = () => {
+        rs = (rs * 16807) % 2147483647;
+        return (rs & 0xffff) / 0x10000;
+      };
       const O = A.outline();
-      cols.forEach((c, i) => {
-        const hw = c.cw / 2;
-        const sx = Math.sin(c.tilt);
-        const cyc = Math.cos(c.tilt);
-        // 本地座標（x 右、y 往上），轉成世界座標：沿傾斜方向長上去
-        const P = (lx, ly) => [c.x + lx * cyc + ly * sx, -(ly * cyc - lx * sx) + 3];
-        const top = c.ch;
-        const shoulder = top - c.cw * (0.45 + Math.abs(c.tip) * 0.4);
-        const tipX = c.tip * hw;
-        const bl = P(-hw, 0), br = P(hw, 0), sl = P(-hw, shoulder), sr = P(hw, shoulder);
-        const tp = P(tipX, top), ridgeB = P(hw * 0.12, 0), ridgeS = P(hw * 0.12, shoulder);
-        const poly = (ptsArr) => {
-          ctx.beginPath();
-          ctx.moveTo(ptsArr[0][0], ptsArr[0][1]);
-          for (let j = 1; j < ptsArr.length; j++) ctx.lineTo(ptsArr[j][0], ptsArr[j][1]);
-          ctx.closePath();
-        };
-        const dim = c.back ? 0.75 : 1;
-        // 左側受光面、右側背光面、頂端兩個斜面
-        poly([bl, sl, ridgeS, ridgeB]);
-        ctx.fillStyle = 'rgba(215,242,255,' + (0.32 * dim).toFixed(3) + ')';
+      ctx.globalAlpha = a;
+      glow(ctx, 0, -bh * 0.5, Math.max(bw, bh) * 0.7, '170,225,255', 0.26);
+      const path = (pts) => {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+        ctx.closePath();
+      };
+      // 冰殼：沿著身體外緣、邊緣凹凸不平的一塊
+      const shell = [];
+      const NS = 9;
+      for (let i = 0; i <= NS; i++) {
+        const k = i / NS;
+        const ang = PI + k * PI; // 左下 → 頂 → 右下
+        const r = 0.82 + R() * 0.36;
+        const yy = Math.sin(ang) * bh * 0.86 * (0.88 + R() * 0.22) + 3;
+        shell.push([Math.cos(ang) * bw * 0.55 * r, air ? yy + bh * 0.08 : Math.min(3, yy)]);
+      }
+      if (air) {
+        // 空中：下半部也包起來（上下對稱的凹凸冰塊）
+        for (let i = 1; i < NS; i++) {
+          const ang = (i / NS) * PI;
+          shell.push([Math.cos(ang) * bw * 0.55 * (0.9 + R() * 0.2), 3 + Math.sin(ang) * bh * 0.12 * (0.7 + R() * 0.5)]);
+        }
+      } else shell.push([bw * 0.55, 3], [-bw * 0.55, 3]);
+      path(shell);
+      ctx.fillStyle = 'rgba(185,228,255,0.24)';
+      ctx.fill();
+      ctx.globalAlpha = a * 0.4;
+      ctx.strokeStyle = O;
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = 'rgba(235,250,255,0.7)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // 冰殼裡面的幾條折射裂紋（不規則折線）
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        let x = (R() - 0.5) * bw * 0.6;
+        let y = -bh * (0.2 + R() * 0.5);
+        ctx.moveTo(x, y);
+        for (let j = 0; j < 3; j++) {
+          x += (R() - 0.5) * bw * 0.25;
+          y += (R() - 0.3) * bh * 0.18;
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+
+      // 一根晶體：本地座標沿長軸往上，左右兩邊各有一個轉折，頂端三種形式
+      const crystal = (bx, by, ang, len, wid, back) => {
+        const ca = Math.cos(ang);
+        const sa = Math.sin(ang);
+        const P = (lx, ly) => [bx + lx * ca + ly * sa, by - (ly * ca - lx * sa)];
+        const hw = wid / 2;
+        const lk = 0.3 + R() * 0.45; // 左側轉折的高度
+        const rk = 0.3 + R() * 0.45;
+        const lo = (R() - 0.35) * hw * 0.35; // 轉折往外或往內
+        const ro = (R() - 0.35) * hw * 0.35;
+        const sh = len * (0.62 + R() * 0.2); // 頂端開始收的地方
+        const shL = sh * (0.9 + R() * 0.18);
+        const shR = sh * (0.9 + R() * 0.18);
+        const kind = R();
+        const top = [];
+        if (kind < 0.55) top.push(P((R() - 0.5) * hw * 0.9, len)); // 尖頂（歪的）
+        else if (kind < 0.8) top.push(P(-hw * 0.55, len * (0.93 + R() * 0.05)), P(hw * 0.5, len * (0.8 + R() * 0.08))); // 斜切
+        else top.push(P(-hw * 0.5, len * 0.9), P(-hw * 0.1, len * 0.97), P(hw * 0.15, len * 0.86), P(hw * 0.5, len * 0.92)); // 斷口
+        const L0 = P(-hw * (0.85 + R() * 0.2), 0);
+        const L1 = P(-hw + lo, len * lk);
+        const L2 = P(-hw * (0.85 + R() * 0.2), shL);
+        const R2 = P(hw * (0.85 + R() * 0.2), shR);
+        const R1 = P(hw + ro, len * rk);
+        const R0 = P(hw * (0.85 + R() * 0.2), 0);
+        const outline = [L0, L1, L2].concat(top, [R2, R1, R0]);
+        const dim = back ? 0.7 : 1;
+        // 斷面：2 或 3 個面，分界位置不固定
+        const faces = R() < 0.5 ? 2 : 3;
+        const cut1 = -hw * (0.25 + R() * 0.3);
+        const cut2 = hw * (0.1 + R() * 0.4);
+        const apex = top[Math.floor(top.length / 2)];
+        const c1b = P(cut1, 0), c1t = P(cut1 * 0.7, sh);
+        const c2b = P(cut2, 0), c2t = P(cut2 * 0.7, sh);
+        path(outline);
+        ctx.fillStyle = 'rgba(160,215,250,' + (0.24 * dim).toFixed(3) + ')';
         ctx.fill();
-        poly([ridgeB, ridgeS, sr, br]);
-        ctx.fillStyle = 'rgba(95,160,220,' + (0.26 * dim).toFixed(3) + ')';
+        ctx.save();
+        path(outline);
+        ctx.clip();
+        // 左側受光面
+        path([L0, L1, L2, c1t, c1b]);
+        ctx.fillStyle = 'rgba(235,248,255,' + ((0.28 + R() * 0.12) * dim).toFixed(3) + ')';
         ctx.fill();
-        poly([sl, tp, ridgeS]);
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.42 * dim).toFixed(3) + ')';
+        // 右側背光面
+        path(faces === 3 ? [c2b, c2t, R2, R1, R0] : [c1b, c1t, R2, R1, R0]);
+        ctx.fillStyle = 'rgba(70,135,200,' + ((0.2 + R() * 0.12) * dim).toFixed(3) + ')';
         ctx.fill();
-        poly([ridgeS, tp, sr]);
-        ctx.fillStyle = 'rgba(150,205,245,' + (0.34 * dim).toFixed(3) + ')';
+        // 頂端斜面
+        path([L2, c1t, apex]);
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.4 * dim).toFixed(3) + ')';
         ctx.fill();
-        // 外輪廓
-        poly([bl, sl, tp, sr, br]);
-        ctx.globalAlpha = a * (c.back ? 0.35 : 0.55);
+        ctx.restore();
+        path(outline);
+        ctx.globalAlpha = a * (back ? 0.32 : 0.55);
         ctx.strokeStyle = O;
-        ctx.lineWidth = 2.2;
+        ctx.lineWidth = 2;
         ctx.stroke();
         ctx.globalAlpha = a;
-        ctx.strokeStyle = 'rgba(235,250,255,' + (c.back ? 0.6 : 0.9) + ')';
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = 'rgba(235,250,255,' + (back ? 0.55 : 0.9) + ')';
+        ctx.lineWidth = 1.1;
         ctx.stroke();
-        // 中稜與頂面稜線
-        ctx.strokeStyle = 'rgba(255,255,255,' + (c.back ? 0.35 : 0.6) + ')';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,' + (back ? 0.3 : 0.55) + ')';
+        ctx.lineWidth = 0.9;
         ctx.beginPath();
-        ctx.moveTo(ridgeB[0], ridgeB[1]);
-        ctx.lineTo(ridgeS[0], ridgeS[1]);
-        ctx.lineTo(tp[0], tp[1]);
-        ctx.moveTo(sl[0], sl[1]);
-        ctx.lineTo(ridgeS[0], ridgeS[1]);
-        ctx.lineTo(sr[0], sr[1]);
+        ctx.moveTo(c1b[0], c1b[1]);
+        ctx.lineTo(c1t[0], c1t[1]);
+        ctx.lineTo(apex[0], apex[1]);
+        if (faces === 3) {
+          ctx.moveTo(c2b[0], c2b[1]);
+          ctx.lineTo(c2t[0], c2t[1]);
+          ctx.lineTo(apex[0], apex[1]);
+        }
         ctx.stroke();
-        // 受光面上一道細高光
-        if (!c.back) {
-          const h1 = P(-hw * 0.62, shoulder * 0.18), h2 = P(-hw * 0.62, shoulder * 0.82);
-          line(ctx, [h1, h2], 'rgba(255,255,255,0.85)', 2);
+        if (!back && wid > 9) {
+          const h1 = P(-hw * 0.6, len * (0.12 + R() * 0.1));
+          const h2 = P(-hw * 0.55, len * (0.45 + R() * 0.2));
+          line(ctx, [h1, h2], 'rgba(255,255,255,0.8)', Math.min(2.2, wid * 0.12));
+        }
+        return P;
+      };
+      // 生長點：2～3 個，不平均地散在腳邊與身體兩側
+      const nOrig = 2 + (R() < 0.5 ? 1 : 0);
+      const crystals = [];
+      for (let o = 0; o < nOrig; o++) {
+        const ox = (R() - 0.5) * bw * 0.85;
+        const oy = air ? -bh * (0.2 + R() * 0.5) : 6 + R() * 4; // 貼地時根部略低於地面，被冰層蓋住
+        const lean = ox / bw; // 靠邊的晶簇往外倒
+        const cnt = 2 + Math.floor(R() * 3);
+        for (let i = 0; i < cnt; i++) {
+          const big = i === 0;
+          crystals.push({
+            x: ox + (R() - 0.5) * 10,
+            y: oy,
+            ang: lean * 0.8 + (R() - 0.5) * (big ? 0.45 : 1.2),
+            len: bh * (big ? 0.7 + R() * 0.4 : 0.25 + R() * 0.4) * (air ? 0.6 : 1),
+            wid: bw * (big ? 0.26 + R() * 0.16 : 0.1 + R() * 0.12),
+            back: R() < 0.4,
+          });
+        }
+      }
+      crystals.sort((p, q) => (p.back === q.back ? q.len - p.len : p.back ? -1 : 1));
+      crystals.forEach((c) => {
+        const P = crystal(c.x, c.y, c.ang, c.len, c.wid, c.back);
+        // 大晶體側面再冒一兩根小晶體
+        if (c.len > bh * 0.55 && R() < 0.7) {
+          const side = R() < 0.5 ? -1 : 1;
+          const at = P(side * c.wid * 0.45, c.len * (0.25 + R() * 0.35));
+          crystal(at[0], at[1], c.ang + side * (0.5 + R() * 0.5), c.len * (0.2 + R() * 0.2), c.wid * (0.3 + R() * 0.2), c.back);
         }
       });
-      // 腳邊幾塊碎冰
-      for (let i = 0; i < 3; i++) {
-        const x = (rnd(i + 50) - 0.5) * bw * 1.05;
-        const r = 4 + rnd(i + 55) * 5;
+      if (!air) {
+        ctx.restore();
+        ctx.save();
+        ctx.translate(0, -hov);
+        // 貼地的冰層：邊緣不規則、有厚度，把晶體的根蓋住；底下一道接觸陰影
+        const gw = bw * 0.56;
+        ctx.fillStyle = 'rgba(20,40,70,0.22)';
         ctx.beginPath();
-        ctx.moveTo(x - r, 3);
-        ctx.lineTo(x - r * 0.4, 3 - r * 1.1);
-        ctx.lineTo(x + r * 0.7, 3 - r * 0.7);
-        ctx.lineTo(x + r, 3);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(210,240,255,0.7)';
+        ctx.ellipse(0, 4, gw * 1.02, 5, 0, 0, TAU);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(40,90,140,0.5)';
-        ctx.lineWidth = 1;
+        const NB = 14;
+        const topE = [];
+        for (let i = 0; i <= NB; i++) {
+          const k = i / NB;
+          const edge = Math.sin(k * PI); // 中間厚、兩端薄
+          topE.push([-gw + k * gw * 2 + (R() - 0.5) * 6, 3 - (3 + edge * (5 + R() * 7))]);
+        }
+        const sheet = topE.concat([[gw * (1 + R() * 0.08), 4], [-gw * (1 + R() * 0.08), 4]]);
+        path(sheet);
+        const sg = ctx.createLinearGradient(0, -10, 0, 4);
+        sg.addColorStop(0, 'rgba(235,249,255,0.85)');
+        sg.addColorStop(1, 'rgba(130,185,230,0.7)');
+        ctx.fillStyle = sg;
+        ctx.fill();
+        ctx.globalAlpha = a * 0.55;
+        ctx.strokeStyle = O;
+        ctx.lineWidth = 1.8;
         ctx.stroke();
+        ctx.globalAlpha = a;
+        // 冰層上緣的亮邊（只畫上緣，不畫貼地那條線）
+        ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(topE[0][0], topE[0][1] + 1);
+        for (let i = 1; i < topE.length; i++) ctx.lineTo(topE[i][0], topE[i][1] + 1);
+        ctx.stroke();
+        // 冰層往外延伸到地面上的霜紋
+        ctx.strokeStyle = 'rgba(230,248,255,0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const side = i % 2 ? 1 : -1;
+          let x = side * gw * (0.85 + R() * 0.15);
+          ctx.moveTo(x, 3);
+          x += side * (8 + R() * 14);
+          ctx.lineTo(x, 3 - R() * 2);
+          ctx.lineTo(x + side * (4 + R() * 6), 3 + R() * 1.5);
+        }
+        ctx.stroke();
+        // 冰層前緣幾塊凸起的碎冰
+        for (let i = 0; i < 3; i++) {
+          const x = (R() - 0.5) * gw * 1.6;
+          const r = 3 + R() * 4;
+          path([[x - r, 4], [x - r * (0.2 + R() * 0.5), 4 - r * (0.8 + R() * 0.6)], [x + r * (0.3 + R() * 0.5), 4 - r * (0.4 + R() * 0.5)], [x + r, 4]]);
+          ctx.fillStyle = 'rgba(225,245,255,0.8)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(40,90,140,0.45)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
       }
-      const tw = 0.8 + 0.2 * Math.sin(t * 5 + seed);
-      sparkle(ctx, -bw * 0.18, -bh * 0.78, 3 + 2 * Math.max(0, Math.sin(t * 7 + seed)), '#ffffff');
-      snowflake(ctx, bw * 0.28, -bh * 0.5, 4 * tw, '#ffffff', 1.3);
+      sparkle(ctx, (R() - 0.5) * bw * 0.5, -bh * (0.5 + R() * 0.3), 3 + 2 * Math.max(0, Math.sin(t * 7 + seed)), '#ffffff');
+      ctx.restore();
       ctx.globalAlpha = 1;
     }
 
