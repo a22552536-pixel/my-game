@@ -37,7 +37,7 @@
         return '<div class="panel ending finale"><div class="body">' +
           '<img class="leaf" src="' + G.art.iconURL('starleaf', '#ffd35a') + '">' +
           '<div class="big">小獅子的冒險　完</div>' +
-          '<div class="txt">謝謝你陪小獅子走完這一趟。<br>五片星楓葉、五座營地、一路上的每一個人。<br><br>沒有誰需要變成石頭。<br>一百年，很快的——但這一次，大家都在。</div>' +
+          '<div class="txt">謝謝你陪小獅子走完這一趟。<br>五片星楓葉、五座營地、一路上的每一個人。<br><br>這一次，王座廳沒有空位。<br>下一個一百年，大家說好一起付。</div>' +
           '<div class="dim">遊玩時間 ' + G.util.fmtTime(P.playTime) + ' · Lv.' + P.level + '</div>' +
           '<button class="primary" data-act="finaleNext">繼續冒險</button></div></div>';
       }
