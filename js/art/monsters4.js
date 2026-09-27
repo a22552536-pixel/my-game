@@ -2730,128 +2730,159 @@
       c.closePath();
     }, '#e04858', '#9a2234', '#ff9aa8', { cel: 1, rim: 0.8, lw: 1.8 });
 
-    // 魔導書翅膀：真正的蝙蝠翼（臂骨→腕→四根指骨撐開翼膜），前翅的翼膜像羊皮紙書頁——
-    //   一行行像紙張橫線的細脈、長在膜上的風咒符文（施法時發光）、翼緣是一道燙金般的金邊；
-    //   後翅是深青色皮革般的翼膜，膜上天生有金色的風紋斑。吹風時翼膜像書頁一樣抖動
+    // 魔導書翅膀：書背在肩膀，往外攤開；翅骨沿著封面伸出去、末端一根小爪
     const wing = (side, back) => {
       ctx.save();
       ctx.translate(side * 7, by - 6);
       ctx.scale(side, 1);
       ctx.rotate(-0.5 + flap * 0.46 + (back ? -0.18 : 0));
-      // 上抬時翅膀微收（前後縮短）、下拍時完全攤開
+      // 放大的魔導書翅膀；上抬時微收、下拍時完全攤開
       const spread = 0.9 + 0.1 * Math.cos(fp + Math.sin(fp) * 0.5 - PI * 0.5) * (dead ? 0 : 1);
-      ctx.scale(spread * (back ? 0.9 : 1), back ? 0.9 : 1);
-      const flut = blow > 0.2 ? blow : 0;
-      const fl = (k) => Math.sin(t * 30 + k * 1.7) * 1.4 * flut;
-      const W = [15, -9];
-      const F = [[35, -14 + fl(0)], [38, -1 + fl(1)], [32, 11 + fl(2)], [19, 16 + fl(3)]];
-      const mem = (c) => {
-        c.moveTo(0, -3.5);
-        c.lineTo(W[0], W[1] - 1.5);
-        c.lineTo(F[0][0], F[0][1]);
-        for (let k = 1; k < 4; k++) {
-          const p0 = F[k - 1];
-          const p1 = F[k];
-          c.quadraticCurveTo((p0[0] + p1[0]) / 2 - 5 + (W[0] - (p0[0] + p1[0]) / 2) * 0.2, (p0[1] + p1[1]) / 2 + (W[1] - (p0[1] + p1[1]) / 2) * 0.2, p1[0], p1[1]);
-        }
-        c.quadraticCurveTo(10, 10, 1, 9);
+      const big = 1.3;
+      ctx.scale(spread * big * (back ? 0.9 : 1), big * (back ? 0.9 : 1));
+      const L = 31;
+      const H = 13.5;
+      const leaf = (c, dx, dy, l, h) => {
+        c.moveTo(dx, dy - h);
+        c.quadraticCurveTo(dx + l * 0.5, dy - h - 4, dx + l, dy - h + 1);
+        c.lineTo(dx + l, dy + h - 1);
+        c.quadraticCurveTo(dx + l * 0.5, dy + h + 2, dx, dy + h);
         c.closePath();
       };
-      const M = back ? [COV[0], COV[1], null] : PAGE;
-      vol(ctx, mem, M[0], M[1], M[2], { cel: 2, rim: 1, lw: 2.3, grad: back ? null : [-14, 16, '#fffaea', '#ecdcb0'], tex: (c) => {
-        if (back) {
-          speckle(c, 0, -16, 40, 32, 16, 71, 'rgba(0,30,24,0.3)', 0.4, 0.9);
-          // 皮革翼膜上的金色風紋斑
-          glow(c, 24, 0, 10, '255,220,120', hot ? 0.45 : 0.18);
-          c.lineCap = 'round';
-          const sig = () => {
-            c.beginPath();
-            c.arc(24, 0, 5, PI * 0.2, PI * 1.7);
-            c.moveTo(17, 4); c.quadraticCurveTo(24, 8, 32, 3);
-            c.moveTo(18, -6); c.quadraticCurveTo(26, -9, 31, -5);
-          };
-          sig();
-          c.strokeStyle = A.c(GOLD[1]);
-          c.lineWidth = 2.2;
-          c.stroke();
-          sig();
-          c.strokeStyle = A.c(GOLD[2]);
-          c.lineWidth = 0.9;
-          c.stroke();
-        } else {
-          if (hot) glow(c, 24, 0, 22, '80,240,180', 0.3 + blow * 0.35);
-          // 紙張橫線般的細脈
-          c.strokeStyle = 'rgba(150,110,60,0.3)';
+      // 翅膜：封面下緣垂著一片蝙蝠翼膜（三道弧）
+      vol(ctx, (c) => {
+        c.moveTo(0, H - 2);
+        c.lineTo(L + 2, H - 2);
+        c.quadraticCurveTo(L - 3, H + 3, L - 8, H + 6);
+        c.quadraticCurveTo(L - 12, H + 3, L - 17, H + 7);
+        c.quadraticCurveTo(L - 21, H + 3, L - 26, H + 6);
+        c.quadraticCurveTo(-2, H + 3, 0, H - 2);
+        c.closePath();
+      }, '#5a3c7c', '#3a2456', null, { cel: 1, lw: 1.8 });
+      // 封面（皮革壓紋、金色包角、書背的突起橫帶）
+      const cover = (c) => leaf(c, -1, 0, L + 3, H + 2);
+      vol(ctx, cover, COV[0], COV[1], COV[2], { cel: 2, rim: 1.3, lw: 2.4, tex: (c) => {
+        speckle(c, -1, -H - 4, L + 4, H * 2 + 6, 18, 71, 'rgba(0,30,24,0.3)', 0.4, 0.9);
+        c.strokeStyle = 'rgba(0,30,24,0.45)';
+        c.lineWidth = 1;
+        c.beginPath();
+        leaf(c, 3, 0, L - 6, H - 3);
+        c.stroke();
+        c.fillStyle = A.c('#1a4e44');
+        c.fillRect(-1, -H - 3, 4, H * 2 + 6);
+        c.fillStyle = A.c(GOLD[0]);
+        [-H * 0.55, 0, H * 0.55].forEach((y) => c.fillRect(-1, y - 1, 4, 2));
+      } });
+      ctx.fillStyle = A.c(GOLD[0]);
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 1.4;
+      [-1, 1].forEach((sy) => {
+        ctx.beginPath();
+        ctx.moveTo(L + 2, sy * (H + 1) - sy * 0.5);
+        ctx.lineTo(L + 2, sy * (H + 1) - sy * 7);
+        ctx.quadraticCurveTo(L - 1, sy * (H + 1) - sy * 3, L - 5, sy * (H + 1) + (sy < 0 ? -2.5 : 1.5));
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+      if (back) {
+        // 後翅只看得到封面：中央一個燙金的風紋徽記
+        glow(ctx, L * 0.52, 0, 10, '255,220,120', hot ? 0.5 : 0.2);
+        ctx.lineCap = 'round';
+        const sig = () => {
+          ctx.beginPath();
+          ctx.arc(L * 0.52, 0, 5.5, PI * 0.2, PI * 1.7);
+          ctx.moveTo(L * 0.52 - 7, 4);
+          ctx.quadraticCurveTo(L * 0.52, 8, L * 0.52 + 8, 3);
+          ctx.moveTo(L * 0.52 - 6, -6);
+          ctx.quadraticCurveTo(L * 0.52 + 2, -9, L * 0.52 + 7, -5);
+        };
+        sig();
+        ctx.strokeStyle = A.c(GOLD[1]);
+        ctx.lineWidth = 2.6;
+        ctx.stroke();
+        sig();
+        ctx.strokeStyle = A.c(GOLD[2]);
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        // 書扣：皮帶橫過封面邊緣，末端金色鎖片
+        vol(ctx, (c) => A.roundRect(c, L - 8, -2.6, 12, 5.2, 1.5), '#6a3a22', '#3e2010', '#a8704a', { cel: 0.6, rim: 0.5, lw: 1.5 });
+        vol(ctx, (c) => A.roundRect(c, L - 3, -4, 6.4, 8, 1.6), GOLD[0], GOLD[1], GOLD[2], { cel: 0.8, rim: 0.6, lw: 1.6 });
+        ctx.fillStyle = A.c('#3a2410');
+        ctx.beginPath();
+        ctx.arc(L + 0.2, -0.8, 1, 0, TAU);
+        ctx.fill();
+      } else {
+        // 前翅：一疊書頁（側邊露出頁緣細線），最上面那頁寫滿風咒
+        vol(ctx, (c) => leaf(c, 1, 1.5, L - 1, H - 1), PAGE[1], '#b8a070', null, { cel: 0.8, lw: 1.5, tex: (c) => {
+          c.strokeStyle = 'rgba(120,90,50,0.45)';
           c.lineWidth = 0.6;
           c.beginPath();
-          for (let y = -12; y <= 14; y += 3.2) { c.moveTo(4, y); c.lineTo(40, y - 1.5); }
+          for (let k = 0; k < 3; k++) { c.moveTo(3, H - 2 + k * 0.9); c.lineTo(L - 1, H - 2.5 + k * 0.9); }
           c.stroke();
-          // 風之法陣（長在膜上的紋）
-          c.strokeStyle = hot ? 'rgba(40,220,160,0.9)' : 'rgba(60,140,120,0.5)';
-          c.lineWidth = 0.8;
+        } });
+        const pg = (c) => leaf(c, 1, 0, L - 2, H - 1.5);
+        vol(ctx, pg, PAGE[0], PAGE[1], PAGE[2], { cel: 1.2, rim: 0.8, lw: 1.9, grad: [-H, H, '#fffaea', '#f0e2bc'], tex: (c) => {
+          if (hot) glow(c, L * 0.5, 0, 20, '80,240,180', 0.35 + blow * 0.35);
+          // 裝飾框線與行線
+          c.strokeStyle = 'rgba(150,110,60,0.35)';
+          c.lineWidth = 0.7;
           c.beginPath();
-          c.arc(25, 1, 7, 0, TAU);
-          c.moveTo(25, -6); c.lineTo(31, 4.5); c.lineTo(19, 4.5); c.closePath();
+          leaf(c, 3.5, 0, L - 7, H - 4);
           c.stroke();
-          // 一行行的風咒符文
           const rc = hot ? '#1ab888' : '#4a8a78';
           for (let r = 0; r < 3; r++) {
-            for (let j = 0; j < 3; j++) {
-              const x = 13 + j * 8 + r * 1.5;
-              const y = -8 + r * 8;
-              if (Math.hypot(x - 25, y - 1) < 8) continue;
-              rune(c, x, y, 1.9, r * 3 + j + 1, A.c(rc), 1.1);
-              if (hot && (r * 3 + j + Math.floor(t * 8)) % 3 === 0) rune(c, x, y, 1.9, r * 3 + j + 1, 'rgba(220,255,240,0.95)', 0.7);
+            for (let j = 0; j < 4; j++) {
+              rune(c, 7 + j * 5.8, -6.2 + r * 6.2, 2, r * 4 + j * 3 + 1, A.c(rc), 1.2);
             }
           }
+          if (hot) {
+            for (let r = 0; r < 3; r++) {
+              for (let j = 0; j < 4; j++) {
+                if ((r * 4 + j + Math.floor(t * 8)) % 3) continue;
+                rune(c, 7 + j * 5.8, -6.2 + r * 6.2, 2, r * 4 + j * 3 + 1, 'rgba(220,255,240,0.95)', 0.8);
+              }
+            }
+          }
+        } });
+        // 吹風時一頁一頁翻過去
+        if (blow > 0.2) {
+          for (let k = 0; k < 2; k++) {
+            const q = (t * 3 + k * 0.5) % 1;
+            ctx.save();
+            ctx.scale(Math.cos(q * PI), 1);
+            vol(ctx, (c) => leaf(c, 0, -0.5, L - 3, H - 2.5), '#fffaf0', PAGE[1], null, { cel: 0.8, lw: 1.5, tex: (c) => rune(c, L * 0.5, 0, 3, k + 2, 'rgba(26,184,136,0.8)', 1.2) });
+            ctx.restore();
+          }
         }
-        // 順著指骨的翼脈
-        c.strokeStyle = back ? 'rgba(0,30,24,0.45)' : 'rgba(140,90,50,0.45)';
-        c.lineWidth = 0.8;
-        c.beginPath();
-        F.forEach((p) => {
-          const mx = (W[0] + p[0]) / 2;
-          const my = (W[1] + p[1]) / 2;
-          c.moveTo(mx, my);
-          c.lineTo(mx - 3, my + 4);
-          c.moveTo(mx + 5, my + 1);
-          c.lineTo(mx + 2, my + 5.5);
-        });
-        c.stroke();
-      } });
-      // 翼緣的燙金邊（前翅）
-      if (!back) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(F[0][0], F[0][1]);
-        for (let k = 1; k < 4; k++) {
-          const p0 = F[k - 1];
-          const p1 = F[k];
-          ctx.quadraticCurveTo((p0[0] + p1[0]) / 2 - 5 + (W[0] - (p0[0] + p1[0]) / 2) * 0.2, (p0[1] + p1[1]) / 2 + (W[1] - (p0[1] + p1[1]) / 2) * 0.2, p1[0], p1[1]);
-        }
-        ctx.strokeStyle = A.c(GOLD[0]);
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
-        ctx.restore();
       }
-      // 骨架：臂骨＋四根指骨（深紫皮膚包著），腕上一根象牙色小爪
-      const boneC = back ? '#3a2650' : '#4a3460';
+      // 拍翅時咒文從書頁上剝離、飛散：發光符文、風紋與小火花（施法時更多）
+      if (!dead) {
+        const n = hot ? 7 : 3;
+        for (let k = 0; k < n; k++) {
+          const q = (t * (hot ? 1.6 : 0.9) + k / n + (back ? 0.37 : 0)) % 1;
+          const px = 8 + hash(k + (back ? 20 : 0)) * (L - 12) + q * 22;
+          const py = -8 + hash(k + 40) * 16 - q * 16 + Math.sin(q * 6 + k) * 4;
+          const aa = Math.sin(q * PI) * (back ? 0.6 : 1);
+          ctx.globalAlpha = ba * aa;
+          if (k % 3 === 0) {
+            glow(ctx, px, py, 5, '120,255,200', 0.5);
+            rune(ctx, px, py, 1.9, k + Math.floor(t * 2), '#d8fff0', 1.1);
+          } else if (k % 3 === 1) {
+            ctx.strokeStyle = 'rgba(160,255,220,0.9)';
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.arc(px, py, 2.4, PI * 0.2, PI * 1.6);
+            ctx.stroke();
+          } else sparkle(ctx, px, py, 1.8, '#fff6b0');
+        }
+        ctx.globalAlpha = ba;
+      }
+      // 翅骨＋小爪（翅膀頂端、書背上方）
       ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(W[0], W[1]);
-      F.forEach((p) => { ctx.moveTo(W[0], W[1]); ctx.quadraticCurveTo((W[0] + p[0]) / 2, (W[1] + p[1]) / 2 - 1.5, p[0], p[1]); });
-      ctx.strokeStyle = A.outline();
-      ctx.lineWidth = 2.9;
-      ctx.stroke();
-      ctx.strokeStyle = A.c(boneC);
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      vol(ctx, (c) => c.arc(W[0], W[1], 2.2, 0, TAU), boneC, '#2a1a3e', back ? null : '#8a70b0', { cel: 0.6, rim: 0.6, lw: 1.6 });
-      ctx.beginPath();
-      ctx.moveTo(W[0] - 0.5, W[1] - 2);
-      ctx.quadraticCurveTo(W[0] - 1, W[1] - 6, W[0] - 4, W[1] - 6.5);
+      ctx.moveTo(1, -H - 1);
+      ctx.quadraticCurveTo(0, -H - 6, -3, -H - 6);
       ctx.strokeStyle = A.outline();
       ctx.lineWidth = 3.2;
       ctx.stroke();
