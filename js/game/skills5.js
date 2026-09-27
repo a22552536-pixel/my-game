@@ -298,9 +298,18 @@
         u.spawnT -= dt;
         if (u.spawnT <= 0 && u.shell.length + u.rocks.length < 40 && u.pt < 1.05) {
           u.spawnT = 0.026;
-          const side = Math.random() < 0.5 ? -1 : 1;
-          const x = u.ox + side * U.rand(110, 420);
-          u.rocks.push({ x, y: u.groundY - 4, vx: 0, vy: -U.rand(200, 380), t: 0, rot: Math.random() * TAU, vr: U.rand(-6, 6), s: U.rand(0.7, 1.25), kind: Math.random() < 0.3 ? 'chunk' : 'stone', tone: (Math.random() * 3) | 0 });
+          // 只從拉扯點底下真正的平台表面撕起石塊（在平台範圍內）；附近沒有平台就是從空中飛來的碎石
+          const surf = G.art.chibakuFx.surface(u);
+          const r = { t: 0, rot: Math.random() * TAU, vr: U.rand(-6, 6), s: U.rand(0.7, 1.25), tone: (Math.random() * 3) | 0 };
+          const x = surf ? U.rand(Math.max(surf.x0 + 10, u.ox - 420), Math.min(surf.x1 - 10, u.ox + 420)) : 0;
+          if (surf && Math.abs(x - u.ox) >= 50) {
+            Object.assign(r, { x, y: surf.y - 4, vx: 0, vy: -U.rand(200, 380), kind: Math.random() < 0.3 ? 'chunk' : 'stone' });
+          } else {
+            const a = Math.random() * TAU;
+            const d = U.rand(240, 420);
+            Object.assign(r, { x: u.ox + Math.cos(a) * d, y: u.oy + Math.sin(a) * d * 0.75, vx: -Math.sin(a) * U.rand(60, 160), vy: Math.cos(a) * U.rand(60, 160), kind: 'stone', air: true });
+          }
+          u.rocks.push(r);
         }
         for (let i = u.rocks.length - 1; i >= 0; i--) {
           const r = u.rocks[i];

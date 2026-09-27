@@ -534,7 +534,7 @@
       lt: u.t, side, raw: mk(side),
       baked: new Set(), nPuff: 0, covered: false, parts: [], waves: [],
       chunks: [], jolt: 0, jx: 0, jy: 0, hitK: 0, flashK: 0, lastN: 0, sqStep: -1, ended: false,
-      ground: null, pits: null, gx: 0, gy: 0, pitN: 0,
+      ground: null, pits: null, span: null, depth: GH, gx: 0, gy: 0, pitN: 0,
     };
     return u._fx;
   }
@@ -549,7 +549,28 @@
   const GW = 820;
   const GH = 90;
   const GOY = 20;
+  // 拉扯點底下真正能站的表面：跟落地同一套規則（x 在平台範圍內、表面在這一點或更下面、最近的那一層）。
+  // 往下 160px 內沒有平台（半空中）就回傳 null：不畫地面裂縫，石塊改成從空中飛來。
+  function surface(u) {
+    if (u.surf !== undefined) return u.surf;
+    const map = G.world && G.world.map;
+    let s = null;
+    if (map && G.physics && G.physics.platformBelow) {
+      const i = G.physics.platformBelow(map, u.ox, u.oy);
+      if (i >= 0) {
+        const p = map.platforms[i];
+        if (p[2] - u.oy <= 160) s = { i, x0: p[0], x1: p[1], y: p[2], ground: i === 0 };
+      }
+    }
+    u.surf = s;
+    return s;
+  }
   function makeGround(f, u) {
+    const surf = surface(u);
+    if (!surf) {
+      f.ground = false;
+      return;
+    }
     const cv = mk(GW, GH);
     const c = cv.getContext('2d');
     const ox = GW / 2;
@@ -620,7 +641,10 @@
     f.ground = cv;
     f.pits = cv; // 坑直接畫進同一張地面圖
     f.gx = Math.round(u.ox - ox);
-    f.gy = Math.round(u.groundY - GOY);
+    f.gy = Math.round(surf.y - GOY);
+    // 只畫在平台的水平範圍內；浮空平台很薄，裂縫只往下劈一點點
+    f.span = [surf.x0, surf.x1];
+    f.depth = surf.ground ? GH : GOY + 16;
   }
   // 被撕走一塊的坑：參差的黑色缺口、翻起的斷面、四周碎屑
   function pit(f, x) {
@@ -700,6 +724,7 @@
   }
 
   A.chibakuFx = {
+    surface, // 遊戲邏輯用它決定石塊從地面撕起來還是從空中飛來
     spr: SPR, // 預先畫好的碎岩圖（除錯、預覽用）
     draw(ctx, u) {
       const f = state(u);
@@ -712,13 +737,19 @@
       const active = ph === 'pull' || ph === 'squeeze' || ph === 'flash';
 
       // ── 事件：石塊離地、鎖進石球、壓縮、黑閃、崩解 ──
-      if (!f.ground && ph !== 'throw') makeGround(f, u);
+      if (f.ground === null && ph !== 'throw') makeGround(f, u);
       u.rocks.forEach((r) => {
         if (r._seen) return;
         r._seen = true;
-        if (f.pits && f.pitN++ % 3 === 0) pit(f, r.x);
-        puff(f, r.x + rr(-10, 10), u.groundY - rr(4, 10), rr(-30, 30), rr(-60, -20), rr(18, 28), rr(0.6, 1.0), rnd() < 0.5);
-        for (let i = 0; i < 4; i++) grit(f, r.x + rr(-10, 10), u.groundY - 4, rr(-80, 80), rr(-260, -120));
+        if (r.air) {
+          // 從空中飛來的碎石：只帶一小團塵
+          puff(f, r.x, r.y, rr(-20, 20), rr(-20, 20), rr(10, 16), rr(0.4, 0.7), rnd() < 0.5);
+          return;
+        }
+        const gy = u.surf ? u.surf.y : r.y + 4;
+        if (f.ground && f.pitN++ % 3 === 0) pit(f, r.x);
+        puff(f, r.x + rr(-10, 10), gy - rr(4, 10), rr(-30, 30), rr(-60, -20), rr(18, 28), rr(0.6, 1.0), rnd() < 0.5);
+        for (let i = 0; i < 4; i++) grit(f, r.x + rr(-10, 10), gy - 4, rr(-80, 80), rr(-260, -120));
       });
       // 黑閃震掉的石頭不從烘好的石球裡挖掉：看起來是表面崩落的碎塊，石球始終是實心的一整顆
       u.shell.forEach((sh) => {
@@ -847,11 +878,15 @@
         if (ga > 0) {
           const reveal = Math.min(1, (ph === 'pull' ? u.pt : 1) / 0.4);
           const w = Math.round(GW * (0.1 + 0.9 * reveal));
-          const sx = (GW - w) >> 1;
-          ctx.save();
-          ctx.globalAlpha = ga;
-          ctx.drawImage(f.ground, sx, 0, w, GH, f.gx + sx, f.gy, w, GH);
-          ctx.restore();
+          // 裂開的範圍 ∩ 平台的水平範圍（不能懸在半空中）
+          const sx = Math.max((GW - w) >> 1, Math.ceil(f.span[0] - f.gx));
+          const ex = Math.min((GW + w) >> 1, Math.floor(f.span[1] - f.gx));
+          if (ex - sx > 1) {
+            ctx.save();
+            ctx.globalAlpha = ga;
+            ctx.drawImage(f.ground, sx, 0, ex - sx, f.depth, f.gx + sx, f.gy, ex - sx, f.depth);
+            ctx.restore();
+          }
         }
       }
       // 3. 核心：冷黑的小球；石頭一蓋上來就再也看不到
@@ -928,7 +963,7 @@
       // 5. 飛進來的石塊、崩解後飛散的石塊
       u.rocks.forEach((r) => {
         const v = vis(r, size);
-        blit(ctx, v.spr, r.x, r.y, v.r * (0.6 + 0.4 * Math.min(1, r.t / 0.12)), r.rot, 1);
+        blit(ctx, v.spr, r.x, r.y, v.r * (0.6 + 0.4 * Math.min(1, r.t / 0.12)), r.rot, r.air ? Math.min(1, r.t / 0.12) : 1);
       });
       u.flying.forEach((fl) => {
         const v = vis(fl, size);
