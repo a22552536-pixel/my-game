@@ -3076,7 +3076,11 @@
     const puffK = clamp(num(fx.puff, 0), 0, 1);
     const blowing = puffK > 0.05;
     const ph = phase(m);
-    const cast = Math.max(puffK, ph === 'wind' ? 0.5 : 0, ph === 'strike' ? 0.8 : 0);
+    // 冰簪（fx.pin）：蓄力時手伸到髮上抽出冰簪（0→1）；擲出後長袖往前一甩
+    const pinK = clamp(num(fx.pin, 0), 0, 1);
+    const pinThrow = pinK > 0.02 && ph === 'strike';
+    const pinDraw = pinK > 0.02 && !pinThrow;
+    const cast = Math.max(puffK, pinK * 0.8, ph === 'wind' ? 0.5 : 0, ph === 'strike' ? 0.8 : 0);
     const fl = Math.sin(t * 1.6) * 3;
     const wind = 1 + (walk ? 0.6 : 0) + cast * 0.4;
     const hw = (k, ph2) => Math.sin(t * 2.2 - k * 2.5 + (ph2 || 0)) * k;
@@ -3225,9 +3229,21 @@
       const lift = puffK;
       const sx = hx + (near ? 6 : -6);
       const sy = hy + 14;
-      const ex = sx + (near ? 15 : 6) + lift * 1;
-      const ey = sy + 17 - lift * 20;
-      const drop = 30 - lift * 8;
+      let ex = sx + (near ? 15 : 6) + lift * 1;
+      let ey = sy + 17 - lift * 20;
+      let drop = 30 - lift * 8;
+      if (near && pinDraw) {
+        // 手往上伸到髮間
+        const k2 = Math.min(1, pinK * 1.6);
+        ex += (-6 - (ex - sx)) * k2 + 4 * k2;
+        ey += (hy - 14 - ey) * k2;
+        drop -= 10 * k2;
+      } else if (near && pinThrow) {
+        // 往前一甩：手伸直在前，長袖往後飄
+        ex = sx + 26;
+        ey = sy + 2 - pinK * 3;
+        drop = 18;
+      }
       const S = (c, g) => {
         c.moveTo(sx - 4, sy - 2);
         c.quadraticCurveTo(ex - 2, ey - 6, ex + 3, ey - 1);
@@ -3255,7 +3271,36 @@
         ctx.lineTo(ex + 1, ey + 7);
         ctx.stroke();
       } });
-      if (near && lift > 0.3) A.shape(ctx, (c) => c.ellipse(ex + 4, ey + 1.5, 2.6, 2.2, 0, 0, TAU), YK.skin, YK.skinS, { lw: 1.4, shadeY: ey + 2 });
+      if (near && (lift > 0.3 || pinDraw || pinThrow)) {
+        if ((pinDraw || pinThrow) && !dead) glowH(ctx, ex + 4, ey + 1, 10 + pinK * 6, P4.teal, 0.35 + pinK * 0.4);
+        A.shape(ctx, (c) => c.ellipse(ex + 4, ey + 1.5, 2.6, 2.2, 0, 0, TAU), YK.skin, YK.skinS, { lw: 1.4, shadeY: ey + 2 });
+        // 指間夾著三根冰簪（抽出時越拉越長）
+        if (pinDraw) {
+          const L = 4 + pinK * 9;
+          [-0.5, 0, 0.5].forEach((d) => {
+            ctx.save();
+            ctx.translate(ex + 4, ey + 1);
+            ctx.rotate(-PI / 2 + 0.5 + d);
+            A.shape(ctx, (c) => poly(c, [[-0.9, 0], [0, -L], [0.9, 0], [0, 2]]), P4.tealL, P4.teal, { lw: 1, shadeY: -L * 0.4 });
+            ctx.restore();
+          });
+          sparkle(ctx, ex + 8 + Math.sin(t * 9) * 1.5, ey - 8, 1.5 + pinK * 1.5, '#ffffff');
+        }
+      }
+      // 甩袖的風痕
+      if (near && pinThrow && !dead) {
+        ctx.save();
+        ctx.globalAlpha *= pinK * 0.8;
+        ctx.strokeStyle = A.c(P4.tealL);
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(sx + 8, sy + 6, 22, -1.1, 0.5);
+        ctx.moveTo(sx + 32, sy - 8);
+        ctx.arc(sx + 8, sy + 6, 27, -0.6, 0.3);
+        ctx.stroke();
+        ctx.restore();
+      }
       yukiFlakes(ctx, ex - 16, ey + drop + 4, 16, 16, 4, t, 0.8, near ? 11 : 17);
     };
     sleeve(false);
@@ -4327,9 +4372,11 @@
     ring.filter((q) => Math.sin(q[4]) >= 0.2).forEach((q) => scrollLobe(q[0], q[1] + 2, q[2], q[3], q[4]));
     // 朱色的前掛（紅布）＋金鈴，掛在領圈下
     const bibSw = Math.sin(t * 2.4 - 0.8) * 1.2 + (walk ? Math.sin(u - 0.8) * 1.5 : 0);
-    const bibP = (c) => { c.moveTo(hx - 11, hy + 19); c.quadraticCurveTo(hx - 1, hy + 23, hx + 9, hy + 19); c.lineTo(hx + 3 + bibSw, hy + 33); c.quadraticCurveTo(hx - 2 + bibSw, hy + 35, hx - 7 + bibSw * 0.6, hy + 31); c.closePath(); };
-    rimShape(ctx, bibP, P4.verm, P4.vermS, P4.vermL, { cel: 2, rim: 1, lw: 2 });
-    A.shape(ctx, (c) => c.arc(hx - 1 + bibSw * 0.3, hy + 24, 2.8, 0, TAU), P4.gold, P4.goldS, { lw: 1.3, cel: [0.8, 0.8] });
+    // 朱色前掛：小小一片，掛在領圈下緣的胸口（不蓋住雲卷）
+    const by0 = hy + 3 + 20 * collarK + 4;
+    const bibP = (c) => { c.moveTo(hx - 6, by0); c.quadraticCurveTo(hx - 1, by0 + 2, hx + 4, by0); c.lineTo(hx + 1.5 + bibSw, by0 + 9); c.quadraticCurveTo(hx - 1 + bibSw, by0 + 10.5, hx - 3.5 + bibSw * 0.6, by0 + 8); c.closePath(); };
+    rimShape(ctx, bibP, P4.verm, P4.vermS, P4.vermL, { cel: 1.5, rim: 0.8, lw: 1.8 });
+    A.shape(ctx, (c) => c.arc(hx - 1 + bibSw * 0.3, by0 + 3.5, 2, 0, TAU), P4.gold, P4.goldS, { lw: 1.1, cel: [0.6, 0.6] });
     // 衝撞時的氣勁與腳下揚起的雪
     if (charging && !dead) {
       ctx.save();
