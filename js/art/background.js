@@ -10,9 +10,23 @@
     forestMorning: {
       sky: ['#a9dcff', '#e9f6ff', '#fff3d2'],
       layers: [
-        { type: 'hills', f: 0.06, color: '#bcdcc0', base: 0.62, amp: 60 },
-        { type: 'trees', f: 0.18, colors: ['#9cc58a', '#8dba7c'], trunk: '#8a7560', base: 0.72, n: 9, size: [70, 110], alpha: 0.9 },
-        { type: 'trees', f: 0.38, colors: ['#6fa85a', '#5f9a4c', '#78b062'], trunk: '#6b4a35', base: 0.86, n: 7, size: [90, 140] },
+        // 天空：晨光、卷雲、積雲、遠方的鳥群
+        { type: 'stack', f: 0.008, of: [
+          { type: 'skyGlow', sun: [0.16, 0.06], rgb: '255,246,205', r: 560, a: 0.6, horizon: '255,250,236', horizonY: 0.6, horizonH: 0.16, horizonA: 0.55, cirrus: 5, cirrusA: 0.4, birds: 3, birdColor: 'rgba(70,96,120,0.5)' },
+          { type: 'cumulus', n: 6, y0: 0.1, y1: 0.34, size: [40, 78], lit: '#ffffff', mid: '#f3f8fd', shade: '#dce9f4', dark: '#c4d6e6', rim: 'rgba(255,255,255,0.9)', alpha: 0.92 },
+        ] },
+        // 遠山兩重：越遠越藍、稜上有樹線，山腳起霧；近一重有田野
+        { type: 'ridges', f: 0.024, fog: '#e8f4f2', fogRgb: '234,245,242', bands: [
+          { base: 0.5, amp: 70, color: '#b6d0dc', shade: 'rgba(110,140,175,0.13)', rim: 'rgba(255,255,240,0.7)', trees: '#a8c4d0', pointy: true, treeH: 9, treeStep: 5, mistA: 0.5 },
+          { base: 0.58, amp: 42, color: '#a9ccb6', shade: 'rgba(70,110,90,0.12)', rim: 'rgba(255,255,230,0.7)', trees: '#97bea4', treeH: 12, mistA: 0.4, fields: 14, fieldCols: ['rgba(236,232,160,0.4)', 'rgba(176,214,136,0.45)', 'rgba(250,236,200,0.35)'] },
+        ] },
+        // 遠方的故事：風車、山坡上的小村、地平線上的世界樹
+        { type: 'landmarks', f: 0.04, wall: '#f4e8d6', wallShade: '#d6c4b0', walls: ['#f4e8d6', '#f0dcc0', '#e8e0d0'], roof: '#d4705a', roofShade: '#b05848', stone: '#a89888', door: '#7a5a48', win: '255,210,140', winC: '#ffe6a8', smoke: 'rgba(245,245,250,0.8)', ground: '#a4c8ae', tree: ['#8cbc84', '#7cb07a'], trunk: '#7a6a58', sail: 'rgba(252,248,236,0.95)', frame: '#8a6a52',
+          items: [['windmill', 0.2, 0.585, 0.8], ['village', 0.44, 0.585, 0.9], ['giantTree', 0.86, 0.6, 0.72, { tree: ['#8fbf98', '#80b48c', '#9ccaa2'], trunk: '#8a8478' }]],
+          haze: '226,240,236', hazeA: [0.32, 0.32], rim: { c: 'rgba(255,252,230,0.7)', dx: 2, dy: 2 } },
+        { type: 'hills', f: 0.06, color: '#bcdcc0', base: 0.62, amp: 60, low: '#6a9a7a' },
+        { type: 'trees', f: 0.18, colors: ['#9cc58a', '#8dba7c'], trunk: '#8a7560', base: 0.72, n: 9, size: [70, 110], alpha: 0.9, haze: '214,236,222', hazeA: [0.28, 0.2], rim: { c: 'rgba(255,252,220,0.6)', dx: 3, dy: 3 } },
+        { type: 'trees', f: 0.38, colors: ['#6fa85a', '#5f9a4c', '#78b062'], trunk: '#6b4a35', base: 0.86, n: 7, size: [90, 140], rim: { c: 'rgba(255,250,200,0.55)', dx: 4, dy: 4 } },
       ],
       beams: 0.18,
       motes: 'rgba(255,250,200,0.8)',
@@ -21,9 +35,24 @@
     forestMushroom: {
       sky: ['#b8e0f0', '#e8f5e6', '#fff0d8'],
       layers: [
-        { type: 'hills', f: 0.06, color: '#c3dcc4', base: 0.6, amp: 50 },
-        { type: 'mushrooms', f: 0.2, colors: ['#f2a36a', '#e88a8a', '#f5c26b'], stem: '#f3e3c8', base: 0.78, n: 7, size: [60, 120], alpha: 0.85 },
-        { type: 'trees', f: 0.4, colors: ['#6fa85a', '#5f9a4c'], trunk: '#6b4a35', base: 0.88, n: 6, size: [90, 150] },
+        { type: 'stack', f: 0.008, of: [
+          { type: 'skyGlow', sun: [0.7, 0.04], rgb: '255,236,200', r: 520, a: 0.55, horizon: '255,244,226', horizonY: 0.58, horizonH: 0.16, horizonA: 0.5, cirrus: 4, cirrusRgb: '255,248,236', cirrusA: 0.4, birds: 2, birdColor: 'rgba(110,90,100,0.45)' },
+          { type: 'cumulus', n: 5, y0: 0.1, y1: 0.32, size: [40, 74], lit: '#fffaf2', mid: '#fdf2ea', shade: '#eed8d4', dark: '#dcc4c8', rim: 'rgba(255,255,255,0.9)', alpha: 0.92 },
+        ] },
+        // 遠方：一整片巨大蘑菇林的剪影，菇頂上還有孢子光
+        { type: 'ridges', f: 0.022, fog: '#f2efe2', fogRgb: '244,240,228', bands: [
+          { base: 0.52, amp: 50, color: '#bcd2d0', shade: 'rgba(120,140,160,0.12)', rim: 'rgba(255,250,236,0.7)', trees: '#b0c8c8', treeH: 10, mistA: 0.5 },
+        ] },
+        { type: 'landmarks', f: 0.032, cap: '#e8b0a0', stem: '#f2e6da', spot: 'rgba(255,250,240,0.7)', glowRgb: '255,230,180', win: '255,214,150', winC: '#ffe2a8', door: '#9a7a6a',
+          items: [['giantMush', 0.12, 0.56, 1.0], ['giantMush', 0.3, 0.55, 0.75, { cap: '#e0bc8c' }], ['giantMush', 0.62, 0.56, 1.15, { cap: '#dca2a8' }], ['giantMush', 0.84, 0.55, 0.8, { cap: '#e6c290' }]],
+          haze: '232,238,232', hazeA: [0.3, 0.3], rim: { c: 'rgba(255,250,236,0.6)', dx: 2, dy: 2 } },
+        // 蘑菇村：菇頂小屋、煙囪冒煙
+        { type: 'landmarks', f: 0.045, caps: ['#e8765e', '#e89a4e', '#d8687a'], wall: '#f6e8cc', stone: '#9a8a7a', door: '#8a5a44', win: '255,206,140', winC: '#ffe0a0', smoke: 'rgba(250,246,240,0.8)', tree: ['#9cc48e', '#8aba84'], trunk: '#8a7460', rock: '#b8ccb4', rockShade: '#a2baa0',
+          items: [['mushHouse', 0.22, 0.6, 0.9], ['mushHouse', 0.26, 0.61, 0.7], ['mushHouse', 0.5, 0.6, 1.0], ['mushHouse', 0.55, 0.612, 0.72], ['mushHouse', 0.8, 0.6, 0.85]],
+          haze: '228,238,228', hazeA: [0.25, 0.25], rim: { c: 'rgba(255,248,230,0.6)', dx: 2, dy: 2 } },
+        { type: 'hills', f: 0.06, color: '#c3dcc4', base: 0.6, amp: 50, low: '#7aa48a' },
+        { type: 'mushrooms', f: 0.2, colors: ['#f2a36a', '#e88a8a', '#f5c26b'], stem: '#f3e3c8', base: 0.78, n: 7, size: [60, 120], alpha: 0.85, glowRgb: '255,220,170', haze: '226,238,226', hazeA: [0.22, 0.16], rim: { c: 'rgba(255,250,230,0.55)', dx: 3, dy: 3 } },
+        { type: 'trees', f: 0.4, colors: ['#6fa85a', '#5f9a4c'], trunk: '#6b4a35', base: 0.88, n: 6, size: [90, 150], rim: { c: 'rgba(255,250,210,0.5)', dx: 4, dy: 4 } },
       ],
       beams: 0.14,
       motes: 'rgba(255,220,170,0.8)',
@@ -32,9 +61,23 @@
     forestDeep: {
       sky: ['#5f8f7a', '#a9c9a0', '#e8e2b0'],
       layers: [
-        { type: 'trees', f: 0.08, colors: ['#6c917a', '#5f8570'], trunk: '#4f6a5a', base: 0.7, n: 10, size: [80, 130], alpha: 0.8 },
-        { type: 'trees', f: 0.22, colors: ['#4f7d52', '#46724a'], trunk: '#4a3a2c', base: 0.8, n: 8, size: [110, 170] },
-        { type: 'trees', f: 0.42, colors: ['#3d6b40', '#346038'], trunk: '#3a2a1e', base: 0.95, n: 6, size: [140, 200] },
+        // 林冠縫隙透下來的天光與光柱
+        { type: 'stack', f: 0.01, of: [
+          { type: 'skyGlow', sun: [0.3, 0.02], rgb: '250,255,210', r: 600, a: 0.6, horizon: '236,236,196', horizonY: 0.55, horizonH: 0.22, horizonA: 0.55 },
+          { type: 'shafts', x: 0.45, span: 0.9, y: -0.05, n: 14, rgb: '255,255,220', a: 0.16, angle: 1.2, spread: 0.2, len: 1.2, w: 0.035 },
+        ] },
+        // 霧裡一層層的樹影
+        { type: 'ridges', f: 0.03, fog: '#dfe2bc', fogRgb: '226,228,190', bands: [
+          { base: 0.46, amp: 40, color: '#9fb89e', trees: '#9fb89e', treeH: 34, treeStep: 12, mistA: 0.55, sharp: 0.2 },
+          { base: 0.56, amp: 30, color: '#86a684', trees: '#86a684', treeH: 44, treeStep: 14, mistA: 0.5, sharp: 0.2 },
+        ] },
+        // 森林深處：長滿藤蔓的古塔與瀑布
+        { type: 'landmarks', f: 0.05, stone: '#9aa894', stoneShade: '#7e8e7c', vine: '#5a8a5a', dark: '#40503f', water: '#f0fae8', water2: 'rgba(230,245,225,0.5)', mist: '236,244,220', tree: ['#6f966e', '#628c64'], trunk: '#5a5040',
+          items: [['ruinTower', 0.3, 0.6, 1.2], ['waterfall', 0.72, 0.64, 1.0, { stone: '#7e9282', stoneShade: '#687c6c', moss: 'rgba(110,150,100,0.5)' }]],
+          haze: '206,220,186', hazeA: [0.45, 0.35], rim: { c: 'rgba(250,255,210,0.55)', dx: 2, dy: 2 } },
+        { type: 'trees', f: 0.08, colors: ['#6c917a', '#5f8570'], trunk: '#4f6a5a', base: 0.7, n: 10, size: [80, 130], alpha: 0.8, haze: '200,218,180', hazeA: [0.38, 0.3], rim: { c: 'rgba(240,255,200,0.5)', dx: 3, dy: 3 } },
+        { type: 'trees', f: 0.22, colors: ['#4f7d52', '#46724a'], trunk: '#4a3a2c', base: 0.8, n: 8, size: [110, 170], haze: '190,210,170', hazeA: [0.16, 0.12], rim: { c: 'rgba(240,255,190,0.5)', dx: 3, dy: 3 } },
+        { type: 'trees', f: 0.42, colors: ['#3d6b40', '#346038'], trunk: '#3a2a1e', base: 0.95, n: 6, size: [140, 200], rim: { c: 'rgba(230,255,170,0.45)', dx: 4, dy: 4 } },
       ],
       beams: 0.32,
       motes: 'rgba(230,255,190,0.9)',
@@ -43,8 +86,13 @@
     rootCave: {
       sky: ['#1d2a2c', '#2c3e38', '#3f4a36'],
       layers: [
-        { type: 'caveWall', f: 0.1, color: '#34443a', base: 0.3 },
-        { type: 'roots', f: 0.25, color: '#4a3a2a', n: 14 },
+        // 洞穴深處：鐘乳石、發光礦脈、地下瀑布與發光巨菇
+        { type: 'stalactites', f: 0.04, ceil: 0.2, floor: 0.8, color: '#26352f', shade: '#1d2a25', wet: 'rgba(140,240,210,0.35)', drip: 'rgba(150,245,215,0.75)', n: 46, len: [30, 130], upK: 0.3, veins: 12, veinRgb: ['125,240,208', '182,240,122', '143,200,255'] },
+        { type: 'landmarks', f: 0.06, stone: '#2e3e38', stoneShade: '#243330', water: '#b8fff0', water2: 'rgba(120,240,210,0.35)', mist: '110,240,210', cap: '#3a8a86', stem: '#9ad8c8', gill: '#8af0d8', spot: 'rgba(190,255,240,0.8)', glowRgb: '120,240,210',
+          items: [['waterfall', 0.36, 0.84, 0.9, { moss: 'rgba(110,220,190,0.25)' }], ['giantMush', 0.12, 0.82, 0.8], ['giantMush', 0.66, 0.84, 1.0, { cap: '#4a6aa0', glowRgb: '140,190,255' }], ['giantMush', 0.86, 0.82, 0.65, { cap: '#6a9a50', glowRgb: '182,240,122' }]],
+          haze: '30,50,45', hazeA: [0.35, 0.35] },
+        { type: 'caveWall', f: 0.1, color: '#34443a', base: 0.3, rim: { c: 'rgba(125,240,208,0.35)', dx: 0, dy: 3 } },
+        { type: 'roots', f: 0.25, color: '#4a3a2a', n: 14, rim: { c: 'rgba(160,240,200,0.3)', dx: 3, dy: 0 } },
         { type: 'glow', f: 0.4, colors: ['#7df0d0', '#b6f07a', '#8fc8ff'], n: 26 },
       ],
       beams: 0.1,
@@ -55,8 +103,17 @@
     queenHall: {
       sky: ['#3a2440', '#6a3e62', '#b0708a'],
       layers: [
-        { type: 'hills', f: 0.05, color: '#5a3656', base: 0.55, amp: 40 },
-        { type: 'mushrooms', f: 0.2, colors: ['#9a4f86', '#b85a8e', '#7e4a8a'], stem: '#e8d4dc', base: 0.82, n: 6, size: [110, 180], alpha: 0.9 },
+        // 暮色裡的菇之王城：遠方的城堡剪影、巨菇塔、孢子光
+        { type: 'stack', f: 0.008, of: [
+          { type: 'skyGlow', sun: [0.5, 0.6], rgb: '255,170,200', r: 620, a: 0.5, horizon: '230,150,180', horizonY: 0.56, horizonH: 0.2, horizonA: 0.45, cirrus: 5, cirrusRgb: '255,190,210', cirrusA: 0.3, cirrusY: [0.08, 0.3] },
+          { type: 'stars', n: 90, colors: ['#ffffff', '#ffd8f0'], cons: 0, line: 'rgba(0,0,0,0)' },
+        ] },
+        { type: 'landmarks', f: 0.025, wall: '#6a4a78', wallShade: '#56386a', roof: '#b85a8e', roofShade: '#8e4478', flag: '#f2c75a', frame: '#3a2440', dark: '#2a1830', win: '255,200,230', winC: '#ffd8ea',
+          items: [['castle', 0.5, 0.56, 1.2], ['giantMush', 0.18, 0.58, 1.1, { cap: '#8a4a86', stem: '#c8a8c0', glowRgb: '255,170,220', spot: 'rgba(255,220,240,0.7)' }], ['giantMush', 0.82, 0.58, 1.25, { cap: '#6e4a8e', stem: '#c0a4c8', glowRgb: '220,170,255', spot: 'rgba(240,220,255,0.7)' }]],
+          haze: '120,70,110', hazeA: [0.35, 0.45], rim: { c: 'rgba(255,190,220,0.7)', dx: 0, dy: 3 } },
+        { type: 'hills', f: 0.05, color: '#5a3656', base: 0.55, amp: 40, low: '#2a1830', rimC: 'rgba(255,180,220,0.45)', path: false },
+        { type: 'banners', f: 0.12, n: 4, cloth: '#7a3a6a', clothShade: '#5a2a50', trim: '#f2c75a', flag: '#9a4a86' },
+        { type: 'mushrooms', f: 0.2, colors: ['#9a4f86', '#b85a8e', '#7e4a8a'], stem: '#e8d4dc', base: 0.82, n: 6, size: [110, 180], alpha: 0.9, glowRgb: '255,190,230', rim: { c: 'rgba(255,200,230,0.55)', dx: 0, dy: 3 } },
         { type: 'lanterns', f: 0.35, n: 10 },
       ],
       beams: 0.12,
@@ -70,12 +127,17 @@
     coastCamp: {
       sky: ['#6ec4f4', '#c6ebff', '#fff4dc'],
       layers: [
+        { type: 'skyGlow', f: 0.006, sun: [0.18, 0.04], rgb: '255,250,215', r: 560, a: 0.6, horizon: '236,248,255', horizonY: 0.49, horizonH: 0.12, horizonA: 0.65, cirrus: 6, cirrusA: 0.45 },
         { type: 'clouds', f: 0.02, n: 6, y0: 0.08, y1: 0.3, size: [50, 90], color: '#ffffff', shade: '#dcecf8', alpha: 0.95 },
         { type: 'sea', f: 0.03, base: 0.5, colors: ['#6cc0e8', '#3f97cf'], hi: '#e8f8ff', n: 70 },
+        // 海平線上的小島與對岸的港町
+        { type: 'landmarks', f: 0.034, rock: '#9ab8c4', rockShade: '#86a6b6', grass: '#a4c8b0', tree: ['#8ab8a0', '#7cae98'], trunk: '#7a8a88', walls: ['#f6efe4', '#f4dcc8', '#e4ecf2', '#f8e2a8'], wall: '#f6efe4', wallShade: '#d8d0c8', roof: '#d86a58', roofShade: '#b45a50', stone: '#b8b4ac', door: '#7a6a6a', win: '255,220,160', winC: '#ffe8b0', frame: '#6a6a78',
+          items: [['islet', 0.06, 0.505, 0.9], ['harbor', 0.33, 0.505, 0.7], ['islet', 0.52, 0.505, 0.6], ['islet', 0.95, 0.505, 0.7]],
+          haze: '206,232,248', hazeA: [0.42, 0.42] },
         { type: 'boats', f: 0.05, base: 0.52, n: 4, hull: '#6a5a6a', sail: '#fff8ee', flag: '#e8604a' },
         { type: 'lighthouse', f: 0.07, base: 0.53, x: 0.72, w: 320, hh: 80, rock: '#c9b89a', grass: '#9ccf78', tower: '#fbf6ee', stripe: '#e0584a' },
-        { type: 'cliffs', f: 0.16, base: 0.76, w: [220, 380], hgt: [70, 130], gap: [120, 320], color: '#d9c29a', shade: '#bea27a', streak: 'rgba(120,90,60,0.18)', top: '#8fc86a', topHi: '#b4e08a' },
-        { type: 'trees', f: 0.34, colors: ['#6fae5a', '#5f9e4c'], trunk: '#7a5a40', base: 0.9, n: 3, size: [90, 130] },
+        { type: 'cliffs', f: 0.16, base: 0.76, w: [220, 380], hgt: [70, 130], gap: [120, 320], color: '#d9c29a', shade: '#bea27a', streak: 'rgba(120,90,60,0.18)', top: '#8fc86a', topHi: '#b4e08a', rim: { c: 'rgba(255,250,225,0.7)', dx: 3, dy: 2 }, haze: '190,225,245', hazeA: [0.12, 0.05] },
+        { type: 'trees', f: 0.34, colors: ['#6fae5a', '#5f9e4c'], trunk: '#7a5a40', base: 0.9, n: 3, size: [90, 130], rim: { c: 'rgba(255,250,210,0.55)', dx: 4, dy: 4 } },
       ],
       beams: 0.1,
       motes: 'rgba(255,255,255,0.8)',
@@ -91,11 +153,16 @@
     tidepool: {
       sky: ['#86d4f8', '#d6f3ff', '#fff6dc'],
       layers: [
+        { type: 'skyGlow', f: 0.006, sun: [0.8, 0.04], rgb: '255,252,225', r: 520, a: 0.6, horizon: '240,252,255', horizonY: 0.46, horizonH: 0.12, horizonA: 0.7, cirrus: 5, cirrusA: 0.45, birds: 2, birdColor: 'rgba(70,100,120,0.45)' },
         { type: 'clouds', f: 0.02, n: 5, y0: 0.06, y1: 0.26, size: [55, 95], color: '#ffffff', shade: '#dff0fa', alpha: 0.95 },
         { type: 'sea', f: 0.03, base: 0.47, colors: ['#74d0ec', '#40b0d8'], hi: '#f0fcff', n: 80 },
+        // 遠方的椰子島與海蝕拱門
+        { type: 'landmarks', f: 0.034, rock: '#a8c0c0', rockShade: '#94b0b4', grass: '#a8ccb0', tree: ['#7ab89a'], trunk: '#a0a090', palm: true, holeC: '#8cc8e0', bird: 'rgba(70,90,110,0.55)',
+          items: [['islet', 0.14, 0.475, 1.0], ['seaStack', 0.4, 0.475, 0.55, { hole: true }], ['islet', 0.66, 0.475, 0.7], ['seaStack', 0.88, 0.475, 0.4]],
+          haze: '214,240,250', hazeA: [0.4, 0.4] },
         { type: 'rocks', f: 0.06, base: 0.5, n: 4, w: [40, 90], hgt: [30, 70], color: '#8f9aa0', shade: '#737e86', top: '#a8c878', foam: true },
         { type: 'shore', f: 0.14, base: 0.64, sand: '#f8ecce', wet: '#e4d4b0', pool: '#8fdcec', rim: '#b9a888', foam: 'rgba(255,255,255,0.9)', pools: 6 },
-        { type: 'palms', f: 0.3, base: 0.86, n: 4, size: [160, 230], trunk: '#b0875a', ring: '#8a6640', colors: ['#5fae4a', '#4f9a40', '#72bf55'] },
+        { type: 'palms', f: 0.3, base: 0.86, n: 4, size: [160, 230], trunk: '#b0875a', ring: '#8a6640', colors: ['#5fae4a', '#4f9a40', '#72bf55'], rim: { c: 'rgba(255,252,215,0.6)', dx: -3, dy: 3 } },
       ],
       beams: 0.12,
       motes: 'rgba(255,255,255,0.85)',
@@ -110,9 +177,17 @@
     shipwreck: {
       sky: ['#7e98bf', '#e6c2a4', '#ffd79c'],
       layers: [
-        { type: 'clouds', f: 0.02, n: 7, y0: 0.05, y1: 0.32, size: [70, 120], color: '#f2d6c4', shade: '#b8a6b4', alpha: 0.95 },
+        { type: 'stack', f: 0.006, of: [
+          { type: 'skyGlow', sun: [0.3, 0.48], rgb: '255,214,150', r: 620, a: 0.55, horizon: '255,226,190', horizonY: 0.5, horizonH: 0.1, horizonA: 0.6, cirrus: 7, cirrusRgb: '255,220,190', cirrusA: 0.4, cirrusY: [0.1, 0.36] },
+          { type: 'shafts', x: 0.3, y: 0.5, n: 12, rgb: '255,226,170', a: 0.14, angle: -1.57, spread: 2.4, len: 0.9, w: 0.03 },
+        ] },
+        { type: 'clouds', f: 0.02, n: 7, y0: 0.05, y1: 0.32, size: [70, 120], color: '#f2d6c4', shade: '#b8a6b4', alpha: 0.95, lit: '#ffe6cc', rim: 'rgba(255,226,170,0.9)' },
         { type: 'sea', f: 0.03, base: 0.52, colors: ['#8aaebc', '#4f8398'], hi: '#ffe6c0', n: 60, glowX: 0.3, glow: 'rgba(255,220,160,0.55)' },
-        { type: 'cliffs', f: 0.07, base: 0.6, w: [260, 420], hgt: [120, 200], gap: [300, 600], color: '#9a8a8c', shade: '#857477', streak: 'rgba(60,40,50,0.15)', top: '#8a9e6a', topHi: '#a2b47e' },
+        // 夕霧裡的海蝕柱與另一艘沉船的桅杆
+        { type: 'landmarks', f: 0.04, rock: '#8a8090', rockShade: '#766c7e', grass: '#8a9474', hull: '#6a5a60', sail: 'rgba(232,214,200,0.8)', bird: 'rgba(80,60,80,0.6)',
+          items: [['seaStack', 0.08, 0.525, 0.8], ['seaStack', 0.14, 0.525, 0.5], ['wreckMast', 0.64, 0.525, 0.7], ['seaStack', 0.9, 0.525, 0.65, { hole: true, holeC: '#d8b4a0' }]],
+          haze: '226,196,186', hazeA: [0.5, 0.45], rim: { c: 'rgba(255,214,160,0.8)', dx: 2, dy: 1 } },
+        { type: 'cliffs', f: 0.07, base: 0.6, w: [260, 420], hgt: [120, 200], gap: [300, 600], color: '#9a8a8c', shade: '#857477', streak: 'rgba(60,40,50,0.15)', top: '#8a9e6a', topHi: '#a2b47e', rim: { c: 'rgba(255,210,150,0.75)', dx: 3, dy: 1 }, haze: '220,190,180', hazeA: [0.25, 0.15] },
         { type: 'ship', f: 0.14, base: 0.7, x: 0.42, s: 1.25, color: '#7c6660', dark: '#5a4644', sail: '#e8dccb' },
         { type: 'shore', f: 0.22, base: 0.74, sand: '#d9c095', wet: '#bfa57a', pool: '#8fb4bc', rim: '#9a8a70', foam: 'rgba(255,245,230,0.85)', pools: 3 },
         { type: 'rocks', f: 0.36, base: 0.86, n: 3, w: [90, 150], hgt: [60, 110], color: '#6e6468', shade: '#564e52', top: '#7e8e5a', foam: false },
@@ -132,11 +207,16 @@
     reef: {
       sky: ['#5fb8ea', '#b8e4f6', '#f0fbff'],
       layers: [
+        { type: 'skyGlow', f: 0.006, sun: [0.62, 0.02], rgb: '255,255,235', r: 520, a: 0.55, horizon: '226,244,252', horizonY: 0.43, horizonH: 0.1, horizonA: 0.7, cirrus: 7, cirrusA: 0.5, birds: 3, birdColor: 'rgba(60,90,120,0.45)' },
         { type: 'clouds', f: 0.02, n: 5, y0: 0.06, y1: 0.28, size: [60, 100], color: '#ffffff', shade: '#d6eaf6', alpha: 0.9 },
         { type: 'sea', f: 0.03, base: 0.44, colors: ['#4aaede', '#1f78b8'], hi: '#e8f8ff', n: 90 },
+        // 外海的礁岩群與燈標小島
+        { type: 'landmarks', f: 0.035, rock: '#8aa2b0', rockShade: '#7690a0', grass: '#9ab8a0', tree: ['#86b09a'], trunk: '#7a8a8a', holeC: '#6ab8e0', walls: ['#f4f0e8'], wall: '#f4f0e8', wallShade: '#d4d0cc', roof: '#d8604a', win: '255,230,170',
+          items: [['seaStack', 0.1, 0.445, 0.7, { hole: true }], ['seaStack', 0.16, 0.445, 0.45], ['islet', 0.46, 0.445, 0.8, { win: '255,230,170' }], ['seaStack', 0.78, 0.445, 0.6], ['seaStack', 0.82, 0.445, 0.9, { hole: true }]],
+          haze: '200,230,248', hazeA: [0.42, 0.42] },
         { type: 'rocks', f: 0.08, base: 0.52, n: 5, w: [60, 120], hgt: [50, 120], color: '#6a7e8a', shade: '#566a76', top: '#f4f4ee', foam: true, splash: true },
         { type: 'surf', f: 0.2, base: 0.68, n: 4, color: '#465660', shade: '#36444e', sea: '#2f86be' },
-        { type: 'rocks', f: 0.36, base: 0.86, n: 4, w: [100, 180], hgt: [70, 130], color: '#3e4c56', shade: '#303c44', top: '#4f7a4a', foam: true, splash: true },
+        { type: 'rocks', f: 0.36, base: 0.86, n: 4, w: [100, 180], hgt: [70, 130], color: '#3e4c56', shade: '#303c44', top: '#4f7a4a', foam: true, splash: true, rim: { c: 'rgba(220,245,255,0.55)', dx: -3, dy: 3 } },
       ],
       beams: 0.08,
       motes: 'rgba(255,255,255,0.95)',
@@ -151,11 +231,19 @@
     crabNest: {
       sky: ['#3e3468', '#d0705e', '#ffbe6e'],
       layers: [
-        { type: 'clouds', f: 0.02, n: 5, y0: 0.08, y1: 0.3, size: [70, 120], color: '#f0a08a', shade: '#9a6690', alpha: 0.85 },
+        { type: 'stack', f: 0.006, of: [
+          { type: 'skyGlow', sun: [0.55, 0.5], rgb: '255,180,110', r: 700, a: 0.5, horizon: '255,190,140', horizonY: 0.49, horizonH: 0.1, horizonA: 0.55, cirrus: 8, cirrusRgb: '255,170,140', cirrusA: 0.45, cirrusY: [0.06, 0.3], birds: 2, birdColor: 'rgba(60,30,60,0.6)' },
+          { type: 'shafts', x: 0.55, y: 0.5, n: 16, rgb: '255,200,140', a: 0.16, angle: -1.57, spread: 2.8, len: 0.8, w: 0.025 },
+        ] },
+        { type: 'clouds', f: 0.02, n: 5, y0: 0.08, y1: 0.3, size: [70, 120], color: '#f0a08a', shade: '#9a6690', alpha: 0.85, lit: '#ffc49a', dark: '#6e4a78', rim: 'rgba(255,214,150,0.95)' },
         { type: 'sun', f: 0.03, x: 0.55, y: 0.5, r: 56, color: '#ffe6a0', glow: 'rgba(255,190,110,0.55)' },
         { type: 'sea', f: 0.03, base: 0.5, colors: ['#b0708a', '#5a4a7a'], hi: '#ffd8a0', n: 60, glowX: 0.55, glow: 'rgba(255,210,140,0.7)' },
+        // 夕陽下的島影
+        { type: 'landmarks', f: 0.034, rock: '#6a4a72', rockShade: '#5a3e64', grass: '#6e5270', tree: ['#5e4468'], trunk: '#4a3450', palm: true, bird: 'rgba(50,25,50,0.7)',
+          items: [['islet', 0.12, 0.505, 1.1], ['seaStack', 0.3, 0.505, 0.5], ['islet', 0.82, 0.505, 0.8], ['seaStack', 0.94, 0.505, 0.7, { hole: true, holeC: '#e0907a' }]],
+          haze: '200,120,130', hazeA: [0.3, 0.3], rim: { c: 'rgba(255,200,130,0.85)', dx: 0, dy: 2 } },
         { type: 'ruins', f: 0.1, base: 0.62, n: 3, color: '#5e4466', shade: '#4a3654', stripe: 'rgba(200,110,110,0.35)', rim: '#ff9e70' },
-        { type: 'rocks', f: 0.24, base: 0.8, n: 4, w: [90, 170], hgt: [60, 120], color: '#4e3a52', shade: '#3c2c42', top: '#6e5a6a', foam: false },
+        { type: 'rocks', f: 0.24, base: 0.8, n: 4, w: [90, 170], hgt: [60, 120], color: '#4e3a52', shade: '#3c2c42', top: '#6e5a6a', foam: false, rim: { c: 'rgba(255,170,110,0.6)', dx: 0, dy: 3 } },
         { type: 'tide', f: 0.4, base: 0.74, color: 'rgba(120,90,150,0.55)', foam: 'rgba(255,230,200,0.85)' },
       ],
       beams: 0.12,
@@ -174,9 +262,18 @@
     hotspringCamp: {
       sky: ['#86c8ee', '#ffe8c6', '#ffd29e'],
       layers: [
+        { type: 'skyGlow', f: 0.006, sun: [0.8, 0.06], rgb: '255,240,210', r: 560, a: 0.55, horizon: '255,236,214', horizonY: 0.5, horizonH: 0.16, horizonA: 0.5, cirrus: 5, cirrusRgb: '255,246,236', cirrusA: 0.4, birds: 2, birdColor: 'rgba(110,70,60,0.5)' },
         { type: 'clouds', f: 0.02, n: 4, y0: 0.06, y1: 0.24, size: [50, 80], color: '#fff8f0', shade: '#f0d8c8', alpha: 0.9 },
-        { type: 'mesas', f: 0.05, base: 0.56, w: [200, 380], hgt: [80, 150], gap: [40, 160], color: '#e8b49a', shade: '#dba38a', top: '#f2c8ae', stripe: 'rgba(255,255,255,0.18)' },
-        { type: 'mesas', f: 0.14, base: 0.66, w: [180, 320], hgt: [110, 190], gap: [120, 300], color: '#d08866', shade: '#bc7658', top: '#e3a07a', stripe: 'rgba(120,50,30,0.14)' },
+        // 遠方淡紫的山脈與熱氣球
+        { type: 'ridges', f: 0.018, fog: '#f4dcca', fogRgb: '246,224,206', bands: [
+          { base: 0.47, amp: 60, color: '#d8b8b8', shade: 'rgba(150,110,130,0.14)', rim: 'rgba(255,240,225,0.8)', mistA: 0.55, sharp: 0.6 },
+        ] },
+        { type: 'mesas', f: 0.05, base: 0.56, w: [200, 380], hgt: [80, 150], gap: [40, 160], color: '#e8b49a', shade: '#dba38a', top: '#f2c8ae', stripe: 'rgba(255,255,255,0.18)', haze: '246,220,200', hazeA: [0.3, 0.2], rim: { c: 'rgba(255,245,225,0.7)', dx: -2, dy: 2 } },
+        // 山谷裡的溫泉旅館、五重塔、冒著熱氣
+        { type: 'landmarks', f: 0.09, wall: '#8a5a44', wallShade: '#6e4636', roof: '#5a4a5a', roofShade: '#46384a', stone: '#9a8a80', win: '255,200,130', winC: '#ffe0a0', accent: '#d8584a', lantern: '#ff9a5a', gold: '#e8b84a', smoke: 'rgba(255,250,245,0.7)', stripes: ['#e8604a', '#f6d06a'],
+          items: [['onsen', 0.08, 0.63, 0.8], ['pagoda', 0.47, 0.63, 0.55, { tiers: 5, lantern: '#ff9a5a' }], ['balloon', 0.7, 0.2, 0.8], ['balloon', 0.9, 0.3, 0.5, { stripes: ['#4aa0d8', '#f4f0e8'] }]],
+          haze: '240,212,190', hazeA: [0.25, 0.2], rim: { c: 'rgba(255,240,215,0.6)', dx: -2, dy: 2 } },
+        { type: 'mesas', f: 0.14, base: 0.66, w: [180, 320], hgt: [110, 190], gap: [120, 300], color: '#d08866', shade: '#bc7658', top: '#e3a07a', stripe: 'rgba(120,50,30,0.14)', shrub: '#8a8a4a', rim: { c: 'rgba(255,236,210,0.6)', dx: -3, dy: 2 } },
         { type: 'pools', f: 0.3, base: 0.72, ground: '#b89878', groundHi: '#cfb08e', water: '#9fe0dc', rim: '#8a8078', n: 4, lanterns: 5 },
       ],
       beams: 0.14,
@@ -192,10 +289,18 @@
     redRift: {
       sky: ['#3f9ee6', '#9ad2f6', '#f6ead6'],
       layers: [
+        { type: 'skyGlow', f: 0.006, sun: [0.2, 0.04], rgb: '255,250,225', r: 520, a: 0.5, horizon: '250,236,220', horizonY: 0.5, horizonH: 0.16, horizonA: 0.55, cirrus: 6, cirrusA: 0.45, birds: 2, birdY: [0.1, 0.22], birdColor: 'rgba(80,40,30,0.55)' },
         { type: 'clouds', f: 0.02, n: 4, y0: 0.05, y1: 0.22, size: [50, 90], color: '#ffffff', shade: '#dceaf6', alpha: 0.9 },
-        { type: 'mesas', f: 0.05, base: 0.58, w: [220, 400], hgt: [90, 170], gap: [60, 200], color: '#eab8a4', shade: '#dea692', top: '#f4cab6', stripe: 'rgba(255,255,255,0.2)' },
-        { type: 'mesas', f: 0.13, base: 0.7, w: [200, 340], hgt: [150, 250], gap: [140, 320], color: '#d88a68', shade: '#c47656', top: '#eaa680', stripe: 'rgba(130,50,30,0.16)' },
-        { type: 'mesas', f: 0.3, base: 0.92, w: [160, 260], hgt: [250, 360], gap: [420, 700], color: '#c06a50', shade: '#a85840', top: '#d88a64', stripe: 'rgba(110,40,25,0.18)' },
+        { type: 'ridges', f: 0.018, fog: '#f6e2d4', fogRgb: '246,228,214', bands: [
+          { base: 0.5, amp: 46, color: '#e2c4bc', shade: 'rgba(170,110,100,0.14)', rim: 'rgba(255,245,230,0.8)', mistA: 0.5, sharp: 0.7 },
+        ] },
+        { type: 'mesas', f: 0.05, base: 0.58, w: [220, 400], hgt: [90, 170], gap: [60, 200], color: '#eab8a4', shade: '#dea692', top: '#f4cab6', stripe: 'rgba(255,255,255,0.2)', haze: '246,224,210', hazeA: [0.28, 0.2], rim: { c: 'rgba(255,248,230,0.7)', dx: 2, dy: 2 } },
+        // 天然石拱、鑿著崖居的孤峰、熱氣球
+        { type: 'landmarks', f: 0.085, rock: '#dc9a7a', rockShade: '#c4826a', cap: '#f0b894', dark: '#7a3a2a', adobe: '#f0c8a4', shrub: '#9a9a5a', frame: '#7a4a34', stripes: ['#3a9ad8', '#f6f0e0'],
+          items: [['arch', 0.22, 0.66, 0.9], ['butte', 0.66, 0.68, 0.9], ['balloon', 0.44, 0.24, 0.7]],
+          haze: '242,206,186', hazeA: [0.28, 0.22], rim: { c: 'rgba(255,240,220,0.75)', dx: 2, dy: 2 } },
+        { type: 'mesas', f: 0.13, base: 0.7, w: [200, 340], hgt: [150, 250], gap: [140, 320], color: '#d88a68', shade: '#c47656', top: '#eaa680', stripe: 'rgba(130,50,30,0.16)', shrub: '#8a8a4a', rim: { c: 'rgba(255,236,210,0.6)', dx: 3, dy: 2 } },
+        { type: 'mesas', f: 0.3, base: 0.92, w: [160, 260], hgt: [250, 360], gap: [420, 700], color: '#c06a50', shade: '#a85840', top: '#d88a64', stripe: 'rgba(110,40,25,0.18)', shrub: '#7a7a3a', rim: { c: 'rgba(255,230,200,0.55)', dx: 4, dy: 3 } },
       ],
       beams: 0.12,
       motes: 'rgba(255,236,200,0.7)',
@@ -209,9 +314,19 @@
     steamPass: {
       sky: ['#a8bcc4', '#e6e0d2', '#f6dcbc'],
       layers: [
-        { type: 'walls', f: 0.05, top: 0.2, color: '#c0a49c', shade: '#b0948c', stripe: 'rgba(255,255,255,0.14)', ceil: 0 },
+        // 峽谷頂上露出的一線天：遠山、雲
+        { type: 'stack', f: 0.01, of: [
+          { type: 'skyGlow', sun: [0.4, 0.02], rgb: '255,248,225', r: 520, a: 0.55, cirrus: 4, cirrusA: 0.4, cirrusY: [0.04, 0.14] },
+          { type: 'cumulus', n: 4, y0: 0.1, y1: 0.16, size: [30, 50], lit: '#ffffff', mid: '#f8f4ee', shade: '#e2d8d0', dark: '#cfc2bc', rim: 'rgba(255,255,255,0.9)' },
+          { type: 'ridges', fog: '#e8e0d4', fogRgb: '232,224,212', bands: [{ base: 0.24, amp: 30, color: '#c8bcc0', rim: 'rgba(255,250,240,0.8)', mistA: 0.6, fogH: 40 }] },
+        ] },
+        { type: 'walls', f: 0.05, top: 0.2, color: '#c0a49c', shade: '#b0948c', stripe: 'rgba(255,255,255,0.14)', ceil: 0, rim: { c: 'rgba(255,245,230,0.6)', dx: 0, dy: 3 } },
         { type: 'steam', f: 0.1, n: 10, y0: 0.3, y1: 0.7, alpha: 0.35, vents: 3, vy: 0.66 },
-        { type: 'walls', f: 0.2, top: 0.36, color: '#8e6c66', shade: '#7a5a56', stripe: 'rgba(40,20,20,0.14)', ceil: 0.08, gaps: 2 },
+        // 橫跨峽谷的吊橋、岩壁上的棧道與崖居
+        { type: 'landmarks', f: 0.13, wood: '#6a4a3a', rope: '#5a3a2a', plank: '#8a6448', post: '#4a3020', flag: '#e0604a', dark: '#5a3a36', adobe: '#c8a494', win: '255,190,120', winC: '#ffd890', lantern: '#ff9a5a',
+          items: [['bridge', 0.16, 0.3, 1.0], ['scaffold', 0.86, 0.4, 0.9], ['alcove', 0.4, 0.36, 0.8], ['alcove', 0.62, 0.5, 0.6]],
+          haze: '220,200,190', hazeA: [0.25, 0.3] },
+        { type: 'walls', f: 0.2, top: 0.36, color: '#8e6c66', shade: '#7a5a56', stripe: 'rgba(40,20,20,0.14)', ceil: 0.08, gaps: 2, rim: { c: 'rgba(255,230,210,0.5)', dx: 0, dy: 3 } },
         { type: 'steam', f: 0.3, n: 6, y0: 0.45, y1: 0.8, alpha: 0.3, vents: 3, vy: 0.84 },
       ],
       beams: 0.22,
@@ -228,6 +343,9 @@
       sky: ['#1c1218', '#3a1c1e', '#6e2a18'],
       layers: [
         { type: 'walls', f: 0.05, top: 0.16, color: '#3a2426', shade: '#301e20', stripe: 'rgba(255,120,60,0.08)', ceil: 0.05, rim: '#8a3a22' },
+        // 岩壁上的熔岩瀑布與遠方的地底鍛造場
+        { type: 'landmarks', f: 0.075, rock: '#3a2426', rockShade: '#2c1a1c', glowRgb: '255,120,50', wood: '#4a2e24', win: '255,150,70', lantern: '#ffb060',
+          items: [['lavaFall', 0.14, 0.67, 0.9], ['lavaFall', 0.58, 0.67, 1.1], ['scaffold', 0.36, 0.6, 0.8], ['lavaFall', 0.84, 0.67, 0.7]] },
         { type: 'lavaRiver', f: 0.1, base: 0.66, ground: '#2a1a1c', ground2: '#221416' },
         { type: 'spires', f: 0.22, base: 0.9, n: 6, w: [60, 120], hgt: [160, 300], color: '#2a1c20', shade: '#1e1418', rim: '#ff7a3a' },
       ],
@@ -244,8 +362,15 @@
     volcanoNest: {
       sky: ['#3a1618', '#b8402a', '#ffae5c'],
       layers: [
-        { type: 'clouds', f: 0.02, n: 5, y0: 0.05, y1: 0.24, size: [80, 130], color: '#7a3a3a', shade: '#4a2226', alpha: 0.75 },
+        { type: 'skyGlow', f: 0.005, sun: [0.5, 0.32], rgb: '255,140,70', r: 640, a: 0.45, horizon: '255,150,90', horizonY: 0.66, horizonH: 0.14, horizonA: 0.4 },
+        { type: 'clouds', f: 0.02, n: 5, y0: 0.05, y1: 0.24, size: [80, 130], color: '#7a3a3a', shade: '#4a2226', alpha: 0.75, lit: '#9a4a40', dark: '#3a1a1e', rim: 'rgba(255,150,90,0.7)', base: 'rgba(255,120,60,0.25)' },
+        // 火山後面的遠山與沖天的煙柱
+        { type: 'ridges', f: 0.025, fog: '#8a3a2a', fogRgb: '150,60,40', bands: [
+          { base: 0.6, amp: 60, color: '#6a2e2a', shade: 'rgba(40,10,10,0.2)', rim: 'rgba(255,140,80,0.7)', mistA: 0.5, sharp: 0.7 },
+        ] },
+        { type: 'landmarks', f: 0.04, smoke: '#4a2c30', far: '#6a4448', lit: '#d8603a', glowRgb: '255,130,60', items: [['plume', 0.5, 0.31, 1.0]] },
         { type: 'volcano', f: 0.04, x: 0.5, base: 0.72, top: 0.3, w: 560, color: '#5a2c2a', shade: '#44201f', rim: '#ff9a50' },
+        { type: 'landmarks', f: 0.08, rock: '#44221f', rockShade: '#341816', glowRgb: '255,120,50', items: [['lavaFall', 0.14, 0.76, 0.7], ['lavaFall', 0.88, 0.76, 0.8]], haze: '120,40,30', hazeA: [0.2, 0.2] },
         { type: 'spires', f: 0.14, base: 0.78, n: 7, w: [70, 130], hgt: [110, 220], color: '#44221f', shade: '#341816', rim: '#ff8a4a' },
         { type: 'lavaRiver', f: 0.26, base: 0.76, ground: '#2e1816', ground2: '#261412', pools: true },
       ],
@@ -1507,8 +1632,15 @@
     },
   };
 
+  // 每個主題約 6~9 張 1600×720 的離屏圖；只留最近用過的幾個主題，免得逛完全地圖吃掉上 GB 記憶體
   const layerCache = {};
+  const layerLRU = [];
+  const LAYER_KEEP = 3;
   function buildLayers(themeId) {
+    const hit = layerLRU.indexOf(themeId);
+    if (hit >= 0) layerLRU.splice(hit, 1);
+    layerLRU.push(themeId);
+    while (layerLRU.length > LAYER_KEEP) delete layerCache[layerLRU.shift()];
     if (layerCache[themeId]) return layerCache[themeId];
     const th = THEMES[themeId];
     const out = th.layers.map((L, i) => {
@@ -1522,11 +1654,42 @@
       const rnd = U.seeded(seed);
       const anim = LAYER[L.type](ctx, L, rnd, G.H) || null;
       // 只有動畫貼圖的層（鐘環、齒輪）不用每格貼一張空白大圖
-      return { canvas: c, f: L.f, anim, empty: L.type === 'clockRings' || L.type === 'gears' };
+      const empty = L.type === 'clockRings' || L.type === 'gears';
+      const crop = empty ? null : cropRows(c);
+      return { canvas: crop ? crop.canvas : c, y0: crop ? crop.y0 : 0, f: L.f, anim, empty };
     });
     layerCache[themeId] = out;
     return out;
   }
+  // 把整列透明的上下邊裁掉：遠景層多半只佔畫面一部分，每格少貼很多空白像素
+  function cropRows(c) {
+    let data;
+    try {
+      data = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    } catch (e) {
+      return null;
+    }
+    const W = c.width;
+    const rowHas = (y) => {
+      for (let x = 3 + y * W * 4, end = (y + 1) * W * 4; x < end; x += 12) if (data[x] > 2) return true;
+      return false;
+    };
+    let y0 = 0;
+    while (y0 < c.height && !rowHas(y0)) y0++;
+    let y1 = c.height - 1;
+    while (y1 > y0 && !rowHas(y1)) y1--;
+    if (y0 >= c.height) return null;
+    y0 = Math.max(0, y0 - 2);
+    y1 = Math.min(c.height - 1, y1 + 2);
+    if (y1 - y0 + 1 > c.height * 0.9) return null;
+    const out = document.createElement('canvas');
+    out.width = W;
+    out.height = y1 - y0 + 1;
+    out.getContext('2d').drawImage(c, 0, -y0);
+    return { canvas: out, y0 };
+  }
+  // 給 bgdetail.js 擴充背景層（遠山、積雲、地標、浮島……）
+  A.BG_LAYER = LAYER;
 
   // ── 地圖準備：預先算好平台上的裝飾 ──
   A.prepareMap = function (map) {
@@ -1590,7 +1753,7 @@
     for (const L of map._layers) {
       const ox = -((cam.x * L.f) % TW);
       const oy = (maxY - cam.y) * L.f * 0.7;
-      if (!L.empty) for (let x = ox; x < G.W; x += TW) ctx.drawImage(L.canvas, x, oy);
+      if (!L.empty) for (let x = ox; x < G.W; x += TW) ctx.drawImage(L.canvas, x, oy + (L.y0 || 0));
       if (L.anim) {
         for (let x = ox - TW; x < G.W; x += TW) {
           ctx.save();
@@ -1637,20 +1800,10 @@
         HANG[hang](ctx, h, t);
       }
     } else {
-      const leafy = map.theme === 'rootCave' ? '#4a6a3a' : '#5f9f3a';
+      const cave = map.theme === 'rootCave';
       for (const h of map._hang) {
         if (h.x < x0 || h.x > x1) continue;
-        const sw = Math.sin(t * 1.5 + h.seed) * 3;
-        ctx.strokeStyle = map.theme === 'rootCave' ? '#5a3e28' : '#4f8a34';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(h.x, h.y - 4);
-        ctx.quadraticCurveTo(h.x + sw, h.y + h.len * 0.5, h.x + sw * 1.5, h.y + h.len);
-        ctx.stroke();
-        ctx.fillStyle = leafy;
-        ctx.beginPath();
-        ctx.ellipse(h.x + sw * 1.5, h.y + h.len, 4, 2.5, 0.5, 0, Math.PI * 2);
-        ctx.fill();
+        drawVineHang(ctx, h, t, cave);
       }
     }
     for (const p of map._props) {
@@ -2492,6 +2645,7 @@
   // ── 地形 ──
   A.drawPlatforms = function (ctx, map, cam) {
     const th = map._theme;
+    terrMap = map;
     const x0 = cam.x - 50;
     const x1 = cam.x + G.W + 50;
     map.platforms.forEach((p, i) => {
@@ -2521,6 +2675,13 @@
           A.roundRect(ctx, left + 3, y + 14, right - left - 6, bodyH - 14, 10);
           ctx.fill();
         }
+        ctx.save();
+        ctx.beginPath();
+        if (isGround) ctx.rect(left, y, right - left, bodyH);
+        else A.roundRect(ctx, left, y, right - left, bodyH, 12);
+        ctx.clip();
+        terrBody(ctx, P, 'grass', left, right, y, bodyH, isGround, i, Math.max(left, x0), Math.min(right, x1));
+        ctx.restore();
         if (isGround) groundPebbles(ctx, left, right, y, bodyH, i, x0, x1);
         else {
           ctx.strokeStyle = P.edge;
@@ -2553,6 +2714,7 @@
         if (d.x < x0 || d.x > x1) continue;
         drawDeco(ctx, P.deco, d, y, P);
       }
+      terrTop(ctx, P, style, left, right, y, isGround, i, x0, x1);
     });
   };
 
@@ -2663,6 +2825,7 @@
       }
       ctx.restore();
     }
+    terrBody(ctx, P, style, left, right, y, bodyH, isGround, i, vx0, vx1);
     ctx.restore();
     if (isGround) groundPebbles(ctx, left, right, y, bodyH, i, x0, x1, P.glow ? 'rgba(0,0,0,0.25)' : null);
     else {
@@ -3052,7 +3215,58 @@
       }
       // 每隔一段一個繩結
       for (let y = top + 26; y < bottom - 6; y += 34) A.ellipse(ctx, sway(y), y, 5.5, 4.5, '#d8aa6a', '#b0854a', { lw: 2, hl: false });
+      // 麻繩的高光與起毛的纖維
+      ctx.strokeStyle = 'rgba(255,236,190,0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let y = top + 2; y < bottom; y += 7) {
+        const xx = sway(y);
+        ctx.moveTo(xx - 1.8, y + 1);
+        ctx.lineTo(xx - 0.4, y + 3.5);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(140,100,56,0.8)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let y = top + 10, k = 0; y < bottom; y += 13, k++) {
+        const xx = sway(y);
+        const s = k % 2 ? 1 : -1;
+        ctx.moveTo(xx + s * 3, y);
+        ctx.lineTo(xx + s * 5.5, y - 2 + (k % 3));
+      }
+      ctx.stroke();
+      // 末端散開的繩穗
+      ctx.strokeStyle = '#c89a5e';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let k = -2; k <= 2; k++) {
+        ctx.moveTo(sway(bottom), bottom);
+        ctx.lineTo(sway(bottom) + k * 2.2, bottom + 7 - Math.abs(k));
+      }
+      ctx.stroke();
     }
+    if (style === 'chain') {
+      // 鐵鍊的高光
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let y = top, k = 0; y < bottom; y += 9, k++) {
+        if (k % 2) continue;
+        const xx = sway(y);
+        ctx.moveTo(xx - 3.5, y + 2);
+        ctx.quadraticCurveTo(xx - 4, y + 4, xx - 3, y + 6.5);
+      }
+      ctx.stroke();
+    }
+    // 頂端的鐵環（繩子穿過木樁）
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(x, top + 3, 5, 3.5, 0, 0, PI2);
+    ctx.stroke();
+    ctx.strokeStyle = '#8a8494';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     // 頂端綁在一截小木樁上
     A.shape(ctx, (c) => A.roundRect(c, x - 10, top - 6, 20, 9, 3), style === 'chain' ? '#6a6070' : '#8a6446', style === 'chain' ? '#4a4250' : '#6e4e36', { lw: 2.2, hl: false });
   }
@@ -3138,8 +3352,38 @@
       for (let y = top + 12, i = 0; y < bottom - 4; y += 20, i++) {
         const sd = i % 2 ? 1 : -1;
         const sway = Math.sin(t * 2 + i) * 0.15;
-        A.ellipse(ctx, x + sd * 9, y, 8, 4, '#7cc84a', '#5a9e34', { rot: sd * 0.6 + sway, lw: 1.8, hl: false });
+        A.ellipse(ctx, x + sd * 9, y, 8, 4, i % 3 === 2 ? '#8ad458' : '#7cc84a', '#5a9e34', { rot: sd * 0.6 + sway, lw: 1.8, hl: false });
+        // 葉脈
+        const lr = sd * 0.6 + sway;
+        ctx.strokeStyle = 'rgba(60,110,40,0.7)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + sd * 9 - Math.cos(lr) * 6, y - Math.sin(lr) * 6);
+        ctx.lineTo(x + sd * 9 + Math.cos(lr) * 6, y + Math.sin(lr) * 6);
+        ctx.stroke();
+        // 對側的捲鬚、偶爾一朵小花苞
+        if (i % 3 === 1) {
+          ctx.strokeStyle = '#5f9e38';
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(x - sd * 3, y + 6);
+          ctx.quadraticCurveTo(x - sd * 10, y + 6, x - sd * 11, y + 11);
+          ctx.arc(x - sd * 8.5, y + 11, 2.5, Math.PI, Math.PI * 2.7);
+          ctx.stroke();
+        } else if (i % 5 === 3) {
+          A.ellipse(ctx, x - sd * 7, y + 8, 2.6, 2.6, i % 2 ? '#ffe36b' : '#ff9fbf', null, { lw: 1.1, hl: false });
+        }
       }
+      // 藤蔓表皮的細紋
+      ctx.strokeStyle = 'rgba(40,80,30,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let y = top + 6; y < bottom; y += 9) {
+        const xx = x + Math.sin(y * 0.07 + t * 0.8) * 2.5;
+        ctx.moveTo(xx - 2.5, y);
+        ctx.lineTo(xx + 2, y + 3);
+      }
+      ctx.stroke();
       // 頂端的結與小花
       A.ellipse(ctx, x, top + 2, 9, 7, '#5f9e38', '#4a8030', { lw: 2.2, hl: false });
       for (let k = 0; k < 5; k++) A.ellipse(ctx, x + 8 + Math.cos(k * 1.256) * 3.5, top - 2 + Math.sin(k * 1.256) * 3.5, 2.6, 2.6, '#fff3a0', null, { lw: 1.2, hl: false });
@@ -3196,8 +3440,16 @@
     snowCamp: {
       sky: ['#6a80b4', '#c2c8e2', '#f8d8bc'],
       layers: [
+        { type: 'stack', f: 0.006, of: [
+          { type: 'skyGlow', sun: [0.86, 0.48], rgb: '255,190,140', r: 720, a: 0.5, horizon: '255,214,186', horizonY: 0.48, horizonH: 0.14, horizonA: 0.5, cirrus: 6, cirrusRgb: '255,210,196', cirrusA: 0.4, birds: 2, birdColor: 'rgba(70,60,90,0.5)' },
+          { type: 'cumulus', n: 4, y0: 0.08, y1: 0.26, size: [40, 70], lit: '#ffe8da', mid: '#f4d6d4', shade: '#c8b8d4', dark: '#a49ac0', rim: 'rgba(255,222,190,0.95)' },
+        ] },
         { type: 'peaks', f: 0.03, base: 0.5, w: [380, 560], hgt: [170, 260], gap: [0.45, 0.7], color: '#8e98c0', shade: '#7882ac', snow: '#f2f0f8', snowShade: '#c6c8e2', cap: 0.45, rim: 'rgba(255,236,220,0.8)', mist: '222,222,240', mistH: 90, mistA: 0.92 },
-        { type: 'pines', f: 0.1, base: 0.6, n: 18, size: [56, 96], colors: ['#667c96', '#5c7290'], trunk: '#4a5060', snow: '#eceff8', snowShade: '#bcc4dc', alpha: 0.92, ground: '#e2e4f2' },
+        // 山腰上的鐘樓與古寺
+        { type: 'landmarks', f: 0.05, wall: '#8a6a78', wallShade: '#6e5262', roof: '#4a3444', stone: '#8a8498', snow: '#f4f2fa', bell: '#d8b060', win: '255,190,120', winC: '#ffd890', lantern: '#ff9a5a', gold: '#e8b84a',
+          items: [['bellTower', 0.3, 0.47, 0.75], ['pagoda', 0.72, 0.48, 0.5, { tiers: 3 }]],
+          haze: '222,220,240', hazeA: [0.38, 0.38], rim: { c: 'rgba(255,214,180,0.8)', dx: -2, dy: 2 } },
+        { type: 'pines', f: 0.1, base: 0.6, n: 18, size: [56, 96], colors: ['#667c96', '#5c7290'], trunk: '#4a5060', snow: '#eceff8', snowShade: '#bcc4dc', alpha: 0.92, ground: '#e2e4f2', rim: { c: 'rgba(255,210,180,0.6)', dx: -2, dy: 2 } },
         { type: 'village', f: 0.2, base: 0.75, w: [110, 170], hgt: [60, 86], gap: [60, 150], wall: '#9a6446', wallShade: '#7c4c36', roof: '#5a3444', snow: '#f8f8ff', snowShade: '#cfd4ec', win: '#ffd88a', glowRgb: '255,186,110', lantern: '#ee5a3a', ground: '#eef0fa', groundShade: '#d4d8ec' },
         { type: 'pines', f: 0.34, base: 0.97, n: 4, size: [150, 200], colors: ['#3f6468', '#365a60'], trunk: '#5a4034', snow: '#f6f8ff', snowShade: '#c6d0e6' },
       ],
@@ -3215,10 +3467,17 @@
     snowField: {
       sky: ['#9cbce0', '#dde8f4', '#f7f5f0'],
       layers: [
+        { type: 'stack', f: 0.005, of: [
+          { type: 'skyGlow', sun: [0.28, 0.04], rgb: '255,255,240', r: 600, a: 0.6, horizon: '240,246,252', horizonY: 0.5, horizonH: 0.14, horizonA: 0.5, cirrus: 6, cirrusA: 0.5, birds: 2, birdColor: 'rgba(70,90,120,0.45)' },
+          { type: 'cumulus', n: 4, y0: 0.08, y1: 0.24, size: [42, 72], lit: '#ffffff', mid: '#f6f9fd', shade: '#dbe4f0', dark: '#c2cee2', rim: 'rgba(255,255,255,0.95)' },
+        ] },
         { type: 'peaks', f: 0.02, base: 0.52, w: [460, 700], hgt: [220, 320], gap: [0.4, 0.62], color: '#a8b6d4', shade: '#93a3c6', snow: '#f5f8fd', snowShade: '#d0d8ec', cap: 0.5, rim: 'rgba(255,255,255,0.85)', mist: '232,238,248', mistH: 80 },
+        // 遠方山稜上的雪之城
+        { type: 'landmarks', f: 0.04, wall: '#c8d0e2', wallShade: '#a8b2ca', roof: '#5a6a9e', roofShade: '#48588a', flag: '#d84a4a', frame: '#3a4460', dark: '#46506e', win: '255,220,150', winC: '#ffe6b0',
+          items: [['castle', 0.62, 0.5, 0.75]], haze: '230,236,248', hazeA: [0.42, 0.42], rim: { c: 'rgba(255,255,255,0.8)', dx: 2, dy: 2 } },
         { type: 'peaks', f: 0.06, base: 0.63, w: [300, 460], hgt: [120, 200], gap: [0.55, 0.9], color: '#7c90b2', shade: '#687ca0', snow: '#eff4fa', snowShade: '#c0cce2', cap: 0.55, rim: 'rgba(255,255,255,0.75)', mist: '236,241,249', mistH: 60 },
         { type: 'drifts', f: 0.13, base: 0.64, amp: 30, colors: ['#f6f9fd', '#dfe7f2'], shadow: 'rgba(150,175,215,0.35)', sparkle: 34 },
-        { type: 'pines', f: 0.22, base: 0.74, n: 9, size: [70, 120], colors: ['#4f7470', '#466a68'], trunk: '#4e4a4e', snow: '#f5f8ff', snowShade: '#c4d0e6' },
+        { type: 'pines', f: 0.22, base: 0.74, n: 9, size: [70, 120], colors: ['#4f7470', '#466a68'], trunk: '#4e4a4e', snow: '#f5f8ff', snowShade: '#c4d0e6', rim: { c: 'rgba(255,255,240,0.6)', dx: 3, dy: 3 } },
       ],
       beams: 0.12,
       motes: 'rgba(255,255,255,0.9)',
@@ -3233,6 +3492,10 @@
     iceFall: {
       sky: ['#1c3052', '#3a6890', '#8cc6e0'],
       layers: [
+        { type: 'stack', f: 0.004, of: [
+          { type: 'stars', n: 160, colors: ['#ffffff', '#cfefff'], cons: 0, line: 'rgba(0,0,0,0)' },
+          { type: 'aurora', bands: [[0.1, 18, '110,255,200', 0.45], [0.16, 24, '140,170,255', 0.32], [0.07, 12, '200,140,255', 0.2]], hgt: 0.16 },
+        ] },
         { type: 'peaks', f: 0.03, base: 0.44, w: [360, 520], hgt: [160, 240], gap: [0.5, 0.8], color: '#3e5a82', shade: '#344e74', snow: '#bcd8f0', snowShade: '#86a6cc', cap: 0.5, rim: 'rgba(200,240,255,0.6)', mist: '120,170,210', mistH: 60, mistA: 0.7 },
         { type: 'icefall', f: 0.1, top: 0.14, base: 0.82, color: '#4c6a8e', shade: '#3a5678', falls: [[0.17, 110], [0.5, 170], [0.83, 96]], ice: ['#f2fcff', '#a8e2f6', '#5eaad4'], snow: '#eaf6ff', glowRgb: '140,220,255' },
         { type: 'crystals', f: 0.26, base: 0.85, n: 6, size: [70, 130], colors: ['#e4faff', '#94d8f0', '#4e98c8'], glowRgb: '130,220,255' },
@@ -3253,7 +3516,16 @@
       sky: ['#3a3268', '#b46e90', '#ffc48a'],
       layers: [
         { type: 'sun', f: 0.02, x: 0.62, y: 0.36, r: 44, color: '#ffe4b4', glow: 'rgba(255,170,120,0.5)' },
+        { type: 'stack', f: 0.02, of: [
+          { type: 'skyGlow', sun: [0.62, 0.36], rgb: '255,180,140', r: 640, a: 0.4, horizon: '255,196,170', horizonY: 0.54, horizonH: 0.14, horizonA: 0.4, cirrus: 7, cirrusRgb: '255,200,190', cirrusA: 0.4, birds: 2, birdColor: 'rgba(60,40,80,0.55)' },
+          { type: 'shafts', x: 0.62, y: 0.36, n: 14, rgb: '255,210,170', a: 0.13, angle: -1.57, spread: 2.8, len: 0.7, w: 0.025 },
+          { type: 'cumulus', n: 4, y0: 0.08, y1: 0.24, size: [44, 74], lit: '#ffd2b8', mid: '#f0b8b8', shade: '#a888b0', dark: '#7a6a98', rim: 'rgba(255,214,170,0.95)' },
+        ] },
         { type: 'peaks', f: 0.04, base: 0.6, w: [340, 520], hgt: [150, 240], gap: [0.45, 0.75], color: '#6a5888', shade: '#564672', snow: '#f4ccd2', snowShade: '#a08ab8', cap: 0.46, rim: 'rgba(255,210,180,0.85)', mist: '214,160,176', mistH: 70, mistA: 0.9 },
+        // 參道盡頭山上的寺院與鐘樓
+        { type: 'landmarks', f: 0.07, wall: '#7a4a5e', wallShade: '#62384c', roof: '#3a2438', stone: '#6a5a72', snow: '#f4dce4', bell: '#e0b060', win: '255,190,120', winC: '#ffd890', lantern: '#ff8a5a', gold: '#f2c75a',
+          items: [['pagoda', 0.2, 0.6, 0.62, { tiers: 5 }], ['bellTower', 0.52, 0.6, 0.6], ['pagoda', 0.82, 0.6, 0.45, { tiers: 3 }]],
+          haze: '190,140,176', hazeA: [0.35, 0.35], rim: { c: 'rgba(255,200,170,0.85)', dx: -2, dy: 2 } },
         { type: 'torii', f: 0.12, base: 0.68, s: 0.55, n: 5, color: '#6a3456', shade: '#582a48', cap: '#34203a', snow: '#e4c4d4', bell: '#b8905e', bellShade: '#8a6a48', cord: '#7a3a50', rows: 2, alpha: 0.9 },
         { type: 'torii', f: 0.28, base: 0.84, s: 1.12, n: 3, color: '#d8452e', shade: '#a83222', cap: '#2a1e2a', snow: '#fbf4f6', bell: '#f2c75a', bellShade: '#b8862a', cord: '#c8302a', rows: 3, lanterns: true, ground: '#6a5a6e', groundHi: '#f2e8f0' },
       ],
@@ -3271,6 +3543,10 @@
     frostAltar: {
       sky: ['#0a1030', '#20366a', '#6484b4'],
       layers: [
+        { type: 'stack', f: 0.004, of: [
+          { type: 'stars', n: 240, colors: ['#ffffff', '#cfe4ff', '#e8f0ff'], cons: 2, line: 'rgba(170,200,255,0.35)' },
+          { type: 'aurora', bands: [[0.16, 22, '110,255,210', 0.3], [0.24, 28, '120,160,255', 0.22], [0.12, 14, '190,140,255', 0.14]], hgt: 0.18 },
+        ] },
         { type: 'moon', f: 0.01, x: 0.26, y: 0.2, r: 64, color: '#eef6ff', spot: 'rgba(150,180,225,0.35)', limb: 'rgba(120,150,210,0.5)', glowRgb: '170,210,255', glowA: 0.45 },
         { type: 'peaks', f: 0.03, base: 0.56, w: [380, 560], hgt: [180, 280], gap: [0.45, 0.7], color: '#223258', shade: '#1a2848', snow: '#8ea6d0', snowShade: '#56709e', cap: 0.5, rim: 'rgba(200,225,255,0.75)', mist: '60,84,130', mistH: 60, mistA: 0.8 },
         { type: 'altar', f: 0.08, x: 0.42, base: 0.8, s: 1, stone: '#6f8cb4', stoneShade: '#56729c', top: '#dff0ff', snow: '#f0f8ff', ice: ['#f4fdff', '#9adcf4', '#4a98cc'], glowRgb: '130,210,255', ground: '#3a5480', groundShade: '#2a3e66' },
@@ -3292,8 +3568,15 @@
     templeCourt: {
       sky: ['#7cb0e6', '#f6e6c8', '#ffd896'],
       layers: [
+        { type: 'stack', f: 0.004, of: [
+          { type: 'skyGlow', sun: [0.44, 0.3], rgb: '255,236,190', r: 700, a: 0.45, horizon: '255,236,206', horizonY: 0.58, horizonH: 0.14, horizonA: 0.45, cirrus: 6, cirrusRgb: '255,246,230', cirrusA: 0.45, birds: 2, birdColor: 'rgba(120,100,90,0.45)' },
+          { type: 'shafts', x: 0.44, y: 0.3, n: 16, rgb: '255,236,180', a: 0.12, angle: -1.57, spread: 3.1, len: 0.9, w: 0.03 },
+        ] },
         { type: 'clockRings', f: 0.01, rings: [[0.42, 0.3, 240, 0.02], [0.42, 0.3, 150, -0.035], [0.86, 0.17, 110, 0.05]], color: '#fff0c0', alpha: 0.4 },
         { type: 'clouds', f: 0.02, n: 5, y0: 0.1, y1: 0.34, size: [60, 100], color: '#fff8ec', shade: '#f0d8c0', alpha: 0.85 },
+        // 雲海上漂著的浮島：瀑布、小樹、殘柱、金色紋路
+        { type: 'floatIsles', f: 0.03, items: [[0.08, 0.3, 0.6], [0.24, 0.16, 0.35], [0.72, 0.24, 0.5], [0.92, 0.42, 0.42]], rock: '#d4c0b2', rockShade: '#b49c8c', grass: '#a8d08a', grassHi: '#cae8a8', fall: 'rgba(240,250,255,0.9)', tree: ['#8cc47a', '#9ad08a'], trunk: '#8a6a58', pillar: '#fbf7ef', gold: 'rgba(232,184,74,0.8)', glowRgb: '255,220,150',
+          haze: '255,240,222', hazeA: [0.35, 0.3], rim: { c: 'rgba(255,248,220,0.8)', dx: 2, dy: 2 } },
         { type: 'temple', f: 0.05, x: 0.44, base: 0.52, s: 0.85, isles: 5, rock: '#c8b4a4', rockShade: '#a08878', marble: '#fbf7ef', marbleShade: '#ddd2c2', inner: '#b8a894', gold: '#e8b84a', top: '#f4ecdc', glowRgb: '255,220,150', glowA: 0.28 },
         { type: 'cloudSea', f: 0.08, base: 0.64, r: 46, colors: ['#fff6e6', '#f6dcc0'], shade: '#ecccb0', hi: '#ffffff', rows: 3 },
         { type: 'balustrade', f: 0.22, base: 0.7, s: 1, marble: '#f8f3ea', shade: '#dcd0bf', wall: '#e8dccb', gold: '#e2b04a', step: 260, glowRgb: '255,210,130' },
@@ -3310,6 +3593,9 @@
     timeCorridor: {
       sky: ['#8a82c0', '#e8d4e6', '#ffe4c2'],
       layers: [
+        { type: 'skyGlow', f: 0.004, sun: [0.5, 0.2], rgb: '255,236,210', r: 700, a: 0.45, horizon: '255,230,220', horizonY: 0.62, horizonH: 0.14, horizonA: 0.4, cirrus: 7, cirrusRgb: '255,240,246', cirrusA: 0.45 },
+        { type: 'floatIsles', f: 0.02, items: [[0.05, 0.22, 0.3], [0.34, 0.14, 0.26], [0.58, 0.6, 0.32], [0.86, 0.18, 0.34]], rock: '#c4b4c8', rockShade: '#a898b0', grass: '#b8d8a8', fall: 'rgba(250,246,255,0.85)', tree: ['#a8cc98'], trunk: '#8a7478', pillar: '#f4eef0', gold: 'rgba(224,174,74,0.8)',
+          haze: '240,226,240', hazeA: [0.45, 0.45] },
         { type: 'clockRings', f: 0.01, rings: [[0.25, 0.24, 170, -0.02], [0.72, 0.32, 250, 0.014]], color: '#fff4dc', alpha: 0.28 },
         { type: 'cloudSea', f: 0.03, base: 0.7, r: 40, colors: ['#f6ecf4', '#e2cce2'], shade: '#d4bcd8', hi: '#ffffff', rows: 2 },
         { type: 'fragments', f: 0.06, kinds: ['forest', 'sea', 'canyon', 'snow', 'mush'], w: [150, 200], y0: 0.3, y1: 0.5, shards: 16 },
@@ -3328,11 +3614,15 @@
     reverseGarden: {
       sky: ['#ffd4e4', '#f2e8ff', '#a6d6f4'],
       layers: [
-        { type: 'flip', f: 0.03, of: { type: 'hills', color: '#d0a4cc', base: 0.85, amp: 26 } },
+        { type: 'skyGlow', f: 0.004, sun: [0.45, 0.6], rgb: '255,236,246', r: 700, a: 0.5, cirrus: 6, cirrusRgb: '255,255,255', cirrusA: 0.5, cirrusY: [0.4, 0.62] },
+        // 倒掛的浮島：草皮朝下、岩尖朝上，瀑布往上流
+        { type: 'floatIsles', f: 0.02, flip: true, items: [[0.12, 0.3, 0.7], [0.36, 0.4, 0.45], [0.66, 0.32, 0.6], [0.9, 0.44, 0.4]], rock: '#d8b8d4', rockShade: '#bc9cc0', grass: '#a8d890', fall: 'rgba(255,250,255,0.85)', tree: ['#f4b8d0', '#f8cadc'], trunk: '#9a7a8e', gold: 'rgba(232,184,74,0.8)',
+          haze: '248,230,244', hazeA: [0.25, 0.25], rim: { c: 'rgba(255,255,255,0.7)', dx: 2, dy: -2 } },
+        { type: 'flip', f: 0.03, of: { type: 'hills', color: '#d0a4cc', base: 0.85, amp: 26, low: '#b886b4', path: false } },
         { type: 'flip', f: 0.05, of: { type: 'trees', colors: ['#f4b8d0', '#eaa4c6', '#f8cadc'], trunk: '#9a7a8e', base: 0.84, n: 9, size: [60, 96], alpha: 0.9 } },
         { type: 'hourglass', f: 0.08, x: 0.45, base: 0.78, s: 0.95, gold: '#e8b84a', goldShade: '#b8862a', sand: '#f4d08a', glowRgb: '255,220,170' },
         { type: 'cloudSea', f: 0.1, base: 0.8, r: 40, colors: ['#ffffff', '#e2f0fa'], shade: '#cfe0f0', hi: '#ffffff', rows: 2 },
-        { type: 'trees', f: 0.24, colors: ['#f6b4ca', '#f0a0bc', '#fac6d6'], trunk: '#8a6070', base: 0.94, n: 5, size: [100, 150] },
+        { type: 'trees', f: 0.24, colors: ['#f6b4ca', '#f0a0bc', '#fac6d6'], trunk: '#8a6070', base: 0.94, n: 5, size: [100, 150], light: '#fff4fa', deep: '#7a3a5a', rim: { c: 'rgba(255,250,255,0.7)', dx: 3, dy: 3 } },
       ],
       beams: 0.14,
       motes: 'rgba(255,220,240,0.9)',
@@ -3348,6 +3638,8 @@
       layers: [
         { type: 'stars', f: 0.01, n: 380, colors: ['#ffffff', '#cfe0ff', '#ffe8c0', '#e0c8ff'], cons: 4, line: 'rgba(170,200,255,0.4)' },
         { type: 'nebula', f: 0.015, n: 5, colors: ['120,80,210', '60,120,230', '230,90,170'], y0: 0.12, y1: 0.62 },
+        { type: 'milkyWay', f: 0.012, y0: 0.72, y1: 0.08, n: 1100, colors: ['150,120,255', '90,140,255', '255,140,200'] },
+        { type: 'landmarks', f: 0.016, items: [['planet', 0.16, 0.18, 0.55, { lit: '#ffd0b0', body: '#c0708a', dark: '#3a2458', ring: 'rgba(255,220,240,0.6)', glowRgb: '255,160,200' }], ['planet', 0.56, 0.1, 0.22, { lit: '#c8f0ff', body: '#5a90c8', dark: '#1a2a58', ring: 'rgba(200,230,255,0.5)', glowRgb: '140,200,255' }]] },
         { type: 'moon', f: 0.02, x: 0.8, y: 0.22, r: 40, color: '#cdbcff', spot: 'rgba(120,90,200,0.3)', limb: 'rgba(60,40,140,0.6)', glowRgb: '170,140,255', glowA: 0.35, ring: 'rgba(235,215,255,0.7)' },
         { type: 'stairs', f: 0.06, spirals: [[0.36, 0.9, 200, 34, 1], [0.08, 0.7, 90, 14, 0.5]], top: '#dfe4ff', front: '#6e6aa8', glow: 'rgba(150,220,255,0.9)', glowRgb: '150,210,255' },
         { type: 'slabs', f: 0.14, n: 7, y0: 0.3, y1: 0.7, alpha: 0.6, top: '#8e8cc4', front: '#46427a', rock: '#2c2a58', glowRgb: '140,200,255' },
@@ -3367,6 +3659,7 @@
       layers: [
         { type: 'stars', f: 0.01, n: 260, colors: ['#ffffff', '#e0d0ff', '#ffe0c0'], cons: 2, line: 'rgba(220,190,255,0.3)' },
         { type: 'nebula', f: 0.012, n: 4, colors: ['140,60,210', '230,120,90', '90,70,210'], y0: 0.1, y1: 0.7 },
+        { type: 'milkyWay', f: 0.011, y0: 0.1, y1: 0.66, n: 800, colors: ['170,90,230', '240,140,110', '110,90,230'], lane: 'rgba(8,4,20,0.4)' },
         { type: 'gears', f: 0.02, list: [[0.18, 0.28, 130, 0.05], [0.7, 0.2, 160, -0.04], [0.82, 0.55, 96, 0.07], [0.1, 0.62, 84, -0.06]], color: '#4e3e62', shade: '#3a2c4e', hi: '#8a70a8', alpha: 0.6 },
         { type: 'clockFace', f: 0.03, x: 0.43, y: 0.4, r: 250, rim: ['#f4d27a', '#a8742e'], face: ['#2a2468', '#110e30'], num: '#f4dc9a', hand: '#f6d680', crack: 'rgba(255,220,140,0.8)', glowRgb: '200,150,255' },
         { type: 'throne', f: 0.08, x: 0.43, base: 0.8, s: 0.9, stone: '#4a4060', stoneShade: '#382e4c', gold: '#e8b84a', floor: '#2a2240', glowRgb: '190,140,255' },
@@ -6943,6 +7236,7 @@
         ctx.fillRect(vx0, y + 60, vx1 - vx0, bodyH);
       }
     }
+    terrBody(ctx, P, style, left, right, y, bodyH, isGround, i, vx0, vx1);
     ctx.restore();
     if (isGround) groundPebbles(ctx, left, right, y, bodyH, i, x0, x1, style === 'ice' ? 'rgba(255,255,255,0.12)' : style === 'marble' ? 'rgba(0,0,0,0.05)' : null);
     else {
@@ -7082,6 +7376,17 @@
         ctx.fillStyle = A.outline();
         ctx.fillRect(bx + sw - 2, y + 5, 4, 1.2);
       }
+      // 繩尾：紅白流蘇
+      const bx = sway(bottom);
+      A.shape(ctx, (c) => A.roundRect(c, bx - 4, bottom - 2, 8, 6, 2), '#d23a2e', null, { lw: 1.4, hl: false });
+      ctx.lineWidth = 1.3;
+      for (let k = -3; k <= 3; k++) {
+        ctx.strokeStyle = k % 2 ? '#f4efe6' : '#d23a2e';
+        ctx.beginPath();
+        ctx.moveTo(bx + k * 1.1, bottom + 3);
+        ctx.lineTo(bx + k * 1.8 + Math.sin(t * 2 + k) * 0.8, bottom + 13 - Math.abs(k) * 0.6);
+        ctx.stroke();
+      }
       A.shape(ctx, (c) => A.roundRect(c, x - 10, top - 6, 20, 9, 3), '#6a4a3a', '#52382c', { lw: 2.2, hl: false });
       A.shape(ctx, (c) => A.roundRect(c, x - 11, top - 10, 22, 5, 2.5), '#f6faff', null, { lw: 1.6, hl: false });
     },
@@ -7098,8 +7403,23 @@
         ctx.lineWidth = 2.5;
         ctx.stroke();
       }
+      // 沿著金鍊往下流動的閃光
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 2; k++) {
+        const ph = (t * 0.35 + k * 0.5) % 1;
+        const gy = top + ph * (bottom - top);
+        ctx.globalAlpha = Math.sin(ph * Math.PI);
+        ctx.drawImage(glowSprite('255,230,150'), sway(gy) - 10, gy - 10, 20, 20);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(sway(gy) - 0.8, gy - 4, 1.6, 8);
+        ctx.fillRect(sway(gy) - 4, gy - 0.8, 8, 1.6);
+      }
+      ctx.restore();
       A.shape(ctx, (c) => A.roundRect(c, x - 11, top - 7, 22, 10, 3), '#fbf7ef', '#ddd2c2', { lw: 2.2, hl: false });
       A.ellipse(ctx, x, top - 2, 3, 3, '#e8b84a', null, { lw: 1.4, hl: false });
+      // 鍊尾的小金鈴
+      A.shape(ctx, (c) => { const by = bottom + 2; c.moveTo(sway(bottom) - 5, by + 9); c.quadraticCurveTo(sway(bottom) - 5, by, sway(bottom), by); c.quadraticCurveTo(sway(bottom) + 5, by, sway(bottom) + 5, by + 9); c.closePath(); }, '#f2cf6a', '#c8962a', { lw: 1.5 });
     },
   };
 
@@ -7151,6 +7471,1491 @@
     return false;
   }
 
+
+  // ════════════════════════════════════════════════════════════
+  // 地形細節（精緻版）：地層、嵌石、樹根、草葉、野花、苔蘚、沙紋、雪簷冰柱、冰面反光、大理石紋與金飾
+  // 所有細節的位置在 prepareMap 時先算好（map._terr），每格只畫鏡頭裡看得到的部分，
+  // 同色的小東西合成一條路徑一次填色，控制每格成本。
+  // ════════════════════════════════════════════════════════════
+  let terrMap = null;
+  const TERR_LAVA = { lavaBed: 1, volcanoNest: 1 };
+  const TERR_DRY = { hotspringCamp: 1, redRift: 1, steamPass: 1 };
+  const TERR_SEA = { coastCamp: 1, tidepool: 1, shipwreck: 1, reef: 1, crabNest: 1 };
+
+  function terrColors(P, style, theme) {
+    const mix = (x, y, k) => U.mix(x, y, k);
+    const c = {};
+    if (style === 'marble') {
+      c.stone = [mix(P.body, '#ffffff', 0.35), mix(P.shade, '#000000', 0.08), mix(P.body, P.gold || '#e8b84a', 0.25)];
+      c.vein = mix(P.shade, '#6a5a7a', 0.35);
+      c.dark = 'rgba(0,0,0,0.10)';
+    } else if (style === 'ice') {
+      c.stone = ['rgba(255,255,255,0.35)', 'rgba(20,50,100,0.25)', 'rgba(200,240,255,0.4)'];
+      c.dark = 'rgba(10,30,70,0.18)';
+    } else {
+      const grey = TERR_LAVA[theme] ? '#3a3036' : style === 'snow' ? '#8a90a4' : '#a09a90';
+      c.stone = [mix(P.body, grey, 0.55), mix(P.shade, '#2a2024', 0.25), mix(P.body, '#e8dcc8', 0.3)];
+      c.dark = 'rgba(0,0,0,0.13)';
+    }
+    c.light = 'rgba(255,255,255,0.10)';
+    c.root = mix(P.edge, P.shade, 0.35);
+    c.rootHi = mix(P.body, '#ffffff', 0.12);
+    c.blade = [mix(P.top, '#1e3a10', 0.28), P.topHi, mix(P.top, '#d8f0a0', 0.2)];
+    c.moss = TERR_DRY[theme] ? ['#9a9a4a', '#b8b060'] : TERR_SEA[theme] ? ['#4f7a4a', '#6a9a58'] : ['#5f9a44', '#86c05a'];
+    return c;
+  }
+
+  function buildTerrain(map) {
+    const th = map._theme;
+    const theme = map.theme;
+    const rnd = U.seeded(map.w * 13 + map.h * 3 + 77);
+    const lava = !!TERR_LAVA[theme];
+    const ropes = (map.ropes || []).map((r) => r[0]);
+    map._terr = map.platforms.map((p, i) => {
+      const isGround = i === 0;
+      const P = isGround && th.ground ? th.ground : th.plat;
+      const style = P.style || 'grass';
+      const left = p[0];
+      const right = p[1];
+      const y = p[2];
+      const w = right - left;
+      const T = { style, col: terrColors(P, style, theme), stones: [], strata: [], roots: [], cracks: [], veins: [], inlays: [], bubbles: [], blades: [], flowers: [], moss: [], ripples: [], icicles: [], glints: [], studs: [], embers: [], grain: [], drips: [] };
+      const earth = style === 'grass' || style === 'sand' || style === 'rock' || style === 'snow' || style === 'slab';
+      if (isGround) {
+        const maxD = Math.min(map.h - y + 60, 360);
+        // 地層：幾道起伏的色帶
+        if (style !== 'ice') {
+          const bands = style === 'marble' ? [] : [[40, 7, 'dark'], [78, 5, 'light'], [124, 9, 'dark'], [190, 6, 'light'], [270, 10, 'dark']];
+          for (const [d, th2, kind] of bands) {
+            if (d > maxD) break;
+            const pts = [];
+            const ph = rnd() * 6;
+            for (let x = left - 48; x <= right + 48; x += 48) {
+              const yy = y + d + Math.sin(x * 0.011 + ph) * 5 + (rnd() - 0.5) * 4;
+              pts.push(x, yy, th2 * (0.6 + rnd() * 0.8));
+            }
+            T.strata.push({ pts, kind });
+          }
+        }
+        // 嵌在土裡的石頭
+        const stoneStep = style === 'marble' ? 999999 : style === 'ice' ? 60 : 46;
+        for (let x = left + 10; x < right - 10; x += stoneStep * (0.5 + rnd())) {
+          const d = 22 + Math.pow(rnd(), 1.4) * (maxD - 30);
+          const r = 3 + rnd() * (d > 90 ? 11 : 7);
+          if (style === 'ice') T.bubbles.push({ x, y: y + d, r: 1.5 + rnd() * 4 });
+          else T.stones.push({ x, y: y + d, rx: r * (1 + rnd() * 0.6), ry: r * (0.6 + rnd() * 0.3), rot: (rnd() - 0.5) * 0.6, v: Math.floor(rnd() * 3) });
+        }
+        // 樹根（草地、雪地下的土）
+        if (style === 'grass' || (style === 'snow' && !lava)) {
+          for (let x = left + 30; x < right - 20; x += 90 + rnd() * 110) {
+            const len = 24 + rnd() * 50;
+            const sw = (rnd() - 0.5) * 30;
+            const r = { x, y: y + 10, len, sw, w: 2 + rnd() * 2.5, br: [] };
+            const nb = 1 + Math.floor(rnd() * 3);
+            for (let k = 0; k < nb; k++) r.br.push({ u: 0.3 + rnd() * 0.5, dx: (rnd() < 0.5 ? -1 : 1) * (6 + rnd() * 12), dy: 6 + rnd() * 14 });
+            T.roots.push(r);
+          }
+        }
+        // 岩石、石板的裂縫
+        if (style === 'rock' || style === 'slab') {
+          const step = 120;
+          for (let x = left + 40; x < right - 40; x += step * (0.6 + rnd() * 0.8)) {
+            const pts = [x, y + 16 + rnd() * 20];
+            let cx = pts[0];
+            let cy = pts[1];
+            const n = 3 + Math.floor(rnd() * 3);
+            for (let k = 0; k < n; k++) {
+              cx += (rnd() - 0.5) * 18;
+              cy += 8 + rnd() * 12;
+              pts.push(cx, cy);
+            }
+            T.cracks.push(pts);
+          }
+        }
+        // 大理石：石紋與金色鑲嵌
+        if (style === 'marble') {
+          for (let x = left + 20; x < right; x += 60 + rnd() * 90) {
+            const d = 20 + rnd() * 120;
+            T.veins.push([x, y + d, x + 20 + rnd() * 30, y + d + (rnd() - 0.5) * 30, x + 40 + rnd() * 40, y + d + (rnd() - 0.5) * 40, x + 70 + rnd() * 50, y + d + (rnd() - 0.5) * 30]);
+          }
+          for (let x = left + 128; x < right - 60; x += 256) T.inlays.push({ x, y: y + 44 });
+        }
+        // 冰：深處的冰晶紋
+        if (style === 'ice') {
+          for (let x = left + 30; x < right; x += 80 + rnd() * 80) T.glints.push({ x, y: y + 30 + rnd() * 80, s: 4 + rnd() * 6 });
+        }
+      } else {
+        // 浮空平台的側面：幾顆小石頭／木紋／冰泡
+        if (style === 'planks') {
+          for (let yy = y + 2; yy < y + 18; yy += 5) {
+            let x = left + 8 + rnd() * 20;
+            while (x < right - 20) {
+              const l = 20 + rnd() * 50;
+              T.grain.push(x, yy + rnd() * 2, Math.min(right - 10, x + l));
+              x += l + 10 + rnd() * 30;
+            }
+          }
+        } else if (style === 'ice') {
+          for (let x = left + 14; x < right - 10; x += 22 + rnd() * 30) T.bubbles.push({ x, y: y + 12 + rnd() * 12, r: 1 + rnd() * 2.5 });
+        } else if (style === 'marble') {
+          for (let x = left + 30; x < right - 30; x += 64) T.studs.push(x);
+          for (let x = left + 10; x < right - 30; x += 50 + rnd() * 60) {
+            const d = 12 + rnd() * 6;
+            T.veins.push([x, y + d, x + 10, y + d + (rnd() - 0.5) * 8, x + 20, y + d + (rnd() - 0.5) * 8, x + 30 + rnd() * 20, y + d + (rnd() - 0.5) * 6]);
+          }
+        } else {
+          for (let x = left + 14; x < right - 14; x += 36 + rnd() * 50) {
+            const r = 2.5 + rnd() * 4;
+            T.stones.push({ x, y: y + 16 + rnd() * (style === 'rock' ? 16 : 7), rx: r * 1.3, ry: r * 0.8, rot: (rnd() - 0.5) * 0.5, v: Math.floor(rnd() * 3) });
+          }
+          if (style === 'grass') {
+            for (let x = left + 20; x < right - 20; x += 50 + rnd() * 60) {
+              if (rnd() < 0.5) T.roots.push({ x, y: y + 12, len: 8 + rnd() * 10, sw: (rnd() - 0.5) * 10, w: 1.5 + rnd(), br: [] });
+            }
+          }
+        }
+        // 平台底下：苔蘚垂條、土塊、冰柱
+        if (earth && style !== 'snow' && !lava) {
+          for (let x = left + 12; x < right - 12; x += 16 + rnd() * 26) {
+            if (rnd() < 0.45) T.drips.push({ x, len: 4 + rnd() * 10, w: 3 + rnd() * 4 });
+          }
+        }
+        if (style === 'snow' || style === 'ice') {
+          for (let x = left + 8; x < right - 8; x += 7 + rnd() * 12) {
+            if (rnd() < 0.55) T.icicles.push({ x, len: 4 + Math.pow(rnd(), 2) * 16, w: 2 + rnd() * 2 });
+          }
+        }
+      }
+      // ── 頂面 ──
+      const nearRope = (x) => ropes.some((rx) => Math.abs(rx - x) < 10);
+      if (style === 'grass') {
+        for (let x = left + (isGround ? 0 : 2); x < right - 2; x += 2.5 + rnd() * 3.5) {
+          T.blades.push(x, 3 + rnd() * rnd() * 10, (rnd() - 0.5) * 5, Math.floor(rnd() * 3));
+        }
+        const fcols = TERR_SEA[theme] ? ['#ff9ec0', '#ffffff', '#ffd6e6'] : ['#ffe36b', '#ffffff', '#ff9fbf', '#b8a0ff', '#8fd0ff'];
+        for (let x = left + 16; x < right - 16; x += 30 + rnd() * 70) {
+          if (nearRope(x)) continue;
+          T.flowers.push({ x, h: 4 + rnd() * 7, c: fcols[Math.floor(rnd() * fcols.length)], s: 1.6 + rnd() * 1.2 });
+        }
+      } else if (style === 'sand') {
+        for (let x = left + 10; x < right - 20; x += 24 + rnd() * 40) T.ripples.push(x, y - 3 + rnd() * 6, 8 + rnd() * 14);
+        for (let x = left + 20; x < right - 20; x += 60 + rnd() * 90) T.glints.push({ x, y: y - 3 + rnd() * 4, s: rnd() < 0.5 ? 0 : 1, c: rnd() });
+      } else if (style === 'rock' || style === 'slab') {
+        if (lava) {
+          for (let x = left + 8; x < right - 8; x += 14 + rnd() * 30) T.embers.push(x, y - 3 + rnd() * 8, 0.8 + rnd() * 1.6);
+        } else {
+          for (let x = left + 10; x < right - 10; x += 36 + rnd() * 70) {
+            if (rnd() < 0.55) T.moss.push({ x, w: 8 + rnd() * 18, h: 2 + rnd() * 3 });
+          }
+        }
+        for (let x = left + 12; x < right - 12; x += 40 + rnd() * 60) T.glints.push({ x, y: y - 4 + rnd() * 4, s: 1.5 + rnd() * 2.5, c: rnd() });
+      } else if (style === 'planks') {
+        for (let x = left + 6; x < right - 30; x += 30 + rnd() * 50) T.grain.push(x, y - 2 + rnd() * 6, x + 12 + rnd() * 24);
+        for (let x = left + 20; x < right - 20; x += 80 + rnd() * 100) if (rnd() < 0.6) T.moss.push({ x, w: 6 + rnd() * 10, h: 2 + rnd() * 2 });
+      } else if (style === 'snow') {
+        for (let x = left + 12; x < right - 12; x += 34 + rnd() * 60) {
+          if (nearRope(x)) continue;
+          T.blades.push(x, 5 + rnd() * 8, (rnd() - 0.5) * 6, rnd() < 0.3 ? 1 : 0);
+        }
+        for (let x = left + 10; x < right - 10; x += 20 + rnd() * 30) T.glints.push({ x, y: y - 6 + rnd() * 6, s: 1.5 + rnd() * 2, c: rnd() });
+      } else if (style === 'ice') {
+        for (let x = left + 10; x < right - 30; x += 50 + rnd() * 70) T.ripples.push(x, y - 4, 10 + rnd() * 18);
+        for (let x = left + 10; x < right - 10; x += 24 + rnd() * 40) T.glints.push({ x, y: y - 6 + rnd() * 5, s: 1.5 + rnd() * 2.5, c: rnd() });
+      } else if (style === 'marble') {
+        for (let x = left + 24; x < right - 24; x += 48) T.studs.push(x);
+        for (let x = left + 20; x < right - 40; x += 70 + rnd() * 90) T.ripples.push(x, y - 3 + rnd() * 3, 14 + rnd() * 20);
+      }
+      return T;
+    });
+  }
+
+  // 側面、地底的細節（在平台本體的 clip 裡畫）
+  function terrBody(ctx, P, style, left, right, y, bodyH, isGround, i, vx0, vx1) {
+    const T = terrMap && terrMap._terr && terrMap._terr[i];
+    if (!T) return;
+    const C = T.col;
+    const a = vx0 - 30;
+    const b = vx1 + 30;
+    // 地層色帶
+    for (const s of T.strata) {
+      const pts = s.pts;
+      let k0 = Math.max(0, Math.floor((a - pts[0]) / 48) * 3);
+      let k1 = Math.min(pts.length - 3, Math.ceil((b - pts[0]) / 48) * 3 + 3);
+      if (k1 <= k0) continue;
+      ctx.fillStyle = s.kind === 'dark' ? C.dark : C.light;
+      ctx.beginPath();
+      ctx.moveTo(pts[k0], pts[k0 + 1]);
+      for (let k = k0 + 3; k <= k1; k += 3) ctx.lineTo(pts[k], pts[k + 1]);
+      for (let k = k1; k >= k0; k -= 3) ctx.lineTo(pts[k], pts[k + 1] + pts[k + 2]);
+      ctx.closePath();
+      ctx.fill();
+      // 色帶上緣的細線
+      ctx.strokeStyle = s.kind === 'dark' ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pts[k0], pts[k0 + 1]);
+      for (let k = k0 + 3; k <= k1; k += 3) ctx.lineTo(pts[k], pts[k + 1]);
+      ctx.stroke();
+    }
+    // 樹根
+    if (T.roots.length) {
+      ctx.lineCap = 'round';
+      const rootPath = (r) => {
+        ctx.moveTo(r.x, r.y);
+        ctx.bezierCurveTo(r.x + r.sw * 0.3, r.y + r.len * 0.35, r.x - r.sw * 0.4, r.y + r.len * 0.65, r.x + r.sw, r.y + r.len);
+        for (const bb of r.br) {
+          const u = bb.u;
+          const bx = r.x + r.sw * u * u;
+          const by = r.y + r.len * u;
+          ctx.moveTo(bx, by);
+          ctx.quadraticCurveTo(bx + bb.dx * 0.5, by + bb.dy * 0.3, bx + bb.dx, by + bb.dy);
+        }
+      };
+      ctx.strokeStyle = C.root;
+      for (const r of T.roots) {
+        if (r.x < a - 40 || r.x > b + 40) continue;
+        ctx.lineWidth = r.w;
+        ctx.beginPath();
+        rootPath(r);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = C.rootHi;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      for (const r of T.roots) {
+        if (r.x < a - 40 || r.x > b + 40) continue;
+        ctx.moveTo(r.x - 0.8, r.y);
+        ctx.bezierCurveTo(r.x + r.sw * 0.3 - 0.8, r.y + r.len * 0.35, r.x - r.sw * 0.4 - 0.8, r.y + r.len * 0.65, r.x + r.sw - 0.8, r.y + r.len);
+      }
+      ctx.stroke();
+    }
+    // 嵌石：三種顏色各一條路徑，再一起加高光與描邊
+    if (T.stones.length) {
+      for (let v = 0; v < 3; v++) {
+        ctx.fillStyle = C.stone[v];
+        ctx.beginPath();
+        for (const s of T.stones) {
+          if (s.v !== v || s.x < a || s.x > b) continue;
+          ctx.moveTo(s.x + s.rx, s.y);
+          ctx.ellipse(s.x, s.y, s.rx, s.ry, s.rot, 0, PI2);
+        }
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.beginPath();
+      for (const s of T.stones) {
+        if (s.x < a || s.x > b || s.rx < 3) continue;
+        ctx.moveTo(s.x - s.rx * 0.2, s.y - s.ry * 0.45);
+        ctx.ellipse(s.x - s.rx * 0.35, s.y - s.ry * 0.45, s.rx * 0.35, s.ry * 0.22, s.rot, 0, PI2);
+      }
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(40,24,16,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (const s of T.stones) {
+        if (s.x < a || s.x > b) continue;
+        ctx.moveTo(s.x + s.rx, s.y);
+        ctx.ellipse(s.x, s.y, s.rx, s.ry, s.rot, 0, PI2);
+      }
+      ctx.stroke();
+    }
+    // 裂縫
+    if (T.cracks.length) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const [col, lw, dx] of [['rgba(0,0,0,0.28)', 1.8, 0], ['rgba(255,255,255,0.14)', 1, 1.2]]) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        for (const c of T.cracks) {
+          if (c[0] < a - 30 || c[0] > b + 30) continue;
+          ctx.moveTo(c[0] + dx, c[1]);
+          for (let k = 2; k < c.length; k += 2) ctx.lineTo(c[k] + dx, c[k + 1]);
+          // 分岔
+          if (c.length > 6) {
+            ctx.moveTo(c[4] + dx, c[5]);
+            ctx.lineTo(c[4] + 8 + dx, c[5] + 7);
+          }
+        }
+        ctx.stroke();
+      }
+    }
+    // 大理石紋
+    if (T.veins.length) {
+      ctx.strokeStyle = C.vein;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      for (const v of T.veins) {
+        if (v[6] < a || v[0] > b) continue;
+        ctx.moveTo(v[0], v[1]);
+        ctx.bezierCurveTo(v[2], v[3], v[4], v[5], v[6], v[7]);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 0.18;
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // 金色鑲嵌（大理石地面）：菱形框＋星
+    if (T.inlays.length) {
+      const gold = P.gold || '#e2b04a';
+      for (const g of T.inlays) {
+        if (g.x < a - 40 || g.x > b + 40) continue;
+        A.shape(ctx, (c) => { c.moveTo(g.x, g.y - 16); c.lineTo(g.x + 26, g.y); c.lineTo(g.x, g.y + 16); c.lineTo(g.x - 26, g.y); c.closePath(); }, P.shade, null, { lw: 1.4 });
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(g.x, g.y - 12); ctx.lineTo(g.x + 20, g.y); ctx.lineTo(g.x, g.y + 12); ctx.lineTo(g.x - 20, g.y); ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = gold;
+        ctx.beginPath();
+        for (let k = 0; k < 8; k++) {
+          const ang = -Math.PI / 2 + (k / 8) * PI2;
+          const r = k % 2 ? 2.4 : 6.5;
+          k ? ctx.lineTo(g.x + Math.cos(ang) * r, g.y + Math.sin(ang) * r) : ctx.moveTo(g.x + Math.cos(ang) * r, g.y + Math.sin(ang) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = gold;
+        for (const s of [-1, 1]) {
+          ctx.fillRect(g.x + s * 40 - 2, g.y - 2, 4, 4);
+          ctx.fillRect(g.x + s * 60 - 1.5, g.y - 1.5, 3, 3);
+        }
+      }
+      // 地面上緣的回紋帶
+      ctx.strokeStyle = P.gold || '#e2b04a';
+      ctx.globalAlpha = 0.7;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      const by = y + 20;
+      for (let x = Math.floor(a / 24) * 24; x < b; x += 24) {
+        ctx.moveTo(x, by + 8);
+        ctx.lineTo(x, by);
+        ctx.lineTo(x + 16, by);
+        ctx.lineTo(x + 16, by + 6);
+        ctx.lineTo(x + 6, by + 6);
+        ctx.lineTo(x + 6, by + 3);
+        ctx.moveTo(x, by + 8);
+        ctx.lineTo(x + 24, by + 8);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // 冰泡與冰晶
+    if (T.bubbles.length) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const s of T.bubbles) {
+        if (s.x < a || s.x > b) continue;
+        ctx.moveTo(s.x + s.r, s.y);
+        ctx.arc(s.x, s.y, s.r, 0, PI2);
+      }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (const s of T.bubbles) {
+        if (s.x < a || s.x > b || s.r < 2) continue;
+        ctx.fillRect(s.x - s.r * 0.5, s.y - s.r * 0.5, 1.2, 1.2);
+      }
+    }
+    if (style === 'ice' && isGround && T.glints.length) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (const g of T.glints) {
+        if (g.x < a || g.x > b) continue;
+        for (let k = 0; k < 3; k++) {
+          const ang = (k / 3) * Math.PI;
+          ctx.moveTo(g.x - Math.cos(ang) * g.s, g.y - Math.sin(ang) * g.s);
+          ctx.lineTo(g.x + Math.cos(ang) * g.s, g.y + Math.sin(ang) * g.s);
+        }
+      }
+      ctx.stroke();
+      // 冰層深處的斜向反光帶
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
+      ctx.beginPath();
+      for (let x = Math.floor(a / 220) * 220; x < b; x += 220) {
+        ctx.moveTo(x, y + 8);
+        ctx.lineTo(x + 40, y + 8);
+        ctx.lineTo(x - 30, y + 150);
+        ctx.lineTo(x - 70, y + 150);
+        ctx.closePath();
+      }
+      ctx.fill();
+    }
+    // 木紋（碼頭木板的側面）
+    if (T.grain.length && !isGround && style === 'planks') {
+      ctx.strokeStyle = 'rgba(40,20,10,0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let k = 0; k < T.grain.length; k += 3) {
+        const x0 = T.grain[k];
+        const yy = T.grain[k + 1];
+        if (yy < y + 6 || T.grain[k + 2] < a || x0 > b) continue;
+        ctx.moveTo(x0, yy);
+        ctx.quadraticCurveTo((x0 + T.grain[k + 2]) / 2, yy + 1.5, T.grain[k + 2], yy);
+      }
+      ctx.stroke();
+    }
+    // 大理石平台側面的金鉚釘
+    if (T.studs.length && !isGround) {
+      ctx.fillStyle = P.gold || '#e2b04a';
+      ctx.beginPath();
+      for (const x of T.studs) {
+        if (x < a || x > b) continue;
+        ctx.moveTo(x + 2.6, y + 15);
+        ctx.arc(x, y + 15, 2.6, 0, PI2);
+      }
+      ctx.fill();
+    }
+  }
+
+  // 頂面與平台邊緣的細節（在頂面、裝飾之後畫）
+  function terrTop(ctx, P, style, left, right, y, isGround, i, x0, x1) {
+    const T = terrMap && terrMap._terr && terrMap._terr[i];
+    if (!T) return;
+    const C = T.col;
+    const a = x0 - 10;
+    const b = x1 + 10;
+    // 平台底下的苔蘚垂條／土塊
+    if (T.drips.length) {
+      const by = style === 'rock' ? y + 20 : style === 'planks' ? y + 19 : y + 24;
+      ctx.fillStyle = style === 'grass' ? C.moss[0] : style === 'planks' ? '#4f7a4a' : C.moss[0];
+      ctx.beginPath();
+      for (const d of T.drips) {
+        if (d.x < a || d.x > b) continue;
+        ctx.moveTo(d.x - d.w / 2, by - 3);
+        ctx.quadraticCurveTo(d.x - d.w * 0.3, by + d.len, d.x, by + d.len + 1);
+        ctx.quadraticCurveTo(d.x + d.w * 0.3, by + d.len, d.x + d.w / 2, by - 3);
+        ctx.closePath();
+      }
+      ctx.fill();
+    }
+    // 冰柱簷
+    if (T.icicles.length) {
+      const by = y + (style === 'ice' ? 22 : 21);
+      ctx.fillStyle = 'rgba(226,246,255,0.95)';
+      ctx.strokeStyle = 'rgba(70,120,170,0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const d of T.icicles) {
+        if (d.x < a || d.x > b) continue;
+        const yy = by;
+        ctx.moveTo(d.x - d.w, yy - 4);
+        ctx.lineTo(d.x + d.w, yy - 4);
+        ctx.lineTo(d.x, yy + d.len);
+        ctx.closePath();
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      for (const d of T.icicles) {
+        if (d.x < a || d.x > b || d.len < 8) continue;
+        ctx.fillRect(d.x - d.w * 0.45, by - 2, 1, d.len * 0.5);
+      }
+    }
+    // 草葉：三種色調各一條路徑
+    if (T.blades.length) {
+      const bl = T.blades;
+      const snow = style === 'snow';
+      const by = snow ? y - 6 : y - 4;
+      for (let tone = 0; tone < 3; tone++) {
+        ctx.fillStyle = snow ? (tone ? '#6a5a4a' : '#8a7a5a') : C.blade[tone];
+        ctx.beginPath();
+        for (let k = 0; k < bl.length; k += 4) {
+          const x = bl[k];
+          if (bl[k + 3] !== tone || x < a || x > b) continue;
+          const h = bl[k + 1];
+          const lean = bl[k + 2];
+          if (snow) {
+            // 雪地冒出來的枯草尖
+            ctx.moveTo(x - 1, by);
+            ctx.lineTo(x + lean, by - h);
+            ctx.lineTo(x + 1, by);
+            ctx.moveTo(x + 2, by);
+            ctx.lineTo(x + 3 + lean * 1.4, by - h * 0.7);
+            ctx.lineTo(x + 3.6, by);
+          } else {
+            ctx.moveTo(x - 1.7, by);
+            ctx.quadraticCurveTo(x + lean * 0.3, by - h * 0.6, x + lean, by - h);
+            ctx.quadraticCurveTo(x + lean * 0.2 + 0.6, by - h * 0.4, x + 1.7, by);
+          }
+        }
+        ctx.fill();
+      }
+    }
+    // 小野花
+    if (T.flowers.length) {
+      ctx.strokeStyle = C.blade[0];
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const f of T.flowers) {
+        if (f.x < a || f.x > b) continue;
+        ctx.moveTo(f.x, y - 4);
+        ctx.lineTo(f.x + 0.5, y - 4 - f.h);
+      }
+      ctx.stroke();
+      for (const f of T.flowers) {
+        if (f.x < a || f.x > b) continue;
+        const fy = y - 4 - f.h;
+        ctx.fillStyle = f.c;
+        ctx.beginPath();
+        for (let k = 0; k < 4; k++) {
+          const px = f.x + 0.5 + Math.cos(k * 1.571 + 0.4) * f.s;
+          const py = fy + Math.sin(k * 1.571 + 0.4) * f.s;
+          ctx.moveTo(px + f.s * 0.8, py);
+          ctx.arc(px, py, f.s * 0.8, 0, PI2);
+        }
+        ctx.fill();
+        ctx.fillStyle = '#ffb040';
+        ctx.fillRect(f.x - 0.3, fy - 0.8, 1.6, 1.6);
+      }
+    }
+    // 苔蘚斑（岩石、石板、木板頂面），邊緣順便垂一點下來
+    if (T.moss.length) {
+      for (let v = 0; v < 2; v++) {
+        ctx.fillStyle = C.moss[v];
+        ctx.beginPath();
+        for (const m of T.moss) {
+          if (m.x < a || m.x > b) continue;
+          const mw = v ? m.w * 0.6 : m.w;
+          const mx = v ? m.x - m.w * 0.12 : m.x;
+          ctx.moveTo(mx - mw / 2, y - 3);
+          ctx.quadraticCurveTo(mx - mw * 0.3, y - 5 - m.h, mx, y - 5 - m.h * (v ? 0.8 : 1));
+          ctx.quadraticCurveTo(mx + mw * 0.35, y - 5 - m.h, mx + mw / 2, y - 3);
+          if (!v) {
+            ctx.quadraticCurveTo(mx + mw * 0.2, y + 2, mx, y + 1);
+            ctx.quadraticCurveTo(mx - mw * 0.2, y + 2, mx - mw / 2, y - 3);
+          }
+          ctx.closePath();
+        }
+        ctx.fill();
+      }
+    }
+    // 熔岩地帶的餘燼碎屑
+    if (T.embers.length) {
+      ctx.fillStyle = '#ff9a3a';
+      ctx.beginPath();
+      for (let k = 0; k < T.embers.length; k += 3) {
+        const x = T.embers[k];
+        if (x < a || x > b) continue;
+        ctx.moveTo(x + T.embers[k + 2], T.embers[k + 1]);
+        ctx.arc(x, T.embers[k + 1], T.embers[k + 2], 0, PI2);
+      }
+      ctx.fill();
+    }
+    // 沙紋、冰面反光、大理石光澤
+    if (T.ripples.length) {
+      const rp = T.ripples;
+      if (style === 'sand') {
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1.2;
+      } else if (style === 'ice') {
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 1.6;
+      } else {
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.2;
+      }
+      ctx.beginPath();
+      for (let k = 0; k < rp.length; k += 3) {
+        const x = rp[k];
+        if (x < a - 40 || x > b) continue;
+        const yy = rp[k + 1];
+        const l = rp[k + 2];
+        if (style === 'sand') {
+          ctx.moveTo(x, yy);
+          ctx.quadraticCurveTo(x + l / 2, yy - 2.5, x + l, yy);
+        } else if (style === 'ice') {
+          // 斜斜的反光條
+          ctx.moveTo(x, yy + 8);
+          ctx.lineTo(x + l * 0.4, yy - 3);
+          ctx.moveTo(x + 5, yy + 8);
+          ctx.lineTo(x + 5 + l * 0.25, yy + 1);
+        } else {
+          ctx.moveTo(x, yy);
+          ctx.lineTo(x + l, yy);
+        }
+      }
+      ctx.stroke();
+    }
+    if (T.glints.length) {
+      if (style === 'sand') {
+        for (const g of T.glints) {
+          if (g.x < a || g.x > b) continue;
+          if (g.s) {
+            // 小貝殼碎片
+            ctx.fillStyle = g.c > 0.5 ? '#ffd2c2' : '#fff4e4';
+            ctx.beginPath();
+            ctx.moveTo(g.x, g.y + 1);
+            ctx.lineTo(g.x - 3, g.y - 1.5);
+            ctx.quadraticCurveTo(g.x, g.y - 5, g.x + 3, g.y - 1.5);
+            ctx.closePath();
+            ctx.fill();
+          } else {
+            ctx.fillStyle = g.c > 0.5 ? 'rgba(120,90,60,0.45)' : 'rgba(160,150,140,0.8)';
+            ctx.beginPath();
+            ctx.ellipse(g.x, g.y, 2.4, 1.5, 0, 0, PI2);
+            ctx.fill();
+          }
+        }
+      } else if (style === 'rock' || style === 'slab') {
+        // 頂面的小碎石
+        ctx.fillStyle = C.stone[2];
+        ctx.beginPath();
+        for (const g of T.glints) {
+          if (g.x < a || g.x > b) continue;
+          ctx.moveTo(g.x + g.s, g.y);
+          ctx.ellipse(g.x, g.y, g.s, g.s * 0.65, 0, 0, PI2);
+        }
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(30,20,20,0.35)';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+      } else if (style === 'snow' || style === 'ice') {
+        // 雪面、冰面的星芒閃點
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        for (const g of T.glints) {
+          if (g.x < a || g.x > b || g.c < 0.45 || g.y > y + 2) continue;
+          const s = g.s;
+          ctx.moveTo(g.x, g.y - s * 1.6);
+          ctx.lineTo(g.x + s * 0.35, g.y);
+          ctx.lineTo(g.x, g.y + s * 1.6);
+          ctx.lineTo(g.x - s * 0.35, g.y);
+          ctx.closePath();
+          ctx.moveTo(g.x - s * 1.6, g.y);
+          ctx.lineTo(g.x, g.y + s * 0.35);
+          ctx.lineTo(g.x + s * 1.6, g.y);
+          ctx.lineTo(g.x, g.y - s * 0.35);
+          ctx.closePath();
+        }
+        ctx.fill();
+      }
+    }
+    // 大理石頂面：金色小圓釘
+    if (style === 'marble' && T.studs.length) {
+      ctx.fillStyle = P.gold || '#e2b04a';
+      ctx.strokeStyle = 'rgba(90,60,20,0.6)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (const x of T.studs) {
+        if (x < a || x > b) continue;
+        ctx.moveTo(x + 2.2, y + 6.2);
+        ctx.arc(x, y + 6.2, 2.2, 0, PI2);
+      }
+      ctx.fill();
+      ctx.stroke();
+    }
+    // 木板頂面的紋路
+    if (style === 'planks' && T.grain.length) {
+      ctx.strokeStyle = 'rgba(60,34,20,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let k = 0; k < T.grain.length; k += 3) {
+        const yy = T.grain[k + 1];
+        if (yy > y + 5 || T.grain[k + 2] < a || T.grain[k] > b) continue;
+        ctx.moveTo(T.grain[k], yy);
+        ctx.lineTo(T.grain[k + 2], yy);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // 森林的垂藤（取代原本一條線＋一片葉）：藤上長著幾片葉子與捲鬚
+  function drawVineHang(ctx, h, t, cave) {
+    const sw = Math.sin(t * 1.5 + h.seed) * 3;
+    const ex = h.x + sw * 1.5;
+    const ey = h.y + h.len;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = cave ? '#5a3e28' : '#3f7a2c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(h.x, h.y - 4);
+    ctx.quadraticCurveTo(h.x + sw, h.y + h.len * 0.5, ex, ey);
+    ctx.stroke();
+    ctx.strokeStyle = cave ? '#7a5a3a' : '#6ab04a';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    const leaf = cave ? '#4a6a3a' : '#6ab84a';
+    const leafD = cave ? '#34502a' : '#4a8a34';
+    const n = Math.max(1, Math.floor(h.len / 14));
+    for (let k = 1; k <= n; k++) {
+      const u = k / (n + 0.5);
+      const px = h.x + sw * u * u * 1.5;
+      const py = h.y - 4 + (h.len + 4) * u;
+      const s = k % 2 ? 1 : -1;
+      ctx.fillStyle = k % 2 ? leaf : leafD;
+      ctx.beginPath();
+      ctx.ellipse(px + s * 4, py, 4.5, 2.2, s * 0.6 + Math.sin(t * 2 + k + h.seed) * 0.15, 0, PI2);
+      ctx.fill();
+    }
+    // 末端的捲鬚或小花苞
+    if (h.seed > 3) {
+      ctx.strokeStyle = cave ? '#6a4a30' : '#5a9a3a';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(ex + 2.5, ey, 2.5, Math.PI, Math.PI * 2.6);
+      ctx.stroke();
+    } else if (!cave) {
+      ctx.fillStyle = h.seed > 1.5 ? '#ffe36b' : '#ff9fbf';
+      ctx.beginPath();
+      ctx.arc(ex, ey + 1, 2.4, 0, PI2);
+      ctx.fill();
+    } else {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(140,255,210,0.55)';
+      ctx.beginPath();
+      ctx.arc(ex, ey + 1, 2.6, 0, PI2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ── 平台上加放的小擺設（原本只有地面有擺設） ──
+  const PLAT_PROPS = {
+    forestMorning: ['flowerPatch', 'mossRock', 'sapling', 'pebbleSet'],
+    forestMushroom: ['toadstools', 'flowerPatch', 'mossRock'],
+    forestDeep: ['fernClump', 'mossRock', 'sapling', 'toadstools'],
+    rootCave: ['glowMoss', 'stalagmite', 'pebbleSet'],
+    queenHall: ['gemCluster', 'toadstools', 'glowMoss'],
+    coastCamp: ['ropeCoil', 'pebbleSet', 'seaGlass'],
+    tidepool: ['seaGlass', 'pebbleSet', 'beachGrass'],
+    shipwreck: ['ropeCoil', 'seaGlass', 'lantern'],
+    reef: ['coralTuft', 'seaGlass', 'pebbleSet'],
+    crabNest: ['coralTuft', 'pebbleSet', 'seaGlass'],
+    hotspringCamp: ['dryBush', 'pebbleSet', 'lantern'],
+    redRift: ['dryBush', 'pebbleSet', 'desertFlower'],
+    steamPass: ['dryBush', 'pebbleSet', 'crystalSmall'],
+    lavaBed: ['emberRock', 'crystalSmall'],
+    volcanoNest: ['emberRock', 'crystalSmall'],
+    snowCamp: ['snowLump', 'lantern', 'frostTuft'],
+    snowField: ['snowLump', 'frostTuft', 'pebbleSet'],
+    iceFall: ['iceSpike', 'frostTuft', 'snowLump'],
+    bellShrine: ['snowLump', 'frostTuft', 'lantern'],
+    frostAltar: ['iceSpike', 'snowLump'],
+    templeCourt: ['goldPot', 'petalPile', 'crystalSmall'],
+    timeCorridor: ['goldPot', 'crystalSmall', 'petalPile'],
+    reverseGarden: ['petalPile', 'flowerPatch', 'goldPot'],
+    starStair: ['crystalSmall', 'starMote'],
+    timeThrone: ['crystalSmall', 'goldPot', 'starMote'],
+  };
+  const GROUND_EXTRA = {
+    forestMorning: ['oakTree', 'flowerPatch'],
+    forestMushroom: ['oakTree', 'toadstools'],
+    forestDeep: ['oakTree', 'fernClump'],
+    rootCave: ['stalagmite', 'glowMoss'],
+    tidepool: ['beachGrass'],
+    coastCamp: ['beachGrass'],
+    redRift: ['desertFlower'],
+    snowField: ['frostTuft'],
+    reverseGarden: ['petalPile'],
+  };
+
+  function extraProps(map) {
+    const th = map._theme;
+    const rnd = U.seeded(map.w * 5 + map.h * 11 + 3);
+    const set = PLAT_PROPS[map.theme];
+    if (!set) return;
+    const avoidX = [].concat((map.portals || []).map((p) => p.x), (map.npcs || []).map((n) => n.x), (map.signs || []).map((s) => s.x), (map.springs || []).map((s) => s.x));
+    const ropes = map.ropes || [];
+    map.platforms.forEach((p, i) => {
+      if (i === 0) return;
+      const len = p[1] - p[0];
+      if (len < 110) return;
+      for (let x = p[0] + 30 + rnd() * 40; x < p[1] - 30; x += 150 + rnd() * 150) {
+        if (rnd() < 0.35) continue;
+        if (avoidX.some((a) => Math.abs(a - x) < 60)) continue;
+        if (ropes.some((r) => Math.abs(r[0] - x) < 34 && r[1] <= p[2] + 10 && r[2] >= p[2] - 10)) continue;
+        map._props.push({ kind: set[Math.floor(rnd() * set.length)], x, y: p[2], s: 0.7 + rnd() * 0.3, flip: rnd() < 0.5 ? -1 : 1 });
+      }
+    });
+    // 地面：在原本擺設之間的空檔補幾個
+    const gx = GROUND_EXTRA[map.theme];
+    if (gx) {
+      const g = map.platforms[0];
+      const taken = map._props.filter((q) => q.y === g[2]).map((q) => q.x);
+      for (let x = g[0] + 220; x < g[1] - 160; x += 420 + rnd() * 380) {
+        if (taken.some((a) => Math.abs(a - x) < 90)) continue;
+        if (avoidX.some((a) => Math.abs(a - x) < 110)) continue;
+        if (map.camp && x > map.camp.x1 - 120 && x < map.camp.x2 + 120) continue;
+        if (ropes.some((r) => Math.abs(r[0] - x) < 60)) continue;
+        map._props.push({ kind: gx[Math.floor(rnd() * gx.length)], x, y: g[2], s: 0.85 + rnd() * 0.35, flip: rnd() < 0.5 ? -1 : 1 });
+      }
+    }
+    // 大樹先畫（在其他擺設後面）
+    map._props.sort((q, r) => (q.kind === 'oakTree' ? 0 : 1) - (r.kind === 'oakTree' ? 0 : 1));
+  }
+
+  Object.assign(PROP, {
+    oakTree(ctx, t) {
+      // 地面上的大樹：粗樹幹、根爪、三層樹冠、光斑
+      const sw = Math.sin(t * 0.8) * 0.015;
+      A.shape(ctx, (c) => { c.moveTo(-14, 0); c.quadraticCurveTo(-8, -40, -10, -86); c.lineTo(10, -86); c.quadraticCurveTo(8, -40, 16, 0); c.closePath(); }, '#8a5e3c', '#6b4428', { cel: [4, 0], lw: 2.6 });
+      A.shape(ctx, (c) => { c.moveTo(-10, -4); c.quadraticCurveTo(-24, -6, -32, 2); c.lineTo(-10, 2); c.closePath(); }, '#8a5e3c', '#6b4428', { lw: 2.2 });
+      A.shape(ctx, (c) => { c.moveTo(12, -4); c.quadraticCurveTo(26, -8, 34, 2); c.lineTo(12, 2); c.closePath(); }, '#8a5e3c', '#6b4428', { lw: 2.2 });
+      ctx.strokeStyle = 'rgba(50,30,15,0.45)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-3, -10); ctx.quadraticCurveTo(-6, -30, -2, -50);
+      ctx.moveTo(5, -20); ctx.quadraticCurveTo(7, -40, 3, -64);
+      ctx.stroke();
+      A.ellipse(ctx, 0, -40, 4, 5, '#4a2e1f', null, { lw: 1.4, hl: false });
+      // 枝
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-4, -76); ctx.lineTo(-26, -100);
+      ctx.moveTo(4, -80); ctx.lineTo(28, -108);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a5e3c';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(0, -110);
+      ctx.rotate(sw);
+      const blobs = [[-34, 8, 26, '#5f9f3a'], [34, 4, 28, '#5f9f3a'], [0, -8, 36, '#6aae4a'], [-22, -26, 24, '#79bf54'], [22, -30, 25, '#79bf54'], [0, -44, 22, '#86c95c']];
+      for (const [x, y, r, col] of blobs) A.ellipse(ctx, x, y, r, r * 0.82, col, U.mix(col, '#2a4a18', 0.35), { cel: [4, 4], hl: false, lw: 2.4 });
+      // 樹冠上的葉片紋與果子
+      ctx.fillStyle = 'rgba(200,240,150,0.55)';
+      for (const [x, y] of [[-26, -30], [16, -36], [-4, -52], [30, -8], [-40, 0]]) {
+        ctx.beginPath();
+        ctx.ellipse(x, y, 5, 2.5, -0.5, 0, PI2);
+        ctx.fill();
+      }
+      for (const [x, y] of [[-12, 4], [20, -14], [-30, -14], [8, -30]]) A.ellipse(ctx, x, y, 3, 3, '#ff6a5a', null, { lw: 1.2, hl: false });
+      ctx.restore();
+    },
+    flowerPatch(ctx, t) {
+      A.ellipse(ctx, 0, -2, 18, 4, '#5f9f3a', null, { noStroke: true, hl: false });
+      const cols = ['#ff9fbf', '#ffe36b', '#b8a0ff', '#ffffff', '#ff8a6a'];
+      for (let i = 0; i < 7; i++) {
+        const x = -15 + i * 5;
+        const h = 6 + ((i * 7) % 5) * 2;
+        const sw = Math.sin(t * 2 + i) * 1.2;
+        ctx.strokeStyle = '#4f8a34';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x, -2);
+        ctx.lineTo(x + sw, -h);
+        ctx.stroke();
+        ctx.fillStyle = cols[i % 5];
+        for (let k = 0; k < 5; k++) {
+          ctx.beginPath();
+          ctx.arc(x + sw + Math.cos(k * 1.26) * 2, -h + Math.sin(k * 1.26) * 2, 1.6, 0, PI2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#ffb040';
+        ctx.fillRect(x + sw - 0.8, -h - 0.8, 1.6, 1.6);
+      }
+    },
+    mossRock(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(-18, 0); c.lineTo(-14, -12); c.quadraticCurveTo(-2, -22, 12, -14); c.lineTo(18, 0); c.closePath(); }, '#9a968c', '#76726a', { cel: [3, 2], lw: 2.2 });
+      A.shape(ctx, (c) => { c.moveTo(-14, -11); c.quadraticCurveTo(-4, -22, 10, -15); c.quadraticCurveTo(6, -10, 0, -12); c.quadraticCurveTo(-8, -8, -14, -11); c.closePath(); }, '#6fae4a', '#4f8a36', { lw: 1.6 });
+      ctx.strokeStyle = 'rgba(40,30,20,0.4)';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(4, -8); ctx.lineTo(8, -3); ctx.lineTo(6, 0); ctx.stroke();
+      A.ellipse(ctx, 22, -2, 4, 2.6, '#aaa69c', null, { lw: 1.4, hl: false });
+    },
+    sapling(ctx, t) {
+      const sw = Math.sin(t * 1.6) * 1.5;
+      ctx.strokeStyle = '#6b4428';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(1, -12, sw, -24); ctx.stroke();
+      for (const [x, y, r] of [[-5, -18, -0.7], [5, -22, 0.7], [sw, -26, 0], [-4, -10, -0.9], [4, -13, 0.9]]) A.ellipse(ctx, x + sw * 0.5, y, 5, 2.6, '#7cc84a', '#5a9e34', { rot: r, lw: 1.3, hl: false });
+    },
+    pebbleSet(ctx) {
+      for (const [x, r, col] of [[-10, 4, '#a8a298'], [-2, 6, '#8e887e'], [8, 3.5, '#b8b2a8'], [14, 2.5, '#9a948a']]) A.ellipse(ctx, x, -r * 0.6, r, r * 0.7, col, null, { lw: 1.4 });
+    },
+    toadstools(ctx) {
+      for (const [x, k, col] of [[-8, 0.8, '#e0513a'], [2, 1.1, '#f28c38'], [10, 0.6, '#c2408f']]) {
+        A.shape(ctx, (c) => A.roundRect(c, x - 2 * k, -10 * k, 4 * k, 10 * k, 1.5), '#fff0d6', null, { lw: 1.4, hl: false });
+        A.shape(ctx, (c) => c.ellipse(x, -10 * k, 8 * k, 6 * k, 0, Math.PI, 0), col, null, { lw: 1.4, hl: false });
+        ctx.fillStyle = '#fff6e8';
+        ctx.beginPath();
+        ctx.arc(x - 3 * k, -13 * k, 1.3 * k, 0, PI2);
+        ctx.arc(x + 2.5 * k, -14 * k, 1 * k, 0, PI2);
+        ctx.fill();
+      }
+    },
+    fernClump(ctx, t) {
+      for (let k = -3; k <= 3; k++) {
+        const sw = Math.sin(t * 1.4 + k) * 1.5;
+        const ex = k * 7 + sw;
+        const ey = -20 + Math.abs(k) * 4;
+        ctx.strokeStyle = k % 2 ? '#3f7f2a' : '#5a9e3a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(k * 2, -18, ex, ey);
+        ctx.stroke();
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let j = 1; j < 5; j++) {
+          const u = j / 5;
+          const px = k * 2 * u + (ex - k * 2 * u) * u * u;
+          const py = -18 * u * (1 - u) * 2 + ey * u * u;
+          ctx.moveTo(px, py);
+          ctx.lineTo(px - 3, py - 3);
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + 3, py - 3);
+        }
+        ctx.stroke();
+      }
+    },
+    glowMoss(ctx, t) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(glowSprite('120,255,200'), -22, -26, 44, 36);
+      ctx.restore();
+      A.ellipse(ctx, 0, -3, 14, 4, '#3f6a3a', null, { lw: 1.4, hl: false });
+      for (let k = 0; k < 6; k++) {
+        const x = -10 + k * 4;
+        const h = 5 + (k % 3) * 3 + Math.sin(t * 2 + k) * 0.8;
+        ctx.strokeStyle = '#5a8a4a';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, -4); ctx.lineTo(x, -4 - h); ctx.stroke();
+        ctx.fillStyle = k % 2 ? '#a8ffe0' : '#7df0d0';
+        ctx.beginPath(); ctx.arc(x, -4 - h, 1.6, 0, PI2); ctx.fill();
+      }
+    },
+    stalagmite(ctx) {
+      for (const [x, h, w] of [[-8, 26, 9], [4, 40, 11], [14, 18, 7]]) {
+        A.shape(ctx, (c) => { c.moveTo(x - w, 0); c.quadraticCurveTo(x - w * 0.4, -h * 0.5, x, -h); c.quadraticCurveTo(x + w * 0.4, -h * 0.5, x + w, 0); c.closePath(); }, '#6e6258', '#54483e', { cel: [3, 0], lw: 2 });
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let yy = -4; yy > -h * 0.8; yy -= 6) { const ww = w * (1 + yy / h) * 0.8; ctx.moveTo(x - ww, yy); ctx.quadraticCurveTo(x, yy + 2, x + ww, yy); }
+        ctx.stroke();
+      }
+    },
+    gemCluster(ctx, t) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.6 + Math.sin(t * 2) * 0.2;
+      ctx.drawImage(glowSprite('255,160,230'), -24, -34, 48, 40);
+      ctx.restore();
+      for (const [x, h, r, col, sh] of [[-7, 16, -0.4, '#ff9fd0', '#d870a8'], [2, 24, 0.05, '#ffd35a', '#d8a030'], [10, 13, 0.5, '#b8a0ff', '#8a70e0']]) {
+        ctx.save();
+        ctx.translate(x, 0);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-4, 0); c.lineTo(-4, -h * 0.7); c.lineTo(0, -h); c.lineTo(4, -h * 0.7); c.lineTo(4, 0); c.closePath(); }, col, sh, { cel: [2, 0], lw: 1.6 });
+        ctx.restore();
+      }
+    },
+    ropeCoil(ctx) {
+      A.ellipse(ctx, 0, -4, 14, 5, '#d8b07a', '#b08a54', { lw: 2, hl: false });
+      A.ellipse(ctx, 0, -6, 10, 3.5, '#e0bc84', null, { lw: 1.6, hl: false });
+      A.ellipse(ctx, 0, -7, 5, 1.8, '#8a6440', null, { lw: 1.2, hl: false });
+      ctx.strokeStyle = '#d8b07a';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(12, -3); ctx.quadraticCurveTo(22, -2, 26, 0); ctx.stroke();
+    },
+    seaGlass(ctx) {
+      for (const [x, y, r, col] of [[-8, -3, 3.5, 'rgba(120,220,200,0.9)'], [0, -2, 2.5, 'rgba(140,190,255,0.9)'], [7, -3, 3, 'rgba(255,255,255,0.9)']]) {
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.ellipse(x, y, r * 1.3, r, 0.3, 0, PI2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillRect(x - r * 0.5, y - r * 0.5, 1.4, 1.2);
+      }
+      PROP.pebbleSet(ctx);
+    },
+    beachGrass(ctx, t) {
+      ctx.lineCap = 'round';
+      for (let k = -4; k <= 4; k++) {
+        const sw = Math.sin(t * 2.4 + k) * 2.5;
+        ctx.strokeStyle = k % 2 ? '#9cc060' : '#c8d27a';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(k * 2, 0);
+        ctx.quadraticCurveTo(k * 3, -12, k * 5 + sw, -22 + Math.abs(k) * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#d8c080';
+      ctx.beginPath(); ctx.ellipse(2 + Math.sin(t * 2.4) * 2.5, -24, 2, 5, 0.2, 0, PI2); ctx.fill();
+    },
+    coralTuft(ctx, t) {
+      const sw = Math.sin(t * 1.2) * 1;
+      ctx.lineCap = 'round';
+      for (const [col, w] of [[A.OUT, 6], ['#ff9f7a', 3]]) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(sw, -16);
+        ctx.moveTo(0, -7); ctx.quadraticCurveTo(-7, -9, -8 + sw, -15);
+        ctx.moveTo(0, -10); ctx.quadraticCurveTo(6, -12, 7 + sw, -19);
+        ctx.stroke();
+      }
+      for (const [x, y] of [[sw, -16], [-8 + sw, -15], [7 + sw, -19]]) A.ellipse(ctx, x, y, 2.2, 2.2, '#ffc0b0', null, { lw: 1, hl: false });
+    },
+    lantern(ctx, t) {
+      const g = 0.45 + Math.sin(t * 3.1) * 0.1;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = g;
+      ctx.drawImage(glowSprite('255,190,110'), -26, -40, 52, 52);
+      ctx.restore();
+      A.shape(ctx, (c) => A.roundRect(c, -8, -20, 16, 20, 3), '#ffd88a', '#e8b060', { lw: 2 });
+      ctx.strokeStyle = '#5a4030';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(8, -10); ctx.moveTo(0, -20); ctx.lineTo(0, 0); ctx.stroke();
+      A.shape(ctx, (c) => { c.moveTo(-10, -20); c.lineTo(10, -20); c.lineTo(5, -26); c.lineTo(-5, -26); c.closePath(); }, '#5a4a44', null, { lw: 1.8 });
+      A.shape(ctx, (c) => c.rect(-10, -2, 20, 3), '#5a4a44', null, { lw: 1.4 });
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, -28, 3, Math.PI, 0); ctx.stroke();
+    },
+    dryBush(ctx, t) {
+      ctx.strokeStyle = '#8a6a44';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      for (const [ang, l] of [[-1.1, 16], [-0.5, 20], [0.1, 18], [0.6, 19], [1.2, 14]]) {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.sin(ang) * l, -Math.cos(ang) * l);
+        ctx.moveTo(Math.sin(ang) * l * 0.6, -Math.cos(ang) * l * 0.6);
+        ctx.lineTo(Math.sin(ang + 0.5) * l * 0.8, -Math.cos(ang + 0.5) * l * 0.8);
+      }
+      ctx.stroke();
+      for (const [x, y] of [[-10, -12], [4, -18], [11, -10], [-3, -15]]) A.ellipse(ctx, x, y, 3, 2, '#b8a860', null, { rot: x * 0.05, lw: 1, hl: false });
+    },
+    desertFlower(ctx, t) {
+      PROP.dryBush(ctx, t);
+      for (const [x, y, col] of [[-6, -18, '#ff8ab0'], [8, -20, '#ffd35a']]) {
+        ctx.fillStyle = col;
+        for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x + Math.cos(k * 1.26) * 2.2, y + Math.sin(k * 1.26) * 2.2, 1.7, 0, PI2); ctx.fill(); }
+        ctx.fillStyle = '#fff4c0';
+        ctx.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
+      }
+    },
+    crystalSmall(ctx, t) {
+      const theme = G.world && G.world.map && G.world.map.theme;
+      const hot = TERR_LAVA[theme] || TERR_DRY[theme];
+      const cols = hot ? ['#ffb870', '#e07a3a', '255,150,70'] : theme === 'starStair' || theme === 'timeThrone' ? ['#c8b8ff', '#8a78e0', '170,150,255'] : ['#fff0c0', '#e8b84a', '255,220,150'];
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.5 + Math.sin(t * 2.3) * 0.15;
+      ctx.drawImage(glowSprite(cols[2]), -20, -30, 40, 36);
+      ctx.restore();
+      for (const [x, h, r] of [[-5, 13, -0.4], [2, 20, 0.05], [8, 11, 0.5]]) {
+        ctx.save();
+        ctx.translate(x, 0);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-3.5, 0); c.lineTo(-3.5, -h * 0.7); c.lineTo(0, -h); c.lineTo(3.5, -h * 0.7); c.lineTo(3.5, 0); c.closePath(); }, cols[0], cols[1], { cel: [1.8, 0], lw: 1.5 });
+        ctx.restore();
+      }
+    },
+    emberRock(ctx, t) {
+      A.shape(ctx, (c) => { c.moveTo(-16, 0); c.lineTo(-12, -10); c.lineTo(-2, -16); c.lineTo(10, -12); c.lineTo(16, 0); c.closePath(); }, '#3a2a2a', '#281c1c', { cel: [3, 2], lw: 2 });
+      ctx.strokeStyle = 'rgba(255,' + Math.round(130 + Math.sin(t * 3) * 30) + ',50,0.9)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-5, -9); ctx.lineTo(-1, -13); ctx.moveTo(4, -4); ctx.lineTo(8, -9); ctx.stroke();
+    },
+    snowLump(ctx) {
+      A.ellipse(ctx, 0, -4, 16, 7, '#f6faff', '#cfdcee', { cel: [2, 1], lw: 1.8, hl: false });
+      A.ellipse(ctx, 10, -3, 7, 4, '#f6faff', '#cfdcee', { lw: 1.6, hl: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-8, -9, 6, 1.5);
+      ctx.strokeStyle = '#6a5a4a';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(-7, -16); ctx.moveTo(-6, -12); ctx.lineTo(-10, -14); ctx.stroke();
+    },
+    frostTuft(ctx, t) {
+      ctx.strokeStyle = '#8a7a5a';
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let k = -3; k <= 3; k++) { ctx.moveTo(k * 2, 0); ctx.lineTo(k * 4 + Math.sin(t * 1.6 + k), -14 + Math.abs(k) * 2); }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(240,250,255,0.9)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      A.ellipse(ctx, 0, -1, 10, 3.5, '#f6faff', null, { lw: 1.2, hl: false });
+    },
+    iceSpike(ctx, t) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.45 + Math.sin(t * 1.8) * 0.12;
+      ctx.drawImage(glowSprite('150,220,255'), -20, -34, 40, 40);
+      ctx.restore();
+      for (const [x, h, w, r] of [[-6, 16, 7, -0.35], [3, 26, 9, 0.05], [10, 12, 6, 0.45]]) {
+        ctx.save();
+        ctx.translate(x, 0);
+        ctx.rotate(r);
+        A.shape(ctx, (c) => { c.moveTo(-w / 2, 0); c.lineTo(0, -h); c.lineTo(w / 2, 0); c.closePath(); }, '#d0f0ff', '#7ec8ea', { cel: [w * 0.3, 0], lw: 1.6 });
+        ctx.restore();
+      }
+    },
+    goldPot(ctx) {
+      A.shape(ctx, (c) => { c.moveTo(-8, 0); c.quadraticCurveTo(-14, -8, -8, -16); c.lineTo(8, -16); c.quadraticCurveTo(14, -8, 8, 0); c.closePath(); }, '#fbf7ef', '#ddd2c2', { cel: [3, 0], lw: 1.8 });
+      A.shape(ctx, (c) => c.rect(-10, -9, 20, 2.5), '#e8b84a', null, { lw: 1.1 });
+      A.shape(ctx, (c) => c.rect(-7, -19, 14, 3), '#e8b84a', null, { lw: 1.2 });
+      for (const [x, y, r] of [[-4, -22, 4], [3, -24, 4.5], [0, -28, 3.5]]) A.ellipse(ctx, x, y, r, r, '#7cae5a', '#5e8e44', { lw: 1.3, hl: false });
+    },
+    petalPile(ctx, t) {
+      ctx.fillStyle = '#ffc4d8';
+      for (let k = 0; k < 7; k++) {
+        ctx.beginPath();
+        ctx.ellipse(-12 + k * 4, -2 - (k % 3), 3, 1.6, k * 0.8, 0, PI2);
+        ctx.fill();
+      }
+      const ph = (t * 0.4) % 1;
+      ctx.globalAlpha = Math.sin(ph * Math.PI);
+      ctx.fillStyle = '#ffd8e6';
+      ctx.beginPath();
+      ctx.ellipse(Math.sin(ph * 6) * 6, -6 - ph * 30, 2.5, 1.4, ph * 6, 0, PI2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    },
+    starMote(ctx, t) {
+      for (let k = 0; k < 3; k++) {
+        const ph = (t * 0.5 + k / 3) % 1;
+        const x = -8 + k * 8;
+        const y = -6 - ph * 26;
+        const s = Math.sin(ph * Math.PI) * 3.5;
+        ctx.fillStyle = k % 2 ? '#fff2c0' : '#cfe4ff';
+        ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.35, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.35, y); ctx.closePath();
+        ctx.moveTo(x - s, y); ctx.lineTo(x, y + s * 0.35); ctx.lineTo(x + s, y); ctx.lineTo(x, y - s * 0.35); ctx.closePath();
+        ctx.fill();
+      }
+      A.ellipse(ctx, 0, -2, 10, 2.5, 'rgba(180,200,255,0.5)', null, { noStroke: true, hl: false });
+    },
+  });
+
+  // 既有擺設補細節：在原本的畫法上再疊裂縫、苔蘚、年輪、小花
+  (function enrichProps() {
+    const wrap = (name, extra) => {
+      const base = PROP[name];
+      if (!base) return;
+      PROP[name] = function (ctx, t, p) {
+        base(ctx, t, p);
+        extra(ctx, t, p);
+      };
+    };
+    wrap('stump', (ctx) => {
+      ctx.strokeStyle = 'rgba(140,100,60,0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(0, -24, 12, 3.8, 0, 0, PI2);
+      ctx.moveTo(4, -24);
+      ctx.ellipse(0, -24, 4, 1.3, 0, 0, PI2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(50,30,15,0.45)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(-9, -18); ctx.lineTo(-10, -4); ctx.moveTo(6, -17); ctx.lineTo(7, -6); ctx.moveTo(-1, -12); ctx.lineTo(-1, -2);
+      ctx.stroke();
+      A.shape(ctx, (c) => { c.moveTo(-16, 0); c.quadraticCurveTo(-24, -2, -26, 3); c.lineTo(-14, 2); c.closePath(); }, '#8b5e3c', null, { lw: 1.8 });
+      A.shape(ctx, (c) => { c.moveTo(15, 0); c.quadraticCurveTo(24, -3, 27, 3); c.lineTo(14, 2); c.closePath(); }, '#8b5e3c', null, { lw: 1.8 });
+      A.ellipse(ctx, -10, -26, 6, 2.5, '#6fae4a', null, { lw: 1.3, hl: false });
+      A.shape(ctx, (c) => A.roundRect(c, 10, -12, 3, 6, 1), '#fff0d6', null, { lw: 1, hl: false });
+      A.shape(ctx, (c) => c.ellipse(11.5, -12, 5, 3.5, 0, Math.PI, 0), '#f28c38', null, { lw: 1.2, hl: false });
+    });
+    wrap('log', (ctx) => {
+      ctx.strokeStyle = 'rgba(50,30,15,0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (const x of [-34, -18, -2, 14]) { ctx.moveTo(x, -15); ctx.quadraticCurveTo(x + 6, -9, x + 2, -3); }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(140,100,60,0.7)';
+      ctx.beginPath(); ctx.ellipse(36, -9, 3, 5, 0, 0, PI2); ctx.stroke();
+      for (const [x, k] of [[-6, 0.7], [2, 0.5]]) {
+        A.shape(ctx, (c) => A.roundRect(c, x - 1.5, -18 - 6 * k, 3, 6 * k, 1), '#fff0d6', null, { lw: 1, hl: false });
+        A.shape(ctx, (c) => c.ellipse(x, -18 - 6 * k, 6 * k, 4 * k, 0, Math.PI, 0), '#e0513a', null, { lw: 1.1, hl: false });
+      }
+      A.ellipse(ctx, -30, -17, 6, 2.5, '#6fae4a', null, { lw: 1.2, hl: false });
+    });
+    wrap('bush', (ctx) => {
+      ctx.fillStyle = 'rgba(200,240,150,0.55)';
+      for (const [x, y] of [[-18, -18], [0, -28], [14, -18], [-6, -10]]) {
+        ctx.beginPath(); ctx.ellipse(x, y, 4.5, 2.2, -0.5, 0, PI2); ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(40,80,30,0.35)';
+      for (const [x, y] of [[-10, -6], [10, -4], [22, -8]]) {
+        ctx.beginPath(); ctx.ellipse(x, y, 4, 2, 0.4, 0, PI2); ctx.fill();
+      }
+      A.ellipse(ctx, 4, -26, 2.2, 2.2, '#ff6a6a', null, { noStroke: true, hl: false });
+      A.ellipse(ctx, 20, -8, 2.2, 2.2, '#ff6a6a', null, { noStroke: true, hl: false });
+    });
+    const rockExtra = (moss) => (ctx) => {
+      ctx.strokeStyle = 'rgba(30,20,20,0.4)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-6, -14); ctx.lineTo(-3, -8); ctx.lineTo(-6, -2);
+      ctx.moveTo(8, -12); ctx.lineTo(12, -6);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath(); ctx.ellipse(-8, -15, 5, 1.6, -0.4, 0, PI2); ctx.fill();
+      if (moss) {
+        ctx.fillStyle = moss;
+        ctx.beginPath(); ctx.ellipse(10, -12, 5, 2, 0.5, 0, PI2); ctx.ellipse(-14, -4, 4, 2, 0.8, 0, PI2); ctx.fill();
+      }
+      for (const [x, r] of [[-24, 3.5], [23, 2.5]]) A.ellipse(ctx, x, -r * 0.6, r, r * 0.7, '#a8a498', null, { lw: 1.2, hl: false });
+    };
+    wrap('rock', rockExtra('#79b04a'));
+    wrap('rockRed', rockExtra(null));
+    wrap('rockDark', (ctx, t) => {
+      ctx.fillStyle = 'rgba(255,' + Math.round(150 + Math.sin(t * 3) * 40) + ',60,0.9)';
+      for (const [x, y] of [[-12, -6], [8, -16], [16, -4]]) { ctx.beginPath(); ctx.arc(x, y, 1.3, 0, PI2); ctx.fill(); }
+    });
+    wrap('snowRock', (ctx) => {
+      ctx.strokeStyle = 'rgba(30,40,60,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(-6, -2); ctx.moveTo(10, -10); ctx.lineTo(14, -3); ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.moveTo(-4, -30); ctx.lineTo(-3, -27); ctx.lineTo(0, -26); ctx.lineTo(-3, -25); ctx.lineTo(-4, -22); ctx.lineTo(-5, -25); ctx.lineTo(-8, -26); ctx.lineTo(-5, -27); ctx.closePath(); ctx.fill();
+    });
+    wrap('fern', (ctx, t) => {
+      ctx.strokeStyle = '#5a9e3a';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let k = -2; k <= 2; k++) {
+        const ex = k * 18 + Math.sin(t * 1.5 + k) * 2;
+        const ey = -22 + Math.abs(k) * 6;
+        for (let j = 1; j < 5; j++) {
+          const u = j / 5;
+          const px = (1 - u) * (1 - u) * 0 + 2 * (1 - u) * u * k * 10 + u * u * ex;
+          const py = 2 * (1 - u) * u * -30 + u * u * ey;
+          ctx.moveTo(px, py);
+          ctx.lineTo(px - 3, py - 4);
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + 3, py - 4);
+        }
+      }
+      ctx.stroke();
+    });
+    wrap('mushCluster', (ctx) => {
+      ctx.fillStyle = '#fff6e8';
+      ctx.beginPath();
+      for (const [x, y, r] of [[-13, -15, 1.4], [-7, -16, 1.2], [1, -19, 1.8], [7, -19, 1.4], [13, -12, 1]]) { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, PI2); }
+      ctx.fill();
+      ctx.fillStyle = '#5f9f3a';
+      ctx.beginPath(); ctx.ellipse(0, 0, 20, 3, 0, Math.PI, 0); ctx.fill();
+    });
+    wrap('driftwood', (ctx) => {
+      A.ellipse(ctx, 30, -14, 4, 3, '#e8e4dc', null, { lw: 1.2, hl: false });
+      A.ellipse(ctx, 24, -15, 3, 2.4, '#e8e4dc', null, { lw: 1.2, hl: false });
+    });
+    wrap('crate', (ctx) => {
+      ctx.fillStyle = '#5a5a64';
+      for (const [x, y] of [[-15, -31], [13, -31], [-15, -5], [13, -5]]) ctx.fillRect(x, y, 2.5, 2.5);
+      ctx.strokeStyle = 'rgba(60,34,20,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-16, -24); ctx.lineTo(-4, -24); ctx.moveTo(4, -10); ctx.lineTo(16, -10); ctx.stroke();
+    });
+    wrap('stoneLantern', (ctx) => {
+      if (G.world && G.world.map && G.world.map.region === 4) return;
+      ctx.fillStyle = '#6fae4a';
+      ctx.beginPath(); ctx.ellipse(-8, -46, 6, 2, -0.2, 0, PI2); ctx.ellipse(-10, -6, 5, 2, 0, 0, PI2); ctx.fill();
+      ctx.strokeStyle = 'rgba(40,30,20,0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-3, -28); ctx.lineTo(-1, -20); ctx.stroke();
+    });
+    wrap('urn', (ctx) => {
+      ctx.strokeStyle = '#c0902e';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = -12; x < 12; x += 4) { ctx.moveTo(x, -27); ctx.lineTo(x + 2, -29); ctx.lineTo(x + 4, -27); }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.beginPath(); ctx.ellipse(-8, -22, 1.6, 5, 0.2, 0, PI2); ctx.fill();
+    });
+    wrap('brokenColumn', (ctx) => {
+      for (const [x, r] of [[-26, 3], [-30, 2], [30, 2.5]]) A.shape(ctx, (c) => { c.moveTo(x - r, 0); c.lineTo(x - r * 0.4, -r * 1.4); c.lineTo(x + r, -r * 0.6); c.lineTo(x + r * 0.8, 0); c.closePath(); }, '#f4eee4', null, { lw: 1.2 });
+    });
+  })();
+
+  // ── 前景補充：小石頭、落葉、小花苞，讓地面前緣更有層次（低矮，不擋角色） ──
+  function drawForeBits(ctx, map, cam, t) {
+    const list = map._fore2;
+    if (!list || !list.length) return;
+    const y = map.platforms[0][2];
+    const x0 = cam.x - 40;
+    const x1 = cam.x + G.W + 40;
+    const kind = map._fore2Kind;
+    for (const f of list) {
+      if (f.x < x0 || f.x > x1) continue;
+      if (kind === 'lava') {
+        A.ellipse(ctx, f.x, y + 12, 9 * f.s, 5 * f.s, '#2a1e22', null, { lw: 1.6, hl: false });
+        ctx.fillStyle = 'rgba(255,' + Math.round(140 + Math.sin(t * 3 + f.x) * 40) + ',60,0.9)';
+        ctx.fillRect(f.x - 3, y + 9, 2, 2);
+        continue;
+      }
+      // 兩三顆前景小石
+      const col = kind === 'snow' ? '#e8f0fa' : kind === 'marble' ? '#f4eee4' : kind === 'sand' ? '#d8c4a0' : '#8e887e';
+      const sh = kind === 'snow' ? '#b8c8e0' : kind === 'marble' ? '#d8ccbc' : kind === 'sand' ? '#b8a07a' : '#6e6a60';
+      A.ellipse(ctx, f.x, y + 12, 7 * f.s, 4.5 * f.s, col, sh, { lw: 1.6, hl: false, shadeAt: 0 });
+      A.ellipse(ctx, f.x + 9 * f.s, y + 13, 4 * f.s, 3 * f.s, col, null, { lw: 1.4, hl: false });
+      if (kind === 'grass') {
+        const sw = Math.sin(t * 2 + f.x * 0.02) * 1.5;
+        ctx.strokeStyle = '#3f7f2a';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(f.x - 8, y + 13);
+        ctx.quadraticCurveTo(f.x - 9, y + 2, f.x - 6 + sw, y - 4 * f.s);
+        ctx.stroke();
+        if (f.k > 0.5) A.ellipse(ctx, f.x - 6 + sw, y - 5 * f.s, 2.4, 2.4, f.k > 0.75 ? '#ffe36b' : '#ff9fbf', null, { lw: 1, hl: false });
+      } else if (kind === 'leaf' && f.k > 0.4) {
+        ctx.fillStyle = f.k > 0.7 ? '#d88a3a' : '#c8a060';
+        ctx.beginPath();
+        ctx.ellipse(f.x - 10, y + 12, 4, 2, 0.4, 0, PI2);
+        ctx.fill();
+      } else if (kind === 'marble' && f.k > 0.5) {
+        ctx.fillStyle = '#ffc4d8';
+        ctx.beginPath();
+        ctx.ellipse(f.x - 9, y + 11, 3, 1.6, f.k * 5, 0, PI2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // 平台底下垂吊物補細節
+  (function enrichHang() {
+    const wrap = (name, extra) => {
+      const base = HANG[name];
+      if (!base) return;
+      HANG[name] = function (ctx, h, t) {
+        base(ctx, h, t);
+        extra(ctx, h, t);
+      };
+    };
+    wrap('seaweed', (ctx, h, t) => {
+      const sw = Math.sin(t * 1.3 + h.seed) * 4;
+      ctx.fillStyle = '#8ab85a';
+      ctx.beginPath();
+      for (let k = 1; k <= 3; k++) {
+        const u = k / 4;
+        const x = h.x + sw * (u * 1.4 - 0.2) + (k % 2 ? 3 : -3);
+        const y = h.y - 8 + (h.len + 14) * u;
+        ctx.moveTo(x + 2, y);
+        ctx.arc(x, y, 2, 0, PI2);
+      }
+      ctx.fill();
+    });
+    wrap('dryroot', (ctx, h) => {
+      ctx.fillStyle = '#7a5a40';
+      ctx.beginPath();
+      ctx.ellipse(h.x + 1, h.y - 5, 5, 3, 0, 0, PI2);
+      ctx.fill();
+      ctx.strokeStyle = '#8a6a4a';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(h.x - 2, h.y + h.len * 0.2);
+      ctx.lineTo(h.x - 6, h.y + h.len * 0.28);
+      ctx.moveTo(h.x + 4, h.y + h.len * 0.45);
+      ctx.lineTo(h.x + 7, h.y + h.len * 0.5);
+      ctx.stroke();
+    });
+    wrap('chain', (ctx, h, t) => {
+      const sw = Math.sin(t + h.seed) * 1.5;
+      const n = Math.ceil(h.len / 8);
+      const x = h.x + sw * (n / 6);
+      const y = h.y - 4 + n * 8;
+      ctx.strokeStyle = '#3a3238';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.arc(x + 3, y + 2, 4, Math.PI, Math.PI * 2.4);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a8494';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    });
+  })();
+
+  // ── 接上：prepareMap 多算一份地形細節；平台繪製時記住目前的地圖；前景多畫一層 ──
+  (function hookTerrain() {
+    const basePrep = A.prepareMap;
+    A.prepareMap = function (map) {
+      basePrep(map);
+      buildTerrain(map);
+      extraProps(map);
+      const rnd = U.seeded(map.w * 3 + 17);
+      const th = map._theme;
+      const g = map.platforms[0];
+      const gs = (th.ground && th.ground.style) || th.plat.style || 'grass';
+      map._fore2Kind = TERR_LAVA[map.theme] ? 'lava' : gs === 'snow' || gs === 'ice' ? 'snow' : gs === 'marble' ? 'marble' : gs === 'sand' ? 'sand' : TERR_DRY[map.theme] ? 'leaf' : 'grass';
+      map._fore2 = [];
+      for (let x = g[0] + 90; x < g[1] - 40; x += 240 + rnd() * 320) map._fore2.push({ x, s: 0.8 + rnd() * 0.5, k: rnd() });
+    };
+    // 平台整段是靜態的（沒有時間參數），所以第一次看到時把每個平台（地面切成數塊）畫進離屏畫布，
+    // 之後每格只貼圖。解析度跟著實際的螢幕縮放（最高 2 倍）；換地圖或一陣子沒看到的塊會被釋放。
+    const livePlat = A.drawPlatforms;
+    const TILE = 1024;
+    const PAD_UP = 46;
+    const PAD_DN = 76;
+    let pcMap = null;
+    let pcScale = 0;
+    let pcTiles = new Map();
+    let pcFrame = 0;
+    function buildTile(map, i, tx0, tw, top, h, sc) {
+      const c = document.createElement('canvas');
+      c.width = Math.ceil(tw * sc);
+      c.height = Math.ceil(h * sc);
+      const g = c.getContext('2d');
+      g.scale(sc, sc);
+      g.translate(-tx0, -top);
+      // 只留下這一個平台（其他平台移到很遠的地方），索引不變，裝飾與細節才對得上
+      const proxy = Object.create(map);
+      proxy.platforms = map.platforms.map((q, k) => (k === i ? q : [-1e9, -1e9 + 1, -1e9]));
+      const saveMode = A.mode;
+      A.mode = null;
+      try {
+        livePlat(g, proxy, { x: tx0, y: map.platforms[i][2] - 100 });
+      } finally {
+        A.mode = saveMode;
+      }
+      terrMap = map;
+      return c;
+    }
+    A.drawPlatforms = function (ctx, map, cam) {
+      const tr = ctx.getTransform ? ctx.getTransform() : null;
+      const dev = tr ? Math.hypot(tr.a, tr.b) : 1;
+      const sc = Math.max(1, Math.min(2, Math.ceil(dev * 2 - 0.05) / 2));
+      if (map !== pcMap || sc !== pcScale) {
+        pcTiles = new Map();
+        pcMap = map;
+        pcScale = sc;
+      }
+      terrMap = map;
+      pcFrame++;
+      const x0 = cam.x - 50;
+      const x1 = cam.x + G.W + 50;
+      map.platforms.forEach((p, i) => {
+        if (p[1] < x0 || p[0] > x1) return;
+        if (p[2] < cam.y - 40 || p[2] > cam.y + G.H + 60) return;
+        const isGround = i === 0;
+        const top = p[2] - PAD_UP;
+        const h = isGround ? Math.min(900, map.h + 80 - top) : PAD_UP + PAD_DN;
+        const L = p[0] - 14;
+        const R = p[1] + 14;
+        for (let tx = L; tx < R; tx += TILE) {
+          const tw = Math.min(TILE, R - tx) + 2;
+          if (tx + tw < x0 || tx > x1) continue;
+          const key = i + ':' + tx;
+          let e = pcTiles.get(key);
+          if (!e) {
+            e = { c: buildTile(map, i, tx, tw, top, h, sc), used: 0 };
+            pcTiles.set(key, e);
+          }
+          e.used = pcFrame;
+          ctx.drawImage(e.c, tx, top, tw, h);
+        }
+      });
+      // 很久沒用到的塊丟掉，省記憶體
+      if (pcFrame % 120 === 0) {
+        for (const [k, e] of pcTiles) if (pcFrame - e.used > 600) pcTiles.delete(k);
+      }
+    };
+    const baseFore = A.drawForeground;
+    A.drawForeground = function (ctx, map, cam, t) {
+      baseFore(ctx, map, cam, t);
+      drawForeBits(ctx, map, cam, t);
+    };
+  })();
 
   A.THEMES = THEMES;
 })();
