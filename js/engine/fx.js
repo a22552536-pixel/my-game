@@ -9,8 +9,9 @@
   // 座標是正規化的：主幹從 (0,0) 走到 (1,0)；寬度是另外的倍率（生成時再乘上實際的粗細）。
   const BF_MAX = 6;
   // 一條帶子：v 頂點（x,y 交錯），w 每段的四個半寬（起點左、終點左、起點右、終點右），lit 每段哪一側受光，t0 從主幹哪裡長出來
-  function bfRibbon(v, w, lit, t0) {
-    return { v: new Float32Array(v), w: new Float32Array(w), lit: new Int8Array(lit), n: lit.length, t0 };
+  // cut：尾端斜切的量（兩側的終點沿著前進方向一前一後錯開 → 像斷掉的刀刃，而不是細尖）
+  function bfRibbon(v, w, lit, t0, cut) {
+    return { v: new Float32Array(v), w: new Float32Array(w), lit: new Int8Array(lit), n: lit.length, t0, cut: cut || 0 };
   }
   // n 段折線；spurs：最多幾根短短的斜刺
   function bfCrease(nMin, nMax, spurs) {
@@ -41,17 +42,27 @@
     for (const [px, py] of pts) v.push(px * cr - py * sr, px * sr + py * cr);
     const w = [];
     const lit = [];
+    let mid = 0;
     for (let i = 0; i < n; i++) {
       const u = i / n;
-      const base = U.rand(0.5, 1) * (1 - 0.55 * u) * (i === 0 ? 0.7 : 1);
-      const a0 = base * U.rand(0.35, 1.6);
-      const b0 = base * U.rand(0.35, 1.6);
-      const last = i === n - 1;
-      w.push(a0, last ? 0 : a0 * U.rand(0.2, 0.65), b0, last ? 0 : b0 * U.rand(0.2, 0.65));
+      const base = U.rand(0.6, 1) * (1 - 0.3 * u) * (i === 0 ? 0.75 : 1);
+      const a0 = base * U.rand(0.45, 1.5);
+      const b0 = base * U.rand(0.45, 1.5);
+      w.push(a0, a0 * U.rand(0.4, 0.75), b0, b0 * U.rand(0.4, 0.75));
       lit.push(sgs[i]);
+      mid += (a0 + b0) / 2;
     }
-    const out = [bfRibbon(v, w, lit, 0)];
-    // 一兩根短的斜刺，從折角往外岔出去（兩段、很細、尖頭）
+    // 尾端不收成細絲：最後一段的終點仍有中段寬度的 55–70%，再斜切掉
+    mid /= n;
+    const e = (n - 1) * 4;
+    const tw = mid * U.rand(0.55, 0.7);
+    const sk = U.rand(0.35, 0.65);
+    w[e] = Math.max(w[e], tw * 1.15);
+    w[e + 2] = Math.max(w[e + 2], tw * 1.15);
+    w[e + 1] = tw * (0.5 + sk);
+    w[e + 3] = tw * (1.5 - sk);
+    const out = [bfRibbon(v, w, lit, 0, U.rand(0.8, 1.6) * (Math.random() < 0.5 ? -1 : 1))];
+    // 一兩根短的斜刺，從折角往外岔出去（兩段；尾端一樣是寬的斷口）
     for (let k = 0; k < spurs; k++) {
       const j = 1 + ((Math.random() * (n - 1)) | 0);
       const hx = hd[j] + ra + (Math.random() < 0.5 ? -1 : 1) * U.rand(0.9, 1.5);
@@ -62,7 +73,7 @@
       const qy = py + Math.sin(hx) * l1;
       const h2 = hx + (Math.random() < 0.5 ? -1 : 1) * U.rand(0.6, 1.1);
       const l2 = l1 * U.rand(0.6, 1.1);
-      out.push(bfRibbon([px, py, qx, qy, qx + Math.cos(h2) * l2, qy + Math.sin(h2) * l2], [0.32, 0.22, 0.28, 0.18, 0.2, 0, 0.16, 0], [1, -1], j / n));
+      out.push(bfRibbon([px, py, qx, qy, qx + Math.cos(h2) * l2, qy + Math.sin(h2) * l2], [0.42, 0.3, 0.38, 0.28, 0.34, 0.24, 0.3, 0.2], [1, -1], j / n, U.rand(0.8, 1.4) * (Math.random() < 0.5 ? -1 : 1)));
     }
     return out;
   }
@@ -97,7 +108,11 @@
       const nx = -(by - ay) / d;
       const ny = (bx - ax) / d;
       const a0 = rb.w[i * 4] * W, a1 = rb.w[i * 4 + 1] * W, b0 = rb.w[i * 4 + 2] * W, b1 = rb.w[i * 4 + 3] * W;
-      const q = [ax + nx * a0, ay + ny * a0, bx + nx * a1, by + ny * a1, bx - nx * b1, by - ny * b1, ax - nx * b0, ay - ny * b0];
+      // 最後一段：終點兩側沿前進方向一前一後錯開（斜切的斷口）
+      const dx = (bx - ax) / d;
+      const dy = (by - ay) / d;
+      const ct = i === n - 1 ? rb.cut * (a1 + b1) * 0.5 : 0;
+      const q = [ax + nx * a0, ay + ny * a0, bx + nx * a1 + dx * ct, by + ny * a1 + dy * ct, bx - nx * b1 - dx * ct, by - ny * b1 - dy * ct, ax - nx * b0, ay - ny * b0];
       const seg = [];
       bfPush(seg, q);
       if (i > 0) {
@@ -165,11 +180,6 @@
     bfs: [],
     bfClock: 0,
     bfDistT: -9,
-    bfDarkT: -9,
-    darkFlash: 0,
-    darkDur: 0.06,
-    darkInv: false,
-    darkAmt: 1,
     streaks: [],
     ghosts: [],
     waves: [],
@@ -195,7 +205,6 @@
       this.bolts.length = 0;
       this.impacts.length = 0;
       this.bfs.length = 0;
-      this.darkFlash = 0;
       this.streaks.length = 0;
       this.ghosts.length = 0;
       this.waves.length = 0;
@@ -300,7 +309,7 @@
       this.rings.push({ x, y, color, r: 4, maxR: maxR || 80, t: 0, life: life || 0.4, w: width || 4 });
     },
 
-    // 黑閃（咒術迴戰式）：命中瞬間空間扭曲（放射狀鼓起＋紅黑色差、極短的反相/壓暗），
+    // 黑閃（咒術迴戰式）：命中點附近的空間扭曲（放射狀鼓起＋紅黑色差；只在局部，整個畫面不閃、不震），
     // 接著幾道粗的「摺痕」從命中點劈出去：直線段以銳角折來折去的黑色帶子，紅光只打在每一折的一側，
     // 像空間本身被揉皺；旁邊散著幾片小摺片，有一兩道貼著目標繞過去。
     // 形狀事先生成一組（BF_POOL／BF_SHARD），每次只做旋轉、縮放、彎曲。
@@ -324,14 +333,6 @@
       if (big || this.bfClock - this.bfDistT > 0.12) {
         f.dist = true;
         this.bfDistT = this.bfClock;
-      }
-      // 全畫面的一瞬間壓暗／反相：最多每 0.25 秒一次；反相更稀有（大黑閃或安靜一陣子之後）
-      if (big || this.bfClock - this.bfDarkT > 0.25) {
-        const inv = big || this.bfClock - this.bfDarkT > 0.9;
-        this.bfDarkT = this.bfClock;
-        this.darkFlash = this.darkDur = big ? 0.075 : 0.055;
-        this.darkInv = inv;
-        this.darkAmt = big ? 1 : 0.75;
       }
       const fwd = dir > 0 ? 0 : Math.PI; // 打飛的方向
       const back = fwd + Math.PI; // 攻擊者那一側
@@ -526,7 +527,6 @@
         }
         if (f.t >= f.life) this.bfs.splice(i, 1);
       }
-      if (this.darkFlash > 0) this.darkFlash -= dt;
       step(this.streaks);
       step(this.ghosts);
       step(this.cuts);
@@ -897,13 +897,13 @@
       r.globalCompositeOperation = 'source-over';
       const amp = (1 - k) * (f.big ? 1.3 : 1);
       // 先向內吸、再往外推：前 30% 縮小，之後放大
-      const z = 1 + (k < 0.3 ? -0.05 * (k / 0.3) : 0.09 * (1 - k)) * (f.big ? 1.4 : 1);
-      const off = (3 + 2 * Math.sqrt(f.s)) * sc * amp * 0.5;
+      const z = 1 + (k < 0.3 ? -0.03 * (k / 0.3) : 0.055 * (1 - k)) * (f.big ? 1.3 : 1);
+      const off = (3 + 2 * Math.sqrt(f.s)) * sc * amp * 0.35;
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = Math.min(1, 0.95 * amp + 0.1);
       ctx.drawImage(BF_SNAP, 0, 0, w, h, dx + (x0 - dx) * z, dy + (y0 - dy) * z, w * z, h * z);
-      ctx.globalAlpha = Math.min(1, 0.6 * amp);
+      ctx.globalAlpha = Math.min(1, 0.4 * amp);
       ctx.globalCompositeOperation = 'multiply';
       ctx.drawImage(BF_SNAP, 0, 0, w, h, x0 - off, y0 - off * 0.35, w, h);
       ctx.globalCompositeOperation = 'screen';
@@ -958,31 +958,6 @@
     drawScreen(ctx) {
       for (const t of this.texts) {
         if (t.screen) this.drawFloatText(ctx, t);
-      }
-      if (this.darkFlash > 0) {
-        // 黑閃瞬間（1–4 幀）：第一幀畫面反相成暗紅的負片，之後是一下壓暗＋四周泛紅
-        const k = Math.max(0, this.darkFlash / this.darkDur);
-        const a = this.darkAmt;
-        ctx.save();
-        if (this.darkInv && k > 0.66) {
-          ctx.globalCompositeOperation = 'difference';
-          ctx.globalAlpha = a;
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, G.W, G.H);
-          ctx.globalCompositeOperation = 'multiply';
-          ctx.globalAlpha = 0.85;
-          ctx.fillStyle = '#801018';
-          ctx.fillRect(0, 0, G.W, G.H);
-        } else {
-          ctx.fillStyle = 'rgba(6,0,3,' + (0.34 * k * a).toFixed(3) + ')';
-          ctx.fillRect(0, 0, G.W, G.H);
-          const g = ctx.createRadialGradient(G.W / 2, G.H / 2, G.H * 0.3, G.W / 2, G.H / 2, G.H * 0.85);
-          g.addColorStop(0, 'rgba(150,0,20,0)');
-          g.addColorStop(1, 'rgba(150,0,20,' + (0.4 * k * a).toFixed(3) + ')');
-          ctx.fillStyle = g;
-          ctx.fillRect(0, 0, G.W, G.H);
-        }
-        ctx.restore();
       }
       if (this.flash > 0) {
         ctx.globalAlpha = Math.min(1, this.flash);

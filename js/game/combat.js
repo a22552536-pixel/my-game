@@ -97,11 +97,11 @@
         if (!chi) G.fx.blackFlash(cx, cy, dir, 1, Math.max(14, Math.min(70, Math.max(m.w || 40, m.h || 40) * (m.scale || 1) * 0.45)));
         if (P.specials.focus) P.mp = Math.min(P.maxMp, P.mp + 3);
         G.fx.addHitstop(0.13);
-        G.fx.shake(b.shake.crit[0] + 3, b.shake.crit[1] + 0.05);
+        // 黑閃不震畫面（常常連發，整個畫面一直抖會累）：特效只留在命中點附近
         G.audio.play('crit');
       } else if (opts.heavy) {
         G.fx.addHitstop(b.hitstop.heavy * 0.8);
-        G.fx.shake(b.shake.heavy[0] * 0.6, b.shake.heavy[1]);
+        if (!chi) G.fx.shake(b.shake.heavy[0] * 0.6, b.shake.heavy[1]);
         G.audio.play(opts.sound === 'rock' ? 'rockHit' : opts.sound === 'sweep' ? 'sweepHit' : 'heavy');
       } else {
         G.fx.addHitstop(b.hitstop.normal);

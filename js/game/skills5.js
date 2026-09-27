@@ -102,9 +102,21 @@
         // 核心往前扔到半路；Boss 拉不動，核心停在牠身邊
         const dir = U.sign(m.x - P.x) || P.dir;
         const gap = Math.abs(m.x - P.x);
-        const tx = m.isBoss ? m.x - dir * (m.w * (m.scale || 1) * 0.5 + 120) : P.x + dir * Math.max(90, Math.min(260, gap * 0.5));
         const size = m.isBoss ? 58 : Math.max(58, Math.min(110, Math.max(m.w, m.h) * (m.scale || 1) * 0.6 + 24));
-        ults.push({ kind: 'chibaku', phase: 'throw', m, S, lv: a.lv, t: 0, pt: 0, dir, sx: P.x + dir * 20, sy: P.y - 50, tx, ty: midY(m), ox: P.x + dir * 20, oy: P.y - 50, R: 7, n: 0, flashT: 0, spin: 0, size, groundY: m.y, rocks: [], shell: [], flying: [], spawnT: 0 });
+        // 一般怪：核心往畫面視覺中心的上方扔，目標被吸上天，在空中壓成石球
+        // Boss 拉不動：核心停在牠身邊
+        let tx, ty;
+        if (m.isBoss) {
+          tx = m.x - dir * (m.w * (m.scale || 1) * 0.5 + 120);
+          ty = midY(m);
+        } else {
+          const cx = G.cam.x + G.W / 2;
+          tx = cx * 0.6 + m.x * 0.4;
+          ty = Math.min(G.cam.y + G.H * 0.28, m.y - m.h * (m.scale || 1) - 110);
+          ty = Math.max(ty, G.cam.y + size + 20);
+        }
+        m.chiBase = m.hover || 0;
+        ults.push({ kind: 'chibaku', phase: 'throw', m, S, lv: a.lv, t: 0, pt: 0, dir, sx: P.x + dir * 20, sy: P.y - 50, tx, ty, ox: P.x + dir * 20, oy: P.y - 50, R: 7, n: 0, flashT: 0, spin: 0, size, groundY: m.y, rocks: [], shell: [], flying: [], spawnT: 0 });
       },
     },
 
@@ -259,6 +271,11 @@
       }
       const release = () => {
         m.pull = 0;
+        // 被吸上天的怪：石球崩掉後摔回原本的地面
+        if (!m.isBoss && (m.hover || 0) > (m.chiBase || 0) + 1) {
+          m.chiFall = true;
+          m.chiFallV = 0;
+        }
       };
       if (!alive(m) && u.phase !== 'end') {
         u.phase = 'end';
@@ -293,7 +310,11 @@
       if (u.phase === 'pull') {
         u.R = 7 + 11 * Math.min(1, u.pt / 0.3);
         hold();
-        if (!m.isBoss) u.oy += (midY(m) - u.oy) * Math.min(1, dt * 8);
+        if (!m.isBoss) {
+          // 目標被吸向空中的核心：用 hover 把身體抬上去（地面位置不變，放開後會摔回來）
+          const want = Math.max(m.chiBase || 0, m.y - u.oy - m.h * (m.scale || 1) * 0.5);
+          m.hover = (m.hover || 0) + (want - (m.hover || 0)) * Math.min(1, dt * 5);
+        }
         // 地面的石塊、連根撕起的土塊被扯起來，繞著飛進核心
         u.spawnT -= dt;
         if (u.spawnT <= 0 && u.shell.length + u.rocks.length < 40 && u.pt < 1.05) {
@@ -335,8 +356,6 @@
           }
         }
         u.shell.forEach((sh) => {
-          // 大石塊撞進石球定位的那一瞬間：畫面輕輕一震
-          if (sh.t < 0.18 && sh.t + dt >= 0.18 && sh.s > 1.1) G.fx.shake(2.2, 0.08);
           sh.t += dt;
         });
         if (u.pt >= 1.45) {
@@ -351,18 +370,16 @@
         // 石球被壓緊：越縮越小、越抖越厲害，石縫開始透出冷光
         hold();
         const k = Math.min(1, u.pt / 0.55);
-        // 一段一段地往內咬緊：每一段一次悶響、一次短震（美術那邊同步縮一格、噴一圈塵）
+        // 一段一段地往內咬緊：每一段一次悶響（美術那邊同步縮一格、噴一圈塵）；畫面不震，免得看久了累
         const step = Math.min(4, Math.floor(k * 5));
         if (step > (u.sqStep === undefined ? -1 : u.sqStep)) {
           u.sqStep = step;
-          G.fx.shake(3 + step * 1.2, 0.1);
           G.audio.play('rockHit');
-        } else G.fx.shake(1 + 1.5 * k, 0.05);
+        }
         if (u.pt >= 0.55) {
           u.phase = 'flash';
           u.pt = 0;
           u.flashT = 0.1;
-          G.fx.shake(12, 0.2);
           G.fx.addHitstop(0.06);
         }
         return false;
@@ -371,8 +388,8 @@
         // 10 發黑閃，每一發都是一次重擊
         hold();
         if (!m.isBoss) {
-          u.ox += (m.x - u.ox) * Math.min(1, dt * 10);
-          u.oy += (midY(m) - u.oy) * Math.min(1, dt * 10);
+          const want = Math.max(m.chiBase || 0, m.y - u.oy - m.h * (m.scale || 1) * 0.5);
+          m.hover = (m.hover || 0) + (want - (m.hover || 0)) * Math.min(1, dt * 10);
         }
         u.flashT -= dt;
         if (u.flashT <= 0 && u.n < S.hits) {
@@ -397,7 +414,8 @@
             G.audio.play('slam');
           } else G.audio.play('rockHit');
           G.fx.addHitstop(last ? 0.18 : 0.05, last);
-          G.fx.shake(last ? 16 : 7, last ? 0.45 : 0.12, last);
+          // 黑閃本身不震畫面；只有最後崩解時輕輕一震
+          if (last) G.fx.shake(2.5, 0.15);
           u.n++;
           if (last) {
             u.phase = 'end';
@@ -644,5 +662,29 @@
     reset();
     ults.forEach((u) => u.kind === 'meidou' && X.releaseSucked && X.releaseSucked(u));
     ults.length = 0;
+  };
+})();
+
+// 地爆天星放開後，被吸上天的怪物摔回地面
+(function () {
+  'use strict';
+  const MP = G.Monster && G.Monster.prototype;
+  if (!MP) return;
+  const base = MP.update;
+  MP.update = function (dt) {
+    if (this.chiFall) {
+      this.chiFallV = (this.chiFallV || 0) + 2200 * dt;
+      this.hover = (this.hover || 0) - this.chiFallV * dt;
+      const floor = this.chiBase || 0;
+      if (this.hover <= floor) {
+        this.hover = floor;
+        this.chiFall = false;
+        if (!this.dead) {
+          G.fx.burst(this.x, this.y - 6, ['#6a6470', '#3a3640', '#9a94a0'], 10, 220, { angle: -Math.PI / 2, spread: 1.4, life: 0.5 });
+          G.audio.play('land');
+        }
+      }
+    }
+    return base.apply(this, arguments);
   };
 })();
