@@ -2198,24 +2198,32 @@
       ctx.restore();
     };
     wing(-1, true);
-    // ── 身體：深靛天鵝絨＋金色節環，胸前一圈象牙白的絨毛領 ──
-    const abd = (c) => taper(c, qb(0, -45, 1, -32, 0, -19), (s) => 7 * (1 - s * 0.75) + 0.8, 12);
-    gradShape(ctx, abd, -4, -40, 4, -22, [[0, BF.night2], [0.5, BF.violet], [1, BF.night]], { lw: 1.9 });
+    // ── 身體：纖細的深靛天鵝絨身軀＋金色節環（整個身體以胸部為中心縮成 0.72 倍，襯出巨大的錶盤翅） ──
+    const BK = 0.72;
+    const bodyScale = () => {
+      ctx.translate(0, -50);
+      ctx.scale(BK, BK);
+      ctx.translate(0, 50);
+    };
+    ctx.save();
+    bodyScale();
+    const abd = (c) => taper(c, qb(0, -45, 0.8, -30, 0, -15), (s) => 5.4 * (1 - s * 0.8) + 0.8, 12);
+    gradShape(ctx, abd, -4, -40, 4, -22, [[0, BF.night2], [0.5, BF.violet], [1, BF.night]], { lw: 1.8 / BK });
     clipDo(ctx, abd, () => {
       ctx.strokeStyle = rgba(BF.gold, 0.9);
       ctx.lineWidth = 1.1;
       ctx.beginPath();
       for (let i = 0; i < 5; i++) {
-        const y = -41 + i * 4.6;
-        ctx.moveTo(-4, y);
-        ctx.quadraticCurveTo(0, y + 1.6, 4, y);
+        const y = -40 + i * 5.2;
+        ctx.moveTo(-3.4, y);
+        ctx.quadraticCurveTo(0, y + 1.4, 3.4, y);
       }
       ctx.stroke();
       ctx.fillStyle = rgba('#ffffff', 0.35);
-      ctx.fillRect(-2.2, -44, 1.2, 22);
+      ctx.fillRect(-1.8, -44, 1, 24);
     });
-    const thorax = (c) => c.ellipse(0, -50, 5.2, 6.8, 0, 0, TAU);
-    A.shape(ctx, thorax, BF.night2, BF.night, { cel: [1.2, 1.2], lw: 2, hl: false });
+    const thorax = (c) => c.ellipse(0, -50, 4.8, 6.8, 0, 0, TAU);
+    A.shape(ctx, thorax, BF.night2, BF.night, { cel: [1.2, 1.2], lw: 1.9 / BK, hl: false });
     // 胸背的絨毛（象牙白，一撮撮往下垂）
     clipDo(ctx, thorax, () => {
       const fg = ctx.createLinearGradient(0, -57, 0, -45);
@@ -2234,7 +2242,10 @@
       }
       ctx.stroke();
     });
+    ctx.restore();
     wing(1, false);
+    ctx.save();
+    bodyScale();
     // 頭
     const hx = 0;
     const hy = -59;
@@ -2268,7 +2279,7 @@
       A.shape(ctx, (c) => starPath(c, e[0], e[1], 3.6, 1.5, 4, t * 0.5), BF.moon, BF.gold, { lw: 1.1, hl: false, shadeY: e[1] + 1 });
     });
     const head = (c) => c.ellipse(hx, hy, 5.6, 5, 0, 0, TAU);
-    A.shape(ctx, head, BF.night2, BF.night, { cel: [1, 1], lw: 2, hl: false });
+    A.shape(ctx, head, BF.night2, BF.night, { cel: [1, 1], lw: 1.8 / BK, hl: false });
     // 額上的星鑽
     glowH(ctx, hx, hy - 3.4, 4.5, BF.eye, 0.6);
     sparkle(ctx, hx, hy - 3.4, 2, '#dffcff');
@@ -2305,6 +2316,7 @@
     ctx.beginPath();
     ctx.arc(hx + 0.5, hy + 7, 1.9, -PI / 2, PI * 1.25);
     ctx.stroke();
+    ctx.restore();
     // 灑落的時之鱗粉
     if (!dead) {
       for (let i = 0; i < 9; i++) {
