@@ -247,7 +247,6 @@
       const S = u.S;
       const m = u.m;
       u.spin += dt * 3;
-      if (u.pulse > 0) u.pulse = Math.max(0, u.pulse - dt * 6);
       // 飛散的碎石（炸開後）
       for (let i = u.flying.length - 1; i >= 0; i--) {
         const f = u.flying[i];
@@ -275,7 +274,7 @@
           u.phase = 'pull';
           u.pt = 0;
           G.audio.play('bossWarn');
-          G.fx.ring(u.ox, u.oy, 'rgba(255,60,80,0.8)', 160, 0.4, 4);
+          G.fx.ring(u.ox, u.oy, 'rgba(24,20,34,0.75)', 160, 0.4, 4);
           G.fx.shake(6, 0.25);
         }
         return false;
@@ -295,14 +294,13 @@
         u.R = 7 + 11 * Math.min(1, u.pt / 0.3);
         hold();
         if (!m.isBoss) u.oy += (midY(m) - u.oy) * Math.min(1, dt * 8);
-        // 地面的石塊、帶草的土塊被扯起來，繞著飛進核心
+        // 地面的石塊、連根撕起的土塊被扯起來，繞著飛進核心
         u.spawnT -= dt;
         if (u.spawnT <= 0 && u.shell.length + u.rocks.length < 40 && u.pt < 1.05) {
           u.spawnT = 0.026;
           const side = Math.random() < 0.5 ? -1 : 1;
           const x = u.ox + side * U.rand(110, 420);
           u.rocks.push({ x, y: u.groundY - 4, vx: 0, vy: -U.rand(200, 380), t: 0, rot: Math.random() * TAU, vr: U.rand(-6, 6), s: U.rand(0.7, 1.25), kind: Math.random() < 0.3 ? 'chunk' : 'stone', tone: (Math.random() * 3) | 0 });
-          G.fx.dust(x, u.groundY, side, 3);
         }
         for (let i = u.rocks.length - 1; i >= 0; i--) {
           const r = u.rocks[i];
@@ -324,10 +322,14 @@
             // 抵達後滑到平均分布的位置（黃金角），石球才會長得圓
             const idx = u.shell.length;
             u.shell.push({ a0: Math.atan2(r.y - u.oy, r.x - u.ox), a: idx * 2.39996, d: idx < 14 ? U.rand(0.55, 0.8) : U.rand(0.85, 1.02), rot: r.rot, s: r.s, kind: r.kind, tone: r.tone, t: 0 });
-            if (Math.random() < 0.35) G.audio.play('rock');
+            if (Math.random() < 0.35) G.audio.play('rockHit');
           }
         }
-        u.shell.forEach((sh) => (sh.t += dt));
+        u.shell.forEach((sh) => {
+          // 大石塊撞進石球定位的那一瞬間：畫面輕輕一震
+          if (sh.t < 0.18 && sh.t + dt >= 0.18 && sh.s > 1.1) G.fx.shake(2.2, 0.08);
+          sh.t += dt;
+        });
         if (u.pt >= 1.45) {
           u.rocks.forEach((r) => u.shell.push({ a0: Math.atan2(r.y - u.oy, r.x - u.ox), a: u.shell.length * 2.39996, d: U.rand(0.85, 1.02), rot: r.rot, s: r.s, kind: r.kind, tone: r.tone, t: 0 }));
           u.rocks.length = 0;
@@ -337,15 +339,16 @@
         return false;
       }
       if (u.phase === 'squeeze') {
-        // 石球被壓緊：越縮越小、越抖越厲害，石縫開始透出紅光
+        // 石球被壓緊：越縮越小、越抖越厲害，石縫開始透出冷光
         hold();
         const k = Math.min(1, u.pt / 0.55);
-        G.fx.shake(1.5 + 3.5 * k, 0.05);
-        if (Math.random() < 0.25 + 0.5 * k) {
-          const a = Math.random() * TAU;
-          G.fx.particles.push({ x: u.ox + Math.cos(a) * u.size * 0.85, y: u.oy + Math.sin(a) * u.size * 0.85, vx: Math.cos(a) * U.rand(40, 120), vy: Math.sin(a) * U.rand(40, 120) + 60, life: 0.4, t: 0, size: U.rand(2, 3.5), color: U.pick(['#8a7a68', '#6e6254', '#a89a88']), grav: 500, shape: 'square', drag: 1 });
-        }
-        if (Math.random() < 0.05) G.audio.play('rock');
+        // 一段一段地往內咬緊：每一段一次悶響、一次短震（美術那邊同步縮一格、噴一圈塵）
+        const step = Math.min(4, Math.floor(k * 5));
+        if (step > (u.sqStep === undefined ? -1 : u.sqStep)) {
+          u.sqStep = step;
+          G.fx.shake(3 + step * 1.2, 0.1);
+          G.audio.play('rockHit');
+        } else G.fx.shake(1 + 1.5 * k, 0.05);
         if (u.pt >= 0.55) {
           u.phase = 'flash';
           u.pt = 0;
@@ -369,14 +372,9 @@
           // Boss：黑閃打在牠靠近核心的那一側
           const hx = m.isBoss ? (m.x + u.ox) / 2 : u.ox;
           const hy = m.isBoss ? midY(m) : u.oy;
-          const bx = hx + U.rand(-18, 18);
-          const by = hy + U.rand(-18, 18);
-          const big = last ? 5.5 : 2.8 + u.n * 0.15;
-          G.fx.blackFlash(bx, by, u.n % 2 ? -1 : 1, big);
-          // 不讓整個畫面變紅：只在石球周圍打出一圈紅黑色的脈衝
-          u.pulse = last ? 1.6 : 1;
-          G.fx.impact(bx, by, last ? 150 : 80, '#ff3a4a');
-          G.fx.ring(bx, by, 'rgba(20,0,10,0.9)', last ? 260 : 120, last ? 0.4 : 0.22, last ? 10 : 6);
+          // 黑閃打在石球上（Boss 則是打在牠身上）：冷色的石縫迸光、塵環、碎屑都畫在 js/art/skills5.js
+          u.hitX = hx + U.rand(-18, 18);
+          u.hitY = hy + U.rand(-18, 18);
           G.fx.kick((u.n % 2 ? -1 : 1) * 10, -3);
           // 每一發都震掉一兩顆石頭
           for (let k = 0; k < (last ? 0 : 2) && u.shell.length > 8; k++) {
@@ -385,7 +383,10 @@
           }
           if (alive(m)) G.combat.hitMonster(m, last ? S.finalMult(u.lv) : S.mult(u.lv), { knock: last ? 560 : 0, heavy: true, sound: 'crit' });
           G.audio.play('crit');
-          if (last) G.audio.play('thunder');
+          if (last) {
+            G.audio.play('thunder');
+            G.audio.play('slam');
+          } else G.audio.play('rockHit');
           G.fx.addHitstop(last ? 0.18 : 0.05, last);
           G.fx.shake(last ? 16 : 7, last ? 0.45 : 0.12, last);
           u.n++;
@@ -617,193 +618,9 @@
       }
     },
 
-    // 石頭：圓潤的石塊，或上面帶著草皮的土塊（跟遊戲其他美術一樣：平塗、深棕描邊、右下陰影、左上亮點）
-    stone(ctx, x, y, r, rot, kind, tone, alpha) {
-      const A = G.art;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(rot);
-      if (alpha < 1) ctx.globalAlpha = alpha;
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = A.outline();
-      ctx.lineJoin = 'round';
-      if (kind === 'chunk') {
-        // 土塊：上平下尖，頂端一條草皮
-        ctx.beginPath();
-        ctx.moveTo(-r, -r * 0.45);
-        ctx.lineTo(r, -r * 0.5);
-        ctx.quadraticCurveTo(r * 0.9, r * 0.3, r * 0.15, r * 0.95);
-        ctx.quadraticCurveTo(-r * 0.7, r * 0.4, -r, -r * 0.45);
-        ctx.closePath();
-        ctx.fillStyle = A.c(['#9a6a44', '#8a5c3a', '#a8784e'][tone]);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = A.c('#6e4428');
-        ctx.beginPath();
-        ctx.moveTo(r * 0.2, r * 0.9);
-        ctx.quadraticCurveTo(r * 0.85, r * 0.3, r * 0.95, -r * 0.2);
-        ctx.lineTo(r * 0.5, 0);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = A.c('#6cc04a');
-        ctx.beginPath();
-        ctx.moveTo(-r * 1.05, -r * 0.42);
-        ctx.lineTo(r * 1.05, -r * 0.48);
-        ctx.lineTo(r * 1.0, -r * 0.2);
-        ctx.lineTo(-r * 1.0, -r * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      } else {
-        // 石塊：圓潤的不規則形
-        const pts = 7;
-        ctx.beginPath();
-        for (let i = 0; i <= pts; i++) {
-          const a = (i / pts) * TAU;
-          const rr = r * (0.82 + 0.18 * Math.sin(i * 2.7 + tone));
-          const x1 = Math.cos(a) * rr;
-          const y1 = Math.sin(a) * rr;
-          if (i === 0) ctx.moveTo(x1, y1);
-          else {
-            const am = ((i - 0.5) / pts) * TAU;
-            ctx.quadraticCurveTo(Math.cos(am) * rr * 1.08, Math.sin(am) * rr * 1.08, x1, y1);
-          }
-        }
-        ctx.closePath();
-        ctx.fillStyle = A.c(['#a89a88', '#968a7a', '#b8ac98'][tone]);
-        ctx.fill();
-        ctx.stroke();
-        ctx.save();
-        ctx.clip();
-        ctx.fillStyle = A.c('#766a5c');
-        ctx.beginPath();
-        ctx.arc(r * 0.45, r * 0.5, r * 0.85, 0, TAU);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        ctx.beginPath();
-        ctx.ellipse(-r * 0.35, -r * 0.4, r * 0.3, r * 0.18, -0.6, 0, TAU);
-        ctx.fill();
-        ctx.restore();
-      }
-      ctx.restore();
-    },
-
-    // 地爆天星：核心（純黑的球、細白邊、旋轉的紅色吸積環）＋被吸過來的石頭
+    // 地爆天星：寫實的碎岩、被撕開的地面、一層層壓緊的石球（美術在 js/art/skills5.js）
     drawChibaku(ctx, u) {
-      const x = u.ox;
-      const y = u.oy;
-      let R = u.R;
-      if (u.phase === 'end') R *= Math.max(0, 1 - u.pt / 0.25);
-      // 飛散的碎石
-      u.flying.forEach((f) => this.stone(ctx, f.x, f.y, 14 * f.s, f.rot, f.kind, f.tone, Math.min(1, (f.life - f.t) * 3)));
-      // 飛過來的石頭
-      u.rocks.forEach((r) => this.stone(ctx, r.x, r.y, 14 * r.s, r.rot, r.kind, r.tone, 1));
-      if (R <= 0.3 && !u.shell.length) return;
-      ctx.save();
-      ctx.translate(x, y);
-      // 引力場：往內收縮的細圈
-      if (u.phase === 'pull' || u.phase === 'squeeze' || u.phase === 'flash') {
-        for (let i = 0; i < 3; i++) {
-          const k = (u.t * 1.6 + i / 3) % 1;
-          ctx.beginPath();
-          ctx.arc(0, 0, R + (1 - k) * 130, 0, TAU);
-          ctx.strokeStyle = 'rgba(255,90,110,' + (0.35 * k).toFixed(3) + ')';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-      }
-      // 石頭越積越多，核心就越被蓋住：光暈、吸積環、黑球一起淡出，最後只看得到石球
-      const cover = Math.min(1, u.shell.length / 22);
-      const coreA = 1 - cover;
-      if (R > 0.3 && coreA > 0.01) {
-        ctx.save();
-        ctx.globalAlpha = coreA;
-        ctx.globalCompositeOperation = 'lighter';
-        const g = ctx.createRadialGradient(0, 0, R * 0.9, 0, 0, R * 3);
-        g.addColorStop(0, 'rgba(255,40,70,0.5)');
-        g.addColorStop(1, 'rgba(255,40,70,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(0, 0, R * 3, 0, TAU);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-        const ring = (front) => {
-          ctx.save();
-          ctx.rotate(-0.35);
-          ctx.scale(1, 0.28);
-          ctx.beginPath();
-          ctx.arc(0, 0, R * 2, front ? 0 : Math.PI, front ? Math.PI : TAU);
-          ctx.lineWidth = R * 0.9;
-          ctx.strokeStyle = 'rgba(255,70,90,0.55)';
-          ctx.stroke();
-          ctx.lineWidth = R * 0.3;
-          ctx.strokeStyle = 'rgba(255,220,225,0.9)';
-          ctx.stroke();
-          ctx.restore();
-        };
-        ring(false);
-        ctx.beginPath();
-        ctx.arc(0, 0, R, 0, TAU);
-        ctx.fillStyle = '#000000';
-        ctx.fill();
-        ctx.lineWidth = 1.6;
-        ctx.strokeStyle = 'rgba(255,235,240,0.95)';
-        ctx.stroke();
-        ring(true);
-        ctx.restore();
-      }
-      // 黑閃的局部脈衝：石球周圍一圈暗紅，很快散掉
-      if (u.pulse > 0) {
-        const pr = u.size * (2.2 + (1 - Math.min(1, u.pulse)) * 1.5) * (u.pulse > 1 ? 1.5 : 1);
-        const pg = ctx.createRadialGradient(0, 0, u.size * 0.6, 0, 0, pr);
-        pg.addColorStop(0, 'rgba(30,0,10,' + (0.5 * Math.min(1, u.pulse)).toFixed(3) + ')');
-        pg.addColorStop(0.6, 'rgba(200,20,40,' + (0.28 * Math.min(1, u.pulse)).toFixed(3) + ')');
-        pg.addColorStop(1, 'rgba(200,20,40,0)');
-        ctx.fillStyle = pg;
-        ctx.beginPath();
-        ctx.arc(0, 0, pr, 0, TAU);
-        ctx.fill();
-      }
-      // 石球外殼：石頭一顆顆黏上去（剛黏上時從外面滑進定位）
-      // 壓緊：縮小到八成，並且抖動（壓得越緊抖得越兇）
-      const sq = u.phase === 'squeeze' ? Math.min(1, u.pt / 0.55) : u.phase === 'flash' || u.phase === 'end' ? 1 : 0;
-      const ease = sq * sq * (3 - 2 * sq);
-      const sz = u.size * (1 - 0.2 * ease) * (u.phase === 'flash' ? 1 + Math.sin(u.t * 40) * 0.02 : 1);
-      const shakeAmt = u.phase === 'squeeze' ? 1 + 4 * sq : u.phase === 'flash' ? 1.5 : 0;
-      if (shakeAmt) ctx.translate(U.rand(-shakeAmt, shakeAmt), U.rand(-shakeAmt, shakeAmt));
-      // 石頭夠多時，中間補一層深色的土，看起來是一整顆球
-      if (u.shell.length > 4) {
-        ctx.beginPath();
-        ctx.arc(0, 0, sz * 0.92 * Math.min(1, (u.shell.length - 4) / 16), 0, TAU);
-        ctx.fillStyle = G.art.c('#5e5246');
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = G.art.outline();
-        ctx.stroke();
-      }
-      const list = u.shell.slice().sort((p, q) => p.d - q.d);
-      list.forEach((sh) => {
-        const settle = Math.min(1, sh.t / 0.18);
-        const d = sz * sh.d * (1.25 - 0.25 * settle);
-        let da = sh.a - (sh.a0 === undefined ? sh.a : sh.a0);
-        da = Math.atan2(Math.sin(da), Math.cos(da));
-        const a = sh.a - da * (1 - settle);
-        this.stone(ctx, Math.cos(a) * d, Math.sin(a) * d, (12 + sz * 0.17) * sh.s, sh.rot, sh.kind, sh.tone, 1);
-      });
-      // 石縫裡透出的紅光（黑閃越打越亮）
-      if ((u.phase === 'flash' || u.phase === 'squeeze') && u.shell.length) {
-        const k = u.phase === 'squeeze' ? 0.45 * ease : 0.45 + 0.55 * (u.n / u.S.hits);
-        ctx.globalCompositeOperation = 'lighter';
-        const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 1.1);
-        g2.addColorStop(0, 'rgba(255,60,80,' + (0.55 * k).toFixed(3) + ')');
-        g2.addColorStop(1, 'rgba(160,0,30,0)');
-        ctx.fillStyle = g2;
-        ctx.beginPath();
-        ctx.arc(0, 0, sz * 1.1, 0, TAU);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-      }
-      ctx.restore();
+      G.art.chibakuFx.draw(ctx, u);
     },
   });
 
