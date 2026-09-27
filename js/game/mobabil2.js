@@ -52,6 +52,129 @@
     return true;
   };
 
+  // 九尾狐的尾尖（美術座標：原點腳底、面向右；蓄力時尾巴張開的第 3、5、7 條尾巴的尖端）＋ 尾巴的方向
+  const FOX_TIPS = [
+    [-108, -54, 3.32],
+    [-76, -115, 4.06],
+    [-10, -129, 4.79],
+  ];
+  function foxTick(p) {
+    // 先往外飄 0.3 秒，之後開始追人並加速到 270。
+    // 轉向上限＝側向加速度 600 ÷ 速度（慢的時候轉得快、全速時每秒只轉約 2.2 弧度 → 跑動、跳躍閃得掉）
+    const sp = Math.hypot(p.vx, p.vy) || 1;
+    const want = p.t < 0.3 ? 80 : Math.min(270, 80 + (p.t - 0.3) * 260);
+    p.vx *= want / sp;
+    p.vy *= want / sp;
+    p.homing = p.t < 0.3 ? 0 : Math.min(6, 600 / want);
+  }
+
+  // ── v1.6 通用的「蓄力 → 放招」能力（遠程技能用）──
+  // c: { flag, wind, rec, cd:[a,b], cd0:[a,b], range, dy, cond(m,P), start(m,P,st), fire(m,P,st), windTick(m,dt,P,st), noIllusion }
+  // 表現旗標：m.fx[flag] 蓄力時 0→1、放招後 1→0；m.attackPhase 'wind' → 'strike' → null。
+  const MA = G.mobAtk;
+  function cast(name, c) {
+    return {
+      update(m, dt, P, aggro) {
+        if (c.noIllusion !== false && m.illusion) return false;
+        const st = m[name + 'St'] || (m[name + 'St'] = { ph: null, t: 0, cd: U.rand(c.cd0[0], c.cd0[1]) });
+        if (c.always) c.always(m, dt, P, st);
+        if (st.ph === 'wind') {
+          if (MA.interrupted(m)) {
+            st.ph = null;
+            m.fx[c.flag] = 0;
+            (st.zs || []).forEach(MA.kill);
+            MA.unlock(m, name);
+            if (c.cancel) c.cancel(m, st);
+            st.cd = U.rand(1, 1.6);
+            return false;
+          }
+          st.t -= dt;
+          m.vx = 0;
+          m.fx[c.flag] = Math.min(1, 1 - st.t / c.wind);
+          if (c.windTick) c.windTick(m, dt, P, st);
+          if (st.t <= 0) {
+            st.ph = 'rec';
+            st.t = c.rec;
+            m.attackPhase = 'strike';
+            c.fire(m, P, st);
+          }
+          return true;
+        }
+        if (st.ph === 'rec') {
+          st.t -= dt;
+          m.fx[c.flag] = Math.max(0, st.t / c.rec);
+          if (c.recTick) {
+            // recTick 回傳 true：招式還在進行（例如衝刺中），收招時間先暫停
+            if (c.recTick(m, dt, P, st)) {
+              st.t = Math.max(st.t, 0.01);
+              m.fx[c.flag] = 1;
+            }
+          } else m.vx = 0;
+          if (st.t <= 0) {
+            st.ph = null;
+            m.fx[c.flag] = 0;
+            m.attackPhase = null;
+            MA.unlock(m, name);
+            if (c.done) c.done(m, st);
+          }
+          return true;
+        }
+        st.cd -= dt;
+        if (aggro && st.cd <= 0 && !MA.busy(m) && near(m, P, c.range, c.dy || 80) && (!c.cond || c.cond(m, P))) {
+          st.cd = U.rand(c.cd[0], c.cd[1]);
+          st.ph = 'wind';
+          st.t = c.wind;
+          st.zs = [];
+          m.dir = U.sign(P.x - m.x) || m.dir;
+          m.attackPhase = 'wind';
+          m.vx = 0;
+          MA.lock(m, name);
+          c.start(m, P, st);
+          return true;
+        }
+        return false;
+      },
+      onDie(m) {
+        const st = m[name + 'St'];
+        if (!st) return;
+        (st.zs || []).forEach(MA.kill);
+        if (c.cancel) c.cancel(m, st);
+        MA.unlock(m, name);
+      },
+    };
+  }
+  // 朝玩家身體中心的角度
+  const aimAt = (x, y, P) => Math.atan2(P.y - 30 - y, P.x - x);
+  // 固定時間後自己淡出的投射物用這個欄位：fade（秒），美術在 js/art/mobfx.js
+  const shot = (o) => {
+    const p = Object.assign({ t: 0, seed: Math.random() * 6, owner: 'monster', r: 10 }, o);
+    G.world.projectiles.push(p);
+    return p;
+  };
+  // 時停蝶的時針：懸空瞄準一段時間後才射出
+  function handTick(p) {
+    if (p.t < p.hold) {
+      const P = G.player;
+      if (P.alive()) p.ang = Math.atan2(P.y - 30 - p.y, P.x - p.x);
+      p.vx = p.vy = 0;
+    } else if (!p.shot) {
+      p.shot = true;
+      p.vx = Math.cos(p.ang) * p.speed;
+      p.vy = Math.sin(p.ang) * p.speed;
+      G.audio.play('featherShot');
+    }
+  }
+  // 聖甲蟲的太陽輪：貼著平台滾，滾出平台就熄掉，一路留下焦痕
+  function wheelTick(p, d) {
+    p.y = p.base - p.r;
+    p.spin += (p.vx / p.r) * d;
+    if (p.x < p.lo || p.x > p.hi) p.life = Math.min(p.life, p.t + 0.05);
+    if (Math.abs(p.x - p.lastMark) > 46) {
+      p.lastMark = p.x;
+      G.world.zones.push({ kind: 'sunscorch', x: p.x, y: p.base, r: 20, t: 0, life: 0.9, visual: true });
+    }
+  }
+
   Object.assign(AB, {
     // ═════ 第四章　霜鈴雪峰 ═════
     // 鎌鼬：撲咬後 1 秒，殘影在原地再咬一次
@@ -242,9 +365,17 @@
             m.attackPhase = null;
             m.fx.aura = 0;
             G.audio.play('spiritShot');
+            // v1.6：三團狐火從尾尖飛出（身後、上方，扇形張開），先往外飄 0.3 秒，再以有上限的轉向追玩家，最後淡出
+            const sc = m.scale || 1;
+            const hv = m.hover || 0;
             for (let k = 0; k < 3; k++) {
-              const a = -Math.PI / 2 + (k - 1) * 0.7;
-              G.world.projectiles.push({ kind: 'foxfire', x: m.x + Math.cos(a) * 40, y: midY(m) - 30 + Math.sin(a) * 20, vx: Math.cos(a) * 120 + m.dir * 80, vy: Math.sin(a) * 120, r: 11, dmg: Math.round(m.atk * 0.8), life: 2.6, t: 0, seed: k * 2, owner: 'monster', homing: 2.4 });
+              const tip = FOX_TIPS[k];
+              const x = m.x + m.dir * tip[0] * sc;
+              const y = m.y - hv + tip[1] * sc;
+              const ox = m.dir * Math.cos(tip[2]);
+              const oy = Math.sin(tip[2]);
+              G.world.projectiles.push({ kind: 'foxfire', x, y, vx: ox * 80, vy: oy * 80, r: 11, dmg: Math.round(m.atk * 0.8), life: 3.2, fade: 0.45, t: 0, seed: k * 2, owner: 'monster', homing: 0, onTick: foxTick });
+              G.fx.burst(x, y, ['#8ff0e8', '#ffffff'], 4, 90);
             }
           }
           return true;
@@ -652,6 +783,237 @@
         return false;
       },
     },
+
+    // ═════ v1.6：第四章、終章補上的技能攻擊 ═════
+    // 雪女：抽出髮上的冰簪，一次擲出三根（窄扇形）。預警：0.7 秒蓄力（fx.pin）＋手邊的冰光
+    icepin: cast('icepin', {
+      flag: 'pin', wind: 0.7, rec: 0.35, cd0: [1.5, 3], cd: [3.6, 4.6], range: 430, dy: 120,
+      start(m, P, st) {
+        st.hx = m.x + m.dir * 22;
+        st.hy = m.y - m.h * (m.scale || 1) * 0.78;
+        st.zs.push(MA.charge(st.hx, st.hy, 26, 0.7, '190,235,255'));
+        say(m, '冰簪！', '#bfe8ff');
+      },
+      fire(m, P, st) {
+        const a0 = aimAt(st.hx, st.hy, P);
+        for (let i = -1; i <= 1; i++) {
+          const a = a0 + i * 0.13;
+          shot({ kind: 'icepin', x: st.hx, y: st.hy, vx: Math.cos(a) * 360, vy: Math.sin(a) * 360, r: 8, dmg: Math.round(m.atk * 0.7), life: 1.5, fade: 0.2, slow: 0.6 });
+        }
+        G.audio.play('featherShot');
+      },
+    }),
+    // 時之鳳凰（朱雀）：張開雙翼，扇形灑出火焰羽與時之沙羽。預警：0.8 秒展翼（fx.wings）＋身上的火光
+    phoenixfan: cast('phoenixfan', {
+      flag: 'wings', wind: 0.8, rec: 0.45, cd0: [2, 3.5], cd: [4.6, 5.6], range: 440, dy: 260,
+      start(m, P, st) {
+        st.zs.push(MA.charge(m.x, midY(m), 46, 0.8, '255,150,70'));
+        say(m, '朱雀之羽！', '#ffb35a');
+        G.audio.play('fire');
+      },
+      fire(m, P, st) {
+        const y = midY(m);
+        const a0 = aimAt(m.x, y, P);
+        for (let i = -2; i <= 2; i++) {
+          const a = a0 + i * 0.2;
+          shot({ kind: 'flamefeather', x: m.x + Math.cos(a) * 20, y: y + Math.sin(a) * 20, vx: Math.cos(a) * 290, vy: Math.sin(a) * 290, r: 9, dmg: Math.round(m.atk * 0.7), life: 1.9, fade: 0.3, sand: i % 2 !== 0 });
+        }
+        G.fx.burst(m.x, y, ['#ffd35a', '#ff7a2a', '#fff2c0'], 14, 260);
+        G.audio.play('sweep');
+      },
+    }),
+    // 鏡麒麟：角上聚光，射出一道斜斜的稜鏡光束。預警：0.8 秒細線瞄準（fx.horn；光束線在瞄準那一刻就固定）
+    prism: cast('prism', {
+      flag: 'horn', wind: 0.8, rec: 0.4, cd0: [2, 3.5], cd: [4.2, 5.2], range: 420, dy: 120,
+      start(m, P, st) {
+        const sc = m.scale || 1;
+        st.x1 = m.x + m.dir * m.w * sc * 0.4;
+        st.y1 = m.y - m.h * sc * 0.9;
+        let a = aimAt(st.x1, st.y1, P);
+        // 只往前方射（不往背後）
+        if (m.dir > 0) a = U.clamp(a, -0.9, 0.9);
+        else a = a > 0 ? U.clamp(a, Math.PI - 0.9, Math.PI) : U.clamp(a, -Math.PI, -Math.PI + 0.9);
+        let len = 420;
+        // 打到地面就停
+        if (Math.sin(a) > 0.01) len = Math.min(len, (m.y - st.y1) / Math.sin(a));
+        st.x2 = st.x1 + Math.cos(a) * len;
+        st.y2 = st.y1 + Math.sin(a) * len;
+        st.beam = { kind: 'prismbeam', x: (st.x1 + st.x2) / 2, y: m.y, x1: st.x1, y1: st.y1, x2: st.x2, y2: st.y2, r: 210, t: 0, life: 1.1, fire: 0.8, visual: true };
+        G.world.zones.push(st.beam);
+        st.zs.push(st.beam);
+        G.audio.play('charge');
+      },
+      fire(m, P, st) {
+        G.audio.play('thunder');
+        G.fx.shake(3, 0.1);
+        st.beamHit = false;
+      },
+      // 光束亮著的前 0.15 秒有傷害
+      recTick(m, dt, P, st) {
+        m.vx = 0;
+        if (!st.beamHit && st.t > 0.4 - 0.15 && P.alive() && MA.segDist(P.x, P.y - 30, st.x1, st.y1, st.x2, st.y2) < 30) {
+          st.beamHit = true;
+          P.hurt(Math.round(m.atk * 1.3), m.x);
+        }
+        return false;
+      },
+    }),
+    // 時停蝶：身邊浮出三根時針，停在空中瞄準玩家（0.6～0.9 秒），然後依序射出。預警：時針懸停＋瞄準線（fx.hands）
+    clockhand: cast('clockhand', {
+      flag: 'hands', wind: 0.6, rec: 0.5, cd0: [1.5, 3], cd: [4.2, 5.2], range: 440, dy: 240,
+      start(m, P, st) {
+        const y = midY(m);
+        say(m, '指針——', '#ffe6a0');
+        G.audio.play('ui');
+        for (let k = 0; k < 3; k++) {
+          const a = -Math.PI / 2 + (k - 1) * 0.9;
+          shot({ kind: 'clockhand', x: m.x + Math.cos(a) * 75, y: y + Math.sin(a) * 60, vx: 0, vy: 0, r: 9, dmg: Math.round(m.atk * 0.75), hold: 0.6 + k * 0.15, speed: 430, ang: 0, shot: false, life: 0.6 + k * 0.15 + 1.3, fade: 0.2, onTick: handTick });
+        }
+      },
+      fire() {},
+    }),
+    // 銜尾蛇的毒牙撲咬：用通用 strike（資料在 mobs45.js），這裡不用另外寫
+    // 時之聖甲蟲：把背上的太陽盤推出去，變成貼地滾動、會燒人的太陽輪。預警：0.8 秒推盤（fx.disc）＋盤上的光＋地上的預警帶
+    sundisc: cast('sundisc', {
+      flag: 'disc', wind: 0.8, rec: 0.5, cd0: [1.5, 3], cd: [4.2, 5.2], range: 480, dy: 60,
+      cond: (m) => m.onGround,
+      always(m, dt) {
+        if (m.discT > 0) {
+          m.discT -= dt;
+          m.fx.discOut = m.discT > 0;
+        }
+      },
+      start(m, P, st) {
+        const sc = m.scale || 1;
+        st.zs.push(MA.charge(m.x + m.dir * 30 * sc, m.y - 44 * sc, 34, 0.8, '255,210,90'));
+        const [lo, hi] = m.bounds();
+        const hw = m.halfW || 0;
+        const end = m.dir > 0 ? Math.min(hi + hw, m.x + 520) : Math.max(lo - hw, m.x - 520);
+        st.zs.push(MA.warn(m.x + m.dir * 30, end, m.y, 0.8, '255,190,70', 44));
+        G.audio.play('charge');
+      },
+      fire(m, P, st) {
+        const [lo, hi] = m.bounds();
+        const hw = m.halfW || 0;
+        shot({ kind: 'sunwheel', x: m.x + m.dir * 40, y: m.y - 26, base: m.y, vx: m.dir * 270, vy: 0, r: 26, dmg: Math.round(m.atk * 1.3), life: 2.2, fade: 0.25, spin: 0, lo: lo - hw, hi: hi + hw, lastMark: m.x, onTick: wheelTick });
+        m.discT = 2.2;
+        m.fx.discOut = true;
+        G.audio.play('fire');
+        G.fx.burst(m.x + m.dir * 40, m.y - 22, ['#ffd35a', '#ff9a3a', '#ffffff'], 10, 200);
+      },
+    }),
+    // 雙生天馬：自己和鏡像的分身各站玩家一邊（以玩家為中心對稱），蓄力後同時衝過來交錯而過，蹄印是會燙人的星光。
+    // 預警：0.8 秒揚蹄（fx.gallop 0→1）＋兩匹馬之間的地上星光預警帶；衝刺時 fx.charging = true。
+    twincharge: cast('twincharge', {
+      flag: 'gallop', wind: 0.8, rec: 0.9, cd0: [2, 3], cd: [6, 7], range: 360, dy: 60,
+      cond: (m, P) => m.onGround && P.onGround && Math.abs(P.x - m.x) > 90,
+      start(m, P, st) {
+        // 分身：以玩家為中心的鏡像位置（分身是幻影，只要夾在平台上就好，不受本體的活動範圍限制）
+        const pf = G.world.map.platforms[m.plat];
+        const lo = pf[0] + 30;
+        const hi = pf[1] - 30;
+        st.ax = m.x;
+        st.bx = U.clamp(2 * P.x - m.x, lo, hi);
+        if (Math.abs(st.bx - P.x) < 80) st.bx = U.clamp(P.x + U.sign(P.x - m.x) * 160, lo, hi);
+        st.y = m.y;
+        st.ghost = { kind: 'twinghost', x: st.bx, y: m.y, r: 50, t: 0, life: 3, dir: -m.dir, src: m, visual: true, k: 0 };
+        G.world.zones.push(st.ghost);
+        st.zs.push(st.ghost);
+        const lane = MA.warn(st.ax, st.bx, m.y, 0.8, '200,170,255', 70);
+        lane.dir = 0; // 兩匹馬對衝，不畫單一方向的箭頭
+        st.zs.push(lane);
+        st.hitA = st.hitB = st.hitP = false;
+        say(m, '雙星衝鋒！', '#e0c8ff');
+        G.fx.sparkle(st.bx, m.y - 40, '#d8c8ff', 12, 40);
+        G.audio.play('portal');
+      },
+      windTick(m, dt, P, st) {
+        st.ghost.k = m.fx.gallop;
+      },
+      fire(m, P, st) {
+        st.run = 0;
+        st.dist = Math.abs(st.bx - st.ax);
+        st.lastA = st.ax;
+        st.lastB = st.bx;
+        m.fx.charging = true;
+        st.ghost.charging = true;
+        st.ghost.life = st.ghost.t + 1.4;
+        G.audio.play('charge');
+      },
+      recTick(m, dt, P, st) {
+        if (!m.fx.charging) {
+          m.vx = 0;
+          return false;
+        }
+        const sp = 720;
+        st.run += sp * dt;
+        const k = Math.min(1, st.run / (st.dist + 60));
+        const s = U.sign(st.bx - st.ax) || m.dir;
+        const [lo, hi] = m.bounds();
+        m.dir = s;
+        m.x = U.clamp(st.ax + s * st.run, lo, hi);
+        m.vx = 0;
+        st.ghost.x = st.bx - s * st.run;
+        st.ghost.dir = -s;
+        // 衝撞（本體、分身各打一次）＋星光蹄印
+        const hb = P.hitbox();
+        if (!st.hitA && P.alive() && U.overlap({ x: m.x - 40, y: m.y - 64, w: 80, h: 64 }, hb)) {
+          st.hitA = true;
+          P.hurt(Math.round(m.atk * 1.2), m.x);
+        }
+        if (!st.hitB && P.alive() && U.overlap({ x: st.ghost.x - 40, y: st.y - 64, w: 80, h: 64 }, hb)) {
+          st.hitB = true;
+          P.hurt(Math.round(m.atk * 1.2), st.ghost.x);
+        }
+        for (const w of ['A', 'B']) {
+          const x = w === 'A' ? m.x : st.ghost.x;
+          if (Math.abs(x - st['last' + w]) > 44) {
+            st['last' + w] = x;
+            const z = { kind: 'hoofstar', x, y: st.y, r: 18, t: 0, life: 1.1, visual: true, seed: Math.random() * 6 };
+            G.world.zones.push(z);
+            st.zs.push(z);
+          }
+        }
+        // 蹄印燙腳：踩在剛留下的蹄印上（整招只燙一次）
+        if (!st.hitP && P.alive() && P.onGround && Math.abs(P.y - st.y) < 30) {
+          for (const z of st.zs) {
+            if (z.kind === 'hoofstar' && z.t > 0.15 && z.t < z.life && Math.abs(P.x - z.x) < 20) {
+              st.hitP = true;
+              P.hurt(Math.round(m.atk * 0.35), z.x, { noKnock: true });
+              break;
+            }
+          }
+        }
+        if (k >= 1) {
+          m.fx.charging = false;
+          st.ghost.charging = false;
+          st.ghost.life = st.ghost.t + 0.35;
+          G.fx.burst(m.x, m.y - 30, ['#ffffff', '#d8c8ff', '#ffe6a0'], 10, 200);
+          st.t = 0.4;
+          return false;
+        }
+        return true;
+      },
+      cancel(m) {
+        m.fx.charging = false;
+      },
+    }),
+    // 星座魚：嘴裡聚起一顆星，吐出會追人的星星（轉向有上限、會淡出）。預警：0.6 秒（fx.spit）＋嘴邊的星光
+    starspit: cast('starspit', {
+      flag: 'spit', wind: 0.6, rec: 0.35, cd0: [3, 4.5], cd: [4.2, 5.2], range: 500, dy: 280,
+      start(m, P, st) {
+        const sc = m.scale || 1;
+        st.hx = m.x + m.dir * m.w * sc * 0.42;
+        st.hy = midY(m);
+        st.zs.push(MA.charge(st.hx, st.hy, 30, 0.6, '255,236,150'));
+        G.audio.play('charge');
+      },
+      fire(m, P, st) {
+        const a = aimAt(st.hx, st.hy, P);
+        shot({ kind: 'homingstar', x: st.hx, y: st.hy, vx: Math.cos(a) * 210, vy: Math.sin(a) * 210, r: 13, dmg: Math.round(m.atk * 1.1), life: 3.2, fade: 0.4, homing: 1.5 });
+        G.audio.play('spiritShot');
+      },
+    }),
   });
 
   // 每幀推進：地面波、殘影、星線、領域

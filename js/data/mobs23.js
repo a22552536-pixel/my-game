@@ -24,13 +24,17 @@
 
   // ── 第三章　赤岩峽谷（Lv26–37）──
   add('matchlizard', { name: '炎劍蜥', lv: 26, art: 'matchlizard', behavior: 'passive', abilities: ['ignite'], speed: 70, w: 60, h: 42, mat: 'matchhead' });
-  add('angerrock', { name: '狂戰士岩', lv: 27, art: 'angerrock', behavior: 'passive', abilities: ['rage'], speed: 40, w: 54, h: 54, hpMul: 1.25, mat: 'vein' });
+  add('angerrock', { name: '狂戰士岩', lv: 27, art: 'angerrock', behavior: 'passive', abilities: ['rage', 'strike'], speed: 40, w: 54, h: 54, hpMul: 1.25, mat: 'vein',
+    // v1.6：舉起岩拳往前砸地（fx.smash）
+    strike: { flag: 'smash', range: 130, wind: 0.7, act: 0.18, rec: 0.5, reach: 60, h: 60, dmg: 1.3, cd: [2.8, 3.6], sound: 'heavy', shake: 4, col: '255,110,60' } });
   add('magnetdillo', { name: '引力犰狳', lv: 28, art: 'magnetdillo', behavior: 'aggressive', abilities: ['magnet'], speed: 55, w: 68, h: 48, sight: 380, hpMul: 1.15, mat: 'lodestone' });
   add('candlesnake', { name: '三頭術士蛇', lv: 30, art: 'candlesnake', behavior: 'aggressive', abilities: ['ranged', 'candle'], speed: 42, w: 70, h: 70, sight: 440, mat: 'wax',
     projectile: { kind: 'fireball', speed: 300, cd: 2.3, range: 440, count: 3 } });
   add('weightbeetle', { name: '戰鎚甲蟲', lv: 31, art: 'weightbeetle', behavior: 'passive', abilities: ['quake'], speed: 34, w: 72, h: 56, hpMul: 1.45, atkMul: 1.1, mat: 'weight' });
   add('bellowsbat', { name: '魔導書蝙蝠', lv: 32, art: 'bellowsbat', behavior: 'aggressive', abilities: ['gust'], speed: 75, w: 64, h: 52, sight: 420, mat: 'bellowswing' });
-  add('potgoat', { name: '重鎧山羊', lv: 35, art: 'potgoat', behavior: 'aggressive', abilities: ['potcharge', 'shatter'], speed: 60, w: 74, h: 72, sight: 380, hpMul: 1.3, atkMul: 1.15, mat: 'potshard' });
+  add('potgoat', { name: '重鎧山羊', lv: 35, art: 'potgoat', behavior: 'aggressive', abilities: ['potcharge', 'shatter', 'strike'], speed: 60, w: 74, h: 72, sight: 380, hpMul: 1.3, atkMul: 1.15, mat: 'potshard',
+    // v1.6：近身時低頭蓄力，用鎧角往前頂（fx.butt）
+    strike: { flag: 'butt', range: 140, wind: 0.6, act: 0.22, rec: 0.45, reach: 40, h: 64, lunge: 260, dmg: 1.2, cd: [3, 4], sound: 'swing', col: '255,140,80' } });
   add('moodchameleon', { name: '元素變色龍', lv: 36, art: 'moodchameleon', behavior: 'passive', abilities: ['mood'], speed: 50, w: 70, h: 52, hpMul: 1.25, mat: 'moodscale',
     projectile: { kind: 'tear', speed: 320, cd: 2.2, range: 420, count: 2 } });
   add('mapvulture', { name: '預言禿鷹', lv: 37, art: 'mapvulture', behavior: 'aggressive', abilities: ['mark'], speed: 80, w: 84, h: 70, sight: 520, hpMul: 1.3, atkMul: 1.15, mat: 'mapscrap' });

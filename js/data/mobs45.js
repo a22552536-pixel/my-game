@@ -16,24 +16,26 @@
   add('avalanchehare', { name: '雪男', lv: 41, art: 'avalanchehare', behavior: 'aggressive', abilities: ['avalanche'], speed: 80, w: 66, h: 64, sight: 420, mat: 'runepaper' });
   add('drumyak', { name: '雷獸', lv: 42, art: 'drumyak', behavior: 'passive', abilities: ['drum'], speed: 40, w: 96, h: 84, hpMul: 1.35, atkMul: 1.05, mat: 'drumskin' });
   add('shadowwolf', { name: '影之芬里爾', lv: 44, art: 'shadowwolf', behavior: 'aggressive', abilities: ['shadow'], speed: 85, w: 92, h: 64, sight: 460, hpMul: 1.1, mat: 'shadowfur' });
-  add('dreamsheep', { name: '雪女', lv: 45, art: 'dreamsheep', behavior: 'passive', abilities: ['sleep'], speed: 45, w: 72, h: 112, hpMul: 1.25, mat: 'dreamwool' });
+  add('dreamsheep', { name: '雪女', lv: 45, art: 'dreamsheep', behavior: 'passive', abilities: ['sleep', 'icepin'], speed: 45, w: 72, h: 112, hpMul: 1.25, mat: 'dreamwool' });
   add('silencefox', { name: '九尾封印狐', lv: 46, art: 'silencefox', behavior: 'aggressive', abilities: ['foxfire'], speed: 80, w: 80, h: 66, sight: 400, hpMul: 1.05, mat: 'sealtalisman' });
   add('heartcedar', { name: '古松樹靈', lv: 48, art: 'heartcedar', behavior: 'passive', abilities: ['ranged', 'heart'], speed: 22, w: 100, h: 130, hpMul: 1.5, mat: 'lifecrystal',
     projectile: { kind: 'icicle', speed: 380, cd: 2.4, range: 460, count: 3 } });
   add('shieldbear', { name: '狛犬', lv: 49, art: 'shieldbear', behavior: 'aggressive', abilities: ['shield'], speed: 55, w: 110, h: 100, sight: 380, hpMul: 1.45, atkMul: 1.1, mat: 'shieldshard' });
 
   // ── 終章　時空間神殿（Lv50–60）──
-  add('hourowl', { name: '時之鳳凰', lv: 51, art: 'hourowl', behavior: 'passive', abilities: ['ranged', 'rewind'], speed: 50, w: 80, h: 90, hpMul: 1.1, mat: 'timesand',
+  add('hourowl', { name: '時之鳳凰', lv: 51, art: 'hourowl', behavior: 'passive', abilities: ['ranged', 'rewind', 'phoenixfan'], speed: 50, w: 80, h: 90, hpMul: 1.1, mat: 'timesand',
     projectile: { kind: 'star', speed: 260, cd: 2.6, range: 460, count: 2 } });
-  add('mirrordeer', { name: '鏡麒麟', lv: 52, art: 'mirrordeer', behavior: 'aggressive', abilities: ['mirror'], speed: 75, w: 100, h: 110, sight: 420, hpMul: 1.15, mat: 'mirrorshard' });
-  add('stopmoth', { name: '時停蝶', lv: 53, art: 'stopmoth', behavior: 'aggressive', abilities: ['timestop'], speed: 60, w: 90, h: 80, sight: 440, mat: 'clockwing' });
-  add('ouroboros', { name: '銜尾蛇', lv: 54, art: 'ouroboros', behavior: 'aggressive', abilities: ['ouro'], speed: 60, w: 120, h: 70, sight: 420, hpMul: 1.25, mat: 'ouroscale' });
-  add('clocksnail', { name: '時之聖甲蟲', lv: 55, art: 'clocksnail', behavior: 'passive', abilities: ['haste'], speed: 24, w: 90, h: 76, hpMul: 1.5, mat: 'brassgear' });
+  add('mirrordeer', { name: '鏡麒麟', lv: 52, art: 'mirrordeer', behavior: 'aggressive', abilities: ['mirror', 'prism'], speed: 75, w: 100, h: 110, sight: 420, hpMul: 1.15, mat: 'mirrorshard' });
+  add('stopmoth', { name: '時停蝶', lv: 53, art: 'stopmoth', behavior: 'aggressive', abilities: ['timestop', 'clockhand'], speed: 60, w: 90, h: 80, sight: 440, mat: 'clockwing' });
+  add('ouroboros', { name: '銜尾蛇', lv: 54, art: 'ouroboros', behavior: 'aggressive', abilities: ['ouro', 'strike'], speed: 60, w: 120, h: 70, sight: 420, hpMul: 1.25, mat: 'ouroscale',
+    // v1.6：昂首蓄力，毒牙往前撲咬（fx.bite）
+    strike: { flag: 'bite', range: 170, wind: 0.6, act: 0.22, rec: 0.5, reach: 50, h: 50, lunge: 300, dmg: 1.3, cd: [3, 4], sound: 'claw', col: '170,255,140' } });
+  add('clocksnail', { name: '時之聖甲蟲', lv: 55, art: 'clocksnail', behavior: 'passive', abilities: ['haste', 'sundisc'], speed: 24, w: 90, h: 76, hpMul: 1.5, mat: 'brassgear' });
   add('pouchroo', { name: '虛空鯨', lv: 56, art: 'pouchroo', behavior: 'aggressive', abilities: ['portal'], speed: 70, w: 96, h: 110, sight: 460, hpMul: 1.2, atkMul: 1.05, mat: 'riftcloth' });
   add('gravjelly', { name: '重力魔眼', lv: 57, art: 'gravjelly', behavior: 'passive', abilities: ['ranged', 'gravity'], speed: 36, w: 100, h: 110, hpMul: 1.2, mat: 'darkstar',
     projectile: { kind: 'gravorb', speed: 170, cd: 3.2, range: 480, homing: 0.9, slow: 1.2 } });
-  add('parallelfox', { name: '雙生天馬', lv: 58, art: 'parallelfox', behavior: 'aggressive', abilities: ['parallel'], speed: 85, w: 90, h: 70, sight: 440, hpMul: 1.2, mat: 'twintail' });
-  add('constellfish', { name: '星座魚', lv: 59, art: 'constellfish', behavior: 'aggressive', abilities: ['constell'], speed: 55, w: 120, h: 80, sight: 520, hpMul: 1.3, atkMul: 1.1, mat: 'stardust' });
+  add('parallelfox', { name: '雙生天馬', lv: 58, art: 'parallelfox', behavior: 'aggressive', abilities: ['parallel', 'twincharge'], speed: 85, w: 90, h: 70, sight: 440, hpMul: 1.2, mat: 'twintail' });
+  add('constellfish', { name: '星座魚', lv: 59, art: 'constellfish', behavior: 'aggressive', abilities: ['constell', 'starspit'], speed: 55, w: 120, h: 80, sight: 520, hpMul: 1.3, atkMul: 1.1, mat: 'stardust' });
 
   // 新美術還沒載入時的備援外觀
   const fb = {
