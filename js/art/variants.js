@@ -13,6 +13,7 @@
     return { sc, h, w, top: m.y - hv - h, mid: m.y - hv - h * 0.5, foot: m.y - hv };
   }
   function glow(ctx, x, y, r, rgb, a) {
+    if (!isFinite(x) || !isFinite(y) || !(r > 0)) return;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, 'rgba(' + rgb + ',' + a + ')');
     g.addColorStop(1, 'rgba(' + rgb + ',0)');
@@ -43,7 +44,7 @@
 
   A.drawMonster = function (ctx, m) {
     const v = m.variant;
-    const live = v && m.V && !m.dead;
+    const live = v && m.V && !m.dead && isFinite(m.x) && isFinite(m.y);
     if (!live) return base(ctx, m);
     const g = geo(m);
     const t = m.t || 0;
