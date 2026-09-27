@@ -2639,9 +2639,12 @@
     terrMap = map;
     const x0 = cam.x - 50;
     const x1 = cam.x + G.W + 50;
+    // 精緻地形（試作，js/art/ground.js）：地圖寫了 refinedGround 就整段交給它畫（一樣畫進平台快取、一樣走土地變老的調色）
+    const GA = map.refinedGround && A.GROUND_ART && A.GROUND_ART[map.refinedGround];
     map.platforms.forEach((p, i) => {
       if (p[1] < x0 || p[0] > x1) return;
       if (p[2] < cam.y - 40 || p[2] > cam.y + G.H + 60) return;
+      if (GA) return GA(ctx, map, i, x0, x1);
       const isGround = i === 0;
       const P = isGround && th.ground ? th.ground : th.plat;
       const style = P.style || 'grass';
@@ -3294,7 +3297,11 @@
       const m = G.world && G.world.map;
       if (m && m._theme && m._theme.rope) style = m._theme.rope;
     }
-    if (style === 'rope' || style === 'chain') {
+    const rm = G.world && G.world.map;
+    const RA = r[3] !== 'ladder' && rm && rm.refinedGround && A.ROPE_ART && A.ROPE_ART[rm.refinedGround];
+    if (RA && (style === 'vine' || !style)) {
+      RA(ctx, r, x, top, bottom, t, rm);
+    } else if (style === 'rope' || style === 'chain') {
       drawRopeLine(ctx, x, top, bottom, t, style);
     } else if (ROPE_EXTRA[style]) {
       ROPE_EXTRA[style](ctx, x, top, bottom, t);

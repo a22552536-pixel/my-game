@@ -45,6 +45,8 @@ G.data.maps = {
 
   '1-2': {
     name: '蘑菇林地', region: 1, type: 'hunt', theme: 'forestMushroom',
+    // 精緻地形試作（js/art/ground.js）：土層、樹根、苔蘚、浮空土塊的底面；確認後再推到其他地圖
+    refinedGround: 'forest',
     w: 3400, h: 1100,
     platforms: [
       [0, 3400, 1020],
