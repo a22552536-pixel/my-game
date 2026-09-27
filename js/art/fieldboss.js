@@ -6398,13 +6398,6 @@
       const eg = 0.9 + Math.sin(t * 5) * 0.1 + (rage ? 0.4 : 0) + breath * 0.5;
       // 實心發光的眼（沒有眼白）：整顆都是熔金／暴走時洋紅的光
       solidEye(ctx, 26, -7.5, 12, hurt ? 2.5 : 6.8, eyeC, eg * 1.3, false);
-      A.shape(ctx, (c) => {
-        c.moveTo(10, -18);
-        c.lineTo(42, -12);
-        c.lineTo(42, -17);
-        c.lineTo(14, -24);
-        c.closePath();
-      }, skyS, null, { lw: 2.4 });
     }
     // 吐息蓄力：嘴前的虛空光球
     if (charge && !dead) {
