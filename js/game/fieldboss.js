@@ -353,6 +353,8 @@
   ];
 
   // ═════ 赤焰炎魔（3-4）：火鞭橫掃、展翅俯衝、流星火雨 ═════
+  const BR_H = 340; // js/art/fieldboss.js 炎魔的設計高度：畫面縮放 K = m.h / BR_H，火鞭的弧線（fb_whipcrack）也用這個 K
+  const FLY_H = 150; // 俯衝前飛起的高度（240 的時候角尖會超出畫面頂端）
   const balrogMoves = [
     {
       id: 'whip', w: 3,
@@ -363,7 +365,7 @@
         const rage = !!m.fx.rage;
         const dirs = rage ? [m.dir, -m.dir] : [m.dir];
         const len = 560;
-        const K = (m.h || 260) / 260;
+        const K = (m.h || BR_H) / BR_H; // 美術的設計高度（js/art/fieldboss.js BR_H）
         dirs.forEach((d) => warnLine(m.x, m.y - 40, m.x + d * len, m.y - 40, 80, 1.0));
         m.attackPhase = 'wind';
         m.fx.whipLen = len;
@@ -378,8 +380,9 @@
             m.fx.whipCharge = t / 1.0;
             // 蓄力到頂時鞭子上的火舌往上噴
             if (t > 0.55 && Math.random() < dt * (rage ? 26 : 16)) {
-              const hx = m.x - m.dir * (60 + Math.random() * 140) * K;
-              G.fx.burst(hx, m.y - (170 + Math.random() * 110) * K, rage ? ['#fff6c8', '#ffd23a', '#ff7a1e'] : ['#ffd35a', '#ff7a2a'], 2, 120, { angle: -Math.PI / 2, spread: 0.6, grav: -200, life: 0.5 });
+              // 沿著舉過頭、往背後捲起的鞭身（設計座標 x −240～60、y −300～−440）
+              const hx = m.x - m.dir * (-60 + Math.random() * 300) * K;
+              G.fx.burst(hx, m.y - (300 + Math.random() * 140) * K, rage ? ['#fff6c8', '#ffd23a', '#ff7a1e'] : ['#ffd35a', '#ff7a2a'], 2, 120, { angle: -Math.PI / 2, spread: 0.6, grav: -200, life: 0.5 });
             }
             return false;
           }
@@ -394,7 +397,7 @@
             // 鞭痕（掃過的火弧、鞭梢爆響、地面火線）：建立時間＝甩出瞬間，0.1 秒後鞭梢著地
             dirs.forEach((d) => zone({
               kind: 'fb_whipcrack', x: m.x + d * len / 2, y: m.y, r: len / 2 + 40, x1: m.x, x2: m.x + d * len, len, dir: d,
-              hx: m.x + d * 156 * K, hy: m.y - 150 * K, k: K, hitAt: 0.1, rage, life: rage ? 1.7 : 1.4,
+              hx: m.x + d * 228 * K, hy: m.y - 214 * K, k: K, hitAt: 0.1, rage, life: rage ? 1.7 : 1.4,
             }));
           }
           if (!hit && t >= 1.1) {
@@ -447,7 +450,7 @@
         return (t, dt, P2) => {
           if (phase === 0) {
             // 飛起來，同時往玩家頭上移動
-            m.hover = Math.min(240, (m.hover || 0) + 360 * dt);
+            m.hover = Math.min(FLY_H, (m.hover || 0) + 360 * dt);
             m.x = clampX(m, m.x + U.clamp(P2.x - m.x, -260 * dt, 260 * dt));
             m.dir = U.sign(P2.x - m.x) || m.dir;
             if (t > 1.0) {
@@ -461,7 +464,7 @@
             return false;
           }
           if (phase === 1) {
-            m.hover = 240 + Math.sin(t * 10) * 6;
+            m.hover = FLY_H + Math.sin(t * 10) * 6;
             if (t - t0 > 0.9) {
               phase = 2;
               t0 = t;
@@ -471,7 +474,7 @@
           }
           if (phase === 2) {
             const k = Math.min(1, (t - t0) / 0.2);
-            m.hover = 240 * (1 - k);
+            m.hover = FLY_H * (1 - k);
             m.x = clampX(m, m.x + (tx - m.x) * Math.min(1, dt * 18));
             if (k >= 1) {
               phase = 3;
