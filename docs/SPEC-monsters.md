@@ -89,9 +89,9 @@
 | avalanchehare | 雪男 | 小型雪男（Yeti）：長毛、冰藍皮膚、額頭符紙 | 踢出越滾越大的雪球（fx.kick、projectile snowball） |
 | drumyak | 雷獸 | 雷神的坐騎：背著一圈雷神太鼓，渾身帶電 | 擂鼓三連地波（fx.beat、zone runewave） |
 | shadowwolf | 影之芬里爾 | 北歐神話巨狼幼體：鎖鏈斷在頸上、影焰鬃毛 | 影子滑到腳下咬住定身（fx.shadowless、zone wolfshadow） |
-| dreamsheep | 貘 | 吃夢的神獸貘：象鼻、犀眼、虎足、身上飄著夢雲與月亮 | 放睡意霧（fx.puff、zone sleepfog） |
+| dreamsheep | 雪女（v1.6 取代貘） | 雪山的雪女：飄浮的白和服、長黑髮、冰簪，吐出讓人在雪裡睡著的寒霧 | 放睡意霧（fx.puff、zone sleepfog） |
 | silencefox | 九尾封印狐 | 九尾妖狐：九條尾巴、狐火、飛舞的封印符、巫女鈴 | **不再封技能**（使用者：體驗不好）→ 蓄力 0.9 秒浮出三團狐火，然後追蹤玩家（fx.aura 0..1 = 蓄力、新 projectile `foxfire`：金橙色狐火球，會拐彎；zone sealfield 不再使用） |
-| heartcedar | 古木樹靈 | 神社御神木的樹靈：注連繩、紙垂、發光的心核 | 心核開合（fx.open、fx.beat、projectile icicle） |
+| heartcedar | 古松樹靈 | 日式松樹（盆景般的枝幹與雲朵狀松葉團）的樹靈、發光的心核 | 心核開合（fx.open、fx.beat、projectile icicle） |
 | shieldbear | 狛犬 | 神社石狛犬：石獅犬身、捲鬃、持石盾（盾面有神紋） | 正面舉盾、盾擊（fx.guard、fx.bash） |
 新材料名：phantomgem→鎌鼬之刃、owlcrystal→白澤之眼、runepaper→雪男符、drumskin→雷鼓皮、shadowfur→芬里爾之毛、dreamwool→貘之夢、sealtalisman→九尾封符、lifecrystal→御神木之心、shieldshard→狛犬石盾片。
 

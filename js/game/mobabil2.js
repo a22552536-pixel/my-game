@@ -215,7 +215,7 @@
         if (m.shade) m.shade.z.life = 0;
       },
     },
-    // 貘：放出睡意霧，玩家在霧裡變得很慢
+    // 雪女：吐出睡意的寒霧，玩家在霧裡變得很慢
     sleep: {
       update(m, dt, P, aggro) {
         if (m.fx.puff > 0) m.fx.puff = Math.max(0, m.fx.puff - dt * 1.5);
@@ -261,7 +261,7 @@
         return false;
       },
     },
-    // 古木樹靈：心臟規律打開；關著時很硬，打開時很脆
+    // 古松樹靈：心臟規律打開；關著時很硬，打開時很脆
     heart: {
       init(m) {
         m.hcT = U.rand(2, 3.5);

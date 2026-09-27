@@ -16,9 +16,9 @@
   add('avalanchehare', { name: '雪男', lv: 41, art: 'avalanchehare', behavior: 'aggressive', abilities: ['avalanche'], speed: 80, w: 66, h: 64, sight: 420, mat: 'runepaper' });
   add('drumyak', { name: '雷獸', lv: 42, art: 'drumyak', behavior: 'passive', abilities: ['drum'], speed: 40, w: 96, h: 84, hpMul: 1.35, atkMul: 1.05, mat: 'drumskin' });
   add('shadowwolf', { name: '影之芬里爾', lv: 44, art: 'shadowwolf', behavior: 'aggressive', abilities: ['shadow'], speed: 85, w: 92, h: 64, sight: 460, hpMul: 1.1, mat: 'shadowfur' });
-  add('dreamsheep', { name: '貘', lv: 45, art: 'dreamsheep', behavior: 'passive', abilities: ['sleep'], speed: 45, w: 84, h: 72, hpMul: 1.25, mat: 'dreamwool' });
+  add('dreamsheep', { name: '雪女', lv: 45, art: 'dreamsheep', behavior: 'passive', abilities: ['sleep'], speed: 45, w: 72, h: 112, hpMul: 1.25, mat: 'dreamwool' });
   add('silencefox', { name: '九尾封印狐', lv: 46, art: 'silencefox', behavior: 'aggressive', abilities: ['foxfire'], speed: 80, w: 80, h: 66, sight: 400, hpMul: 1.05, mat: 'sealtalisman' });
-  add('heartcedar', { name: '古木樹靈', lv: 48, art: 'heartcedar', behavior: 'passive', abilities: ['ranged', 'heart'], speed: 22, w: 100, h: 130, hpMul: 1.5, mat: 'lifecrystal',
+  add('heartcedar', { name: '古松樹靈', lv: 48, art: 'heartcedar', behavior: 'passive', abilities: ['ranged', 'heart'], speed: 22, w: 100, h: 130, hpMul: 1.5, mat: 'lifecrystal',
     projectile: { kind: 'icicle', speed: 380, cd: 2.4, range: 460, count: 3 } });
   add('shieldbear', { name: '狛犬', lv: 49, art: 'shieldbear', behavior: 'aggressive', abilities: ['shield'], speed: 55, w: 110, h: 100, sight: 380, hpMul: 1.45, atkMul: 1.1, mat: 'shieldshard' });
 
@@ -50,9 +50,9 @@
     runepaper: { name: '雪男符', price: 57, desc: '雪男額頭上的符紙，小聲念一次，腳邊就會滾出雪球。' },
     drumskin: { name: '雷鼓皮', price: 60, desc: '雷獸背上的雷鼓皮，輕輕一敲就劈啪作響。' },
     shadowfur: { name: '芬里爾之毛', price: 64, desc: '影之芬里爾的毛，放在太陽下也沒有影子。' },
-    dreamwool: { name: '貘之夢', price: 66, desc: '貘吃剩的一小團夢，捏起來軟軟的，會發出月光。' },
+    dreamwool: { name: '雪女的冰簪', price: 66, desc: '雪女髮上掉下來的冰簪，握久了手會睏，像要在雪裡睡著。' },
     sealtalisman: { name: '九尾封符', price: 70, desc: '九尾封印狐尾巴上的封符，是一百年前的巫女寫的。' },
-    lifecrystal: { name: '御神木之心', price: 76, desc: '古木樹靈心核裡的一小片紅水晶，還在一下一下地跳。' },
+    lifecrystal: { name: '御神木之心', price: 76, desc: '古松樹靈心核裡的一小片紅水晶，還在一下一下地跳。' },
     shieldshard: { name: '狛犬石盾片', price: 80, desc: '狛犬石盾上崩下來的一角，刻著半個神紋。' },
     timesand: { name: '鳳凰時羽', price: 86, desc: '時之鳳凰的尾羽，羽尖流著往上跑的沙。' },
     mirrorshard: { name: '麒麟鏡鱗', price: 88, desc: '鏡麒麟身上的一片鏡鱗，照出來的你是反過來的。' },
