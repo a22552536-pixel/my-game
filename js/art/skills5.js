@@ -37,25 +37,48 @@
       ctx.fillStyle = A.c('#ffffff');
       [[5, -4], [8, 3], [2, 5], [6, -8]].forEach(([x, y]) => ctx.fillRect(x - 0.8, y - 0.8, 1.6, 1.6));
     },
-    // 石球＋紅黑色的閃電
+    // 冷色的岩石星球（多面碎岩、左上受光）＋一道細的黑閃裂紋（黑芯、暗紅細邊）
     chibaku(ctx) {
-      glow(ctx, 0, 0, 19, '255,50,70', 0.4);
-      A.shape(ctx, (c) => c.arc(0, 1, 12, 0, TAU), '#7a6a58', '#4e4034', { lw: 2, hl: false });
-      [[-6, -5], [5, -6], [-7, 5], [6, 5], [0, 8], [0, -9]].forEach(([x, y]) => A.shape(ctx, (c) => c.arc(x, y + 1, 3.2, 0, TAU), '#9a8468', null, { lw: 1.2, hl: false }));
-      const bolt = (pts, w) => {
-        ctx.lineJoin = 'round';
+      glow(ctx, 0, 0, 20, '150,170,210', 0.3);
+      A.shape(ctx, (c) => c.arc(0, 1, 13, 0, TAU), '#4a4f59', '#2a2d34', { lw: 2, hl: false });
+      // 幾塊受光的石面（左上亮、右下暗）
+      const plate = (pts, col) => {
         ctx.beginPath();
         pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-        ctx.strokeStyle = A.c('#ff2a3a');
-        ctx.lineWidth = w + 2.5;
+        ctx.closePath();
+        ctx.fillStyle = A.c(col);
+        ctx.fill();
+        ctx.strokeStyle = A.c('#1c1e24');
+        ctx.lineWidth = 0.8;
         ctx.stroke();
-        ctx.strokeStyle = A.c('#14000a');
+      };
+      plate([[-11, -4], [-6, -10], [0, -11], [-2, -4], [-8, 0]], '#8a93a3');
+      plate([[1, -11], [8, -8], [6, -2], [-1, -3]], '#6c7483');
+      plate([[-11, 0], [-6, 2], [-5, 9], [-10, 6]], '#5d6472');
+      plate([[7, 0], [12, 3], [8, 10], [3, 8]], '#353941');
+      plate([[-3, 5], [3, 9], [-1, 13], [-5, 11]], '#3e434c');
+      ctx.strokeStyle = A.c('#c8d2e4');
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(0, 1, 11.4, Math.PI * 1.08, Math.PI * 1.42);
+      ctx.stroke();
+      // 黑閃：從右上劈進石球、在中間分岔
+      const crack = (pts, w) => {
+        ctx.lineJoin = 'miter';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+        ctx.strokeStyle = A.c('#c8102c');
+        ctx.lineWidth = w + 1.1;
+        ctx.stroke();
+        ctx.strokeStyle = A.c('#060206');
         ctx.lineWidth = w;
         ctx.stroke();
       };
-      bolt([[-2, 0], [-8, -6], [-7, -11], [-14, -16]], 2.2);
-      bolt([[1, 1], [8, -3], [11, 2], [17, 0]], 2.2);
-      bolt([[0, 2], [-3, 10], [2, 13], [-1, 18]], 2);
+      crack([[17, -15], [12, -10], [13, -7], [7, -4], [5, 1], [0, 2], [-2, 6], [-7, 8]], 1.6);
+      crack([[5, 1], [7, 6], [5, 9]], 0.8);
+      crack([[12, -10], [16, -8]], 0.7);
+      crack([[0, 2], [-5, -1]], 0.7);
     },
   });
 })();

@@ -82,16 +82,19 @@
         m.squash = 1;
         G.fx.burst(cx, cy, r.crit ? ['#ffffff', '#ffd27a'] : ['#ffffff', '#d8c8ff'], r.crit ? 4 : 2, 160, { life: 0.25 });
       } else {
-      G.fx.burst(cx, cy, r.crit ? ['#fff', '#ffd27a', '#ff8a3a'] : ['#fff', '#fff3c0'], r.crit ? 12 : 7, r.crit ? 320 : 220, { life: 0.35 });
-      G.fx.ring(cx, cy, 'rgba(255,255,255,0.8)', r.crit ? 50 : 34, 0.18, 3);
-      G.fx.impact(cx + U.rand(-8, 8), cy + U.rand(-8, 8), r.crit ? 78 : opts.heavy ? 58 : 44, r.crit ? '#ffc23a' : opts.heavy ? '#ffe08a' : '#fff3c8');
-      G.fx.streak(cx, cy, dir > 0 ? U.rand(-0.7, -0.3) : Math.PI + U.rand(0.3, 0.7), r.crit ? 130 : 95, r.crit ? '#ffe7a0' : '#ffffff', r.crit ? 9 : 6);
-      if (r.crit) G.fx.burst(cx, cy, ['#ffe066', '#ffffff'], 6, 380, { shape: 'star', size: 5, life: 0.4, grav: 300 });
+      // 暴擊（黑閃）的命中光改成冷硬的白＋暗紅，不再是金黃色的星星，黑色閃電才是主角
+      G.fx.burst(cx, cy, r.crit ? ['#fff', '#ff5a6a'] : ['#fff', '#fff3c0'], r.crit ? 5 : 7, r.crit ? 300 : 220, { life: 0.3 });
+      if (!r.crit) G.fx.ring(cx, cy, 'rgba(255,255,255,0.8)', 34, 0.18, 3);
+      G.fx.impact(cx + U.rand(-8, 8), cy + U.rand(-8, 8), r.crit ? 38 : opts.heavy ? 58 : 44, r.crit ? '#ff3a4a' : opts.heavy ? '#ffe08a' : '#fff3c8');
+      G.fx.streak(cx, cy, dir > 0 ? U.rand(-0.7, -0.3) : Math.PI + U.rand(0.3, 0.7), r.crit ? 120 : 95, r.crit ? '#ffffff' : '#ffffff', r.crit ? 7 : 6);
       G.fx.kick(dir * (r.crit ? 7 : opts.heavy ? 5 : 3), r.crit ? -2 : 0);
       m.squash = 1;
+      // 地爆天星的每一發都是黑閃（大一號、閃電繞著石球）；其他攻擊只有暴擊才是黑閃，繞著怪物的身體
+      const chi = opts.sound === 'crit' && G.skillExec.ults ? G.skillExec.ults.find((u) => u.kind === 'chibaku' && u.m === m) : null;
+      if (chi) G.fx.blackFlash(chi.hitX != null ? chi.hitX : cx, chi.hitY != null ? chi.hitY : cy, dir, chi.n >= chi.S.hits - 1 ? 2.3 : 1.5, chi.size * 0.8);
       if (r.crit) {
-        // 黑閃：命中點迸出幾道短閃電
-        G.fx.blackFlash(cx, cy, dir);
+        // 黑閃：命中點空間扭曲、細碎分岔的黑色閃電
+        if (!chi) G.fx.blackFlash(cx, cy, dir, 1, Math.max(14, Math.min(70, Math.max(m.w || 40, m.h || 40) * (m.scale || 1) * 0.45)));
         if (P.specials.focus) P.mp = Math.min(P.maxMp, P.mp + 3);
         G.fx.addHitstop(0.13);
         G.fx.shake(b.shake.crit[0] + 3, b.shake.crit[1] + 0.05);
