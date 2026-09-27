@@ -21,6 +21,7 @@
   // ═════════ 第四章 霜鈴雪峰 ═════════
   M['4-1'] = Object.assign(clone('3-1', 'vine'), {
     name: '霜鈴村', region: 4, type: 'camp', theme: 'snowCamp',
+    refinedGround: 'snow',
     portals: [
       { id: 'l', x: 70, p: 0, to: '3-B', target: 'r' },
       { id: 'r', x: 2530, p: 0, to: '4-2', target: 'l' },
@@ -48,6 +49,7 @@
 
   M['4-2'] = Object.assign(clone('3-2', 'vine'), {
     name: '鈴風雪原', region: 4, type: 'hunt', theme: 'snowField',
+    refinedGround: 'snow',
     portals: [
       { id: 'l', x: 70, p: 0, to: '4-1', target: 'r' },
       { id: 'r', x: 3330, p: 0, to: '4-3', target: 'l' },
@@ -70,6 +72,7 @@
 
   M['4-3'] = Object.assign(clone('3-3', 'vine'), {
     name: '冰瀑鈴道', region: 4, type: 'explore', theme: 'iceFall',
+    refinedGround: 'ice',
     portals: [
       { id: 'l', x: 70, p: 0, to: '4-2', target: 'r' },
       { id: 'r', x: 2930, p: 0, to: '4-4', target: 'l' },
@@ -97,6 +100,7 @@
 
   M['4-4'] = Object.assign(clone('3-4', 'vine'), {
     name: '千鈴參道', region: 4, type: 'hunt', theme: 'bellShrine',
+    refinedGround: 'shrine',
     portals: [
       { id: 'l', x: 70, p: 0, to: '4-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '4-B', target: 'l' },
@@ -123,6 +127,7 @@
 
   M['4-B'] = Object.assign(clone('3-B', 'vine'), {
     name: '霜靈祭壇', region: 4, type: 'boss', theme: 'frostAltar',
+    refinedGround: 'frost',
     portals: [
       { id: 'l', x: 70, p: 0, to: '4-4', target: 'r' },
       { id: 'r', x: 2130, p: 0, to: '5-1', target: 'l', req: 'frostSpiritDefeated', reqText: '打倒霜靈之後，往雲上的階梯才會出現' },
@@ -133,6 +138,7 @@
   // ═════════ 終章 時空間神殿 ═════════
   M['5-1'] = Object.assign(clone('3-1', 'vine'), {
     name: '神殿前庭', region: 5, type: 'camp', theme: 'templeCourt',
+    refinedGround: 'temple',
     portals: [
       { id: 'l', x: 70, p: 0, to: '4-B', target: 'r' },
       { id: 'r', x: 2530, p: 0, to: '5-2', target: 'l' },
@@ -158,6 +164,7 @@
 
   M['5-2'] = Object.assign(clone('3-2', 'vine'), {
     name: '回憶迴廊', region: 5, type: 'hunt', theme: 'timeCorridor',
+    refinedGround: 'temple',
     portals: [
       { id: 'l', x: 70, p: 0, to: '5-1', target: 'r' },
       { id: 'r', x: 3330, p: 0, to: '5-3', target: 'l' },
@@ -179,6 +186,7 @@
 
   M['5-3'] = Object.assign(clone('3-3', 'vine'), {
     name: '倒轉庭園', region: 5, type: 'explore', theme: 'reverseGarden',
+    refinedGround: 'garden',
     portals: [
       { id: 'l', x: 70, p: 0, to: '5-2', target: 'r' },
       { id: 'r', x: 2930, p: 0, to: '5-4', target: 'l' },
@@ -203,6 +211,7 @@
 
   M['5-4'] = Object.assign(clone('3-4', 'vine'), {
     name: '星之階梯', region: 5, type: 'hunt', theme: 'starStair',
+    refinedGround: 'star',
     portals: [
       { id: 'l', x: 70, p: 0, to: '5-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '5-B', target: 'l' },
@@ -228,6 +237,7 @@
 
   M['5-B'] = Object.assign(clone('3-B', 'vine'), {
     name: '時之王座', region: 5, type: 'boss', theme: 'timeThrone',
+    refinedGround: 'throne',
     portals: [{ id: 'l', x: 70, p: 0, to: '5-4', target: 'r' }],
     boss: { m: 'timeItself', x: 1500 },
   });

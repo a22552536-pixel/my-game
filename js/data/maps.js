@@ -8,6 +8,7 @@
 G.data.maps = {
   '1-1': {
     name: '苔光小徑', region: 1, type: 'camp', theme: 'forestMorning',
+    refinedGround: 'forestMorning',
     w: 2600, h: 820,
     platforms: [
       [0, 2600, 740],
@@ -92,6 +93,7 @@ G.data.maps = {
 
   '1-3': {
     name: '木漏日深谷', region: 1, type: 'explore', theme: 'forestDeep',
+    refinedGround: 'forestDeep',
     w: 3000, h: 1000,
     platforms: [
       [0, 3000, 920],
@@ -139,6 +141,7 @@ G.data.maps = {
 
   '1-4': {
     name: '古樹根洞', region: 1, type: 'hunt', theme: 'rootCave',
+    refinedGround: 'rootCave',
     w: 3800, h: 1200,
     platforms: [
       [0, 3800, 1120],
@@ -195,6 +198,7 @@ G.data.maps = {
 
   '1-B': {
     name: '女王菇的殿堂', region: 1, type: 'boss', theme: 'queenHall',
+    refinedGround: 'queenHall',
     w: 1900, h: 800,
     platforms: [
       [0, 1900, 720],
@@ -216,6 +220,7 @@ G.data.maps = {
   // ═════════ 第二章 潮風海岬 ═════════
   '2-1': {
     name: '燈塔岬', region: 2, type: 'camp', theme: 'coastCamp',
+    refinedGround: 'coast',
     w: 2600, h: 820,
     platforms: [
       [0, 2600, 740],
@@ -254,6 +259,7 @@ G.data.maps = {
 
   '2-2': {
     name: '潮池沙灘', region: 2, type: 'hunt', theme: 'tidepool',
+    refinedGround: 'tidepool',
     w: 3400, h: 1100,
     platforms: [
       [0, 3400, 1020],
@@ -298,6 +304,7 @@ G.data.maps = {
 
   '2-3': {
     name: '沉船灣', region: 2, type: 'explore', theme: 'shipwreck',
+    refinedGround: 'wreck',
     w: 3000, h: 1000,
     platforms: [
       [0, 3000, 920],
@@ -342,6 +349,7 @@ G.data.maps = {
 
   '2-4': {
     name: '浪花礁岩', region: 2, type: 'hunt', theme: 'reef',
+    refinedGround: 'reef',
     w: 3800, h: 1200,
     platforms: [
       [0, 3800, 1120],
@@ -396,6 +404,7 @@ G.data.maps = {
 
   '2-B': {
     name: '寄居蟹的巢灣', region: 2, type: 'boss', theme: 'crabNest',
+    refinedGround: 'crabnest',
     w: 2000, h: 800,
     platforms: [
       [0, 2000, 720],
@@ -418,6 +427,7 @@ G.data.maps = {
   // ═════════ 第三章 赤岩峽谷 ═════════
   '3-1': {
     name: '溫泉谷', region: 3, type: 'camp', theme: 'hotspringCamp',
+    refinedGround: 'onsen',
     w: 2600, h: 820,
     platforms: [
       [0, 2600, 740],
@@ -456,6 +466,7 @@ G.data.maps = {
 
   '3-2': {
     name: '赤岩裂谷', region: 3, type: 'hunt', theme: 'redRift',
+    refinedGround: 'canyon',
     w: 3400, h: 1100,
     platforms: [
       [0, 3400, 1020],
@@ -500,6 +511,7 @@ G.data.maps = {
 
   '3-3': {
     name: '蒸氣隘道', region: 3, type: 'explore', theme: 'steamPass',
+    refinedGround: 'steam',
     w: 3000, h: 1000,
     platforms: [
       [0, 3000, 920],
@@ -547,6 +559,7 @@ G.data.maps = {
 
   '3-4': {
     name: '熔岩河床', region: 3, type: 'hunt', theme: 'lavaBed',
+    refinedGround: 'lava',
     w: 3800, h: 1200,
     platforms: [
       [0, 3800, 1120],
@@ -602,6 +615,7 @@ G.data.maps = {
 
   '3-B': {
     name: '甲龜的火山巢', region: 3, type: 'boss', theme: 'volcanoNest',
+    refinedGround: 'volcano',
     w: 2200, h: 800,
     platforms: [
       [0, 2200, 720],
