@@ -640,6 +640,16 @@
       ctx.beginPath();
       ctx.ellipse(w * 0.1, h * 0.02, Math.max(0.8, w * 0.1), h * 0.62, 0.12, 0, TAU);
       ctx.fill();
+    } else {
+      // 沒有眼珠：整顆眼睛就是一團光，中心白熱
+      ctx.fillStyle = rgba(U.mix(col, '#ffffff', 0.7), 0.9);
+      ctx.beginPath();
+      ctx.ellipse(w * 0.05, 0, w * 0.55, h * 0.5, 0.1, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(w * 0.05, 0, w * 0.25, h * 0.26, 0.1, 0, TAU);
+      ctx.fill();
     }
     ctx.beginPath();
     eyePath(ctx);
@@ -1169,6 +1179,194 @@
     }, CR.moss, CR.mossS, { shadeY: -41, lw: 1.6 });
     ctx.restore();
   }
+  // 祖傳的大圓金框老花眼鏡（鱷王的招牌）：近側鏡片圓心在原點、遠側鏡片在 (CRG_F) 被頭骨擋掉下半；
+  // part='back' 畫遠側鏡片＋鏡片上長的小傘菇（在頭骨之前畫）；part='front' 畫放大的眼、近側鏡片、鼻橋、鏡腳、裂痕；
+  // part='fallen' 掉在泥裡（兩片並排、躺平、裂得更兇）。o：{ x, y, rot, P, t, rage, inner（在鏡片裡畫放大的內容）, drip }
+  const CRG_R = 17;
+  const CRG_F = [33, 1, 13.5];
+  const CRG_MAG = 1.42;
+  function crLens(ctx, x, y, r, P, t, rage, seed, crack) {
+    const lp = (c) => c.arc(x, y, r, 0, TAU);
+    // 淡淡的茶色鏡片（暴走時透出橘紅光）
+    ctx.beginPath();
+    lp(ctx);
+    ctx.fillStyle = rage ? rgba('#ff5a1e', 0.26 + Math.sin(t * 4) * 0.06) : rgba('#f4f8d8', 0.2);
+    ctx.fill();
+    // 每隔幾秒掃過一道反光
+    const q = ((t + seed) % 3.4) / 0.55;
+    ctx.save();
+    ctx.beginPath();
+    lp(ctx);
+    ctx.clip();
+    if (q < 1) {
+      const bx = x - r - 10 + q * (r * 2 + 20);
+      ctx.fillStyle = rgba('#ffffff', 0.75);
+      ctx.beginPath();
+      ctx.moveTo(bx - 3, y + r);
+      ctx.lineTo(bx + 7, y - r);
+      ctx.lineTo(bx + 12, y - r);
+      ctx.lineTo(bx + 2, y + r);
+      ctx.closePath();
+      ctx.moveTo(bx + 7, y + r);
+      ctx.lineTo(bx + 15, y - r);
+      ctx.lineTo(bx + 16.5, y - r);
+      ctx.lineTo(bx + 8.5, y + r);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    // 常駐的小弧光
+    ctx.strokeStyle = rgba('#ffffff', 0.7);
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.72, PI * 1.1, PI * 1.42);
+    ctx.stroke();
+    if (crack) {
+      // 一道小裂痕（從鏡框右下往裡裂，分岔）
+      const k = crack;
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.62, y + r * 0.78);
+      ctx.lineTo(x + r * 0.3, y + r * 0.38);
+      ctx.lineTo(x + r * 0.4, y + r * 0.12 * k);
+      ctx.lineTo(x + r * 0.12 * k, y - r * 0.22 * k);
+      ctx.moveTo(x + r * 0.3, y + r * 0.38);
+      ctx.lineTo(x + r * 0.02, y + r * 0.45);
+      if (k > 1) {
+        ctx.lineTo(x - r * 0.35, y + r * 0.2);
+        ctx.moveTo(x + r * 0.4, y + r * 0.12 * k);
+        ctx.lineTo(x + r * 0.78, y - r * 0.2);
+      }
+      ctx.strokeStyle = rgba('#1a2410', 0.55);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.strokeStyle = rgba('#ffffff', 0.85);
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+    }
+    // 金框：黑邊 → 金 → 亮邊
+    ctx.beginPath();
+    lp(ctx);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    ctx.strokeStyle = A.c(CR.gold);
+    ctx.lineWidth = 3.4;
+    ctx.stroke();
+    ctx.strokeStyle = rgba('#fff4c0', 0.8);
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 0.6, PI * 1.05, PI * 1.6);
+    ctx.stroke();
+    ctx.strokeStyle = A.c(CR.goldD);
+    ctx.beginPath();
+    ctx.arc(x, y, r - 0.6, PI * 0.1, PI * 0.7);
+    ctx.stroke();
+  }
+  // 鏡片上長的一小撮苔＋小紅菇
+  function crSpecMoss(ctx, x, y, t) {
+    const sw = Math.sin(t * 1.7) * 1;
+    A.shape(ctx, (c) => {
+      c.moveTo(x - 9, y + 2);
+      c.quadraticCurveTo(x - 8, y - 5, x - 3, y - 3);
+      c.quadraticCurveTo(x, y - 8, x + 4, y - 3);
+      c.quadraticCurveTo(x + 9, y - 3, x + 9, y + 2);
+      c.lineTo(x + 5, y + 3);
+      c.lineTo(x + 3 + sw, y + 8);
+      c.lineTo(x + 1, y + 3);
+      c.lineTo(x - 4, y + 3);
+      c.lineTo(x - 6 + sw, y + 7);
+      c.lineTo(x - 7, y + 3);
+      c.closePath();
+    }, CR.moss, CR.mossS, { shadeY: y, lw: 1.6 });
+  }
+  function crSpecs(ctx, part, o) {
+    const { P, t, rage } = o;
+    const R = CRG_R;
+    const [fx0, fy0, fr] = CRG_F;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    ctx.rotate(o.rot);
+    if (part === 'back') {
+      crLens(ctx, fx0, fy0, fr, P, t + 0.25, rage, 0.2, 0);
+      // 遠側鏡框頂上冒出一朵小紅傘菇
+      crMush(ctx, fx0 + 5, fy0 - fr + 1, 0.38, 0.35 + Math.sin(t * 2.1) * 0.06, 0);
+    } else if (part === 'front') {
+      if (rage) glow(ctx, 0, 0, R * 2.2, '#ff6a1e', 0.35 + Math.sin(t * 4) * 0.08);
+      // 鏡片裡：放大的頭骨與眼（回到頭部座標，以鏡片圓心放大）
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, R - 1, 0, TAU);
+      ctx.clip();
+      ctx.rotate(-o.rot);
+      ctx.translate(o.mx - o.x, o.my - o.y);
+      ctx.scale(CRG_MAG, CRG_MAG);
+      ctx.translate(-o.mx, -o.my);
+      o.inner(ctx);
+      ctx.restore();
+      crLens(ctx, 0, 0, R, P, t, rage, 0, 1);
+      // 鼻橋：跨過吻脊拱起來
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(R - 1, -5);
+      ctx.quadraticCurveTo(R + 3, -14, fx0 - fr + 1, fy0 - 3);
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 5.4;
+      ctx.stroke();
+      ctx.strokeStyle = A.c(CR.gold);
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+      // 鏡腳：往後伸到耳孔，末端勾下去
+      ctx.beginPath();
+      ctx.moveTo(-R + 1, -1);
+      ctx.quadraticCurveTo(-32, 2, -42, 8);
+      ctx.quadraticCurveTo(-48, 12, -45, 18);
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.strokeStyle = A.c(CR.goldS);
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      // 鉸鏈小鉚釘
+      A.ellipse(ctx, -R + 0.5, -1, 3, 3, CR.gold, CR.goldS, { lw: 1.6, hl: false });
+      // 鏡框上的苔
+      crSpecMoss(ctx, -8, -R + 1, t);
+      if (o.drip > 0) {
+        // 剛浮上來：鏡片下緣滴水
+        ctx.fillStyle = rgba('#d8f4ff', 0.85 * o.drip);
+        ctx.beginPath();
+        [[-6, R], [7, R - 2], [fx0, fy0 + fr]].forEach(([dx, dy], i) => {
+          const qq = (t * 1.8 + i * 0.37) % 1;
+          const yy = dy + qq * qq * 22;
+          const rr = 2.2 - qq;
+          ctx.moveTo(dx + rr, yy);
+          ctx.ellipse(dx, yy, rr, rr * 1.4, 0, 0, TAU);
+        });
+        ctx.fill();
+      }
+    } else {
+      // 掉在泥裡：躺平（壓扁）、兩片並排、近側那片裂得更兇
+      ctx.scale(1, 0.62);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-R, 0);
+      ctx.lineTo(-R - 18, 10);
+      ctx.moveTo(fx0 + R, 0);
+      ctx.lineTo(fx0 + R + 14, 12);
+      ctx.moveTo(R - 1, -4);
+      ctx.quadraticCurveTo(fx0 / 2, -12, fx0 - R + 1, -4);
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.strokeStyle = A.c(CR.goldS);
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      crLens(ctx, fx0, 0, R, P, t + 1.3, false, 1.1, 0);
+      crLens(ctx, 0, 0, R, P, t, false, 0, 2);
+      crSpecMoss(ctx, -6, -R + 1, 0);
+    }
+    ctx.restore();
+  }
   function fb_shroom(ctx, m) {
     const S = atk(m);
     const { fx, ph, t, rage, dead, kind } = S;
@@ -1296,6 +1494,26 @@
     if (blink && !firing && !hurt && !jump) lid = 1;
     const shake = crouch || (charging && breath > 0.6) || (summon && bellow > 0.5) ? Math.sin(t * 55) * 1.3 : 0;
     const gemA = dead ? 0 : (rage ? 0.8 : 0.5) + Math.sin(t * 3) * 0.15 + (summon ? 0.3 : 0);
+    // 眼鏡的動態：吐息蓄力時沿著吻滑下去（眼睛從鏡框上緣瞪出來）、受擊歪一下、跳起來時彈高、低吼時抖
+    const slide = charging ? breath : firing ? 1 : 0;
+    let gx = 106 + slide * 12;
+    let gy = -112 + slide * 7;
+    let gr = slide * 0.13;
+    if (hurt) {
+      gy -= 5;
+      gx -= 2;
+      gr += -0.22 + Math.sin(t * 40) * 0.05;
+    }
+    if (jump) {
+      gy -= 7 + Math.sin(t * 14) * 3;
+      gr -= 0.1 + Math.sin(t * 14 + 1) * 0.05;
+    }
+    if (crouch) gy += 1.5;
+    if (landed) {
+      gy += 3;
+      gr += 0.06;
+    }
+    if (summon) gy += bellow * Math.sin(t * 60) * 1.2;
     const runeA = dead ? 0 : (rage ? 0.95 : 0.5) + Math.sin(t * 2.4) * 0.12 + (charging ? breath * 0.4 : 0) + (summon ? 0.45 : 0);
     // 背上的傘菇：召喚時發光、搖晃、最後彈出去
     const nPop = rage ? 3 : 2;
@@ -1693,6 +1911,8 @@
     ctx.translate(HX, HY);
     ctx.rotate(-up);
     ctx.translate(-HX, -HY);
+    const gO = { x: gx, y: gy, mx: 102 + (gx - 106) * 0.55, my: -113 + (gy + 112) * 0.55, rot: gr, P, t, rage, drip: sp > 0.05 ? Math.min(1, sp * 2) : 0 };
+    if (!dead) crSpecs(ctx, 'back', gO);
     A.shape(ctx, crUpper, P.skin, P.skinS, { cel: [0, 6], lw: 3.2 });
     ctx.save();
     ctx.beginPath();
@@ -1737,8 +1957,39 @@
     ctx.ellipse(196, -99, 3.4, 1.8, 0.3, 0, TAU);
     ctx.fill();
     // 王冠（歪戴在頭骨上）與眼
-    if (!dead) crCrown(ctx, 70, -116, 0.84, -0.3 + (crouch ? 0.06 : 0) + (jump ? -0.1 : 0) + (summon ? Math.sin(t * 30) * 0.03 * bellow : 0), P, gemA, t);
-    crEye(ctx, 102, -113, 10, P, { lid, wide, dead, shut: hurt, glowA: rage ? 0.6 + Math.sin(t * 4) * 0.1 : firing || charging ? 0.3 : 0 });
+    const crownRot = -0.3 + (crouch ? 0.06 : 0) + (jump ? -0.1 : 0) + (summon ? Math.sin(t * 30) * 0.03 * bellow : 0);
+    if (!dead) crCrown(ctx, 70, -116, 0.84, crownRot, P, gemA, t);
+    const eyeO = { lid, wide, dead, shut: hurt, glowA: rage ? 0.6 + Math.sin(t * 4) * 0.1 : firing || charging ? 0.3 : 0 };
+    crEye(ctx, 102, -113, 10, P, eyeO);
+    if (!dead) {
+      // 鏡框（鏡片裡放大的頭骨＋眼：暴躁老學究的大眼）
+      gO.inner = (c) => {
+        A.shape(c, crUpper, P.skin, P.skinS, { cel: [0, 6], lw: 3.2 });
+        crEye(c, 102, -113, 10, P, eyeO);
+      };
+      crSpecs(ctx, 'front', gO);
+      // 細金鍊：從鏡腳鉸鏈垂過臉頰，掛到王冠左端
+      const hc = Math.cos(gr);
+      const hs = Math.sin(gr);
+      const hx = gx - (CRG_R - 0.5) * hc + hs;
+      const hy = gy - (CRG_R - 0.5) * hs - hc;
+      const rc = crownRot;
+      const kx = 70 + 0.84 * (-31 * Math.cos(rc) - 1 * Math.sin(rc));
+      const ky = -116 + 0.84 * (-31 * Math.sin(rc) + 1 * Math.cos(rc));
+      const sag = 24 + Math.sin(t * 1.8) * 2 + (jump ? -10 : 0) + slide * 4;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.bezierCurveTo(hx - 6, hy + sag, kx + 8, ky + sag, kx, ky);
+      ctx.setLineDash([0.01, 3.4]);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 3.4;
+      ctx.stroke();
+      ctx.strokeStyle = A.c(CR.gold);
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     ctx.restore();
 
     // 交錯的牙齒（上排往下、下排往上）
@@ -1906,7 +2157,10 @@
       }
     }
     // 死掉：王冠掉進泥水裡
-    if (dead) crCrown(ctx, 150, 10, 0.62, 0.55, P, 0, t);
+    if (dead) {
+      crCrown(ctx, 150, 10, 0.62, 0.55, P, 0, t);
+      crSpecs(ctx, 'fallen', { x: 92, y: 14, rot: -0.12, P, t, rage: false });
+    }
     ctx.restore();
 
     // ── 召喚：傘菇從背上彈出去、落到地上 ──
@@ -4615,7 +4869,7 @@
   const VD = {
     sky: '#221c56', skyS: '#140f36', skyR: '#2a1040', skyRS: '#16061e', belly: '#3e3690', bellyS: '#2c2670',
     gold: '#f2cc62', goldS: '#c0923a', goldR: '#ff9a4a', face: '#fff2d2', faceS: '#e0cc9c',
-    star: '#fff6d0', line: '#ffd86a', eye: '#ffb81e', eyeR: '#ff2ac8', neb: '#b06aff', nebR: '#ff5a9a', beam: '#c89aff',
+    star: '#fff6d0', line: '#ffd86a', eye: '#ffb81e', eyeR: '#dcb4ff', neb: '#b06aff', nebR: '#ff5a9a', beam: '#c89aff',
   };
   function starShape(ctx, x, y, r, col) {
     ctx.fillStyle = A.c(col);
@@ -5157,7 +5411,7 @@
     } else {
       const eg = 0.9 + Math.sin(t * 5) * 0.1 + (rage ? 0.4 : 0) + breath * 0.5;
       // 實心發光的眼（沒有眼白）：整顆都是熔金／暴走時洋紅的光
-      solidEye(ctx, 26, -7.5, 12, hurt ? 2.5 : 6.8, eyeC, eg * 1.3, true);
+      solidEye(ctx, 26, -7.5, 12, hurt ? 2.5 : 6.8, eyeC, eg * 1.3, false);
       A.shape(ctx, (c) => {
         c.moveTo(10, -18);
         c.lineTo(42, -12);

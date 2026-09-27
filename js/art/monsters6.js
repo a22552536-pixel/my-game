@@ -682,7 +682,7 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang);
-    const k = far ? 0.78 : 0.9;
+    const k = far ? 1.02 : 1.2;
     ctx.scale(k * lerp(0.8, 1, open), k);
     const fan = lerp(0.2, 1, open);
     const el = [13, 2];
@@ -697,7 +697,7 @@
     for (let i = 8; i >= 0; i--) {
       const q = i / 8;
       const a = ha - lerp(1.35, 0.08, q) * fan - (1 - fan) * 0.1 + Math.sin(t * 4 + i * 0.9) * 0.025;
-      prim.push([lerp(wr[0], tip[0], q), lerp(wr[1], tip[1], q), a, lerp(30, 46, Math.pow(q, 0.8)) * (far ? 0.9 : 1), i]);
+      prim.push([lerp(wr[0], tip[0], q), lerp(wr[1], tip[1], q), a, lerp(34, 60, Math.pow(q, 0.8)) * (far ? 0.9 : 1), i]);
     }
     const sec = [];
     for (let j = 6; j >= 0; j--) {
@@ -758,7 +758,87 @@
     const path = (c) => taper(c, arm, (s) => lerp(far ? 6.5 : 8, 2.4, s), 16);
     A.shape(ctx, path, cM, cR, { cel: [0, -1.4], lw: 2, hl: false });
     if (!far) crescent(ctx, path, 0, 1.4, PHX.cream, 0.85);
+    phxWingTime(ctx, prim, t + (far ? 0.37 : 0), heat * (far ? 0.6 : 1), far);
     ctx.restore();
+  }
+  // 翼緣的時間意象：羽尖拖出的時之符文與金沙流、漂浮的錶盤碎片、繞著翼尖轉的數字環
+  function phxWingTime(ctx, prim, t, heat, lite) {
+    ctx.lineCap = 'round';
+    const tipOf = (P) => [P[0] + Math.cos(P[2]) * P[3], P[1] + Math.sin(P[2]) * P[3], P[2]];
+    // 羽尖的符文與金沙（往羽毛延伸的方向飄走、漸漸淡去）
+    for (let n = 0; n < prim.length; n += lite ? 4 : 2) {
+      const [x, y, a] = tipOf(prim[n]);
+      for (let j = 0; j < 3; j++) {
+        const q = (t * 0.6 + j / 3 + n * 0.17) % 1;
+        const d = 4 + q * 20;
+        const px = x + Math.cos(a) * d + Math.cos(a + PI / 2) * Math.sin(q * 5 + n) * 3;
+        const py = y + Math.sin(a) * d + Math.sin(a + PI / 2) * Math.sin(q * 5 + n) * 3;
+        if (j === 0) {
+          ctx.strokeStyle = rgba('#fff0b0', (1 - q) * 0.9);
+          ctx.lineWidth = 0.9;
+          rune(ctx, px, py, 2.4, n + Math.floor(t * 0.6 + n * 0.17), a + q * 2);
+        } else {
+          ctx.fillStyle = rgba(j % 2 ? PHX.gold : '#fff2b0', (1 - q) * 0.95);
+          ctx.fillRect(px - 0.9, py - 0.9, 1.8, 1.8);
+        }
+      }
+    }
+    // 金沙流：從翼後緣往後飄的一道細流
+    ctx.strokeStyle = rgba(PHX.gold, 0.35 + heat * 0.2);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let n = 1; n < prim.length; n += 3) {
+      const [x, y, a] = tipOf(prim[n]);
+      const w = Math.sin(t * 3 + n) * 3;
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + Math.cos(a) * 10 + Math.cos(a + PI / 2) * w, y + Math.sin(a) * 10 + Math.sin(a + PI / 2) * w, x + Math.cos(a - 0.4) * 22, y + Math.sin(a - 0.4) * 22);
+    }
+    ctx.stroke();
+    // 漂浮的錶盤碎片（四分之一圈的錶框、刻度與一根指針，慢慢轉）
+    (lite ? [[4, 10, 0.8]] : [[2, 12, 0], [6, 9, 1.7]]).forEach(([n, r, ph]) => {
+      const [x, y, a] = tipOf(prim[n]);
+      const cx = x + Math.cos(a + 0.5) * 14;
+      const cy = y + Math.sin(a + 0.5) * 14 + Math.sin(t * 1.5 + ph) * 2;
+      const rot = t * 0.5 + ph;
+      ctx.strokeStyle = rgba('#ffe7a0', 0.85);
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, rot, rot + 1.6);
+      ctx.stroke();
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      for (let i = 0; i <= 4; i++) {
+        const aa = rot + i * 0.4;
+        ctx.moveTo(cx + Math.cos(aa) * r * 0.78, cy + Math.sin(aa) * r * 0.78);
+        ctx.lineTo(cx + Math.cos(aa) * r * 0.95, cy + Math.sin(aa) * r * 0.95);
+      }
+      const ha = -t * 2 + ph;
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(ha) * r * 0.7, cy + Math.sin(ha) * r * 0.7);
+      ctx.stroke();
+      glowH(ctx, cx, cy, 3, PHX.gold, 0.6);
+    });
+    // 繞著翼尖轉的數字環（傾斜的橢圓軌道上的羅馬數字）
+    {
+      const [x, y] = tipOf(prim[0]);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(1, 0.4);
+      ctx.strokeStyle = rgba('#fff0b0', 0.4);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = rgba('#ffe7a0', 0.85);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const aa = t * 0.9 + (i / 4) * TAU;
+        roman(ctx, Math.cos(aa) * 16, Math.sin(aa) * 16, 5, i * 3, 0);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
   }
   // 羅馬數字（用線畫；s＝字高）
   const ROMAN = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
@@ -881,25 +961,25 @@
     const beat = Math.sin(phi);
     const upS = Math.cos(phi);
     let lift = dead ? 0 : -Math.cos(phi - 0.7) * 3;
-    let wAng = -2.0 + beat * 0.55;
+    let wAng = -1.82 + beat * 0.55;
     let open = 1 - Math.max(0, -upS) * 0.22;
     let bend = Math.max(0, -upS) * 0.55 - Math.max(0, upS) * 0.2;
     let lean = Math.sin(phi - 1.2) * 0.03;
     let headA = Math.cos(phi - 0.7) * 0.05;
     if (wind) {
-      wAng = -1.72 + beat * 0.3;
+      wAng = -1.55 + beat * 0.3;
       open = 1;
       bend = beat * 0.15;
       lean = -0.16;
       headA = -0.22;
     } else if (strike) {
-      wAng = -2.55 + beat * 0.12;
+      wAng = -2.4 + beat * 0.12;
       open = 0.75;
       bend = 0.35;
       lean = 0.3;
       headA = 0.22;
     } else if (rw) {
-      wAng = -1.68 + beat * 0.25;
+      wAng = -1.55 + beat * 0.25;
       open = 1;
       bend = beat * 0.12;
       headA = -0.3;
@@ -935,9 +1015,9 @@
     const swS = dead ? 0 : 1;
     for (let k = 6; k >= 0; k--) {
       const long = k % 2 === 1;
-      const L = long ? 70 - Math.abs(k - 3) * 4 : 40 + (k === 0 || k === 6 ? -4 : 0);
+      const L = long ? 92 - Math.abs(k - 3) * 6 : 50 + (k === 0 || k === 6 ? -6 : 0);
       const pts = [[-11, -36]];
-      let hd = PI + 0.42 - k * 0.14 + (strike ? 0.15 : 0);
+      let hd = PI + 0.3 - k * 0.12 + (strike ? 0.15 : 0);
       for (let i = 0; i < 6; i++) {
         hd += -0.07 + Math.sin(t * (wind || rw ? 4 : 2.4) - i * 0.75 - k * 0.45) * (0.05 + i * 0.03) * swS + (dead ? -0.12 : 0);
         const p = pts[i];
@@ -945,8 +1025,9 @@
       }
       const fn = spline(pts);
       const W = long ? 11 : 7.5;
-      const wf = long ? (s) => 2.8 * (1 - s) + W * Math.exp(-Math.pow((s - 0.8) / 0.12, 2)) * Math.min(1, (1 - s) * 7) : (s) => W * Math.sin(Math.min(1, s * 0.9 + 0.12) * PI) * (1 - s * 0.3) + 0.8;
-      const path = (c) => taper(c, fn, wf, 20);
+      // 長飄羽：羽軸兩側有一層薄薄的羽片（像鳳尾的緞帶），末端展開成眼紋
+      const wf = long ? (s) => 3.2 * (1 - s) + 3.4 * Math.sin(Math.min(1, s * 1.3) * PI) * (1 - s) + W * Math.exp(-Math.pow((s - 0.8) / 0.12, 2)) * Math.min(1, (1 - s) * 7) : (s) => W * Math.sin(Math.min(1, s * 0.9 + 0.12) * PI) * (1 - s * 0.3) + 0.8;
+      const path = (c) => taper(c, fn, wf, long ? 18 : 12);
       const p1 = pts[6];
       gradShape(ctx, path, -11, -36, p1[0], p1[1], [[0, long ? PHX.red : PHX.redS], [0.45, PHX.orange], [0.8, PHX.gold], [1, PHX.cream]], { lw: 1.7 });
       if (long) {
@@ -1002,18 +1083,25 @@
       for (let i = 0; i < 6; i++) {
         const bx = -24 + i * 9 + Math.sin(t * 3 + i) * 2;
         const by = -22 - Math.sin((i / 5) * PI) * 8;
-        flameTongue(ctx, bx, by, 5, 24 + Math.sin(t * 11 + i * 1.7) * 7 + Math.sin((i / 5) * PI) * 14, t, i * 1.9, '#ff6a2a', '#ffe68a', rw * 0.6);
+        flameTongue(ctx, bx, by, 3.2, 24 + Math.sin(t * 11 + i * 1.7) * 7 + Math.sin((i / 5) * PI) * 14, t, i * 1.9, '#ff6a2a', '#ffe68a', rw * 0.6);
       }
     }
     // ── 遠側翅膀 ──
-    phxWing(ctx, 6, -58, wAng - 0.26, open, bend, true, t + 0.15, heat);
+    {
+      // 遠側翅膀：往前上方張開（翼展比身體寬得多）
+      ctx.save();
+      ctx.translate(6, -57);
+      ctx.scale(-1, 1);
+      phxWing(ctx, 0, 0, wAng + 0.1, open, bend, true, t + 0.15, heat);
+      ctx.restore();
+    }
 
     // ── 爪：金色鱗腳收在身下，攻擊時往前伸 ──
     [[5, 1], [-2, 0]].forEach(([lx, far]) => {
       const reach = strike ? 9 : wind ? -2 : 0;
       const ax = lx + reach * 0.5;
       const kx = lx + 3 + reach;
-      const ky = -18 + (dead ? 3 : 0) + Math.sin(phi + far) * 0.8;
+      const ky = -24 + (dead ? 3 : 0) + Math.sin(phi + far) * 0.8;
       limb(ctx, (c) => {
         c.moveTo(lx, -32);
         c.quadraticCurveTo(ax + 2, -24, kx, ky);
@@ -1056,11 +1144,11 @@
 
     // ── 身體：挺起的胸 ──
     const body = (c) => {
-      c.moveTo(12, -62);
-      c.bezierCurveTo(24, -56, 23, -38, 10, -30);
-      c.bezierCurveTo(2, -25, -10, -27, -15, -34);
-      c.bezierCurveTo(-20, -42, -14, -56, -2, -61);
-      c.bezierCurveTo(3, -63, 8, -63.5, 12, -62);
+      c.moveTo(9, -61);
+      c.bezierCurveTo(18, -55, 16, -40, 7, -33);
+      c.bezierCurveTo(1, -29, -8, -31, -12, -37);
+      c.bezierCurveTo(-15, -44, -9, -55, 0, -59);
+      c.bezierCurveTo(3, -61, 6, -62, 9, -61);
       c.closePath();
     };
     A.shape(ctx, body, PHX.red, PHX.redS, { cel: [3, 3], lw: 2.6, hl: false });
@@ -1092,8 +1180,8 @@
     strokeOut(ctx, body, 2.6);
 
     // ── 脖子：S 形，頸圈是一圈金色尖羽 ──
-    const neckF = cb(3, -56, 19, -62, 5, -78, 17, -90);
-    const neckW = (q) => 15 - q * 6.5;
+    const neckF = cb(3, -56, 17, -63, 5, -78, 16, -91);
+    const neckW = (q) => 10.5 - q * 5;
     const neck = (c) => taper(c, neckF, neckW, 14);
     A.shape(ctx, neck, PHX.red, PHX.redS, { cel: [2, 2], hl: false, noStroke: true });
     clipDo(ctx, neck, () => {
@@ -1119,7 +1207,8 @@
 
     // ── 頭 ──
     ctx.save();
-    ctx.translate(17, -90);
+    ctx.translate(16, -91);
+    ctx.scale(0.8, 0.8);
     ctx.rotate(headA - lift * 0.015);
     // 冠羽：兩根像時針與分針的長冠羽（金色羽軸、菱形羽尖），後面襯著三根小火焰羽
     for (let i = 2; i >= 0; i--) {
@@ -1227,7 +1316,7 @@
     phxWing(ctx, -5, -55, wAng, open, bend, false, t, heat);
 
     if (rw > 0) {
-      for (let i = 0; i < 4; i++) flameTongue(ctx, -12 + i * 8, -26, 4, 12 + Math.sin(t * 13 + i) * 4, t, i * 2.3, '#ff8a3a', '#fff2a0', rw * 0.55);
+      for (let i = 0; i < 4; i++) flameTongue(ctx, -12 + i * 8, -26, 2.6, 12 + Math.sin(t * 13 + i) * 4, t, i * 2.3, '#ff8a3a', '#fff2a0', rw * 0.55);
       for (let i = 0; i < 12; i++) {
         const q = (t * 0.9 + hash(i)) % 1;
         const px = -30 + hash(i + 7) * 60;
@@ -1334,7 +1423,8 @@
     const t = num(m.t, 0);
     // 整隻放大一點，填滿牠的判定框（原點在腳底，地面不動）
     ctx.save();
-    ctx.scale(1.1, 1.1);
+    ctx.scale(1.05, 1.05);
+    ctx.translate(-7, 0);
     if (!copy) {
       qilinBody(ctx, m, false);
       ctx.restore();
@@ -1642,15 +1732,16 @@
     // ── 弓形的粗頸：從肩膀昂起，頸背一排稜鏡水晶鬃 ──
     ctx.save();
     bodyXf();
-    ctx.translate(16, -64);
+    // 頸根在胸前（肩的前方），往前上方斜著昂起，頭在身體前方、不壓在背上
+    ctx.translate(26, -61);
     ctx.rotate(headDrop * 0.45 + nod);
-    const neckF = cb(0, 6, 1, -9, 9, -20, 21, -27);
+    const neckF = cb(0, 6, 3, -8, 11, -18, 22, -25);
     const neckW = (q) => 25 - q * 10;
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 6; i >= 2; i--) {
       const s0 = 0.04 + i * 0.14;
       const p = along(neckF, s0, -neckW(s0) * 0.42);
       const fl = Math.sin(t * (walk ? 5 : 3) - i * 0.5) * (0.08 + i * 0.012) - nod * 0.8;
-      crystalShard(ctx, p[0], p[1], 21 - i * 0.8, 9, -2.55 + i * 0.1 + fl, Math.floor(t * 4) + i);
+      crystalShard(ctx, p[0], p[1], 17 - i * 0.6, 8, -2.25 + i * 0.07 + fl, Math.floor(t * 4) + i);
     }
     const neck = (c) => taper(c, neckF, neckW, 14);
     A.shape(ctx, neck, QL.body, QL.bodyS, { cel: [2, 2], hl: false, noStroke: true });
@@ -1679,7 +1770,7 @@
     strokeOut(ctx, (c) => taper(c, neckF, neckW, 14, true), 2.6);
     // ── 龍首 ──
     ctx.save();
-    ctx.translate(20, -27);
+    ctx.translate(21, -25);
     ctx.rotate(headDrop * 0.5 - 0.05);
     const open = strike || wind ? 1 : hurt ? 0.4 : 0;
     const wh = Math.sin(t * 2.4) * 3;
@@ -3944,7 +4035,7 @@
       gradShape(ctx, path, 0, 2, 0, -w0, [[0, col], [1, colS]], { lw: 1.2 });
       return path;
     };
-    if (!lite) {
+    if (!lite || lite === 'lower') {
       covert(11, 6, c0, far ? P.wingS : P.wing, 7);
       const cp = covert(6, 3.5, c0, far ? P.wingS : P.tip, 6);
       if (!far) crescent(ctx, cp, 1, 1, '#ffffff', 0.7);
@@ -4024,7 +4115,26 @@
       wBeat = -1.1;
     }
     const wBend = -wBeat * 0.35 + (wind ? Math.sin(t * 11 - 1.2) * 0.25 : 0);
-    const wAng = lerp(-2.8, -1.95, wOpen) + wBeat * 0.45;
+    const wAng = lerp(-2.62, -1.9, wOpen) + wBeat * 0.45;
+    // 下面那對小翅膀：拍動比上面慢半拍、角度偏後下方
+    let wBeat2 = Math.sin(t * 1.3 - 0.9) * 0.08 + rustle * Math.sin(t * 16 - 1) * 0.12;
+    if (walk) wBeat2 = Math.sin(G2 - 2.3) * 0.1;
+    if (wind) wBeat2 = Math.sin(t * 11 - 1.4) * 0.6;
+    else if (strike) wBeat2 = -0.3;
+    if (hurt) wBeat2 = 0.45;
+    if (dead) wBeat2 = -1.3;
+    const wOpen2 = clamp(wOpen * 0.9 + (wind ? 0.1 : 0), 0, 1);
+    const wAng2 = lerp(-3.4, -2.75, wOpen2) + wBeat2 * 0.45;
+    const wBend2 = -wBeat2 * 0.4;
+    const smallWing = (x, y, far) => {
+      if (lite) return;
+      const r = xf(x, y);
+      ctx.save();
+      ctx.translate(r[0], r[1]);
+      ctx.scale(0.72, 0.72);
+      pegWing(ctx, 0, 0, (far ? wAng2 - 0.25 : wAng2) + pitch, wOpen2, wBend2, P, far, t + 0.5, lite || 'lower');
+      ctx.restore();
+    };
     const PX = -22;
     const PY = -40;
     const cp = Math.cos(pitch);
@@ -4078,6 +4188,7 @@
     {
       const r = xf(6, -50);
       pegWing(ctx, r[0], r[1], wAng - 0.22 + pitch, wOpen, wBend, P, true, t + 0.2, lite);
+      smallWing(-2, -46, true);
     }
     leg(-20, -44, 0.5, false, true);
     leg(11, -41, 0.75, true, true);
@@ -4331,6 +4442,7 @@
     ctx.restore();
     // ── 近側翅膀 ──
     {
+      smallWing(-7, -43, false);
       const r = xf(2, -48);
       pegWing(ctx, r[0], r[1], wAng + pitch, wOpen, wBend, P, false, t, lite);
     }
@@ -4342,6 +4454,8 @@
     const twin = !!fx.twin;
     const fake = !!fx.fake;
     ctx.save();
+    // 整隻放大：身體更有份量
+    ctx.scale(1.15, 1.15);
     if (!fake) {
       // 分身中：背後浮著淡淡的、錯開的銀藍重影（另一個世界的自己）
       if (twin) {
@@ -4467,17 +4581,64 @@
       ctx.stroke();
     }
     ctx.restore();
-    // 尾鰭
-    const tailP = (c) => {
-      const p = [[-34, -42], [-64, -70], [-56, -46], [-52, -40], [-56, -34], [-64, -10], [-34, -38]].map(([x, y]) => tailT(x, y));
-      c.moveTo(p[0][0], p[0][1]);
-      c.quadraticCurveTo(p[1][0] + 8, p[1][1] + 4, p[1][0], p[1][1]);
-      c.quadraticCurveTo(p[2][0], p[2][1], p[3][0], p[3][1]);
-      c.quadraticCurveTo(p[4][0], p[4][1], p[5][0], p[5][1]);
-      c.quadraticCurveTo(p[5][0] + 8, p[5][1] - 4, p[6][0], p[6][1]);
-      c.closePath();
+    // 尾鰭：大片、多瓣、像緞帶一樣飄動的鰭（每一瓣各自慢半拍擺動），鰭緣有發光的線紋
+    const lobes = [[-0.62, 58, 24], [-0.25, 42, 18], [0.1, 30, 13], [0.42, 44, 18], [0.75, 60, 24]];
+    const lobeTip = lobes.map(([a, L], i) => {
+      const sw = Math.sin(t * 3.2 - i * 0.7) * 0.12 + Math.sin(t * 1.7 - i) * 0.05;
+      const aa = PI + a + sw;
+      const cu = Math.sin(t * 3.2 - i * 0.7 - 1) * 6 + (i < 2 ? -5 : i > 2 ? 5 : 0);
+      return [aa, L, cu];
+    });
+    // 每一瓣是一片寬寬的葉形鰭（從尾柄長出、尖端往後彎），幾瓣疊在一起
+    const tailLocal = (c, k) => {
+      const ox = -35;
+      const oy = -40;
+      lobeTip.forEach(([aa, L, cu], i) => {
+        const Lk = L * k;
+        const w = lobes[i][2] * k;
+        const ca = Math.cos(aa);
+        const sa = Math.sin(aa);
+        const Q = (u, v) => tailT(ox + ca * u - sa * v, oy + sa * u + ca * v);
+        const p0 = Q(0, -w * 0.3);
+        const p1 = Q(Lk * 0.5, -w * 0.75 + cu * 0.3);
+        const p2 = Q(Lk, cu);
+        const p3 = Q(Lk * 0.7, w * 0.35 + cu * 0.8);
+        const p4 = Q(Lk * 0.25, w * 0.1);
+        const p5 = Q(0, w * 0.3);
+        c.moveTo(p0[0], p0[1]);
+        c.quadraticCurveTo(p1[0], p1[1], p2[0], p2[1]);
+        c.quadraticCurveTo(p3[0], p3[1], p4[0], p4[1]);
+        c.lineTo(p5[0], p5[1]);
+        c.closePath();
+      });
     };
-    nebula(tailP, 0.55, -50, -40, 34);
+    const tailP = (c) => tailLocal(c, 1);
+    nebula(tailP, 0.6, -56, -40, 46);
+    // 鰭緣的發光線紋（內縮一圈的描線＋鰭條）
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(140,230,255,' + (0.4 + link * 0.4).toFixed(3) + ')';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    tailLocal(ctx, 0.78);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,240,190,' + (0.75 + link * 0.25).toFixed(3) + ')';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(190,240,255,0.55)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    lobeTip.forEach(([aa, L, cu]) => {
+      const a0 = tailT(-36, -40);
+      const b = tailT(-36 + Math.cos(aa) * L * 0.72 + Math.sin(aa) * cu * 0.4, -40 + Math.sin(aa) * L * 0.72 - Math.cos(aa) * cu * 0.4);
+      ctx.moveTo(a0[0], a0[1]);
+      ctx.lineTo(b[0], b[1]);
+      sparkle(ctx, b[0], b[1], 1.6, '#fff6c8');
+      ctx.moveTo(b[0], b[1]);
+    });
+    ctx.stroke();
+    ctx.restore();
     // 背鰭（高高的帆）、腹鰭
     // 背鰭與腹鰭跟著游動輕輕起伏（鰭尖慢半拍）
     const fr = Math.sin(t * 3 - 0.8) * 2.2;
