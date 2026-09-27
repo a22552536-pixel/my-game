@@ -18,9 +18,15 @@
   const BOT = 40;
   const SC = 2;
   let cache = null;
+  // 土地變老（見 background.js 檔尾）：營地所在的地圖變老時，靜態層在畫進快取時調色，
+  // 動態層走同一套顏色調色，螢火蟲、飛鳥少一大半。
+  let campAge = null;
+  let livingK = 1;
+  // 第三章打完：第一章營地龜爺爺的位置只剩一張空椅子
+  let emptyChairOn = false;
 
   function staticLayer(ctx, region, x1, x2, y, build) {
-    const key = region + '|' + x1 + '|' + x2 + '|' + y;
+    const key = region + '|' + x1 + '|' + x2 + '|' + y + '|' + (campAge ? campAge.key : '') + '|' + (emptyChairOn ? 'chair' : '');
     if (!cache || cache.key !== key) {
       const w = x2 - x1 + PAD * 2;
       const h = TOP + BOT;
@@ -36,7 +42,9 @@
       c.lineCap = 'round';
       c.lineJoin = 'round';
       try {
-        build(c, x1, x2, y);
+        // 變老的營地：畫進快取時每個顏色先經過調色
+        if (campAge && A.withAgeProfile) A.withAgeProfile(c, campAge, () => build(c, x1, x2, y));
+        else build(c, x1, x2, y);
       } finally {
         c.restore();
         A.mode = mode;
@@ -149,6 +157,7 @@
     }
   }
   function fireflies(ctx, cx, cy, w, h, t, n, rgb) {
+    n = Math.round(n * livingK);
     for (let k = 0; k < n; k++) {
       const s = hash(k + 7.3);
       const fx = cx + (hash(k * 1.7) - 0.5) * w + Math.sin(t * (0.5 + s * 0.6) + k * 2) * 18;
@@ -181,6 +190,7 @@
   }
   // 飛過的小鳥（遠景，V 字）
   function flyBirds(ctx, x1, x2, yTop, t, n, col) {
+    n = Math.round(n * livingK);
     for (let k = 0; k < n; k++) {
       const sp = 30 + hash(k * 4.1) * 20;
       const span = x2 - x1 + 400;
@@ -670,7 +680,62 @@
     [P(900), P(1150), P(1300), P(1440), P(1720), P(1810)].forEach((x, k) => grassTuft(c, x, y, 0.9, k % 2 ? '#5a9a3a' : '#6ab846'));
     flowers(c, P(1540), y, 3, ['#ffffff', '#ff8fb0'], 23);
     flowers(c, P(1702), y, 2, ['#ffd35a'], 29);
+    if (emptyChairOn) emptyChair(c, P(868), y);
   }
+
+  // 龜爺爺的空椅子：矮木椅、椅墊上是他那塊苔綠色的毯子，拐杖靠在椅背上；
+  // 旁邊的樹樁小桌上一杯茶，沒有冒煙（靜態層，本來就不會有煙）。
+  function emptyChair(c, x, y) {
+    at(c, x, y, (c) => {
+      c.scale(1.2, 1.2);
+      // 地上的影子
+      c.fillStyle = A.c('rgba(40,26,14,0.25)');
+      c.beginPath();
+      c.ellipse(-8, 0, 40, 4, 0, 0, TAU);
+      c.fill();
+      // 樹樁小桌與涼掉的茶（椅子左邊，鞦韆右邊留空）
+      const tx = -32;
+      S(c, (p) => { p.moveTo(tx - 11, 0); p.lineTo(tx - 9, -18); p.lineTo(tx + 9, -18); p.lineTo(tx + 11, 0); p.closePath(); }, '#8a5a36', '#6e4428', { cel: [3, 0], lw: 1.8, hl: false });
+      E(c, tx, -18, 9.5, 3.2, '#e0b884', '#c89a64', { lw: 1.6, hl: false });
+      c.strokeStyle = A.c('rgba(110,70,35,0.55)');
+      c.lineWidth = 0.9;
+      c.beginPath();
+      c.ellipse(tx, -18, 5, 1.6, 0, 0, TAU);
+      c.stroke();
+      // 茶碟、茶杯（沒有把手的小茶碗），茶面平靜，沒有煙
+      E(c, tx, -21, 7.5, 2, '#fbf6ec', '#e0d6c4', { lw: 1.3, hl: false });
+      S(c, (p) => { p.moveTo(tx - 5.5, -29); p.quadraticCurveTo(tx - 5.5, -21, tx, -21); p.quadraticCurveTo(tx + 5.5, -21, tx + 5.5, -29); p.closePath(); }, '#fbf6ec', '#ddd2be', { lw: 1.5, hl: false, shadeY: -24 });
+      E(c, tx, -29, 5.5, 1.5, '#8a6a2a', null, { lw: 1.1, hl: false });
+      line(c, [[tx - 3.5, -25.5], [tx + 2.5, -25.5]], '#6a9ac0', 1.2);
+      // 後腳與椅背（在椅面後面）
+      S(c, (p) => RR(p, 8, -60, 5, 60, 2), '#9a6436', '#7a4a28', { cel: [1.5, 0], lw: 2, hl: false });
+      S(c, (p) => RR(p, -13, -60, 5, 60, 2), '#9a6436', '#7a4a28', { cel: [1.5, 0], lw: 2, hl: false });
+      S(c, (p) => RR(p, -16, -63, 32, 8, 3), '#b8804a', '#9a6436', { cel: [1.5, 1.5], lw: 2, hl: false });
+      S(c, (p) => RR(p, -12, -48, 24, 5, 2), '#b8804a', '#9a6436', { lw: 1.8, hl: false });
+      // 前腳
+      S(c, (p) => RR(p, -15, -22, 5, 22, 2), '#9a6436', '#7a4a28', { lw: 2, hl: false });
+      S(c, (p) => RR(p, 11, -22, 5, 22, 2), '#9a6436', '#7a4a28', { lw: 2, hl: false });
+      line(c, [[-12, -9], [13, -9]], '#7a4a28', 2.4);
+      // 椅面
+      S(c, (p) => RR(p, -18, -27, 37, 7, 3), '#c8905a', '#a8744a', { cel: [2, 1.5], lw: 2.2 });
+      // 疊好的苔綠色小毯子（龜爺爺殼上的顏色），毯角垂在椅面前
+      S(c, (p) => { p.moveTo(-12, -27); p.quadraticCurveTo(-11, -34, -4, -34); p.lineTo(10, -34); p.quadraticCurveTo(15, -33, 14, -27); p.closePath(); }, '#7aa058', '#5a7e3e', { lw: 1.6, hl: false, shadeY: -29 });
+      S(c, (p) => { p.moveTo(6, -27); p.lineTo(13, -27); p.lineTo(12, -16); p.lineTo(7, -18); p.closePath(); }, '#7aa058', '#5a7e3e', { lw: 1.4, hl: false, shadeY: -20 });
+      c.strokeStyle = A.c('rgba(255,248,220,0.6)');
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(-8, -31);
+      c.lineTo(10, -31);
+      c.stroke();
+      // 靠在椅背右邊的拐杖
+      line(c, [[26, 0], [15, -64]], A.OUT, 5);
+      line(c, [[26, 0], [15, -64]], '#8a5a36', 3);
+      S(c, (p) => { p.moveTo(15, -63); p.quadraticCurveTo(13, -74, 5, -71); p.quadraticCurveTo(3, -67, 7, -66); }, 'rgba(0,0,0,0)', null, { lw: 2.8, hl: false });
+      // 椅子前面一片落葉
+      E(c, -4, -1, 4, 1.8, '#c8904a', null, { rot: 0.3, lw: 1, hl: false });
+    });
+  }
+
 
   function r1Anim(ctx, x1, x2, y, t) {
     const P = (wx) => wx - 800 + x1;
@@ -2133,9 +2198,20 @@
   A.drawCampHouses = function (ctx, x1, x2, y, t, region) {
     const R = CAMPS[region || 1];
     if (!R) return OLD && OLD.call(A, ctx, x1, x2, y, t, region);
+    const W = G.world;
+    const map = W && W.map && W.map.region === (region || 1) ? W.map : null;
+    campAge = map && A.ageProfile ? A.ageProfile(map) : null;
+    livingK = campAge ? 1 - 0.75 * campAge.lvl : 1;
+    emptyChairOn = (region || 1) === 1 && !!(W && W.flags && W.flags.lavaTortoiseDefeated);
     ctx.save();
-    staticLayer(ctx, region || 1, x1, x2, y, R.build);
-    R.anim(ctx, x1, x2, y, t);
-    ctx.restore();
+    try {
+      staticLayer(ctx, region || 1, x1, x2, y, R.build);
+      if (campAge && A.withAge) A.withAge(ctx, map, () => R.anim(ctx, x1, x2, y, t));
+      else R.anim(ctx, x1, x2, y, t);
+    } finally {
+      ctx.restore();
+      campAge = null;
+      livingK = 1;
+    }
   };
 })();

@@ -33,6 +33,8 @@
     load(mapId, entry) {
       const map = G.data.maps[mapId];
       if (!map) throw new Error('找不到地圖 ' + mapId);
+      // 土地變老：強度在進地圖時依旗標決定（背景、地形快取看到強度變了就重建）
+      map._aged = G.art.agedLevel ? G.art.agedLevel(map, this.flags) : 0;
       if (!map._theme) G.art.prepareMap(map);
       this.map = map;
       this.mapId = mapId;
@@ -54,7 +56,8 @@
       this.signs = (map.signs || []).map((s) => ({ x: s.x, y: map.platforms[s.p][2], text: s.text }));
       this.critters = [];
       const th = map.theme;
-      const nC = th === 'rootCave' ? 14 : ['queenHall', 'crabNest', 'lavaBed', 'volcanoNest', 'reef', 'snowCamp', 'snowField', 'iceFall', 'bellShrine', 'frostAltar', 'starStair', 'timeThrone', 'timeCorridor'].indexOf(th) >= 0 ? 0 : 6;
+      let nC = th === 'rootCave' ? 14 : ['queenHall', 'crabNest', 'lavaBed', 'volcanoNest', 'reef', 'snowCamp', 'snowField', 'iceFall', 'bellShrine', 'frostAltar', 'starStair', 'timeThrone', 'timeCorridor'].indexOf(th) >= 0 ? 0 : 6;
+      if (map._aged) nC = Math.round(nC * (1 - 0.8 * map._aged)); // 變老的土地：蝴蝶、螢火蟲少掉大半
       for (let i = 0; i < nC; i++) {
         this.critters.push({
           kind: th === 'rootCave' ? 'firefly' : 'butterfly',

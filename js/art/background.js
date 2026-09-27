@@ -1636,12 +1636,14 @@
   const layerCache = {};
   const layerLRU = [];
   const LAYER_KEEP = 3;
-  function buildLayers(themeId) {
-    const hit = layerLRU.indexOf(themeId);
+  // age：土地變老的調色設定（見檔尾「土地變老」）；有的話整組層在建快取時調色一次，快取也分開存
+  function buildLayers(themeId, age) {
+    const key = age ? themeId + '@' + age.key : themeId;
+    const hit = layerLRU.indexOf(key);
     if (hit >= 0) layerLRU.splice(hit, 1);
-    layerLRU.push(themeId);
+    layerLRU.push(key);
     while (layerLRU.length > LAYER_KEEP) delete layerCache[layerLRU.shift()];
-    if (layerCache[themeId]) return layerCache[themeId];
+    if (layerCache[key]) return layerCache[key];
     const th = THEMES[themeId];
     const out = th.layers.map((L, i) => {
       const c = document.createElement('canvas');
@@ -1656,9 +1658,10 @@
       // 只有動畫貼圖的層（鐘環、齒輪）不用每格貼一張空白大圖
       const empty = L.type === 'clockRings' || L.type === 'gears';
       const crop = empty ? null : cropRows(c);
+      if (age && !empty) ageCanvas(crop ? crop.canvas : c, age);
       return { canvas: crop ? crop.canvas : c, y0: crop ? crop.y0 : 0, f: L.f, anim, empty };
     });
-    layerCache[themeId] = out;
+    layerCache[key] = out;
     return out;
   }
   // 把整列透明的上下邊裁掉：遠景層多半只佔畫面一部分，每格少貼很多空白像素
@@ -1695,7 +1698,9 @@
   A.prepareMap = function (map) {
     const th = THEMES[map.theme] || THEMES.forestMorning;
     map._theme = th;
-    map._layers = buildLayers(THEMES[map.theme] ? map.theme : 'forestMorning');
+    const age = ageProfile(map);
+    map._layers = buildLayers(THEMES[map.theme] ? map.theme : 'forestMorning', age);
+    map._layersAge = age ? age.key : '';
     const rnd = U.seeded(map.w * 7 + map.h);
     map._deco = map.platforms.map((p) => {
       const list = [];
@@ -8889,6 +8894,7 @@
     const PAD_DN = 76;
     let pcMap = null;
     let pcScale = 0;
+    let pcAge = '';
     let pcTiles = new Map();
     let pcFrame = 0;
     function buildTile(map, i, tx0, tw, top, h, sc) {
@@ -8901,12 +8907,25 @@
       // 只留下這一個平台（其他平台移到很遠的地方），索引不變，裝飾與細節才對得上
       const proxy = Object.create(map);
       proxy.platforms = map.platforms.map((q, k) => (k === i ? q : [-1e9, -1e9 + 1, -1e9]));
+      // 土地變老：平台上的小花、小菇少掉大半，整塊地形在這裡調色一次
+      const age = ageProfile(map);
+      if (age) {
+        proxy._deco = agedDeco(map, age);
+        proxy._terr = agedTerr(map, age);
+      }
       const saveMode = A.mode;
       A.mode = null;
+      // 變老的地形：畫進快取時每個顏色先經過調色（依字串快取），不用事後逐像素再掃一遍大圖
+      const prevAge = activeAge;
+      if (age) {
+        hookCtx(g);
+        activeAge = age;
+      }
       try {
         livePlat(g, proxy, { x: tx0, y: map.platforms[i][2] - 100 });
       } finally {
         A.mode = saveMode;
+        activeAge = prevAge;
       }
       terrMap = map;
       return c;
@@ -8915,10 +8934,12 @@
       const tr = ctx.getTransform ? ctx.getTransform() : null;
       const dev = tr ? Math.hypot(tr.a, tr.b) : 1;
       const sc = Math.max(1, Math.min(2, Math.ceil(dev * 2 - 0.05) / 2));
-      if (map !== pcMap || sc !== pcScale) {
+      const ageKey = map._aged ? map.region + '@' + map._aged : '';
+      if (map !== pcMap || sc !== pcScale || ageKey !== pcAge) {
         pcTiles = new Map();
         pcMap = map;
         pcScale = sc;
+        pcAge = ageKey;
       }
       terrMap = map;
       pcFrame++;
@@ -8954,6 +8975,446 @@
     A.drawForeground = function (ctx, map, cam, t) {
       baseFore(ctx, map, cam, t);
       drawForeBits(ctx, map, cam, t);
+    };
+  })();
+
+  // ════════════════════════════════════════════════════════════
+  // 土地變老（docs/STORY.md 第 5 節之 1）：每章 Boss 被打倒後，那一章的每張地圖
+  // 整體偏灰、偏冷、飽和度降低，草轉枯黃；花、蝴蝶、發光菇這類活的小東西少掉大半，
+  // 多出幾堆落葉、枯枝。雪山（第四章）是「解凍」：髒灰的融雪、光禿的樹、雪變少。
+  // ・背景層、地形塊、營地靜態層：建快取時逐像素調色一次，遊戲中每格不多做像素運算
+  // ・每格重畫的向量擺設（地面擺設、前景草、飄葉、背景動畫、天空漸層）：
+  //   顏色字串經過同一個調色函數（依字串快取），只在畫這些東西的那一小段時間生效
+  // ・玩家、怪物、NPC、傳送門、寶箱、特效都不調色
+  // 強度在 world.load 時決定（map._aged），所以 Boss 房不會在勝利那一瞬間變色，下次進來才看到。
+  // ════════════════════════════════════════════════════════════
+  const AGE_FLAGS = { 1: 'queenShroomDefeated', 2: 'hermitCrabDefeated', 3: 'lavaTortoiseDefeated', 4: 'frostSpiritDefeated' };
+  A.AGE_FLAGS = AGE_FLAGS;
+  // 0 = 沒變老；打倒該章 Boss 後 0.7，之後每多打倒一章 Boss，前面的土地再老一點（最多 1）
+  A.agedLevel = function (map, flags) {
+    const r = map && map.region;
+    if (!AGE_FLAGS[r] || !flags || !flags[AGE_FLAGS[r]]) return 0;
+    let later = 0;
+    for (let k = r + 1; k <= 4; k++) if (flags[AGE_FLAGS[k]]) later++;
+    return Math.min(1, Math.round((0.7 + later * 0.1) * 100) / 100);
+  };
+  // 各章在強度 1 時的調色：dry 綠→枯黃、sat 保留的飽和度、tint 混入的冷灰（第四章是髒灰的融雪色）、br 亮度
+  const AGE_BASE = {
+    1: { dry: 0.85, sat: 0.5, tint: [112, 122, 138], ta: 0.17, br: 0.97 },
+    2: { dry: 0.6, sat: 0.52, tint: [116, 126, 140], ta: 0.17, br: 0.97 },
+    3: { dry: 0.5, sat: 0.6, tint: [118, 114, 116], ta: 0.18, br: 0.96 },
+    4: { dry: 0.3, sat: 0.55, tint: [118, 110, 98], ta: 0.3, br: 0.9 },
+  };
+  const ageProfiles = {};
+  function ageProfile(map) {
+    const lvl = (map && map._aged) || 0;
+    if (!lvl || !AGE_BASE[map.region]) return null;
+    const key = map.region + '@' + lvl;
+    let P = ageProfiles[key];
+    if (!P) {
+      const B = AGE_BASE[map.region];
+      P = ageProfiles[key] = {
+        key, region: map.region, lvl,
+        dry: B.dry * lvl, sat: 1 - (1 - B.sat) * lvl, br: 1 - (1 - B.br) * lvl, ta: B.ta * lvl,
+        tr: B.tint[0], tg: B.tint[1], tb: B.tint[2],
+        colors: new Map(),
+        heads: new Map(),
+      };
+    }
+    return P;
+  }
+  A.ageProfile = ageProfile;
+
+  // 單一顏色的調色（像素與顏色字串共用同一條公式）
+  function gradeRGB(r, g, b, P, out) {
+    const gd = g - (r > b ? r : b);
+    if (gd > 0) {
+      const k = gd * P.dry;
+      r += k * 0.95;
+      g -= k * 0.3;
+      b -= k * 0.12;
+    }
+    const L = 0.3 * r + 0.59 * g + 0.11 * b;
+    const s = P.sat;
+    const br = P.br * (1 - P.ta);
+    out[0] = (L + (r - L) * s) * br + P.tr * P.ta;
+    out[1] = (L + (g - L) * s) * br + P.tg * P.ta;
+    out[2] = (L + (b - L) * s) * br + P.tb * P.ta;
+  }
+  const px = [0, 0, 0];
+  function ageCanvas(c, P) {
+    if (!c || !c.width || !c.height) return;
+    const g = c.getContext('2d');
+    let img;
+    try {
+      img = g.getImageData(0, 0, c.width, c.height);
+    } catch (e) {
+      return;
+    }
+    const d = img.data;
+    for (let i = 0, n = d.length; i < n; i += 4) {
+      if (d[i + 3] === 0) continue;
+      gradeRGB(d[i], d[i + 1], d[i + 2], P, px);
+      d[i] = px[0];
+      d[i + 1] = px[1];
+      d[i + 2] = px[2];
+    }
+    g.putImageData(img, 0, 0);
+  }
+  A.ageCanvas = ageCanvas;
+
+  const RGBA_RE = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i;
+  function gradeColor(s, P) {
+    let v = P.colors.get(s);
+    if (v !== undefined) return v;
+    // 'rgba(r,g,b,a)' 的透明度常常每格都在變：只快取 rgb 的部分，a 原樣接回去，快取不會一直長
+    if (s.charCodeAt(3) === 97 && s.charCodeAt(4) === 40 && s.charCodeAt(0) === 114) {
+      const cut = s.lastIndexOf(',');
+      const head = s.slice(0, cut);
+      let gh = P.heads.get(head);
+      if (gh === undefined) {
+        const m = RGBA_RE.exec(head.replace('rgba(', 'rgb(') + ')');
+        if (m) {
+          gradeRGB(+m[1], +m[2], +m[3], P, px);
+          const cl = (x) => (x < 0 ? 0 : x > 255 ? 255 : Math.round(x));
+          gh = 'rgba(' + cl(px[0]) + ',' + cl(px[1]) + ',' + cl(px[2]);
+        } else gh = null;
+        if (P.heads.size > 2000) P.heads.clear();
+        P.heads.set(head, gh);
+      }
+      if (gh !== null) return gh + s.slice(cut);
+    }
+    let r, g, b, a = null;
+    if (s.charCodeAt(0) === 35) {
+      let h = s.slice(1);
+      if (h.length === 3 || h.length === 4) h = h.split('').map((k) => k + k).join('');
+      if (h.length === 6 || h.length === 8) {
+        r = parseInt(h.slice(0, 2), 16);
+        g = parseInt(h.slice(2, 4), 16);
+        b = parseInt(h.slice(4, 6), 16);
+        if (h.length === 8) a = parseInt(h.slice(6, 8), 16) / 255;
+      }
+    } else {
+      const m = RGBA_RE.exec(s);
+      if (m) {
+        r = +m[1];
+        g = +m[2];
+        b = +m[3];
+        if (m[4] != null) a = +m[4];
+      }
+    }
+    if (r == null || isNaN(r + g + b)) v = s;
+    else {
+      gradeRGB(r, g, b, P, px);
+      const cl = (x) => (x < 0 ? 0 : x > 255 ? 255 : Math.round(x));
+      const hx = (x) => (x < 16 ? '0' : '') + x.toString(16);
+      v = a == null ? '#' + hx(cl(px[0])) + hx(cl(px[1])) + hx(cl(px[2])) : 'rgba(' + cl(px[0]) + ',' + cl(px[1]) + ',' + cl(px[2]) + ',' + a + ')';
+    }
+    if (P.colors.size > 4000) P.colors.clear();
+    P.colors.set(s, v);
+    return v;
+  }
+  A.ageColor = (s, map) => {
+    const P = ageProfile(map);
+    return P && typeof s === 'string' ? gradeColor(s, P) : s;
+  };
+
+  // 每格重畫的東西：在 activeAge 生效的那一小段，畫布的 fillStyle / strokeStyle 與漸層色標都先調色。
+  // 只在用到的畫布（主畫布、變老的地形塊與營地快取）上裝一次存取子，之後沒生效時只多一個判斷；
+  // 其他離屏畫布（光暈貼圖之類的共用快取）完全不受影響，不會把調過色的東西存進共用快取。
+  let activeAge = null;
+  const addStop = typeof CanvasGradient !== 'undefined' ? CanvasGradient.prototype.addColorStop : null;
+  const hookedCtx = typeof WeakSet === 'function' ? new WeakSet() : null;
+  function hookCtx(ctx) {
+    if (!hookedCtx || hookedCtx.has(ctx)) return;
+    hookedCtx.add(ctx);
+    const proto = Object.getPrototypeOf(ctx);
+    ['createLinearGradient', 'createRadialGradient'].forEach((k) => {
+      const make = proto[k];
+      if (!make || !addStop) return;
+      try {
+        Object.defineProperty(ctx, k, {
+          configurable: true,
+          writable: true,
+          value: function () {
+            const g = make.apply(this, arguments);
+            const P = activeAge;
+            if (P !== null) g.addColorStop = (o, c) => addStop.call(g, o, typeof c === 'string' ? gradeColor(c, P) : c);
+            return g;
+          },
+        });
+      } catch (e) {
+        /* 不支援就只少了漸層的調色 */
+      }
+    });
+    ['fillStyle', 'strokeStyle'].forEach((k) => {
+      const d = Object.getOwnPropertyDescriptor(proto, k);
+      if (!d || !d.set || !d.get) return;
+      try {
+        Object.defineProperty(ctx, k, {
+          configurable: true,
+          get() {
+            return d.get.call(this);
+          },
+          set(v) {
+            d.set.call(this, activeAge !== null && typeof v === 'string' ? gradeColor(v, activeAge) : v);
+          },
+        });
+      } catch (e) {
+        /* 不支援就只少了向量擺設的調色 */
+      }
+    });
+  }
+  // 讓其他檔案（營地）也能用同一套調色畫：A.withAge(ctx, map, () => ...)；A.withAgeProfile 直接給調色設定
+  A.withAge = function (ctx, map, fn) {
+    return A.withAgeProfile(ctx, ageProfile(map), fn);
+  };
+  A.withAgeProfile = function (ctx, P, fn) {
+    if (!P) return fn();
+    hookCtx(ctx);
+    const prev = activeAge;
+    activeAge = P;
+    try {
+      return fn();
+    } finally {
+      activeAge = prev;
+    }
+  };
+
+  // ── 活的小東西變少 ──
+  // 平台上的小花、小菇（map._deco 與 map._terr 的花），依座標固定挑掉一大半
+  const LIVING_DECO = { flowers: 1, mushrooms: 1, glowshrooms: 1 };
+  const keepFrac = (P) => 1 - 0.85 * P.lvl;
+  function agedDeco(map, P) {
+    if (map._agedDecoKey === P.key) return map._agedDeco;
+    const th = map._theme;
+    const keep = keepFrac(P);
+    map._agedDeco = map._deco.map((list, i) => {
+      const P2 = i === 0 && th.ground ? th.ground : th.plat;
+      if (!LIVING_DECO[P2 && P2.deco]) return list;
+      return list.map((d) => (d.k >= 0.45 && d.k <= 0.8 && hash(d.x * 0.37 + i) > keep ? Object.assign({}, d, { k: 0.9 }) : d));
+    });
+    map._agedDecoKey = P.key;
+    return map._agedDeco;
+  }
+  function agedTerr(map, P) {
+    if (!map._terr) return map._terr;
+    if (map._agedTerrKey === P.key) return map._agedTerr;
+    const keep = keepFrac(P);
+    map._agedTerr = map._terr.map((T) => {
+      if (!T) return T;
+      const T2 = Object.assign({}, T);
+      T2.flowers = T.flowers.filter((f) => hash(f.x * 0.53 + 3) < keep);
+      // 雪山解凍：冰柱短一截、少一半
+      if (P.region === 4 && T.icicles.length) T2.icicles = T.icicles.filter((c) => hash(c.x + 9) < 0.5).map((c) => Object.assign({}, c, { len: c.len * 0.6 }));
+      return T2;
+    });
+    map._agedTerrKey = P.key;
+    return map._agedTerr;
+  }
+  // 地面擺設：花叢、菇叢、發光苔、珊瑚……挑掉大半，一部分換成落葉堆、枯枝；雪山的松樹有的變成光禿的樹
+  const LIVING_PROP = {
+    flowers: 1, flowerPatch: 1, mushCluster: 1, toadstools: 1, bigMush: 1, glowCluster: 1, glowMoss: 1,
+    fern: 1, fernClump: 1, sapling: 1, desertFlower: 1, coral: 1, coralTuft: 1, starfish: 1, frostTuft: 1,
+  };
+  function agedProps(map, src, P) {
+    const keep = keepFrac(P);
+    const out = [];
+    for (const p of src) {
+      const h = hash(p.x * 0.71 + 5);
+      if (P.region === 4 && (p.kind === 'snowPine' || p.kind === 'frozenShrub') && h < 0.6) {
+        out.push(Object.assign({}, p, { kind: 'bareTree', s: p.s * 0.95 }));
+        continue;
+      }
+      if (P.region === 4 && p.kind === 'snowLump' && h < 0.7) {
+        out.push(Object.assign({}, p, { kind: 'slush' }));
+        continue;
+      }
+      if (!LIVING_PROP[p.kind] || h < keep) {
+        out.push(p);
+        continue;
+      }
+      // 沒留下來的：大約一半換成落葉堆／枯枝（雪山是一灘融雪）
+      const h2 = hash(p.x * 1.3 + 11);
+      if (h2 < 0.55) out.push(Object.assign({}, p, { kind: P.region === 4 ? 'slush' : h2 < 0.3 ? 'agedLeaves' : 'agedBranch', s: 0.8 + h2 * 0.5 }));
+    }
+    return out;
+  }
+
+  // ── 新的擺設：落葉堆、枯枝、光禿的樹、融雪 ──
+  Object.assign(PROP, {
+    agedLeaves(ctx) {
+      // 地上一小堆捲起來的枯葉
+      const leaves = [[-14, -2, 0.3, '#b8843a'], [-6, -4, -0.5, '#9a6a34'], [3, -2, 0.6, '#c89a48'], [11, -3, -0.2, '#a8743a'], [-1, -6, 0.1, '#d0a456'], [17, -1, 0.9, '#8a5e30']];
+      for (const [x, y, rot, col] of leaves) {
+        A.ellipse(ctx, x, y, 6, 2.6, col, null, { rot, lw: 1.3, hl: false });
+        ctx.strokeStyle = 'rgba(80,50,25,0.55)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(x - Math.cos(rot) * 4.5, y - Math.sin(rot) * 4.5);
+        ctx.lineTo(x + Math.cos(rot) * 4.5, y + Math.sin(rot) * 4.5);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-20, 0);
+      ctx.lineTo(-4, -3);
+      ctx.lineTo(4, -9);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a6a50';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    },
+    agedBranch(ctx) {
+      // 掉在地上的枯枝：灰褐、分兩個叉、斷口淺色
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const path = (c) => {
+        c.moveTo(-30, -2);
+        c.quadraticCurveTo(-8, -6, 12, -3);
+        c.lineTo(30, -1);
+        c.moveTo(-6, -5);
+        c.quadraticCurveTo(0, -14, 8, -20);
+        c.moveTo(12, -3);
+        c.lineTo(22, -12);
+        c.moveTo(-18, -3);
+        c.lineTo(-24, -10);
+      };
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 6.5;
+      ctx.beginPath();
+      path(ctx);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a7462';
+      ctx.lineWidth = 3.6;
+      ctx.beginPath();
+      path(ctx);
+      ctx.stroke();
+      A.ellipse(ctx, -30, -2, 2.4, 2.6, '#d8c4a8', null, { lw: 1.2, hl: false });
+      // 最後兩片還掛著的葉子
+      A.ellipse(ctx, 9, -21, 4.5, 2.2, '#b8843a', null, { rot: -0.7, lw: 1.1, hl: false });
+      A.ellipse(ctx, 23, -14, 4, 2, '#9a6a34', null, { rot: 0.5, lw: 1.1, hl: false });
+    },
+    bareTree(ctx, t) {
+      // 光禿的小樹：葉子掉光，只剩灰褐的枝，枝頭一兩片不肯掉的葉子
+      const sw = Math.sin(t * 0.7) * 0.01;
+      A.shape(ctx, (c) => { c.moveTo(-9, 0); c.quadraticCurveTo(-5, -40, -5, -78); c.lineTo(5, -78); c.quadraticCurveTo(5, -40, 10, 0); c.closePath(); }, '#8a7a6c', '#6e6054', { cel: [3, 0], lw: 2.4 });
+      ctx.save();
+      ctx.translate(0, -70);
+      ctx.rotate(sw);
+      const limbs = [[0, 0, -30, -40, 5], [0, -4, 26, -46, 4.5], [0, -8, 4, -62, 4], [-18, -24, -34, -30, 2.6], [-20, -27, -22, -54, 2.4], [15, -26, 34, -30, 2.4], [16, -28, 14, -58, 2.2], [3, -40, -8, -58, 2]];
+      ctx.lineCap = 'round';
+      for (const [x0, y0, x1, y1, w] of limbs) {
+        ctx.strokeStyle = A.outline();
+        ctx.lineWidth = w + 2.6;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.quadraticCurveTo((x0 + x1) / 2 + (x1 - x0) * 0.1, (y0 + y1) / 2, x1, y1);
+        ctx.stroke();
+        ctx.strokeStyle = '#8a7a6c';
+        ctx.lineWidth = w;
+        ctx.stroke();
+      }
+      A.ellipse(ctx, -34, -31, 4, 2.2, '#b8843a', null, { rot: 0.4, lw: 1.1, hl: false });
+      ctx.restore();
+    },
+    slush(ctx) {
+      // 融掉一半的雪：髒灰的一灘水，邊上幾塊塌掉的雪
+      ctx.fillStyle = 'rgba(96,104,112,0.55)';
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 30, 5, 0, 0, PI2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(220,228,236,0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-14, 1);
+      ctx.lineTo(-4, 1);
+      ctx.moveTo(6, 3);
+      ctx.lineTo(14, 3);
+      ctx.stroke();
+      A.ellipse(ctx, -24, -2, 9, 5, '#c8c4bc', '#a8a49c', { lw: 1.6, hl: false, shadeY: -1 });
+      A.ellipse(ctx, 22, -1, 7, 4, '#bcb8b0', '#9c988e', { lw: 1.5, hl: false, shadeY: 0 });
+      A.ellipse(ctx, 12, -3, 4, 2.6, '#d4d0c8', null, { lw: 1.2, hl: false });
+    },
+  });
+
+  // ── 接上：背景、擺設、前景、大氣在「變老」的地圖上走調色 ──
+  (function hookAging() {
+    const baseBg = A.drawBackground;
+    A.drawBackground = function (ctx, map, cam, t) {
+      const P = ageProfile(map);
+      const want = P ? P.key : '';
+      // 旗標改變（下一次 world.load 重算 map._aged）→ 換一組背景層快取
+      if ((map._layersAge || '') !== want) {
+        map._layers = buildLayers(THEMES[map.theme] ? map.theme : 'forestMorning', P);
+        map._layersAge = want;
+      }
+      if (!P) return baseBg(ctx, map, cam, t);
+      hookCtx(ctx);
+      activeAge = P;
+      try {
+        baseBg(ctx, map, cam, t);
+      } finally {
+        activeAge = null;
+      }
+    };
+    const baseProps = A.drawProps;
+    A.drawProps = function (ctx, map, cam, t) {
+      const P = ageProfile(map);
+      if (!P) return baseProps(ctx, map, cam, t);
+      const orig = map._props;
+      if (map._agedPropsKey !== P.key || map._agedPropsSrc !== orig) {
+        map._agedProps = agedProps(map, orig, P);
+        map._agedPropsKey = P.key;
+        map._agedPropsSrc = orig;
+      }
+      map._props = map._agedProps;
+      hookCtx(ctx);
+      activeAge = P;
+      try {
+        baseProps(ctx, map, cam, t);
+      } finally {
+        activeAge = null;
+        map._props = orig;
+      }
+    };
+    const baseFore = A.drawForeground;
+    A.drawForeground = function (ctx, map, cam, t) {
+      const P = ageProfile(map);
+      if (!P) return baseFore(ctx, map, cam, t);
+      hookCtx(ctx);
+      activeAge = P;
+      try {
+        baseFore(ctx, map, cam, t);
+      } finally {
+        activeAge = null;
+      }
+    };
+    const baseAtmo = A.drawAtmosphere;
+    A.drawAtmosphere = function (ctx, map, cam, t) {
+      const P = ageProfile(map);
+      if (!P) return baseAtmo(ctx, map, cam, t);
+      // 飄浮的光點少一大半；雪山解凍：雪只剩零星幾片
+      const motes = map._motes;
+      const th = map._theme;
+      if (map._agedMotesKey !== P.key) {
+        map._agedMotes = motes.slice(0, Math.round(motes.length * (1 - 0.65 * P.lvl)));
+        map._agedMotesKey = P.key;
+        map._agedTheme = P.region === 4 ? Object.assign(Object.create(th), { snowAmt: (th.snowAmt || 1) * (1 - 0.7 * P.lvl) }) : th;
+      }
+      map._motes = map._agedMotes;
+      map._theme = map._agedTheme;
+      hookCtx(ctx);
+      activeAge = P;
+      try {
+        baseAtmo(ctx, map, cam, t);
+      } finally {
+        activeAge = null;
+        map._motes = motes;
+        map._theme = th;
+      }
     };
   })();
 

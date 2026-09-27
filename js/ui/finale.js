@@ -20,6 +20,8 @@
     a_finaleNext() {
       const lines = G.data.story.ending;
       this.finaleI = (this.finaleI || 0) + 1;
+      // 第二頁「你把心葉放回樹上。時鐘又開始轉。」：停住的世界恢復顏色與聲音
+      if (G.cut && G.cut.resumeClock) G.cut.resumeClock();
       if (this.finaleI > lines.length) {
         this.close('finale');
         G.world.flags.gameCleared = true;

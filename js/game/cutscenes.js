@@ -38,6 +38,8 @@
       this.talk = null;
       const region = tk.region;
       G.hud.story(G.data.story.bossDefeated[tk.boss.id] || '');
+      // 時間倒下：「滴答聲，停了。」——從這一句起世界停住，直到結局第二頁把心葉放回去
+      if (tk.boss.id === 'timeItself') this.stopClock();
       // 接著是拿葉子的儀式，儀式結束後出現章末卡片
       if (!G.story.hasLeaf(region)) {
         G.story.pendingEnd = region;
@@ -109,8 +111,66 @@
       G.audio.play('evolve');
     },
 
+    // ── 時鐘停住（docs/STORY.md 第 5 節之 3）──
+    // 打倒時間後：世界上的粒子停在半空、畫面褪成灰、音樂淡出。
+    // 一直停到結局第二頁（「你把心葉放回樹上。時鐘又開始轉。」），顏色與音樂才回來。
+    // 只存在記憶體裡（不寫進存檔）；如果流程被跳過或中斷（沒有遺言、儀式、章末卡片、結局頁在進行），
+    // 1.5 秒後自己恢復，不會把世界永遠卡在灰色裡。
+    clock: null,
+    stopClock() {
+      if (this.clock && !this.clock.releasing) return;
+      this.clock = { amt: this.clock ? this.clock.amt : 0, releasing: false, idle: 0 };
+      G.fx.particles.forEach((p) => (p.clockStopped = true));
+      if (G.music && G.music.current()) G.music.stop(1.8);
+    },
+    resumeClock() {
+      const k = this.clock;
+      if (!k || k.releasing) return;
+      k.releasing = true;
+      G.fx.particles.forEach((p) => (p.clockStopped = false));
+      const map = G.world.map;
+      if (G.music) G.music.play(G.music.songFor({ region: map ? map.region : 5 }));
+    },
+    clockHold() {
+      return !!(this.clock && !this.clock.releasing);
+    },
+    tickClock(dt) {
+      const k = this.clock;
+      if (!k) return;
+      if (G.scene !== 'play') {
+        this.clock = null;
+        return;
+      }
+      if (k.releasing) {
+        k.amt -= dt / 1.4;
+        if (k.amt <= 0) this.clock = null;
+        return;
+      }
+      k.amt = Math.min(1, k.amt + dt / 1.6);
+      const U = G.ui;
+      const inFlow = this.talk || this.epi || this.pendingTalk || G.story.cer || G.story.pendingEnd || (U.isOpen && (U.isOpen('m1end') || U.isOpen('finale')));
+      k.idle = inFlow ? 0 : k.idle + dt;
+      if (k.idle > 1.5) this.resumeClock();
+    },
+    drawClock(ctx) {
+      const k = this.clock;
+      if (!k || k.amt <= 0) return;
+      const a = k.amt * k.amt * (3 - 2 * k.amt);
+      ctx.save();
+      ctx.globalCompositeOperation = 'saturation';
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, G.W, G.H);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(24,28,40,' + (0.2 * a).toFixed(3) + ')';
+      ctx.fillRect(0, 0, G.W, G.H);
+      ctx.restore();
+    },
+
     // 每幀：時機到了就自動開始內心的聲音（不在 Boss 戰、沒有視窗、沒有其他過場）
     tick() {
+      this.tickClock(1 / 60);
       if (!this.pendingVoice || this.pendingTalk || G.story.pendingEnd || G.scene !== 'play' || this.active() || G.story.cer || G.evolve.anim) return;
       if (G.ui.blocking() || (G.world.boss && !G.world.boss.dead) || G.tutorial.blocking()) return;
       if (!G.evolve.canEvolve()) {
@@ -344,6 +404,41 @@
       ctx.restore();
     },
   });
+
+  // 時鐘停住時：世界畫完後整片褪灰（HUD、過場對話、儀式的葉子不褪）；停住那一刻已經在飛的粒子不再動
+  const worldDraw = G.world.draw;
+  G.world.draw = function (ctx) {
+    worldDraw.call(this, ctx);
+    if (C.clock) C.drawClock(ctx);
+  };
+  const fxUpdate = G.fx.update;
+  G.fx.update = function (dt) {
+    if (!C.clockHold()) return fxUpdate.call(this, dt);
+    const held = [];
+    const live = [];
+    for (const p of this.particles) (p.clockStopped ? held : live).push(p);
+    if (!held.length) return fxUpdate.call(this, dt);
+    this.particles = live;
+    try {
+      return fxUpdate.call(this, dt);
+    } finally {
+      this.particles = held.concat(this.particles);
+    }
+  };
+  // 換地圖（倒下回營、讀檔、傳送）就不再停著
+  const worldLoad = G.world.load;
+  G.world.load = function () {
+    C.clock = null;
+    return worldLoad.apply(this, arguments);
+  };
+  // 沒有遺言可講的情況（資料被改掉）也要停住：直接在 Boss 倒下時開始
+  const bossKilled = G.world.onBossKilled;
+  G.world.onBossKilled = function (b) {
+    const first = !this.flags[b.id + 'Defeated'];
+    const r = bossKilled.call(this, b);
+    if (b.id === 'timeItself' && first && !b.recall && !G.data.story.bossWords[b.id]) C.stopClock();
+    return r;
+  };
 
   document.addEventListener('mousedown', () => {
     if (C.active()) C.clicked = true;

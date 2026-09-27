@@ -24,7 +24,7 @@ G.data.maps = {
     ],
     start: { x: 180, p: 0 },
     npcs: [
-      { id: 'turtle', x: 860, p: 0 },
+      { id: 'turtle', x: 860, p: 0, noFlag: 'lavaTortoiseDefeated' },
       { id: 'owl', x: 1060, p: 0 },
       { id: 'hedgehog', x: 1230, p: 0 },
       { id: 'hedgekid', x: 1310, p: 0 },

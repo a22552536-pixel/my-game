@@ -358,31 +358,78 @@
       id: 'whip', w: 3,
       ok: (m, P) => Math.abs(P.x - m.x) < 640,
       run(m, P) {
-        const dirs = m.fx.rage ? [m.dir, -m.dir] : [m.dir];
+        // 節奏：蓄力 1.0 秒（鞭子往後捲、火焰沿鞭身竄起）→ 0.1 秒甩出（鞭梢劃過頭頂落到前方）→ 鞭梢著地爆響、判定一次
+        // 判定：從魔王腳下往前 len、離地 0～80 的長方形＝預警線＝美術的鞭梢落點（fx.whipLen）＝地面火線 fb_whipcrack
+        const rage = !!m.fx.rage;
+        const dirs = rage ? [m.dir, -m.dir] : [m.dir];
         const len = 560;
+        const K = (m.h || 260) / 260;
         dirs.forEach((d) => warnLine(m.x, m.y - 40, m.x + d * len, m.y - 40, 80, 1.0));
         m.attackPhase = 'wind';
+        m.fx.whipLen = len;
+        m.fx.whipCharge = 0;
+        m.fx.whipT = 0;
         G.audio.play('bossWarn');
         let hit = false;
-        return (t) => {
+        let swung = false;
+        return (t, dt, P2) => {
           if (t < 1.0) {
             m.fx.whip = 0;
+            m.fx.whipCharge = t / 1.0;
+            // 蓄力到頂時鞭子上的火舌往上噴
+            if (t > 0.55 && Math.random() < dt * (rage ? 26 : 16)) {
+              const hx = m.x - m.dir * (60 + Math.random() * 140) * K;
+              G.fx.burst(hx, m.y - (170 + Math.random() * 110) * K, rage ? ['#fff6c8', '#ffd23a', '#ff7a1e'] : ['#ffd35a', '#ff7a2a'], 2, 120, { angle: -Math.PI / 2, spread: 0.6, grav: -200, life: 0.5 });
+            }
             return false;
           }
           m.attackPhase = 'strike';
-          m.fx.whip = Math.min(1, (t - 1.0) / 0.3);
+          m.fx.whipCharge = 1;
+          m.fx.whipT = t - 1.0;
+          const k = Math.min(1, (t - 1.0) / 0.1);
+          m.fx.whip = 1 - (1 - k) * (1 - k);
+          if (!swung) {
+            swung = true;
+            G.audio.play('sweep');
+            // 鞭痕（掃過的火弧、鞭梢爆響、地面火線）：建立時間＝甩出瞬間，0.1 秒後鞭梢著地
+            dirs.forEach((d) => zone({
+              kind: 'fb_whipcrack', x: m.x + d * len / 2, y: m.y, r: len / 2 + 40, x1: m.x, x2: m.x + d * len, len, dir: d,
+              hx: m.x + d * 156 * K, hy: m.y - 150 * K, k: K, hitAt: 0.1, rage, life: rage ? 1.7 : 1.4,
+            }));
+          }
           if (!hit && t >= 1.1) {
             hit = true;
-            G.audio.play('sweep');
-            G.fx.shake(5, 0.15);
+            m.fx.whip = 1;
+            G.audio.play('slam');
+            G.audio.play('rockHit');
+            let got = false;
             dirs.forEach((d) => {
               const x1 = Math.min(m.x, m.x + d * len);
-              for (let i = 0; i < 8; i++) G.fx.burst(m.x + d * (i + 1) * (len / 8), m.y - 40, ['#ff7a2a', '#ffd35a'], 3, 160, { life: 0.4 });
-              hitBox(m, { x: x1, y: m.y - 80, w: len, h: 80 }, 1.35);
+              const tx = m.x + d * len;
+              const ty = m.y - 40;
+              // 鞭梢的音爆：白熱閃光圈＋往四周噴的火花
+              G.fx.ring(tx, ty, rage ? 'rgba(255,246,200,0.95)' : 'rgba(255,220,120,0.9)', rage ? 150 : 110, 0.32, rage ? 8 : 6);
+              G.fx.ring(tx, ty, 'rgba(255,120,40,0.8)', rage ? 230 : 170, 0.45, 4);
+              G.fx.burst(tx, ty, rage ? ['#ffffff', '#fff6c8', '#ffd23a', '#ff7a1e'] : ['#ffffff', '#ffd35a', '#ff7a2a'], rage ? 30 : 20, rage ? 560 : 440, { grav: 300, life: 0.55, size: 5 });
+              G.fx.text(tx, ty - 50, '啪！', rage ? '#fff6c8' : '#ffd35a', rage ? 34 : 28, 0.6);
+              // 沿著鞭痕的火星、地面炸起的碎屑
+              const n = rage ? 10 : 8;
+              for (let i = 0; i < n; i++) {
+                const bx = m.x + d * (i + 0.5) * (len / n);
+                G.fx.burst(bx, m.y - 40, ['#ff7a2a', '#ffd35a', rage ? '#fff6c8' : '#ff5a1e'], rage ? 5 : 4, 260, { angle: -Math.PI / 2, spread: 0.9, life: 0.6 });
+                if (i % 2) G.fx.burst(bx, m.y - 4, ['#3a2a24', '#5a3a2a'], 3, 220, { angle: -Math.PI / 2, spread: 0.7, life: 0.45 });
+              }
+              got = hitBox(m, { x: x1, y: m.y - 80, w: len, h: 80 }, 1.35) || got;
             });
+            // 打擊感：打中玩家時畫面停得久一點、閃一下；打在地上也有短暫停頓＋震動
+            G.fx.shake(got ? (rage ? 12 : 10) : rage ? 9 : 7, got ? 0.35 : 0.25, got && rage);
+            G.fx.addHitstop(got ? 0.12 : 0.06, got);
+            if (got) G.fx.screenFlash(rage ? '#fff0c0' : '#ffb060', rage ? 0.3 : 0.22);
           }
           if (t > 1.6) {
             m.fx.whip = 0;
+            m.fx.whipCharge = 0;
+            m.fx.whipT = 0;
             return true;
           }
           return false;
@@ -552,17 +599,41 @@
   ];
 
   // 光束（千手冰像的雙眼冰光、星蝕魔龍的虛空吐息）：蓄力 1.2 秒（預警線瞄準玩家當下的位置），發射 0.6 秒、只打一下
+  // 方向在蓄力開始時就決定；起點每一幀都跟著嘴／眼（魔龍懸空會上下飄），所以預警線、光束、判定三者永遠從同一點出發。
+  // o.eye(k, fire, a)：k＝蓄力進度 0..1、fire＝是否發射中、a＝光束角度（世界座標），回傳 { x, y }
+  // o.pose(a)（可省略）：依光束角度設定頭的姿勢旗標（例如 m.fx.beamTilt），讓美術把頭對準光束
   function beamMove(m, P, o) {
     let shot = 0;
     let t0 = 0;
+    let ang = 0;
     let seg = null;
+    let warnZ = null;
+    let beamZ = null;
+    const place = (k, fire) => {
+      const e = o.eye(k, fire, ang);
+      seg = { x1: e.x, y1: e.y, x2: e.x + Math.cos(ang) * o.len, y2: e.y + Math.sin(ang) * o.len };
+      for (const z of [fire ? beamZ : warnZ]) {
+        if (!z) continue;
+        Object.assign(z, seg);
+        z.x = (seg.x1 + seg.x2) / 2;
+        z.y = Math.max(seg.y1, seg.y2);
+      }
+    };
     const aim = (P2) => {
-      const e = o.eye();
       const tx = P2.x;
       const ty = P2.y - 30;
-      const a = Math.atan2(ty - e.y, tx - e.x);
-      seg = { x1: e.x, y1: e.y, x2: e.x + Math.cos(a) * o.len, y2: e.y + Math.sin(a) * o.len };
-      warnLine(seg.x1, seg.y1, seg.x2, seg.y2, o.w, 1.2);
+      // 起點會跟著角度（頭的仰角）移動，算兩次讓光束確實從嘴巴指向玩家
+      let e = o.eye(1, true, 0);
+      for (let i = 0; i < 2; i++) {
+        ang = Math.atan2(ty - e.y, tx - e.x);
+        if (o.pose) o.pose(ang);
+        e = o.eye(1, true, ang);
+      }
+      ang = Math.atan2(ty - e.y, tx - e.x);
+      if (o.pose) o.pose(ang);
+      const s = o.eye(0, false, ang);
+      warnZ = warnLine(s.x, s.y, s.x + Math.cos(ang) * o.len, s.y + Math.sin(ang) * o.len, o.w, 1.2);
+      beamZ = null;
       G.audio.play('bossWarn');
     };
     aim(P);
@@ -574,6 +645,7 @@
       if (lt < 1.2) {
         m.fx[o.flag] = lt / 1.2;
         m.fx.beamFire = false;
+        place(lt / 1.2, false);
         return false;
       }
       m.fx[o.flag] = 1;
@@ -582,10 +654,15 @@
       if (!fired) {
         fired = true;
         hit = false;
+        // 預警線在發射的同一幀收掉：畫面上只會有一道光束
+        if (warnZ) warnZ.t = warnZ.life + 1;
+        warnZ = null;
         G.audio.play('thunder');
         G.fx.shake(5, 0.4);
-        zone({ kind: 'fb_beam', x: (seg.x1 + seg.x2) / 2, y: Math.max(seg.y1, seg.y2), x1: seg.x1, y1: seg.y1, x2: seg.x2, y2: seg.y2, w: o.w, r: o.len / 2, color: o.color, life: 0.6 });
+        place(1, true);
+        beamZ = zone({ kind: 'fb_beam', x: (seg.x1 + seg.x2) / 2, y: Math.max(seg.y1, seg.y2), x1: seg.x1, y1: seg.y1, x2: seg.x2, y2: seg.y2, w: o.w, r: o.len / 2, color: o.color, life: 0.6 });
       }
+      place(1, true);
       if (!hit && lt < 1.75 && P2.alive() && segDist(P2.x, P2.y - 30, seg.x1, seg.y1, seg.x2, seg.y2) < o.w / 2 + 16) {
         hit = hurtP(m, o.k, m.x) || hit;
       }
@@ -608,6 +685,28 @@
     };
   }
 
+  // 星蝕魔龍嘴巴的位置：照抄 js/art/fieldboss.js fb_voiddragon 的變換
+  //   畫布：(m.x, m.y − hover) → scale(dir·sc) → scale(K = h/250) → translate(0, fl = sin(t·1.6)·5)
+  //   頭：translate(84 + headX/2, −150 − headUp·20) → rotate(−headUp) → 嘴 (74, 14)
+  //   噴吐時 headX = 10、headUp = fx.beamTilt（頭對準光束）；蓄力時 headUp = 0.35k、headX = −14k（往後仰）
+  const VOID_TILT = [-0.6, 0.4];
+  const voidTilt = (m, a) => {
+    const la = Math.atan2(Math.sin(a), Math.cos(a) * (m.dir || 1)); // 面向前方時的角度（往下為正）
+    return U.clamp(-la, VOID_TILT[0], VOID_TILT[1]);
+  };
+  const voidMouth = (m, k, fire) => {
+    const sc = m.scale || 1;
+    const K = (m.h || 220) / 250;
+    const hu = fire ? m.fx.beamTilt || 0 : 0.35 * k;
+    const hx = fire ? 10 : -14 * k;
+    const fl = m.dead ? 0 : Math.sin((m.t || 0) * 1.6) * 5;
+    const c = Math.cos(hu);
+    const s = Math.sin(hu);
+    const lx = 84 + hx * 0.5 + 74 * c + 14 * s;
+    const ly = -150 - hu * 20 - 74 * s + 14 * c + fl;
+    return { x: m.x + (m.dir || 1) * sc * K * lx, y: m.y - (m.hover || 0) + sc * K * ly };
+  };
+
   // ═════ 星蝕魔龍（5-4）：虛空吐息、黑洞球、墜星雨 ═════
   const voidMoves = [
     {
@@ -615,7 +714,8 @@
       ok: (m, P) => Math.abs(P.x - m.x) < 1000,
       run(m, P) {
         return beamMove(m, P, {
-          eye: () => ({ x: m.x + m.dir * m.halfW * 0.8, y: midY(m) - 10 }),
+          eye: (k, fire) => voidMouth(m, k, fire),
+          pose: (a) => (m.fx.beamTilt = voidTilt(m, a)),
           len: 1150, w: 70, k: 1.5, color: '#b88aff', flag: 'breath', times: m.fx.rage ? 2 : 1,
         });
       },
@@ -706,7 +806,7 @@
     },
     fbBalrog: {
       init(m) {
-        Object.assign(m.fx, { whip: 0, fly: false, rage: false });
+        Object.assign(m.fx, { whip: 0, whipCharge: 0, whipT: 0, whipLen: 560, fly: false, rage: false });
         m.hover = 0;
       },
       update(m, dt, P) {
@@ -729,7 +829,7 @@
     },
     fbVoid: {
       init(m) {
-        Object.assign(m.fx, { breath: 0, beamFire: false, rage: false });
+        Object.assign(m.fx, { breath: 0, beamFire: false, beamTilt: 0, rage: false });
         m.hover = 40;
       },
       update(m, dt, P) {
@@ -1115,6 +1215,14 @@
         ctx.strokeStyle = 'rgba(255,80,80,' + (0.6 + blink * 0.4).toFixed(3) + ')';
         ctx.lineWidth = 3;
         ctx.strokeRect(0, -z.w / 2, len, z.w);
+        ctx.restore();
+      },
+      fb_whipcrack(ctx, z, t) {
+        if (z.t < (z.hitAt || 0)) return;
+        ctx.save();
+        ctx.globalAlpha = fade(z);
+        ctx.fillStyle = 'rgba(255,140,40,0.45)';
+        ctx.fillRect(Math.min(z.x1, z.x2), z.y - 80, Math.abs(z.x2 - z.x1), 80);
         ctx.restore();
       },
       fb_beam(ctx, z, t) {

@@ -3077,10 +3077,16 @@
     const { fx, ph, t, rage, dead, kind } = S;
     const K = (m.h || 260) / 260;
     // 火鞭：預警時 fx.whip = 0（m.fbLast = 'whip'、attackPhase = 'wind'），出手後 0→1 是鞭子甩出去的長度
+    // fx.whipCharge 0→1＝蓄力進度（鞭子往後捲起、火焰沿鞭身竄高），fx.whipT＝甩出後經過的秒數（0.1 秒時鞭梢著地），fx.whipLen＝判定長度
     const whipMove = kind === 'whip' || amt(fx.whip) > 0;
     const whipStrike = whipMove && (ph === 'strike' || (!ph && amt(fx.whip) >= 0.999));
     const whipWind = whipMove && !whipStrike;
-    const whipV = whipStrike ? Math.max(0.15, amt(fx.whip)) : whipWind ? (ph ? 0.6 + 0.4 * Math.abs(Math.sin(t * 2.5)) : amt(fx.whip)) : 0;
+    const whipCh = whipWind ? (fx.whipCharge != null ? amt(fx.whipCharge) : ph ? 0.6 + 0.4 * Math.abs(Math.sin(t * 2.5)) : amt(fx.whip)) : 0;
+    const coilK = 1 - (1 - Math.min(1, whipCh / 0.75)) ** 2; // 前 0.75 秒捲起，之後蓄滿發抖
+    const tense = whipWind && whipCh > 0.75;
+    const whipV = whipStrike ? amt(fx.whip) : whipWind ? coilK : 0;
+    const whipT = whipStrike ? num(fx.whipT, 0.2) : 0;
+    const crackK = whipStrike ? clamp(1 - Math.abs(whipT - 0.12) / 0.14, 0, 1) : 0; // 鞭梢爆響的閃光
     const fly = !!fx.fly;
     const dive = fly && (ph === 'strike' || !!fx.dive);
     const meteor = !dead && !whipMove && !fly && (/meteor|rain/.test(kind) || !!fx.meteor || (!kind && (ph === 'wind' || ph === 'strike')));
@@ -3102,15 +3108,18 @@
     let flapAmp = 0.06;
     let legBend = 0;
     if (whipWind) {
-      lean = -0.1 * whipV;
-      mouth = 0.4 + 0.4 * whipV;
-      headTilt = -0.1 * whipV;
-      spread = Math.max(spread, 0.8);
+      // 預備動作：身體往後仰、張口、翅膀張開
+      lean = -0.17 * whipV;
+      mouth = 0.4 + 0.5 * whipV;
+      headTilt = -0.15 * whipV;
+      spread = Math.max(spread, 0.8 + 0.2 * whipV);
     }
     if (whipStrike) {
-      lean = 0.12;
-      mouth = 0.8;
-      headTilt = 0.08;
+      // 甩出：整個身體往前壓，著地後慢慢回正
+      const lunge = clamp(1 - (whipT - 0.1) / 0.5, 0, 1);
+      lean = 0.1 + 0.1 * lunge;
+      mouth = 0.8 + 0.2 * crackK;
+      headTilt = 0.06 + 0.06 * lunge;
       spread = 1;
     }
     if (meteor) {
@@ -3148,7 +3157,7 @@
       spread = 0.15;
       flapAmp = 0;
     }
-    const shake = (whipWind && whipV > 0.6) || (meteor && ph === 'wind') ? Math.sin(t * 55) * 1.6 : 0;
+    const shake = tense ? Math.sin(t * 60) * 2.4 : (whipWind && whipV > 0.6) || (meteor && ph === 'wind') ? Math.sin(t * 55) * 1.6 : 0;
 
     ctx.save();
     ctx.scale(K, K);
@@ -3675,17 +3684,41 @@
     // ── 前手臂＋火鞭 ──
     // 鞭子
     let wfn;
+    // 判定長度（世界座標）換成這裡的座標：鞭梢著地點＝(Lw, −40)＝預警線／判定框的最前端
+    const Lw = num(fx.whipLen, 560) / (K * (m.scale || 1));
     if (whipStrike) {
-      // 規格：水平橫掃約 560px、高度約腳底上方 40（js/game/fieldboss.js 的預警線）
-      const wv = Math.sin(t * 30) * 6;
-      const L = lerp(fH[0] + 60, 560 / K, whipV);
-      wfn = cb(fH[0], fH[1], lerp(fH[0], L, 0.35), fH[1] + 10 + wv, lerp(fH[0], L, 0.7), -44 - wv, L, -40);
+      // 甩出：鞭梢沿著「頭後上方 → 頭頂前方 → 前方地面」的弧線劃過（地上的 fb_whipcrack 用同一條弧畫火痕）
+      const p = whipV;
+      const arc = qb(-120, -300, Lw * 0.55, -420, Lw, -40);
+      // 手臂畫在上半身（繞腰 lean 轉過）的座標裡：把地面座標的鞭梢換回來，前傾時鞭梢才會正好落在判定框上
+      const tw = arc(p);
+      const cl = Math.cos(-lean);
+      const sl = Math.sin(-lean);
+      const ry = tw[1] - bob - hipY;
+      const tp = [tw[0] * cl - ry * sl, tw[0] * sl + ry * cl + hipY];
+      const wv = p >= 1 ? Math.sin(t * 30) * 6 * clamp(1 - (whipT - 0.1) / 0.4, 0.3, 1) : 0;
+      const c1 = [lerp(fH[0], tp[0], 0.35), lerp(fH[1], tp[1], 0.35) - 50 * (1 - p) + 10 + wv];
+      const c2 = [lerp(fH[0], tp[0], 0.7), lerp(fH[1], tp[1], 0.7) - 30 * (1 - p) - 4 - wv];
+      wfn = cb(fH[0], fH[1], c1[0], c1[1], c2[0], c2[1], tp[0], tp[1]);
     } else if (whipWind) {
+      // 蓄力：鞭身甩到背後、末端捲成一圈（越捲越緊），蓄滿後鞭梢微微發抖
       const k = whipV;
       const idle = [fH[0] + 20, fH[1] + 70, 140, 0, 196, -4];
-      const up = [fH[0] - 80, fH[1] - 30, -190, -250, -196, -120];
+      const up = [fH[0] - 70, fH[1] - 50, -170, -270, -200, -170];
       const q = idle.map((v, i) => lerp(v, up[i], k));
-      wfn = cb(fH[0], fH[1], q[0], q[1], q[2], q[3] + Math.sin(t * 8) * 10 * k, q[4], q[5]);
+      const trem = tense ? Math.sin(t * 47) * 4 : 0;
+      const body = cb(fH[0], fH[1], q[0], q[1], q[2], q[3] + Math.sin(t * 8) * 8 * k, q[4], q[5] + trem);
+      const r0 = 6 + 30 * k;
+      const cx = q[4] + r0;
+      const cy = q[5] + trem;
+      const turn = 1.75 * PI * k;
+      wfn = (s) => {
+        if (s <= 0.6) return body(s / 0.6);
+        const u = (s - 0.6) / 0.4;
+        const a = PI + turn * u;
+        const r = r0 * (1 - 0.5 * u);
+        return [cx + Math.cos(a) * r, cy - Math.sin(a) * r];
+      };
     } else if (fly) {
       const sw = Math.sin(t * 3) * 14;
       wfn = cb(fH[0], fH[1], fH[0] + 20, fH[1] + 60, fH[0] - 10 + sw, fH[1] + 110, fH[0] - 40 + sw, fH[1] + 150);
@@ -3693,18 +3726,24 @@
       const sw = Math.sin(t * 2) * 5;
       wfn = cb(fH[0], fH[1], fH[0] + 26, fH[1] + 70, 150, -2, 200 + sw, -6 + (walk ? Math.sin(t * 8) * 4 : 0));
     }
-    const whipGlow = dead ? 0 : whipStrike ? 1 : 0.55 + whipV * 0.45 + (rage ? 0.2 : 0);
+    const whipGlow = dead ? 0 : whipStrike ? 1 + (rage ? 0.3 : 0) : 0.55 + whipV * 0.6 + (rage ? 0.2 : 0);
     if (whipGlow > 0) {
       ctx.save();
       ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.beginPath();
       for (let i = 0; i <= 30; i++) {
         const p = wfn(i / 30);
         i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]);
       }
-      ctx.strokeStyle = rgba('#ff7a1e', 0.35 * whipGlow);
-      ctx.lineWidth = 22;
+      ctx.strokeStyle = rgba(rage ? '#ffb43a' : '#ff7a1e', Math.min(0.75, 0.35 * whipGlow));
+      ctx.lineWidth = 22 + whipV * (whipStrike ? 12 : 20) + (rage ? 8 : 0);
       ctx.stroke();
+      if (whipStrike || whipV > 0.3) {
+        ctx.strokeStyle = rgba(rage ? '#fff6c8' : '#ffd23a', whipStrike ? 0.55 : 0.4 * whipV);
+        ctx.lineWidth = 9 + (rage ? 4 : 0);
+        ctx.stroke();
+      }
       ctx.restore();
     }
     A.shape(ctx, (c) => taper(c, wfn, (s) => 11 - s * 7, 30), BR.whip, null, { lw: 2.6 });
@@ -3750,14 +3789,23 @@
     ctx.setLineDash([]);
     ctx.restore();
     if (!dead) {
-      const n = whipStrike ? 9 : 5;
+      // 沿鞭身的火舌：蓄力時越竄越高、越來越多；暴走更大更亮
+      const fl = whipWind ? whipV : 0;
+      const n = whipStrike ? 9 : 5 + Math.round(fl * 2);
+      const fw = (whipStrike ? 9 : 6 + fl * 4) * (rage ? 1.2 : 1);
+      const fh = (whipStrike ? 30 : 18 + fl * 22) * (rage ? 1.25 : 1);
+      const fo = rage ? '#ffb43a' : '#ff7a1e';
+      const fi = rage ? '#fff6c8' : '#ffe27a';
       for (let i = 1; i <= n; i++) {
         const p = wfn(i / n);
-        flame(ctx, p[0], p[1] + 3, whipStrike ? 9 : 6, whipStrike ? 30 : 18, t, i + 20, '#ff7a1e', '#ffe27a', 1.8);
+        flame(ctx, p[0], p[1] + 3, fw, fh, t, i + 20, fo, fi, 1.8);
       }
-      // 鞭梢的火球
+      // 鞭梢的火球（蓄力時越來越大；著地瞬間爆出白光）
       const tp = wfn(1);
-      glow(ctx, tp[0], tp[1], 30, '#ffb43a', 0.8);
+      glow(ctx, tp[0], tp[1], 30 + fl * 26 + crackK * (rage ? 90 : 70), crackK > 0 ? '#fff4c0' : '#ffb43a', 0.8 + crackK * 0.2);
+      if (tense) glow(ctx, tp[0], tp[1], 18, '#ffffff', 0.5 + 0.4 * Math.abs(Math.sin(t * 30)));
+      // 握把處的火焰（蓄力的力量從手上灌進鞭子）
+      if (whipWind && fl > 0.2) glow(ctx, fH[0], fH[1], 26 + fl * 30, '#ff9a2a', 0.5 * fl);
     }
     // 鞭柄
     ctx.save();
@@ -4947,7 +4995,8 @@
       headX = -14 * breath;
     }
     if (fire) {
-      headUp = -0.08;
+      // 頭對準光束：js/game/fieldboss.js 依瞄準角度給 fx.beamTilt，並用同一套變換算出嘴巴＝光束起點
+      headUp = num(fx.beamTilt, -0.08);
       jaw = 1;
       headX = 10;
     }
@@ -5438,49 +5487,30 @@
     }
     ctx.restore();
 
-    // ── 虛空吐息（長光束）──
+    // ── 虛空吐息：嘴邊的噴發光 ──
+    // 光束本體只由地面區域 fb_beam 畫（起點就是這張嘴、方向＝頭的方向＝判定線）；
+    // 這裡不再畫任何有方向的光柱，只畫以嘴為中心、不分方向的噴發光，避免出現第二道光束。
     if (fire && !dead) {
       ctx.save();
       ctx.translate(hbX, hbY);
       ctx.rotate(-headUp);
       ctx.translate(74, 14);
-      // 長光束由地面區域 fb_beam 畫（瞄準玩家）；這裡只畫嘴邊噴出的一截
-      const L = 70;
-      const wob = Math.sin(t * 40) * 3;
-      const g = ctx.createLinearGradient(0, -40, 0, 40);
-      g.addColorStop(0, rgba(VD.beam, 0));
-      g.addColorStop(0.5, rgba(VD.beam, 0.6));
-      g.addColorStop(1, rgba(VD.beam, 0));
-      ctx.fillStyle = g;
-      ctx.fillRect(0, -40, L, 80);
-      A.shape(ctx, (c) => {
-        c.moveTo(0, -12);
-        c.lineTo(L, -20 - wob);
-        c.lineTo(L, 20 + wob);
-        c.lineTo(0, 12);
-        c.closePath();
-      }, '#1a0a34', null, { lw: 2.6 });
-      ctx.strokeStyle = A.c(VD.beam);
-      ctx.lineWidth = 6;
+      const ga = ctx.globalAlpha;
+      const pulse = 0.85 + Math.sin(t * 40) * 0.15;
+      glow(ctx, 0, 0, 58 * pulse, VD.beam, 0.85);
+      glow(ctx, 0, 0, 26 * pulse, '#ffffff', 1);
+      ctx.strokeStyle = rgba('#f0dcff', 0.8);
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
-      ctx.moveTo(0, -8);
-      ctx.lineTo(L, -14 - wob);
-      ctx.moveTo(0, 8);
-      ctx.lineTo(L, 14 + wob);
+      ctx.arc(0, 0, 20 + ((t * 90) % 22), 0, TAU);
       ctx.stroke();
-      ctx.strokeStyle = A.c('#ffffff');
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, -8);
-      ctx.lineTo(L, -14 - wob);
-      ctx.moveTo(0, 8);
-      ctx.lineTo(L, 14 + wob);
-      ctx.stroke();
-      for (let i = 0; i < 14; i++) {
-        const q = (t * 2.2 + hash(i)) % 1;
-        starShape(ctx, q * L, (hash(i + 3) - 0.5) * 24, 3 + hash(i) * 3, i % 3 ? '#ffffff' : VD.line);
+      for (let i = 0; i < 8; i++) {
+        const q = (t * 2.6 + hash(i + 40)) % 1;
+        const a = hash(i + 41) * TAU;
+        const d = 10 + q * 34;
+        ctx.globalAlpha = ga * (1 - q);
+        starShape(ctx, Math.cos(a) * d, Math.sin(a) * d, 2.5 + (1 - q) * 3, i % 3 ? '#ffffff' : VD.line);
       }
-      glow(ctx, 0, 0, 50, '#ffffff', 0.9);
       ctx.restore();
     }
     // 黑洞球：雙爪之間
@@ -5706,6 +5736,122 @@
       ctx.lineTo(x - 10, w * 0.2);
     }
     ctx.stroke();
+    ctx.restore();
+  }
+  // 火鞭的鞭痕（赤焰炎魔）：z.x1＝魔王腳下、z.dir、z.len、z.k（體型）、z.hitAt（鞭梢著地的時間）
+  //   ① 掃過的火弧：鞭梢從頭後上方劃過頭頂落到前方（與 fb_balrog 甩鞭時鞭梢走的同一條弧）
+  //   ② 判定帶：離地 0～80、長 len 的火光＝js/game/fieldboss.js 的判定框
+  //   ③ 鞭梢音爆：白熱星芒＋衝擊圈　④ 地面焦痕：燒紅的裂縫＋小火苗，慢慢熄滅
+  function fb_whipcrack(ctx, z, t) {
+    const life = z.life || 1.4;
+    const zt = z.t || 0;
+    if (zt >= life) return;
+    const hitAt = num(z.hitAt, 0.1);
+    const len = z.len || 560;
+    const K = z.k || 1;
+    const rage = !!z.rage;
+    const R = rage ? 1.3 : 1;
+    const hot = rage ? '#fffbe8' : '#fff0b0';
+    const mid = rage ? '#ffd23a' : '#ffb43a';
+    const out = rage ? '#ff9a2a' : '#ff5a1e';
+    const after = zt - hitAt;
+    const ga = ctx.globalAlpha;
+    ctx.save();
+    ctx.translate(num(z.x1, z.x), z.y);
+    ctx.scale(z.dir || 1, 1);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // ④ 地面焦痕
+    if (after >= 0) {
+      const f = clamp(Math.min(after * 14, (life - zt) * 2.2), 0, 1);
+      const heat = clamp(1 - after / (life - hitAt), 0, 1);
+      ctx.globalAlpha = ga * f;
+      ctx.fillStyle = rgba('#1a0c08', 0.5);
+      ctx.beginPath();
+      ctx.ellipse(len / 2, 0, len / 2, 8 * R, 0, 0, TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(4, 0);
+      for (let i = 1; i <= 12; i++) ctx.lineTo((i / 12) * len, (hash(i + 300) - 0.5) * 7 * R);
+      ctx.strokeStyle = rgba(out, 0.45 * heat);
+      ctx.lineWidth = 12 * R;
+      ctx.stroke();
+      ctx.strokeStyle = rgba(mid, 0.95 * heat);
+      ctx.lineWidth = 3 * R;
+      ctx.stroke();
+      if (heat > 0.12) {
+        const n = rage ? 9 : 7;
+        for (let i = 0; i < n; i++) {
+          const x = ((i + 0.5) / n) * len;
+          flame(ctx, x, 2, 7 * R, (20 + hash(i + 310) * 16) * R * heat, t, i + 50, out, hot, 1.6);
+        }
+      }
+    }
+    // ② 判定帶（著地後 0.4 秒內）：正好是離地 0～80、長 len 的框
+    if (after >= 0 && after < 0.4) {
+      const k = 1 - after / 0.4;
+      ctx.globalAlpha = ga;
+      const g = ctx.createLinearGradient(0, -80, 0, 0);
+      g.addColorStop(0, rgba(out, 0));
+      g.addColorStop(0.5, rgba(mid, 0.55 * k));
+      g.addColorStop(1, rgba(out, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(0, -80, len, 80);
+      const wob = Math.sin(t * 40) * 4 * k;
+      ctx.beginPath();
+      ctx.moveTo(0, -40);
+      ctx.quadraticCurveTo(len * 0.5, -40 + wob, len, -40);
+      ctx.strokeStyle = rgba(out, 0.7 * k);
+      ctx.lineWidth = (16 + 10 * k) * R;
+      ctx.stroke();
+      ctx.strokeStyle = rgba(hot, k);
+      ctx.lineWidth = (3 + 5 * k) * R;
+      ctx.stroke();
+    }
+    // ① 掃過的火弧
+    const sp = clamp(zt / hitAt, 0, 1);
+    const fa = after < 0 ? 1 : clamp(1 - after / 0.35, 0, 1);
+    if (fa > 0 && sp > 0) {
+      const arc = qb(-120 * K, -300 * K, len * 0.55, -420 * K, len, -40);
+      const N = 14;
+      const layers = [[out, 0.4, 1], [mid, 0.7, 0.55], [hot, 0.95, 0.2]];
+      ctx.globalAlpha = ga * fa;
+      for (const [col, a, wk] of layers) {
+        ctx.strokeStyle = rgba(col, a);
+        for (let i = 0; i < N; i++) {
+          const p0 = arc((sp * i) / N);
+          const p1 = arc((sp * (i + 1)) / N);
+          ctx.lineWidth = (4 + (28 * (i + 1)) / N) * R * wk;
+          ctx.beginPath();
+          ctx.moveTo(p0[0], p0[1]);
+          ctx.lineTo(p1[0], p1[1]);
+          ctx.stroke();
+        }
+      }
+    }
+    // ③ 鞭梢音爆
+    if (after >= 0 && after < 0.3) {
+      const e = after / 0.3;
+      const f = 1 - e;
+      ctx.globalAlpha = ga;
+      ctx.translate(len, -40);
+      glow(ctx, 0, 0, (50 + 90 * e) * R, hot, f);
+      ctx.fillStyle = rgba(hot, f);
+      ctx.beginPath();
+      const spikes = 10;
+      for (let i = 0; i < spikes * 2; i++) {
+        const a = (i / (spikes * 2)) * TAU + 0.2;
+        const r = i % 2 ? (8 + 10 * e) * R : (26 + 70 * e) * R * (0.7 + 0.5 * hash(i + 320));
+        i ? ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r) : ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = rgba(mid, f);
+      ctx.lineWidth = 2 + 6 * f;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, (20 + 110 * e) * R, (14 + 60 * e) * R, 0, 0, TAU);
+      ctx.stroke();
+    }
     ctx.restore();
   }
   // 光束（千手冰像的冰光、星蝕魔龍的虛空吐息）：z.color
@@ -6183,5 +6329,5 @@
     fb_voiddragon: withSpawn('fb_voiddragon', 220, fb_voiddragon),
   });
   Object.assign(A.PROJ_DRAW, { fb_anchor, fb_meteor, fb_voidorb });
-  Object.assign(A.ZONE_DRAW, { fb_warn, fb_warnline, fb_beam, fb_sporebreath, fb_inkcloud, fb_tentacle, fb_armslam });
+  Object.assign(A.ZONE_DRAW, { fb_warn, fb_warnline, fb_whipcrack, fb_beam, fb_sporebreath, fb_inkcloud, fb_tentacle, fb_armslam });
 })();
