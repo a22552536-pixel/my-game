@@ -19,6 +19,7 @@
   // 放射狀柔光
   function glow(ctx, x, y, r, col, a) {
     if (!(a > 0) || !(r > 0)) return;
+    if (G.lowFx && r < 30) return; // 省效能模式（手機）：小的柔光不畫
     const c = rgb(col);
     const g = ctx.createRadialGradient(x, y, r * 0.05, x, y, r);
     g.addColorStop(0, 'rgba(' + c + ',' + Math.min(1, a).toFixed(3) + ')');
@@ -62,7 +63,8 @@
       o.tex(ctx);
       ctx.restore();
     }
-    if (rim && r > 0) {
+    // 省效能模式：左上邊光要把整片 1800x1800 裁切填色，手機上很貴，不畫
+    if (rim && r > 0 && !G.lowFx) {
       ctx.beginPath();
       ctx.rect(-900, -900, 1800, 1800);
       ctx.translate(r, r);

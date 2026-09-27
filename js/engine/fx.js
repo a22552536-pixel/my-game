@@ -244,6 +244,11 @@
 
     burst(x, y, color, n, speed, opts) {
       opts = opts || {};
+      // 省效能模式（手機）：粒子減半，場上最多 220 顆
+      if (G.lowFx) {
+        n = Math.ceil(n * 0.5);
+        if (this.particles.length > 220) return;
+      }
       for (let i = 0; i < n; i++) {
         const a = opts.angle != null ? opts.angle + U.rand(-opts.spread, opts.spread) : U.rand(0, Math.PI * 2);
         const s = U.rand(speed * 0.4, speed);
@@ -264,6 +269,10 @@
 
     // 飄浮的光點（升級、進化、稀有掉落用）
     sparkle(x, y, color, n, spread) {
+      if (G.lowFx) {
+        n = Math.ceil(n * 0.5);
+        if (this.particles.length > 220) return;
+      }
       for (let i = 0; i < n; i++) {
         this.particles.push({
           x: x + U.rand(-spread, spread),

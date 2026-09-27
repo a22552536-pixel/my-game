@@ -966,6 +966,7 @@
   }
   function qGlow(ctx, x, y, r, hex, a) {
     if (!(a > 0) || !(r > 0)) return;
+    if (G.lowFx && r < 30) return; // 省效能模式（手機）：螢火蟲之類的小柔光不畫
     const rgb = G.util.hexToRgb(A.c(hex)).join(',');
     const g = ctx.createRadialGradient(x, y, r * 0.05, x, y, r);
     g.addColorStop(0, 'rgba(' + rgb + ',' + Math.min(1, a).toFixed(3) + ')');

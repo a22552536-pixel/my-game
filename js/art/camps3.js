@@ -157,7 +157,7 @@
     }
   }
   function fireflies(ctx, cx, cy, w, h, t, n, rgb) {
-    n = Math.round(n * livingK);
+    n = Math.round(n * livingK * (G.lowFx ? 0.4 : 1)); // 省效能模式（手機）：螢火蟲少一大半
     for (let k = 0; k < n; k++) {
       const s = hash(k + 7.3);
       const fx = cx + (hash(k * 1.7) - 0.5) * w + Math.sin(t * (0.5 + s * 0.6) + k * 2) * 18;

@@ -1,5 +1,8 @@
-// 手機觸控操作（楓之谷 M 風格）：左下虛擬搖桿，右下大攻擊鈕＋跳躍＋技能弧形排列＋藥水，右上選單鈕。
-// 只在觸控裝置上出現；網址加 ?touch=1 可以在電腦上強制打開（?touch=0 強制關閉）。
+// 手機觸控操作（楓之谷 M 風格）：左半邊按哪裡就在哪裡出現的浮動搖桿；右下大顆跳躍鈕，
+// 技能 1–4 以跳躍鈕為圓心排成弧形，攻擊鈕縮小放在右下角落；藥水鈕在技能弧左下；右上選單鈕＋全螢幕鈕。
+// 觸控偵測：(pointer: coarse)、(any-pointer: coarse)、maxTouchPoints、ontouchstart 任一成立就打開；
+// 就算都沒偵測到，第一次真的用手指點畫面（任何時候，包括標題畫面）也會自動打開。
+// 網址加 ?touch=1 可以在電腦上強制打開（?touch=0 強制關閉）。
 // 按鈕透過 G.input.setVirtual() 送出跟鍵盤一樣的「動作」，遊戲邏輯完全不用改。
 (function () {
   'use strict';
@@ -7,23 +10,79 @@
   const Q = location.search;
   const FORCE_ON = /[?&]touch=1/.test(Q);
   const FORCE_OFF = /[?&]touch=0/.test(Q);
-  const COARSE = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-
-  // 版面（邏輯座標 1280x720，跟著畫面一起縮放）
-  const JOY = { x: 170, y: 560, r: 96, knob: 44 };
-  const ZONE = { x: 0, y: 330, w: 470, h: 390 };
-  const ATK = { x: 1160, y: 600, r: 70 };
-  const BTN = {
-    jump: { x: 995, y: 664, r: 44 },
-    hpPot: { x: 823, y: 676, r: 30 },
-    mpPot: { x: 893, y: 676, r: 30 },
+  const mm = (q) => {
+    try {
+      return !!(window.matchMedia && window.matchMedia(q).matches);
+    } catch (e) {
+      return false;
+    }
   };
-  // 技能 1–4 以攻擊鈕為圓心排成弧形（五轉大招也是放進這 4 格，沒有專屬按鈕）
+  const TOUCH_DEV = mm('(pointer: coarse)') || mm('(any-pointer: coarse)') || (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+
+  // 版面（邏輯座標 1280x720，跟著畫面一起縮放）；安全區（瀏海、圓角）在 layout() 裡再往內推
+  const LW = 1280;
+  const LH = 720;
+  const JOY = { x: 170, y: 540, r: 96, knob: 44 }; // 搖桿平常的位置（淡淡的提示）
+  const ZONE = { x: 0, y: 100, w: 576, h: 620 }; // 左邊 45%、頂端圖示列以下：按哪裡搖桿就出現在哪裡
+  const JUMP = { x: 1130, y: 590, r: 72 }; // 主要大按鈕：跳躍
+  const ATK = { x: 1238, y: 678, r: 36 }; // 普攻：右下角落的小按鈕
+  const POT = { hpPot: { x: 868, y: 678, r: 30 }, mpPot: { x: 940, y: 678, r: 30 } };
+  // 技能 1–4 以跳躍鈕為圓心排成弧形（五轉大招也是放進這 4 格，沒有專屬按鈕）
   const SK_R = 150;
-  const SK_ANG = [165, 130, 95, 60];
+  const SK_ANG = [185, 145, 105, 65];
   const SK_SIZE = 39;
+  const TOP = { menu: { x: 914, y: 8, w: 58, h: 44 }, fs: { x: 848, y: 8, w: 58, h: 44 } };
 
   const I = () => G.input;
+
+  // ── 全螢幕（電腦也能用：Esc 選單裡有按鈕）──
+  const FS = (G.fullscreen = {
+    supported() {
+      const d = document;
+      const el = d.documentElement;
+      return !!((d.fullscreenEnabled || d.webkitFullscreenEnabled) && (el.requestFullscreen || el.webkitRequestFullscreen));
+    },
+    active() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement);
+    },
+    // 已經是從主畫面開啟的 App（iPhone 加入主畫面）：本來就沒有瀏覽器介面
+    standalone() {
+      if (navigator.standalone) return true;
+      if (this.active()) return false; // 網頁全螢幕時 display-mode 也會變成 fullscreen，不算
+      return mm('(display-mode: fullscreen)') || mm('(display-mode: standalone)');
+    },
+    lockLandscape() {
+      try {
+        const o = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape');
+        if (o && o.catch) o.catch(() => {});
+      } catch (err) {}
+    },
+    enter() {
+      const el = document.documentElement;
+      try {
+        let p = null;
+        if (el.requestFullscreen) p = el.requestFullscreen({ navigationUI: 'hide' });
+        else if (el.webkitRequestFullscreen) p = el.webkitRequestFullscreen();
+        if (p && p.then) p.then(() => this.lockLandscape()).catch(() => {});
+        else this.lockLandscape();
+      } catch (err) {}
+    },
+    exit() {
+      const d = document;
+      try {
+        const p = d.exitFullscreen ? d.exitFullscreen() : d.webkitExitFullscreen ? d.webkitExitFullscreen() : null;
+        if (p && p.catch) p.catch(() => {});
+      } catch (err) {}
+    },
+    toggle() {
+      if (this.active()) this.exit();
+      else this.enter();
+    },
+    isIOS() {
+      const ua = navigator.userAgent || '';
+      return /iP(hone|od|ad)/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+    },
+  });
 
   const T = (G.touch = {
     on: false,
@@ -32,17 +91,26 @@
     actShown: false,
     joyId: null,
     joyVec: { x: 0, y: 0 },
+    joyC: { x: JOY.x, y: JOY.y }, // 搖桿目前的圓心（邏輯座標，相對於畫面）
     held: {}, // action -> pointerId（按鈕）
     btns: {},
     sk: [],
+    safe: { l: 0, r: 0, t: 0, b: 0 },
     portraitOff: false,
+    autoFsTried: false,
 
     enable() {
       if (this.on || FORCE_OFF) return;
       this.on = true;
       document.body.classList.add('touch-mode');
+      // 觸控模式晚開（第一次觸控才偵測到）：重新算畫布解析度、打開省效能模式
+      if (G.resize) G.resize();
       this.build();
       this.checkPortrait();
+      // 已經開著的視窗重畫成觸控版
+      try {
+        if (G.ui && G.ui.refresh) G.ui.refresh();
+      } catch (e) {}
     },
 
     circle(el, c) {
@@ -60,18 +128,14 @@
       root.style.display = 'none';
       root.addEventListener('contextmenu', (e) => e.preventDefault());
 
-      // ── 搖桿 ──
+      // ── 浮動搖桿 ──
       const zone = document.createElement('div');
-      zone.className = 'tc-joyzone';
+      zone.className = 'tc-joyzone idle';
       const base = document.createElement('div');
       base.className = 'tc-joy';
-      // 感應區比搖桿大：左下這一整塊按下去都算（座標相對於感應區）
-      Object.assign(zone.style, { left: ZONE.x + 'px', top: ZONE.y + 'px', width: ZONE.w + 'px', height: ZONE.h + 'px' });
-      this.circle(base, { x: JOY.x - ZONE.x, y: JOY.y - ZONE.y, r: JOY.r });
       base.innerHTML = '<i class="ar u"></i><i class="ar d"></i><i class="ar l"></i><i class="ar r"></i>';
       const knob = document.createElement('div');
       knob.className = 'tc-knob';
-      this.circle(knob, { x: JOY.x - ZONE.x, y: JOY.y - ZONE.y, r: JOY.knob });
       zone.appendChild(base);
       zone.appendChild(knob);
       root.appendChild(zone);
@@ -87,25 +151,21 @@
       act.className = 'tc-actions';
       root.appendChild(act);
       this.act = act;
-      const mk = (action, c, cls, html) => {
+      const mk = (action, cls, html) => {
         const b = document.createElement('div');
         b.className = 'tc-btn ' + cls;
-        this.circle(b, c);
         b.innerHTML = html || '';
         this.bindBtn(b, action);
         act.appendChild(b);
         this.btns[action] = b;
         return b;
       };
-      mk('attack', ATK, 'tc-attack', '<img alt="" src="' + G.art.iconURL('claw') + '"><span>攻擊</span>');
-      mk('jump', BTN.jump, 'tc-jump', '<b>⤒</b><span>跳躍</span>');
-      mk('hpPot', BTN.hpPot, 'tc-pot tc-hp', '<img alt="" src="' + G.art.iconURL('hpPot') + '"><em>0</em>');
-      mk('mpPot', BTN.mpPot, 'tc-pot tc-mp', '<img alt="" src="' + G.art.iconURL('mpPot') + '"><em>0</em>');
-      const slots = ['skill1', 'skill2', 'skill3', 'skill4'];
-      slots.forEach((a, i) => {
-        const ang = (SK_ANG[i] * Math.PI) / 180;
-        const c = { x: ATK.x + Math.cos(ang) * SK_R, y: ATK.y - Math.sin(ang) * SK_R, r: SK_SIZE };
-        const b = mk(a, c, 'tc-skill', '<img alt="" class="hide"><div class="cd"></div><span class="cdt"></span><i>' + (i + 1) + '</i>');
+      mk('jump', 'tc-jump', '<b>⤒</b><span>跳躍</span>');
+      mk('attack', 'tc-attack', '<img alt="" src="' + G.art.iconURL('claw') + '"><span>攻擊</span>');
+      mk('hpPot', 'tc-pot tc-hp', '<img alt="" src="' + G.art.iconURL('hpPot') + '"><em>0</em>');
+      mk('mpPot', 'tc-pot tc-mp', '<img alt="" src="' + G.art.iconURL('mpPot') + '"><em>0</em>');
+      ['skill1', 'skill2', 'skill3', 'skill4'].forEach((a, i) => {
+        const b = mk(a, 'tc-skill', '<img alt="" class="hide"><div class="cd"></div><span class="cdt"></span><i>' + (i + 1) + '</i>');
         this.sk.push({ el: b, img: b.querySelector('img'), cd: b.querySelector('.cd'), cdt: b.querySelector('.cdt'), id: undefined, state: '' });
       });
 
@@ -122,8 +182,113 @@
       root.appendChild(menu);
       this.menu = menu;
 
+      // ── 全螢幕鈕（瀏覽器支援才有作用；iPhone Safari 不支援，改成提示「加入主畫面」）──
+      const fs = document.createElement('div');
+      fs.className = 'tc-menu tc-fs';
+      fs.innerHTML = '<b></b>';
+      fs.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        G.audio.unlock();
+        if (FS.supported()) FS.toggle();
+        else this.iosHint(true);
+      });
+      root.appendChild(fs);
+      this.fsBtn = fs;
+      this.syncFs();
+
       ui.insertBefore(root, ui.firstChild);
       this.root = root;
+      this.layout();
+    },
+
+    // 安全區（瀏海／圓角／Home 條）：量 env(safe-area-inset-*)，扣掉黑邊之後換算成邏輯座標
+    measureSafe() {
+      let p = document.getElementById('tc-safe-probe');
+      if (!p) {
+        p = document.createElement('div');
+        p.id = 'tc-safe-probe';
+        p.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);';
+        document.body.appendChild(p);
+      }
+      const cs = getComputedStyle(p);
+      const v = (k) => parseFloat(cs[k]) || 0;
+      const ins = { l: v('paddingLeft'), r: v('paddingRight'), t: v('paddingTop'), b: v('paddingBottom') };
+      const st = document.getElementById('stage');
+      const r = st ? st.getBoundingClientRect() : null;
+      if (!r || !r.width) return { l: 0, r: 0, t: 0, b: 0 };
+      const k = LW / r.width;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // 黑邊寬度（畫面還沒縮放好時可能是負的，當成 0）
+      const gap = (g) => Math.max(0, g);
+      return {
+        l: Math.max(0, ins.l - gap(r.left)) * k,
+        r: Math.max(0, ins.r - gap(vw - r.right)) * k,
+        t: Math.max(0, ins.t - gap(r.top)) * k,
+        b: Math.max(0, ins.b - gap(vh - r.bottom)) * k,
+      };
+    },
+
+    layout() {
+      if (!this.root) return;
+      const s = (this.safe = this.measureSafe());
+      const dx = -s.r; // 右邊的按鈕群往左推
+      const dy = -s.b;
+      Object.assign(this.zone.style, { left: ZONE.x + 'px', top: ZONE.y + 'px', width: ZONE.w + s.l + 'px', height: ZONE.h + 'px' });
+      this.rest = { x: JOY.x + s.l, y: JOY.y + dy };
+      if (this.joyId == null) this.placeJoy(this.rest.x, this.rest.y);
+      const at = (c) => ({ x: c.x + dx, y: c.y + dy, r: c.r });
+      const J = at(JUMP);
+      this.circle(this.btns.jump, J);
+      this.circle(this.btns.attack, at(ATK));
+      this.circle(this.btns.hpPot, at(POT.hpPot));
+      this.circle(this.btns.mpPot, at(POT.mpPot));
+      this.sk.forEach((sk, i) => {
+        const ang = (SK_ANG[i] * Math.PI) / 180;
+        this.circle(sk.el, { x: J.x + Math.cos(ang) * SK_R, y: J.y - Math.sin(ang) * SK_R, r: SK_SIZE });
+      });
+      const top = (el, b) => Object.assign(el.style, { left: b.x - s.r + 'px', top: b.y + s.t + 'px', width: b.w + 'px', height: b.h + 'px' });
+      top(this.menu, TOP.menu);
+      top(this.fsBtn, TOP.fs);
+    },
+
+    // 搖桿圓心放到 (x, y)（邏輯座標）
+    placeJoy(x, y) {
+      this.joyC = { x, y };
+      const zx = x - ZONE.x;
+      const zy = y - ZONE.y;
+      this.circle(this.base, { x: zx, y: zy, r: JOY.r });
+      this.circle(this.knob, { x: zx, y: zy, r: JOY.knob });
+    },
+
+    // 螢幕座標 → 邏輯座標
+    toLogical(cx, cy) {
+      const r = document.getElementById('stage').getBoundingClientRect();
+      const k = LW / r.width;
+      return { x: (cx - r.left) * k, y: (cy - r.top) * k };
+    },
+
+    // 某個觸控按鈕在畫面上的位置（邏輯座標 [x, y, w, h]；教學的外框、箭頭用）
+    rectOf(name) {
+      if (!this.on || !this.root || !this.shown) return null;
+      const el = name === 'joy' ? this.base : this.btns[name];
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      if (!r.width) return null;
+      const a = this.toLogical(r.left, r.top);
+      const b = this.toLogical(r.right, r.bottom);
+      return [a.x, a.y, b.x - a.x, b.y - a.y];
+    },
+
+    syncFs() {
+      if (!this.fsBtn) return;
+      const can = FS.supported() || FS.isIOS();
+      this.fsBtn.style.visibility = can && !FS.standalone() ? 'visible' : 'hidden';
+      const on = FS.active();
+      this.fsBtn.classList.toggle('on', on);
+      this.fsBtn.querySelector('b').textContent = on ? '⤡' : '⛶';
+      this.fsBtn.title = on ? '離開全螢幕' : '全螢幕';
     },
 
     bindBtn(b, action) {
@@ -147,7 +312,7 @@
       ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => b.addEventListener(ev, up));
     },
 
-    // ── 搖桿 ──
+    // ── 浮動搖桿：手指按下的地方就是圓心，放開才回到原位 ──
     joyDown(e) {
       e.preventDefault();
       G.audio.unlock();
@@ -156,15 +321,20 @@
       try {
         this.zone.setPointerCapture(e.pointerId);
       } catch (err) {}
+      const p = this.toLogical(e.clientX, e.clientY);
+      const R = JOY.r;
+      const x = Math.max(R + 4 + this.safe.l, p.x);
+      const y = Math.min(LH - R - 4 - this.safe.b, Math.max(ZONE.y + R * 0.4, p.y));
+      this.placeJoy(x, y);
       this.zone.classList.add('on');
+      this.zone.classList.remove('idle');
       this.joyMove(e);
     },
     joyMove(e) {
       if (e.pointerId !== this.joyId) return;
-      const r = this.base.getBoundingClientRect();
-      const R = r.width / 2;
-      let dx = (e.clientX - (r.left + R)) / R;
-      let dy = (e.clientY - (r.top + R)) / R;
+      const p = this.toLogical(e.clientX, e.clientY);
+      let dx = (p.x - this.joyC.x) / JOY.r;
+      let dy = (p.y - this.joyC.y) / JOY.r;
       const m = Math.hypot(dx, dy);
       if (m > 1) {
         dx /= m;
@@ -176,11 +346,17 @@
     },
     joyUp(e) {
       if (e.pointerId !== this.joyId) return;
+      this.resetJoy();
+      this.applyJoy();
+    },
+    resetJoy() {
       this.joyId = null;
       this.joyVec = { x: 0, y: 0 };
+      if (!this.knob) return;
       this.knob.style.transform = '';
       this.zone.classList.remove('on');
-      this.applyJoy();
+      this.zone.classList.add('idle');
+      if (this.rest) this.placeJoy(this.rest.x, this.rest.y);
     },
     // 死區 0.28；幾乎垂直（與水平夾角 > 約 58°）才算上／下，走路時不會誤爬繩子
     applyJoy() {
@@ -205,10 +381,7 @@
     },
 
     releaseAll() {
-      this.joyId = null;
-      this.joyVec = { x: 0, y: 0 };
-      if (this.knob) this.knob.style.transform = '';
-      if (this.zone) this.zone.classList.remove('on');
+      this.resetJoy();
       if (this.base) this.base.setAttribute('data-dir', '');
       for (const a in this.btns) this.btns[a].classList.remove('on');
       this.held = {};
@@ -225,12 +398,14 @@
       if (show !== this.shown) {
         this.shown = show;
         this.root.style.display = show ? 'block' : 'none';
+        if (show) this.layout();
       }
       if (actShow !== this.actShown) {
         this.actShown = actShow;
         this.root.classList.toggle('blocked', !actShow);
         if (!actShow) this.releaseAll();
       }
+      this.tutorialWin();
       if (!actShow) return;
       I().holdVirtual();
       // 按住攻擊鈕：一直攻擊（楓之谷 M 的手感）
@@ -308,18 +483,49 @@
       if (id === this.glowId && id !== 'useSkill') return;
       this.glowId = id;
       const want = {};
-      const joy = { move: 1, climb: 1, drop: 1, talk: 1 };
+      const joy = { move: 1, climb: 1, drop: 1, talk: 1, shop: 1 };
       if (joy[id]) want.joy = 1;
       if (id === 'jump' || id === 'drop' || (s && s.info)) want.jump = 1;
       if (id === 'attack') want.attack = 1;
       if (id === 'potion') want.hpPot = 1;
       if (id === 'mpPot') want.mpPot = 1;
+      if (id === 'infoSlots') want.skill1 = want.skill2 = want.skill3 = want.skill4 = 1;
       if (id === 'useSkill') {
         const i = G.player.hotbar.indexOf('roar');
         if (i >= 0 && i < 4) want['skill' + (i + 1)] = 1;
       }
       for (const a in this.btns) this.btns[a].classList.toggle('glow', !!want[a]);
       this.base.classList.toggle('glow', !!want.joy);
+    },
+
+    // 教學「放小吼」這一步：技能視窗還開著的話，讓視窗右上的 ✕ 發光（手機沒有 Esc）
+    tutorialWin() {
+      const tu = G.tutorial;
+      const s = tu && tu.current && tu.current();
+      const want = !!(s && s.id === 'useSkill');
+      if (!G.ui.isOpen || !G.ui.isOpen('skills')) return;
+      const x = document.querySelector('#ui .win-skills .title .x');
+      if (x && x.classList.contains('tut-glow') !== want) x.classList.toggle('tut-glow', want);
+    },
+
+    // ── iPhone Safari：不支援網頁全螢幕 → 提示「分享 → 加入主畫面」（自動提示只有一次）──
+    iosHint(force) {
+      if (!FS.isIOS() || FS.standalone() || FS.supported()) return;
+      const KEY = 'xiaozong_ioshint_v1';
+      if (!force) {
+        try {
+          if (localStorage.getItem(KEY)) return;
+          localStorage.setItem(KEY, '1');
+        } catch (e) {}
+      }
+      let el = document.getElementById('tc-ioshint');
+      if (el) el.remove();
+      el = document.createElement('div');
+      el.id = 'tc-ioshint';
+      el.innerHTML = '<span>想全螢幕玩？點 Safari 的「分享」→「加入主畫面」，再從主畫面開啟</span><button type="button">知道了</button>';
+      el.querySelector('button').addEventListener('click', () => el.remove());
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 9000);
     },
 
     // ── 直向提示 ──
@@ -364,38 +570,45 @@
   // iOS：擋掉雙指縮放手勢
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 
-  if (FORCE_ON || (COARSE && !FORCE_OFF)) T.enable();
-  else if (!FORCE_OFF) {
-    window.addEventListener(
-      'touchstart',
-      () => {
-        T.enable();
-      },
-      { once: true, passive: true }
-    );
-  }
+  // 第一次真的用手指點（任何時候，包括標題畫面）：打開觸控模式
+  const onTouch = () => {
+    if (!FORCE_OFF && !T.on) T.enable();
+  };
+  window.addEventListener('touchstart', onTouch, { capture: true, passive: true });
+  window.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (e.pointerType === 'touch') onTouch();
+    },
+    true
+  );
+  // 觸控模式下第一次點擊：試著全螢幕＋鎖橫向（要在使用者手勢裡要求：pointerup／touchend 都算）
+  const autoFs = (e) => {
+    if (!T.on || T.autoFsTried) return;
+    if (e.type === 'pointerup' && e.pointerType !== 'touch') return;
+    T.autoFsTried = true;
+    if (FS.standalone() || FS.active()) return;
+    if (FS.supported()) FS.enter();
+    else T.iosHint(false);
+  };
+  window.addEventListener('pointerup', autoFs, true);
+  window.addEventListener('touchend', autoFs, true);
 
-  window.addEventListener('resize', () => T.checkPortrait());
-  window.addEventListener('orientationchange', () => setTimeout(() => T.checkPortrait(), 200));
+  if (!FORCE_OFF && (FORCE_ON || TOUCH_DEV)) T.enable();
 
-  // 真正的手機：第一次點擊時試著全螢幕＋鎖橫向（不支援就算了）
-  if (COARSE && !FORCE_OFF) {
-    const fs = () => {
-      window.removeEventListener('pointerup', fs, true);
-      const d = document.documentElement;
-      try {
-        const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null;
-        if (p && p.then)
-          p.then(() => {
-            try {
-              const o = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape');
-              if (o && o.catch) o.catch(() => {});
-            } catch (err) {}
-          }).catch(() => {});
-      } catch (err) {}
-    };
-    window.addEventListener('pointerup', fs, true);
-  }
+  const relayout = () => {
+    T.checkPortrait();
+    T.layout();
+  };
+  window.addEventListener('resize', relayout);
+  window.addEventListener('orientationchange', () => setTimeout(relayout, 250));
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) =>
+    document.addEventListener(ev, () => {
+      T.syncFs();
+      setTimeout(relayout, 100);
+      if (G.ui && G.ui.isOpen && G.ui.isOpen('menu')) G.ui.render('menu');
+    })
+  );
 
   // 自己的更新迴圈（在主迴圈之前註冊，所以每幀先處理觸控再跑遊戲邏輯）
   function loop() {

@@ -364,8 +364,48 @@
     }
   };
 
+  // 省效能模式（手機）：一般怪物畫進自己的小畫布，每 3 幀才重畫一次，中間只貼圖（位置每幀都跟著走）；
+  // 被打中、壓扁、死亡淡出時每幀重畫，打擊感不變。美術函式本身不用改。
+  let cacheSeq = 0;
+  function drawCached(m, ctx) {
+    const k = ctx.getTransform().a || 1;
+    const sc = m.scale || 1;
+    const half = Math.ceil(Math.max(m.w || 60, m.h || 60) * sc * 1.1 + 40);
+    const top = Math.ceil((m.h || 60) * sc * 1.7 + 70 + (m.hover || 0));
+    const bot = 40;
+    const W = half * 2;
+    const H = top + bot;
+    let c = m._cache;
+    if (!c || c.k !== k || c.W !== W || c.H !== H) {
+      const cv = c && c.cv ? c.cv : document.createElement('canvas');
+      cv.width = Math.max(1, Math.ceil(W * k));
+      cv.height = Math.max(1, Math.ceil(H * k));
+      c = m._cache = { cv, x: cv.getContext('2d'), k, W, H, n: (cacheSeq++ % 3), ok: false };
+    }
+    c.n++;
+    // 野外魔王：一直被打，所以不看受擊閃光，固定每 2 幀重畫一次
+    const redraw = m.fieldBoss ? c.n % 2 === 0 || (m.fx && m.fx.spawn > 0) : c.n % 3 === 0 || m.hurtFlash > 0 || m.squash > 0 || m.deadT > 0 || m.pull;
+    if (!c.ok || redraw) {
+      const x = c.x;
+      x.setTransform(1, 0, 0, 1, 0, 0);
+      x.clearRect(0, 0, c.cv.width, c.cv.height);
+      x.setTransform(k, 0, 0, k, (half - m.x) * k, (top - m.y) * k);
+      G.art.drawMonster(x, m);
+      c.ok = true;
+    }
+    ctx.drawImage(c.cv, m.x - half, m.y - top, W, H);
+  }
+
   Monster.prototype.draw = function (ctx) {
-    G.art.drawMonster(ctx, this);
+    // 畫面外很遠的一般怪物不畫（Boss、野外魔王、菁英一律照畫；招式預警可能畫得很遠，所以邊界留很寬；
+    // 省效能模式邊界縮小）。畫面外本來就看不到，桌機畫面不變
+    if (!this.isBoss && !this.fieldBoss && !this.elite && !(this.def && this.def.boss) && G.cam) {
+      const half = Math.max(this.w || 60, this.h || 60) * (this.scale || 1);
+      const pad = half + (G.lowFx ? 220 : 700);
+      if (this.x + pad < G.cam.x || this.x - pad > G.cam.x + G.W) return;
+    }
+    if (G.lowFx && !G.noMobCache && (this.fieldBoss || (!this.isBoss && !(this.def && this.def.boss)))) drawCached(this, ctx);
+    else G.art.drawMonster(ctx, this);
     if (!this.dead && G.art.drawStatus) G.art.drawStatus(ctx, this, this.t);
     if (this.dead) return;
     const top = this.y - this.h * this.scale - 12;

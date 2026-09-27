@@ -2,19 +2,36 @@
 html, body {
   margin: 0;
   height: 100%;
+  /* 整頁固定、不能捲、不回彈：手機上拖搖桿時畫面才不會飄走 */
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
   background: #0d0906;
   overflow: hidden;
   font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
   user-select: none;
 }
+/* 畫面比例跟 16:9 不同時的黑邊：填上深色、帶一點暖光的底，不是死黑 */
+body {
+  background:
+    radial-gradient(ellipse at 50% 55%, rgba(120, 72, 30, 0.35), rgba(0, 0, 0, 0) 65%),
+    repeating-linear-gradient(135deg, rgba(255, 220, 160, 0.025) 0 14px, rgba(0, 0, 0, 0) 14px 28px),
+    linear-gradient(#1a110a, #0d0906 60%, #080503);
+  background-color: #0d0906;
+}
+/* 位置與縮放由 js/main.js resize() 算好（依 visualViewport 置中），這裡只放在左上角 */
 #stage {
-  position: absolute;
-  left: 50%;
-  top: 50%;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.7);
+  position: fixed;
+  left: 0;
+  top: 0;
   width: 1280px;
   height: 720px;
-  transform-origin: center center;
+  transform-origin: 0 0;
+  touch-action: none;
 }
+/* 視窗裡能捲的清單還是要能用手指捲 */
+.panel .body, .shop .col, .sellgrid, .gallery-wrap, #demo-panel { touch-action: pan-x pan-y; }
 #game { position: absolute; inset: 0; width: 1280px; height: 720px; display: block; }
 #ui { position: absolute; inset: 0; pointer-events: none; }
 #ui > * { pointer-events: auto; }
@@ -324,7 +341,7 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 #demo-panel .dp-row button.on { background: #ffd35a; }
 
 /* ══════════ 手機觸控操作（js/ui/touch.js）══════════ */
-body.touch-mode { touch-action: manipulation; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+body.touch-mode { touch-action: none; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 body.touch-mode #game { touch-action: none; }
 #ui > #touch-ctl { position: absolute; inset: 0; pointer-events: none; }
 #touch-ctl, #touch-ctl * { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -332,6 +349,9 @@ body.touch-mode #game { touch-action: none; }
 #touch-ctl .tc-joyzone { position: absolute; pointer-events: auto; }
 #touch-ctl .tc-joy { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255, 248, 230, 0.10) 0 55%, rgba(255, 248, 230, 0.22) 56% 100%); border: 3px solid rgba(255, 240, 210, 0.55); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18), inset 0 0 18px rgba(0, 0, 0, 0.25); opacity: 0.55; transition: opacity 0.15s; }
 #touch-ctl .tc-joyzone.on .tc-joy { opacity: 1; }
+#touch-ctl .tc-joyzone.idle .tc-joy { opacity: 0.28; }
+#touch-ctl .tc-joyzone.idle .tc-knob { opacity: 0.3; }
+#touch-ctl .tc-joyzone.idle .tc-joy.glow, #touch-ctl .tc-joyzone.idle .tc-joy.glow + .tc-knob { opacity: 0.8; }
 #touch-ctl .tc-joy .ar { position: absolute; width: 0; height: 0; border: 11px solid transparent; opacity: 0.75; }
 #touch-ctl .tc-joy .ar.u { left: 50%; top: 8px; margin-left: -11px; border-bottom: 14px solid #fff3d8; border-top: 0; }
 #touch-ctl .tc-joy .ar.d { left: 50%; bottom: 8px; margin-left: -11px; border-top: 14px solid #fff3d8; border-bottom: 0; }
@@ -349,11 +369,13 @@ body.touch-mode #game { touch-action: none; }
 #touch-ctl .tc-btn img { pointer-events: none; }
 #touch-ctl .tc-btn span { pointer-events: none; }
 #touch-ctl .tc-attack { background: radial-gradient(circle at 50% 30%, rgba(255, 196, 110, 0.78), rgba(210, 100, 30, 0.72) 70%, rgba(150, 60, 15, 0.75)); border: 4px solid rgba(255, 244, 214, 0.9); box-shadow: 0 5px 0 rgba(90, 40, 5, 0.45), 0 0 16px rgba(255, 170, 60, 0.35), inset 0 -8px 16px rgba(120, 40, 0, 0.35); }
-#touch-ctl .tc-attack img { width: 74px; height: 74px; margin-top: -4px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4)); }
-#touch-ctl .tc-attack span { font-size: 17px; margin-top: -4px; }
-#touch-ctl .tc-jump { background: radial-gradient(circle at 50% 30%, rgba(150, 220, 255, 0.7), rgba(40, 120, 200, 0.68) 70%, rgba(20, 70, 140, 0.72)); border-color: rgba(230, 248, 255, 0.85); }
-#touch-ctl .tc-jump b { font-size: 34px; line-height: 30px; }
-#touch-ctl .tc-jump span { font-size: 14px; }
+#touch-ctl .tc-attack { border-width: 3px; }
+#touch-ctl .tc-attack img { width: 40px; height: 40px; margin-top: -2px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4)); }
+#touch-ctl .tc-attack span { font-size: 11px; margin-top: -6px; }
+/* 跳躍：右下主要的大按鈕 */
+#touch-ctl .tc-jump { background: radial-gradient(circle at 50% 30%, rgba(160, 225, 255, 0.8), rgba(40, 120, 200, 0.74) 70%, rgba(20, 70, 140, 0.78)); border: 4px solid rgba(235, 250, 255, 0.92); box-shadow: 0 5px 0 rgba(10, 40, 90, 0.45), 0 0 16px rgba(90, 180, 255, 0.35), inset 0 -8px 16px rgba(10, 40, 110, 0.35); }
+#touch-ctl .tc-jump b { font-size: 56px; line-height: 50px; }
+#touch-ctl .tc-jump span { font-size: 18px; }
 #touch-ctl .tc-skill img { width: 64px; height: 64px; border-radius: 50%; }
 #touch-ctl .tc-skill img.hide { display: none; }
 #touch-ctl .tc-skill i { position: absolute; right: -4px; top: -6px; font-style: normal; font-size: 13px; min-width: 20px; height: 20px; line-height: 17px; text-align: center; border-radius: 10px; background: rgba(60, 36, 18, 0.9); border: 2px solid rgba(255, 232, 190, 0.8); color: #ffe9b0; }
@@ -371,9 +393,20 @@ body.touch-mode #game { touch-action: none; }
 @keyframes tcGlow { from { box-shadow: 0 0 0 3px #ffd83a, 0 0 10px #ffd83a; } to { box-shadow: 0 0 0 7px #ffd83a, 0 0 30px #ffb020; } }
 #touch-ctl .tc-menu { position: absolute; left: 914px; top: 8px; width: 58px; height: 44px; pointer-events: auto; border-radius: 12px; background: rgba(40, 24, 12, 0.72); border: 2px solid #c8a060; color: #ffe9b0; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
 #touch-ctl .tc-menu:active { filter: brightness(1.4); }
+#touch-ctl .tc-fs b { font-size: 28px; line-height: 1; }
+#touch-ctl .tc-fs.on { background: rgba(90, 56, 24, 0.85); }
+#touch-ctl.blocked > .tc-menu { display: flex; }
+#tc-ioshint { position: fixed; left: 50%; top: calc(8px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 1001; display: flex; gap: 10px; align-items: center; max-width: 78vw; font-size: 12px !important; background: rgba(40, 24, 12, 0.94); color: #ffe9b0; border: 2px solid #c8a060; border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
+#tc-ioshint button { flex: none; font-size: 13px; padding: 4px 10px; }
+/* 教學：商店視窗裡的黃色導引框（跟畫面上的教學金框同樣式） */
+.tut-box { position: relative; border-radius: 10px; animation: tutBox 0.9s ease-in-out infinite alternate; }
+@keyframes tutBox { from { box-shadow: 0 0 0 3px rgba(255, 216, 58, 0.75), 0 0 10px rgba(255, 216, 58, 0.9); } to { box-shadow: 0 0 0 4px #ffd83a, 0 0 22px rgba(255, 216, 58, 0.95); } }
+.good.tut-box { background: #fff3c4; }
+.tut-free { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 6px; background: #3cb043; color: #fff; font-size: 12px; font-weight: bold; }
+.good s { color: #a08a70; }
 /* 觸控模式：標題畫面的鍵盤提示改成觸控說明、試玩面板不要蓋住技能鈕 */
 .touch-mode .title-screen .hint { font-size: 0; }
-.touch-mode .title-screen .hint::after { content: '左下搖桿移動（往上推：爬繩／對話／傳送門）· 右下按鈕攻擊、跳躍、技能 · 搖桿往下＋跳躍：跳下平台'; font-size: 15px; }
+.touch-mode .title-screen .hint::after { content: '左半邊按住出現搖桿（往上推：爬繩／對話／傳送門）· 右下大鈕跳躍、周圍技能、角落攻擊 · 搖桿往下＋跳躍：跳下平台'; font-size: 15px; }
 .touch-mode #demo-panel { max-height: 190px; }
 .touch-mode .panel .title .x { font-size: 18px; padding: 4px 14px; }
 #tc-rotate { position: fixed; inset: 0; z-index: 1000; background: rgba(13, 9, 6, 0.9); display: flex; align-items: center; justify-content: center; }

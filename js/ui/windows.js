@@ -475,7 +475,7 @@
             else if (Q.available(id)) btns += '<button class="primary' + (tutAccept ? ' tut-glow' : '') + '" data-act="offerQ" data-arg="' + id + '">！「' + q.name + '」</button>';
           });
         }
-        if (def.role === 'shop') btns += '<button class="primary" data-act="openShop">交易</button>';
+        if (def.role === 'shop') btns += '<button class="primary' + (tc && tc.id === 'shop' ? ' tut-glow' : '') + '" data-act="openShop">交易</button>';
         if (def.role === 'travel') {
           // 松鼠信差：到過的營地之間可以直接移動
           Object.keys(G.data.camps).forEach((r) => {
@@ -535,6 +535,11 @@
     },
 
     // ───────── 商店 ─────────
+    // 教學「去貓頭鷹商人那裡買紅漿果」這一步：那一顆紅漿果免費（只限「買 1」、只限教學進行中）
+    tutFree(g, n) {
+      const tc = G.tutorial && G.tutorial.current();
+      return !!(tc && tc.id === 'shop' && g && g.type === 'potion' && g.id === 'hp' && n === 1);
+    },
     r_shop() {
       const P = G.player;
       const D = G.data.items;
@@ -543,8 +548,11 @@
       goods.forEach((g, i) => {
         if (g.type === 'potion') {
           const p = D.potions[g.id];
-          buy += '<div class="good"><img src="' + G.art.iconURL(p.icon) + '"><div class="info"><div class="nm">' + p.name + '</div><div class="ds">' + p.desc + ' · ' + p.price + ' 金葉 · 持有 ' + (P.potions[g.id] || 0) + '</div></div>' +
-            '<button data-act="buy" data-arg="' + i + ':1"' + (P.gold >= p.price ? '' : ' disabled') + '>買 1</button><button data-act="buy" data-arg="' + i + ':10"' + (P.gold >= p.price * 10 ? '' : ' disabled') + '>買 10</button></div>';
+          // 教學：黃框框住要買的紅漿果和它的「買 1」，價格顯示 0（教學免費）
+          const free = this.tutFree(g, 1);
+          const price = free ? '<s>' + p.price + '</s> 0 金葉<span class="tut-free">教學免費</span>' : p.price + ' 金葉';
+          buy += '<div class="good' + (free ? ' tut-box' : '') + '"><img src="' + G.art.iconURL(p.icon) + '"><div class="info"><div class="nm">' + p.name + '</div><div class="ds">' + p.desc + ' · ' + price + ' · 持有 ' + (P.potions[g.id] || 0) + '</div></div>' +
+            '<button class="' + (free ? 'primary tut-box' : '') + '" data-act="buy" data-arg="' + i + ':1"' + (free || P.gold >= p.price ? '' : ' disabled') + '>' + (free ? '買 1（免費）' : '買 1') + '</button><button data-act="buy" data-arg="' + i + ':10"' + (P.gold >= p.price * 10 ? '' : ' disabled') + '>買 10</button></div>';
         } else {
           const base = D.bases[g.base];
           const R = D.rarity[g.rarity];
@@ -591,7 +599,7 @@
       const [i, n] = arg.split(':').map(Number);
       const g = this.shopGoods()[i];
       if (g.type === 'potion') {
-        const cost = D.potions[g.id].price * n;
+        const cost = this.tutFree(g, n) ? 0 : D.potions[g.id].price * n;
         if (P.gold < cost) return;
         P.gold -= cost;
         P.potions[g.id] = (P.potions[g.id] || 0) + n;
@@ -712,6 +720,8 @@
           '<button data-act="openKeys">按鍵設定</button>' +
           '<button data-act="toggleSound">音效：' + (on ? '開' : '關') + '</button>' +
           '<button data-act="toggleMusic">音樂：' + (G.music.enabled ? '開' : '關') + '</button>' +
+          (G.fullscreen && G.fullscreen.supported() ? '<button data-act="toggleFs">' + (G.fullscreen.active() ? '離開全螢幕' : '全螢幕') + '</button>' : '') +
+          (G.fullscreen && !G.fullscreen.supported() && G.fullscreen.isIOS() && !G.fullscreen.standalone() ? '<div class="dim small">想全螢幕玩：Safari「分享」→「加入主畫面」</div>' : '') +
           '<button data-act="toTitle">存檔並回到標題</button>' +
           '<button class="danger" data-act="resetGame">' + (this.confirmReset ? '再按一次：刪除存檔並重新開始' : '重新開始') + '</button>' +
           '<div class="dim small">遊玩時間 ' + U.fmtTime(G.player.playTime) + '</div>' +
@@ -724,6 +734,10 @@
     },
     a_toggleSound() {
       G.audio.setEnabled(!G.audio.enabled);
+    },
+    a_toggleFs() {
+      G.fullscreen.toggle();
+      setTimeout(() => this.isOpen('menu') && this.render('menu'), 300);
     },
     a_toggleMusic() {
       G.music.setEnabled(!G.music.enabled);

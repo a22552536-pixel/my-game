@@ -2331,6 +2331,8 @@
       if (!active || arguments.length !== 3) return own.apply(this, arguments);
       const d = TOKENS.get(img);
       if (d) {
+        // 省效能模式（手機）：每幀重畫的環境動態層（光柱、孢子、霧、閃電…）整層略過，只留靜態背景
+        if (G.lowFx) return;
         if (x < G.W && x + TW > 0) {
           this.save();
           this.translate(x, y);
@@ -3214,7 +3216,7 @@
   A.drawAtmosphere = function (ctx, map, cam, t) {
     baseAtmo.apply(this, arguments);
     const th = map && map._theme;
-    if (!th || !th.fgSpores) return;
+    if (!th || !th.fgSpores || G.lowFx) return;
     const aged = !!map._aged;
     const n = aged ? 3 : fgPts.length;
     const img = glowSprite(aged ? agedRgb(th.fgSpores, { aged, map }) : th.fgSpores);
