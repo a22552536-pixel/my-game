@@ -1,4 +1,4 @@
-// 畫面左上角的小圖示：裝備、技能、形態、地圖、任務。點一下就打開對應的視窗（原本的快捷鍵也還能用）。
+// 畫面左上角的小圖示：裝備、技能、形態、地圖、任務、圖鑑、鍵盤。點一下就打開對應的視窗。
 (function () {
   'use strict';
   const A = G.art;
@@ -64,6 +64,16 @@
       A.ellipse(ctx, -8, 0, 4, 5, '#1d1330', null, { lw: 1, hl: false });
       G.hud.text(ctx, '★', 8, 2, 13, '#e0a020', 'center', false);
     }),
+    // 鍵盤：米色鍵帽排三排，空白鍵長一條，其中一顆橘色（像是正在改的那顆）
+    keys: () => draw((ctx) => {
+      A.shape(ctx, (c) => A.roundRect(c, -17, -10, 34, 24, 4), '#6a4a30', '#4a3020', { lw: 2, hl: false });
+      const cap = (x, y, w, col) => A.shape(ctx, (c) => A.roundRect(c, x, y, w, 5, 1.2), col, null, { lw: 1, hl: false });
+      for (let i = 0; i < 6; i++) cap(-14.5 + i * 5, -7.5, 4, i === 2 ? '#ffb040' : '#fff3d0');
+      for (let i = 0; i < 5; i++) cap(-12 + i * 5, -1.5, 4, '#fff3d0');
+      cap(-14.5, 4.5, 4, '#fff3d0');
+      cap(-9.5, 4.5, 19, '#fff3d0');
+      cap(10.5, 4.5, 4, '#fff3d0');
+    }),
   };
 
   const LIST = [
@@ -73,6 +83,7 @@
     ['worldmap', '地圖'],
     ['quests', '任務'],
     ['codex', '圖鑑'],
+    ['keys', '鍵盤'],
   ];
 
   const H = (G.hudIcons = {
@@ -120,10 +131,14 @@
       };
       G.codex.note('forms', P.form);
       set('skills', P.sp > 0 ? String(P.sp) : '');
-      // 教學「點技能圖示」那一步：讓圖示本身發光
-      const ts = G.tutorial && G.tutorial.current();
-      const sb = this.el.querySelector('[data-win="skills"]');
-      if (sb) sb.classList.toggle('tut-glow', !!(ts && ts.id === 'openSkills' && !G.ui.isOpen('skills')));
+      // 教學（左上角圖示導覽、點技能圖示）：讓指到的圖示發光並顯示名稱
+      const glow = G.tutorial && G.tutorial.tourIcon ? G.tutorial.tourIcon() : null;
+      LIST.forEach(([id]) => {
+        const b = this.el.querySelector('[data-win="' + id + '"]');
+        if (!b) return;
+        b.classList.toggle('tut-glow', glow === id);
+        b.classList.toggle('tut-show', glow === id);
+      });
       set('forms', G.evolve.canEvolve() ? '↑' : '');
       const ready = Object.keys(G.quests.state).filter((id) => G.quests.state[id] === 'ready').length;
       set('quests', ready ? String(ready) : '');

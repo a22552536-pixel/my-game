@@ -141,8 +141,8 @@
       skillsOf(formId).forEach((id) => (P.skills[id] = G.data.skills[id].maxLv));
       P.sp = 0;
       P.pages = null;
-      // 技能欄：優先放高階的主動技能
-      const act = skillsOf(formId).filter((id) => G.data.skills[id].type !== 'passive' && G.data.skills[id].form !== 'apex');
+      // 技能欄：優先放高階的主動技能（五轉時兩招大招排最前面）
+      const act = skillsOf(formId).filter((id) => G.data.skills[id].type !== 'passive');
       const tierOf = (id) => (G.data.forms[G.data.skills[id].form] || { tier: 0 }).tier;
       act.sort((a, b) => tierOf(b) - tierOf(a));
       P.hotbar = G.data.keys.skillSlots.map((a, i) => act[i] || null);

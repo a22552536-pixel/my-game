@@ -17,14 +17,11 @@
     jump: { x: 995, y: 664, r: 44 },
     hpPot: { x: 823, y: 676, r: 30 },
     mpPot: { x: 893, y: 676, r: 30 },
-    ult1: { x: 1076, y: 372, r: 42 },
-    ult2: { x: 1188, y: 356, r: 42 },
   };
-  // 技能 1–4 以攻擊鈕為圓心排成弧形
+  // 技能 1–4 以攻擊鈕為圓心排成弧形（五轉大招也是放進這 4 格，沒有專屬按鈕）
   const SK_R = 150;
   const SK_ANG = [165, 130, 95, 60];
   const SK_SIZE = 39;
-  const ULTS = (G.data.keys && G.data.keys.ults) || [['ult1', 'meidou'], ['ult2', 'chibaku']];
 
   const I = () => G.input;
 
@@ -110,11 +107,6 @@
         const c = { x: ATK.x + Math.cos(ang) * SK_R, y: ATK.y - Math.sin(ang) * SK_R, r: SK_SIZE };
         const b = mk(a, c, 'tc-skill', '<img alt="" class="hide"><div class="cd"></div><span class="cdt"></span><i>' + (i + 1) + '</i>');
         this.sk.push({ el: b, img: b.querySelector('img'), cd: b.querySelector('.cd'), cdt: b.querySelector('.cdt'), id: undefined, state: '' });
-      });
-      this.ults = ULTS.map(([a, id]) => {
-        const b = mk(a, BTN[a], 'tc-skill tc-ult', '<img alt=""><div class="cd"></div><span class="cdt"></span>');
-        b.style.display = 'none';
-        return { a, id, el: b, img: b.querySelector('img'), cd: b.querySelector('.cd'), cdt: b.querySelector('.cdt'), vis: false, icon: false, state: '' };
       });
 
       // ── 選單（等同 Esc）──
@@ -255,20 +247,10 @@
             s.img.classList.remove('hide');
           } else s.img.classList.add('hide');
           s.el.classList.toggle('empty', !id);
+          // 五轉大招放進技能格時：金框紫底，一眼認得出來
+          s.el.classList.toggle('tc-ult', !!(id && S[id] && S[id].form === 'apex'));
         }
         this.cool(s, id);
-      });
-      this.ults.forEach((u) => {
-        const vis = !!(P.skills && P.skills[u.id] > 0 && S[u.id]);
-        if (vis !== u.vis) {
-          u.vis = vis;
-          u.el.style.display = vis ? 'block' : 'none';
-          if (vis && !u.icon) {
-            u.icon = true;
-            u.img.src = G.art.iconURL(u.id);
-          }
-        }
-        if (vis) this.cool(u, u.id);
       });
       const pot = P.potions || {};
       const hpN = (pot.hp || 0) + (pot.hpL || 0) + (pot.hpXL || 0);

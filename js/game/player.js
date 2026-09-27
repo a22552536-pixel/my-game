@@ -228,14 +228,6 @@
         this.startAttack();
         return;
       }
-      // 五轉大招：專屬按鍵
-      for (const [a, id] of G.data.keys.ults) {
-        if (I.wasPressed(a)) {
-          if ((this.skills[id] || 0) > 0) this.useSkill(id);
-          else G.hud.toast('五轉「星楓獅王」之後才會學到這一招', '#ddd');
-          return;
-        }
-      }
       const slots = G.data.keys.skillSlots;
       for (let i = 0; i < slots.length; i++) {
         if (I.wasPressed(slots[i])) {
@@ -572,7 +564,7 @@
       return { x: this.x - this.w / 2, y: this.y - this.h, w: this.w, h: this.h };
     },
 
-    // 快捷鍵 1／2：先用小的，用完再用大的
+    // 藥水鍵（預設 A／S）：先用小的，用完再用大的
     usePotion(kind) {
       const big = kind + 'L';
       const xl = kind + 'XL';

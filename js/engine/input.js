@@ -2,7 +2,8 @@
 (function () {
   'use strict';
 
-  const KEY_STORE = 'xiaozong_keys_v1';
+  // v2：預設按鍵改成 Z 跳、D 攻擊、X C V B 技能、A／S 藥水，舊的自訂按鍵不沿用
+  const KEY_STORE = 'xiaozong_keys_v2';
 
   G.input = {
     bind: {},

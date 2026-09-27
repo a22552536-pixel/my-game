@@ -7,7 +7,19 @@
   const slotOf = (id) => Math.max(0, G.player.hotbar.indexOf(id));
   const slotKey = (id) => G.data.keys.skillSlots[slotOf(id)];
 
-  // info：說明步驟，看完按跳躍鍵繼續；sub：第二行的補充說明
+  // 左上角圖示導覽：每按一下跳躍鍵換下一個圖示（一行短說明）
+  const TOUR = [
+    ['inventory', '「裝備」換裝備、看背包'],
+    ['skills', '「技能」學技能、放進技能欄'],
+    ['forms', '「形態」進化、切換形態'],
+    ['worldmap', '「地圖」看世界地圖'],
+    ['quests', '「任務」看接下的任務'],
+    ['codex', '「圖鑑」遇過的怪物與形態'],
+    ['keys', '「鍵盤」查看、更改按鍵'],
+  ];
+  const skillKeys = () => G.data.keys.skillSlots.map((a) => G.input.label(a)).join(' ');
+
+  // info：說明步驟，看完按跳躍鍵繼續；sub：第二行的補充說明（text、sub 可以是函式，按鍵名稱跟著改鍵走）
   const STEPS = [
     { id: 'move', keys: () => ['left', 'right'], text: '左右走路' },
     { id: 'jump', keys: () => ['jump'], text: '跳躍' },
@@ -17,9 +29,11 @@
     { id: 'infoHp', info: true, keys: () => ['jump'], text: '紅色的是 HP（生命）', sub: '被怪物打到會減少，歸零就會倒下（倒下沒有懲罰，會在營地醒來）' },
     { id: 'infoMp', info: true, keys: () => ['jump'], text: '藍色的是 MP（魔力）', sub: '放技能會用掉 MP，不夠的時候技能放不出來' },
     { id: 'infoExp', info: true, keys: () => ['jump'], text: '最下面黃色的是 EXP（經驗）', sub: '打怪、完成任務會增加；集滿就升級，還會拿到技能點（升級不會補血，記得喝藥水）' },
+    { id: 'infoIcons', info: true, tour: true, keys: () => ['jump'], text: () => (TOUR[T.tourI] || TOUR[0])[1], sub: () => '左上角的圖示 ' + (T.tourI + 1) + ' / ' + TOUR.length },
     { id: 'openSkills', keys: () => [], text: '點左上角的「技能」圖示' },
     { id: 'learn', keys: () => [], text: '按「＋」學會「小吼」', sub: '送你 1 點技能點。每升一級都會再拿到 1 點' },
     { id: 'useSkill', keys: () => [slotKey('roar')], text: '放出小吼（先按 Esc 關掉視窗）', sub: '注意看，放完之後 MP 會變少' },
+    { id: 'infoSlots', info: true, keys: () => ['jump'], text: () => (G.touch && G.touch.on ? '右下 4 顆技能鈕放 4 招' : '技能欄 ' + skillKeys() + ' 放 4 招'), sub: '在「技能」視窗選格子。五轉大招也一樣' },
     { id: 'potion', keys: () => ['hpPot'], text: '受傷了！吃一顆紅漿果補 HP' },
     { id: 'mpPot', keys: () => ['mpPot'], text: 'MP 快用完了！喝一瓶藍花蜜補 MP' },
     { id: 'infoRegen', info: true, keys: () => ['jump'], text: 'HP、MP 會慢慢自己回復，但很慢', sub: '打怪時要靠紅漿果、藍花蜜；站在營地的營火旁邊回得比較快' },
@@ -37,6 +51,15 @@
     doneT: 0,
     outroT: 0,
     potions0: 0,
+    tourI: 0, // 圖示導覽目前指到第幾個
+
+    // 圖示導覽中：目前要發光的圖示 id（hudicons.js 用）
+    tourIcon() {
+      const s = this.current();
+      if (!s) return null;
+      if (s.id === 'openSkills') return G.ui.isOpen('skills') ? null : 'skills';
+      return s.tour ? (TOUR[this.tourI] || TOUR[0])[0] : null;
+    },
 
     start() {
       this.active = true;
@@ -63,6 +86,7 @@
       if (!s) return;
       const P = G.player;
       this.stepT = 0;
+      this.tourI = 0;
       if (s.id === 'mpPot') {
         P.mp = Math.max(1, Math.round(P.maxMp * 0.25));
         P.potions.mp = Math.max(1, P.potions.mp || 0);
@@ -121,7 +145,14 @@
       this.stepT = (this.stepT || 0) + dt;
       // 說明步驟：看一下之後按跳躍鍵繼續
       if (s.info) {
-        if (this.stepT > 0.6 && I.wasPressed('jump')) this.on(s.id);
+        if (this.stepT > (s.tour ? 0.35 : 0.6) && I.wasPressed('jump')) {
+          // 圖示導覽：一個一個看完才算完成
+          if (s.tour && this.tourI < TOUR.length - 1) {
+            this.tourI++;
+            this.stepT = 0;
+            G.audio.play('ui');
+          } else this.on(s.id);
+        }
         this.lastX = P.x;
         return;
       }
@@ -271,7 +302,15 @@
           return [[sx(P.x), sy(P.y) + 40, 'down']];
         }
         case 'openSkills':
-          return [];
+        case 'infoIcons': {
+          // 左上角的圖示是 DOM 按鈕：在它外面畫一圈金光（按鈕本身也會發光、顯示名稱）
+          const id = this.tourIcon();
+          const H = G.hudIcons && G.hudIcons.el;
+          const b = id && H && H.querySelector('[data-win="' + id + '"]');
+          return b ? [{ box: [H.offsetLeft + b.offsetLeft, H.offsetTop + b.offsetTop, b.offsetWidth, b.offsetHeight] }] : [];
+        }
+        case 'infoSlots':
+          return G.touch && G.touch.on ? [] : [{ box: [sx0, barY + 5, nSlots * 52 - 4, 44] }];
         case 'infoHp':
           return [{ box: [72, barY + 22, 220, 14] }];
         case 'infoMp':
@@ -316,7 +355,7 @@
         total += ctx.measureText('Esc 選單').width;
         const x0 = W / 2 - total / 2 - 20;
         G.hud.panel(ctx, x0, 60, total + 40, 84, 14, 'rgba(30,20,12,0.8)');
-        G.hud.text(ctx, '教學完成！背包、技能、地圖都在左上角的圖示。其他按鍵：', W / 2, 80, 15, '#ffe9a0', 'center', false);
+        G.hud.text(ctx, '教學完成！左上角的圖示隨時能點。其他按鍵：', W / 2, 80, 15, '#ffe9a0', 'center', false);
         let x = x0 + 20;
         items.forEach(([k, t]) => {
           x += this.keycap(ctx, L(k), x, 118) + 6;
@@ -335,14 +374,16 @@
       if (!s) return;
       this.target(s).forEach((t) => (t.box ? this.box(ctx, t.box[0], t.box[1], t.box[2], t.box[3]) : this.arrow(ctx, t[0], t[1], t[2])));
       const keys = s.info ? [] : s.keys();
+      const text = typeof s.text === 'function' ? s.text() : s.text;
+      const sub = typeof s.sub === 'function' ? s.sub() : s.sub;
       ctx.font = 'bold 22px ' + G.art.FONT;
       const keysW = keys.reduce((a, k) => a + Math.max(40, ctx.measureText(L(k)).width + 18) + 8, 0);
-      const tw = ctx.measureText(s.text).width;
+      const tw = ctx.measureText(text).width;
       ctx.font = 'bold 15px ' + G.art.FONT;
-      const subW = s.sub ? ctx.measureText(s.sub).width : 0;
+      const subW = sub ? ctx.measureText(sub).width : 0;
       const contW = s.info ? 150 : 0;
       const w = Math.max(keysW + tw + contW + 70, subW + 60);
-      const h = 86 + (s.sub ? 28 : 0);
+      const h = 86 + (sub ? 28 : 0);
       const x0 = W / 2 - w / 2;
       const bob = Math.sin(G.time * 3) * 2;
       G.hud.panel(ctx, x0, 60 + bob, w, h, 16, 'rgba(30,20,12,0.85)');
@@ -356,21 +397,26 @@
       ctx.fillStyle = '#fff6e0';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(s.text, x + 8, 116 + bob);
+      ctx.fillText(text, x + 8, 116 + bob);
       if (s.info) {
-        // 「按 [C] 繼續」
+        // 「按 [跳躍鍵] 繼續」
         let cx = x + 8 + tw + 24;
         ctx.font = 'bold 16px ' + G.art.FONT;
         ctx.fillStyle = '#bfe8ff';
-        ctx.fillText('按', cx, 116 + bob);
-        cx += 22;
-        cx += this.keycap(ctx, L('jump'), cx, 116 + bob) + 6;
-        ctx.font = 'bold 16px ' + G.art.FONT;
-        ctx.fillStyle = '#bfe8ff';
-        ctx.textAlign = 'left';
-        ctx.fillText('繼續', cx, 116 + bob);
+        if (G.touch && G.touch.on) {
+          // 手機沒有鍵盤：直接說按跳躍鈕
+          ctx.fillText('點跳躍鈕繼續', cx, 116 + bob);
+        } else {
+          ctx.fillText('按', cx, 116 + bob);
+          cx += 22;
+          cx += this.keycap(ctx, L('jump'), cx, 116 + bob) + 6;
+          ctx.font = 'bold 16px ' + G.art.FONT;
+          ctx.fillStyle = '#bfe8ff';
+          ctx.textAlign = 'left';
+          ctx.fillText('繼續', cx, 116 + bob);
+        }
       }
-      if (s.sub) G.hud.text(ctx, s.sub, W / 2, 148 + bob, 15, '#e8dcc0', 'center', false);
+      if (sub) G.hud.text(ctx, sub, W / 2, 148 + bob, 15, '#e8dcc0', 'center', false);
       if (this.doneT > 0) {
         ctx.globalAlpha = Math.min(1, this.doneT * 2);
         G.hud.text(ctx, '✔', x0 + w - 22, 84 + bob, 28, '#7dff7a', 'center');

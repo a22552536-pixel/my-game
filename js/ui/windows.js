@@ -330,10 +330,8 @@
         h += '<div class="nm">' + S.name + ' <span class="lv">Lv.' + lv + ' / ' + S.maxLv + '</span>' + (slot >= 0 ? ' <span class="key">[' + I.label(G.data.keys.skillSlots[slot]) + ']</span>' : '') + '</div>';
         const mpTxt = (l) => (typeof S.mp === 'function' ? '（MP ' + S.mp(l) + '）' : '');
         h += '<div class="ds">' + (lv > 0 ? S.desc(lv) + mpTxt(lv) : '尚未學會') + '</div>';
-        // 直接點按鍵把技能放上技能欄（五轉大招有專屬按鍵，不佔格子）
-        const ult = G.data.keys.ults.find(([, u]) => u === id);
-        if (ult) h += '<div class="slotpick">專屬按鍵：<span class="key">[' + I.label(ult[0]) + ']</span></div>';
-        else if (S.type !== 'passive') {
+        // 直接點按鍵把技能放上技能欄（五轉大招也一樣，自己選要放哪一格）
+        if (S.type !== 'passive') {
           h += '<div class="slotpick">放在：' + G.data.keys.skillSlots.map((a, i) => {
             const on = P.hotbar[i] === id;
             const other = P.hotbar[i] && !on ? G.data.skills[P.hotbar[i]] : null;
@@ -370,9 +368,10 @@
       P.skills[id] = (P.skills[id] || 0) + 1;
       P.sp--;
       G.formSwitch.sync(P);
-      if (S.type !== 'passive' && S.form !== 'apex' && P.hotbar.indexOf(id) < 0) {
+      if (S.type !== 'passive' && P.hotbar.indexOf(id) < 0) {
         const free = P.hotbar.indexOf(null);
         if (free >= 0) P.hotbar[free] = id;
+        else G.hud.toast('技能欄滿了：點「放在」的按鍵換上去', '#ffe14a');
       }
       G.audio.play('quest');
       G.save.write();
@@ -748,12 +747,17 @@
     r_keys() {
       const I = G.input;
       let h = '<div class="keys">';
+      const slots = G.data.keys.skillSlots;
       G.data.keys.actions.forEach(([a, label]) => {
         const waiting = this.keyWait && this.keyWait.type === 'rebind' && this.keyWait.action === a;
+        // 技能欄順便標出現在放的是哪一招（要換招請到「技能」視窗）
+        const si = slots.indexOf(a);
+        const sk = si >= 0 && G.player && G.player.hotbar[si] ? G.data.skills[G.player.hotbar[si]] : null;
+        if (si >= 0) label += sk ? '<em class="kskill">' + sk.name + '</em>' : '<em class="kskill dim">空</em>';
         h += '<div class="krow"><span>' + label + '</span><button class="' + (waiting ? 'waiting' : '') + '" data-act="rebind" data-arg="' + a + '">' + (waiting ? '請按新按鍵…' : esc(I.label(a))) + '</button></div>';
       });
       h += '<div class="krow"><span>選單／關閉視窗</span><button disabled>Esc（固定）</button></div>';
-      h += '</div><div class="notice">' + esc(this.keyMsg || '點一下按鈕，再按下想要的按鍵。和其他動作重複時會自動互換。') + '</div>';
+      h += '</div><div class="notice">' + esc(this.keyMsg || '點按鈕，再按新按鍵。重複會自動互換。技能放哪一格，到「技能」視窗設定。') + '</div>';
       h += '<div class="btns"><button data-act="resetKeys">恢復預設</button><button class="primary" data-act="close">完成</button></div>';
       return this.frame('按鍵設定', h, 'keycfg');
     },

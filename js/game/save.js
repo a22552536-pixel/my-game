@@ -37,6 +37,7 @@
           gold: P.gold, skills: P.skills, hotbar: P.hotbar,
           equip: P.equip, bag: P.bag, potions: P.potions, buffs: P.buffs,
           questItems: P.questItems, playTime: P.playTime, pages: P.pages || null, apexLine: P.apexLine || null,
+          ultSlots: 1, // 五轉大招已經改成放在技能欄（舊存檔沒有這個標記）
         },
         pos: P.dead ? null : { map: G.world.mapId, x: Math.round(P.x), y: Math.round(P.y) },
         lastCamp: G.data.camps[G.world.map.region] || '1-1',
@@ -73,8 +74,14 @@
             pg.skills[id] = G.data.skills[id].maxLv;
           }
         }
-        pg.hotbar = (pg.hotbar || []).slice(0, G.data.keys.skillSlots.length).map((id) => (id && G.data.skills[id] && G.data.skills[id].form !== 'apex' ? id : null));
+        pg.hotbar = (pg.hotbar || []).slice(0, G.data.keys.skillSlots.length).map((id) => (id && G.data.skills[id] ? id : null));
         while (pg.hotbar.length < G.data.keys.skillSlots.length) pg.hotbar.push(null);
+        // 舊存檔：五轉大招原本用專屬按鍵、不在技能欄裡，已經學會的就放進空格（沒有空格就留給玩家自己在技能視窗放）
+        if (!d.ultSlots) ['meidou', 'chibaku'].forEach((u) => {
+          if ((pg.skills[u] || 0) <= 0 || pg.hotbar.indexOf(u) >= 0) return;
+          const free = pg.hotbar.indexOf(null);
+          if (free >= 0) pg.hotbar[free] = u;
+        });
       };
       const cur = { skills: P.skills, sp: P.sp, hotbar: P.hotbar };
       clean(cur);

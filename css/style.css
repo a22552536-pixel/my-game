@@ -195,6 +195,7 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 .keys { display: flex; flex-direction: column; gap: 4px; }
 .krow { display: flex; justify-content: space-between; align-items: center; background: #f6e8c8; border-radius: 8px; padding: 3px 8px; }
 .krow button { min-width: 110px; padding: 3px 10px; }
+.krow .kskill { font-style: normal; font-size: 12px; margin-left: 8px; padding: 0 6px; border-radius: 6px; background: #e8d4a8; color: #6a3a0a; }
 .krow button.waiting { background: linear-gradient(#fff3a0, #ffd24a); animation: blink 0.8s infinite; }
 @keyframes blink { 50% { opacity: 0.6; } }
 
@@ -288,6 +289,7 @@ button.confirm { background: linear-gradient(#ffb0a0, #e0604a); }
 #hud-icons button img { width: 38px; height: 38px; display: block; margin: 1px auto 0; }
 #hud-icons button .tip { display: none; position: absolute; left: 50%; top: 48px; transform: translateX(-50%); white-space: nowrap; background: rgba(30, 18, 8, 0.9); color: #ffe9b0; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
 #hud-icons button:hover .tip { display: block; }
+#hud-icons button.tut-show .tip { display: block; }
 #hud-icons button .badge { position: absolute; right: -6px; top: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e84a3a; color: #fff; font-size: 11px; font-weight: bold; line-height: 18px; border: 2px solid #fff3d0; }
 #hud-icons button .badge.hide { display: none; }
 /* 從左上角圖示打開的視窗往下放，不要被圖示列蓋住 */
@@ -361,7 +363,6 @@ body.touch-mode #game { touch-action: none; }
 #touch-ctl .tc-skill.lock img { filter: grayscale(1) brightness(0.5); }
 #touch-ctl .tc-skill.nomp img { filter: saturate(0.4) brightness(0.6) sepia(0.3) hue-rotate(180deg); }
 #touch-ctl .tc-ult { background: radial-gradient(circle at 50% 35%, rgba(170, 90, 255, 0.6), rgba(50, 10, 90, 0.7)); border: 4px solid rgba(255, 220, 120, 0.95); animation: tcUlt 1.4s ease-in-out infinite alternate; }
-#touch-ctl .tc-ult img { width: 72px; height: 72px; }
 @keyframes tcUlt { from { box-shadow: 0 0 6px 2px rgba(255, 210, 90, 0.5), 0 3px 0 rgba(0, 0, 0, 0.3); } to { box-shadow: 0 0 20px 7px rgba(255, 190, 60, 0.8), 0 3px 0 rgba(0, 0, 0, 0.3); } }
 #touch-ctl .tc-pot img { width: 46px; height: 46px; margin-top: 2px; }
 #touch-ctl .tc-pot em { position: absolute; right: -6px; bottom: -4px; font-style: normal; font-size: 14px; min-width: 22px; height: 20px; padding: 0 4px; line-height: 17px; text-align: center; border-radius: 10px; background: rgba(40, 24, 12, 0.9); border: 2px solid rgba(255, 232, 190, 0.8); }

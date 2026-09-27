@@ -143,14 +143,8 @@
       if (!(G.touch && G.touch.on)) {
       // ── 技能欄 ──
       const slots = G.data.keys.skillSlots;
-      // 五轉大招學會之後，技能欄右邊多兩格專屬按鍵
-      const ults = G.data.keys.ults.filter(([, u]) => (P.skills[u] || 0) > 0);
-      const sx0 = W - 8 - (slots.length + ults.length + 2) * 52 - 8;
-      this.panel(ctx, sx0 - 8, barY, (slots.length + ults.length + 2) * 52 + 16, 54, 12);
-      ults.forEach(([a, u], i) => {
-        const S = G.data.skills[u];
-        this.slot(ctx, sx0 + (slots.length + i) * 52, barY + 5, I.label(a), S.icon, () => (P.mp < S.mp(P.skills[u]) ? 'nomp' : null));
-      });
+      const sx0 = W - 8 - (slots.length + 2) * 52 - 8;
+      this.panel(ctx, sx0 - 8, barY, (slots.length + 2) * 52 + 16, 54, 12);
       slots.forEach((a, i) => {
         const x = sx0 + i * 52;
         const id = P.hotbar[i];
@@ -163,7 +157,7 @@
           return null;
         });
       });
-      const px = sx0 + (slots.length + ults.length) * 52;
+      const px = sx0 + slots.length * 52;
       const hpN = (P.potions.hp || 0) + (P.potions.hpL || 0) + (P.potions.hpXL || 0);
       const mpN = (P.potions.mp || 0) + (P.potions.mpL || 0) + (P.potions.mpXL || 0);
       this.slot(ctx, px, barY + 5, I.label('hpPot'), P.potions.hp > 0 || !P.potions.hpL ? 'hpPot' : 'hpPotL', () => (hpN > 0 ? null : 'nomp'), hpN);
