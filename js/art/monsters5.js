@@ -4449,13 +4449,16 @@
       hand = [36, -66];
       bladeA = -0.6;
     } else if (recover) {
-      hand = [26, -44];
-      bladeA = 1.3;
+      // 收招：刀尖往後下方垂到剛好碰到雪面
+      hand = [24, -48];
+      bladeA = PI - 0.6;
     } else {
-      // 平常：刀垂在身側，刀尖朝前下方
-      hand = [26, -46 + (walk ? Math.sin(u) : Math.sin(t * 1.3) * 0.6)];
-      bladeA = 1.02 + Math.sin(t * 1.3) * 0.03;
+      // 平常（脇構え風）：刀低低地拿在身側，刀尖往後下方約 27°
+      hand = [22, -42 + (walk ? Math.sin(u) : Math.sin(t * 1.3) * 0.6)];
+      bladeA = PI - 0.47 + Math.sin(t * 1.3) * 0.02;
     }
+    // 往後拿的時候把刀翻過來：刃朝下、反（彎）朝上
+    const flipBlade = !guarding && !striking;
     // ── 遠側的手臂（鬼火的肘） ──
     const armFar = hand2 || [-24, -48];
     ghostFire(ctx, (-14 + armFar[0]) / 2, (-72 + armFar[1]) / 2 + 4, 2.4, 7, t, 3, 0.8 * fireK);
@@ -4584,6 +4587,7 @@
     ctx.save();
     ctx.translate(hand[0], hand[1]);
     ctx.rotate(bladeA);
+    if (flipBlade) ctx.scale(1, -1);
     const BL = 86;
     // 刃：腰反（彎曲集中在靠柄的地方）、往刀尖略收窄，刀尖是帶橫手線的切先；明亮的鋼、深色刀背、波浪刃紋、霜光
     const cy = (q) => -6 * (1 - (1 - q) * (1 - q));
@@ -4678,6 +4682,11 @@
     ctx.restore();
     A.shape(ctx, (c) => A.roundRect(c, -28, -2.1, 3, 4.2, 1), P4.gold, P4.goldS, { lw: 1.1, shadeY: 0.6 });
     ctx.restore();
+    // 收招時刀尖碰到雪面，揚起一點雪
+    if (recover) {
+      const q = (t * 1.2) % 1;
+      puff(ctx, hand[0] + Math.cos(bladeA) * 86, -1 - q * 3, 1.5 + q * 2.5, '#ffffff', (1 - q) * 0.8);
+    }
     // 手的位置：鬼火（沒有手）
     ghostFire(ctx, hand[0] - 1, hand[1] + 2, 2.6, 6.5, t, 7, 0.9 * fireK);
     if (hand2) ghostFire(ctx, hand2[0], hand2[1] + 2, 2.4, 6, t, 8, 0.9 * fireK);
