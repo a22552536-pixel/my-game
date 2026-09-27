@@ -70,8 +70,13 @@ G.data.balance = {
   variants: {
     giant: { chance: 0.04, name: '巨大', color: '#ffb070', scale: 1.45, hp: 3, atk: 1.3, exp: 3, speed: 0.8, loot: 'elite' },
     tiny: { chance: 0.04, name: '迷你', color: '#b0f0ff', scale: 0.65, hp: 0.6, atk: 0.8, exp: 2, speed: 1.7, loot: 'gold' },
-    rage: { chance: 0.03, name: '狂暴', color: '#ff7a6a', tint: '#ff3a2a', tintAmt: 0.38, hp: 1.6, atk: 1.6, exp: 2.5, speed: 1.4, aggressive: true, loot: 'elite' },
+    rage: { chance: 0.03, name: '憤怒', color: '#ff7a6a', tint: '#ff3a2a', tintAmt: 0.38, hp: 1.6, atk: 1.6, exp: 2.5, speed: 1.4, aggressive: true, loot: 'elite' },
     ghost: { chance: 0.02, name: '幽靈', color: '#c8d8ff', tint: '#b8c8ff', tintAmt: 0.5, alpha: 0.6, hp: 1.3, atk: 1.2, exp: 3, speed: 1.1, float: true, loot: 'elite' },
+    // v1.5：更多特質（行為在 js/game/variants.js、外觀疊加在 js/art/variants.js）
+    void: { chance: 0.025, name: '虛空', color: '#b89aff', tint: '#2a1250', tintAmt: 0.5, hp: 1.5, atk: 1.3, exp: 3, speed: 1.1, blink: true, loot: 'elite' },
+    poison: { chance: 0.03, name: '中毒', color: '#9af07a', tint: '#58c83a', tintAmt: 0.38, hp: 1.3, atk: 1.1, exp: 2.5, poison: true, loot: 'elite' },
+    sneaky: { chance: 0.025, name: '猥瑣', color: '#e8d49a', tint: '#8a7a4a', tintAmt: 0.22, scale: 0.88, hp: 0.9, atk: 0.9, exp: 2.5, speed: 1.5, thief: true, loot: 'gold' },
+    hypocrite: { chance: 0.02, name: '偽善', color: '#ffd0e8', tint: '#fff2c8', tintAmt: 0.3, hp: 1.4, atk: 1.4, exp: 3, twoFaced: true, loot: 'elite' },
   },
 
   // ── 掉落 ──

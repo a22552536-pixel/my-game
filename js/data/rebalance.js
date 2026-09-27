@@ -51,6 +51,9 @@
     if (!d.lv || d.boss || d.fieldBoss) continue;
     d.sizeMul = sizeFor(d.lv);
   }
+  // 本來就是大型生物的，再個別放大（例如貘有象的身體）
+  const bigBody = { dreamsheep: 1.35, pouchroo: 1.3, drumyak: 1.2, heartcedar: 1.15, mirrordeer: 1.15, shieldbear: 1.1 };
+  for (const id in bigBody) if (D.monsters[id]) D.monsters[id].sizeMul = (D.monsters[id].sizeMul || 1) * bigBody[id];
   // ── 越後面的章節，地圖上的怪越多（緩緩加密）──
   const densityFor = { 1: 1, 2: 1.15, 3: 1.3, 4: 1.45, 5: 1.6 };
   // 以第一章同位置的地圖（1-2、1-3、1-4）為基準，總數乘上倍率，多出來的平均分給各組

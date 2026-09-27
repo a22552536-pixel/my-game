@@ -31,11 +31,11 @@
     this.h = d.h;
     this.halfW = (d.w * this.scale) / 2;
     this.level = d.lv;
-    this.maxHp = Math.round(b.monsterHp(d.lv) * (d.hpMul || 1) * (this.elite ? b.eliteHpMult : 1) * (V ? V.hp : 1));
+    this.maxHp = Math.round(b.monsterHp(d.lv) * (d.hpMul || 1) * (this.elite ? b.eliteHpMult : 1) * (V ? V.hp || 1 : 1));
     this.hp = this.maxHp;
-    this.atk = Math.round(b.monsterAtk(d.lv) * (d.atkMul || 1) * (this.elite ? b.eliteAtkMult : 1) * (V ? V.atk : 1));
+    this.atk = Math.round(b.monsterAtk(d.lv) * (d.atkMul || 1) * (this.elite ? b.eliteAtkMult : 1) * (V ? V.atk || 1 : 1));
     this.armor = b.monsterDef(d.lv);
-    this.exp = Math.round(b.monsterExp(d.lv) * (this.elite ? b.eliteExpMult : 1) * (this.shiny ? b.shinyExpMult : 1) * (V ? V.exp : 1));
+    this.exp = Math.round(b.monsterExp(d.lv) * (this.elite ? b.eliteExpMult : 1) * (this.shiny ? b.shinyExpMult : 1) * (V ? V.exp || 1 : 1));
     this.x = x;
     this.y = p[2];
     this.vx = 0;
@@ -216,7 +216,7 @@
     if (this.moodAggro && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < 320) this.aggroT = Math.max(this.aggroT, 2);
     const aggro = this.aggroT > 0 && P.alive();
     const [minX, maxX] = this.bounds();
-    const speed = d.speed * (this.V ? this.V.speed : 1) * (this.slowT > 0 ? 0.5 : 1) * (this.hasteT > 0 ? 1.6 : 1);
+    const speed = d.speed * (this.V ? this.V.speed || 1 : 1) * (this.slowT > 0 ? 0.5 : 1) * (this.hasteT > 0 ? 1.6 : 1);
     // 被冥道殘月破的黑洞吸住：不動、不受重力，位置由技能控制
     if (this.sucked) {
       this.vx = 0;
@@ -306,7 +306,10 @@
 
     // 碰撞傷害
     if (P.alive() && this.touchCd <= 0 && U.overlap(this.hitbox(), P.hitbox())) {
-      if (P.hurt(this.atk, this.x)) this.touchCd = 0.5;
+      if (P.hurt(this.atk, this.x)) {
+        this.touchCd = 0.5;
+        if (G.variantHooks) G.variantHooks.onHit(this);
+      }
     }
     return false;
   };
@@ -331,7 +334,7 @@
         this.attackPhase = 'strike';
         this.attackT = 0.22;
         const box = { x: this.dir > 0 ? this.x : this.x - 96, y: this.y - 50, w: 96, h: 44 };
-        if (P.alive() && U.overlap(box, P.hitbox())) P.hurt(Math.round(this.atk * 1.2), this.x);
+        if (P.alive() && U.overlap(box, P.hitbox()) && P.hurt(Math.round(this.atk * 1.2), this.x) && G.variantHooks) G.variantHooks.onHit(this);
         G.audio.play('swing');
       } else {
         const pr = d.projectile;
