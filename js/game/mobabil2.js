@@ -179,41 +179,74 @@
     // ═════ 第四章　霜鈴雪峰 ═════
     // 鎌鼬：撲咬後 1 秒，殘影在原地再咬一次
     echo: {
+      // 鎌鼬：像一道風刃一樣高速穿過玩家（從這一側掠到另一側），掠過的整段路徑都算傷害；
+      // 穿過去之後頓一下，再反向掠回來一次。終點留下殘影，1 秒後再咬一次。
       update(m, dt, P, aggro) {
+        const pass = (from) => {
+          const [lo, hi] = m.bounds();
+          const tx = U.clamp(P.x + m.dir * 150, lo, hi);
+          m.lgFrom = from;
+          m.lgTo = tx;
+          m.lgT = 0;
+          m.lgDur = Math.max(0.12, Math.abs(tx - from) / 1500);
+          m.lgHit = false;
+          m.fx.dash = true;
+          m.attackPhase = 'strike';
+          G.audio.play('swing');
+        };
         if (m.lgWind > 0) {
           m.lgWind -= dt;
           m.vx = 0;
           m.attackPhase = 'wind';
           if (m.lgWind <= 0) {
-            m.attackPhase = 'strike';
-            m.lgT = 0.28;
-            m.lgHit = false;
-            m.fx.dash = true;
-            m.lgX = m.x;
-            G.audio.play('swing');
+            m.lgPasses = 2;
+            pass(m.x);
           }
           return true;
         }
-        if (m.lgT > 0) {
-          m.lgT -= dt;
-          m.vx = m.dir * m.def.speed * 6;
-          if (!m.lgHit && P.alive() && U.overlap({ x: m.x - 34, y: m.y - 50, w: 68, h: 50 }, P.hitbox())) {
+        if (m.lgDur > 0) {
+          const prev = m.x;
+          m.lgT += dt;
+          const k = Math.min(1, m.lgT / m.lgDur);
+          m.x = m.lgFrom + (m.lgTo - m.lgFrom) * k;
+          m.vx = 0;
+          // 掃過的整段都算：這一幀從 prev 到 m.x 的長條
+          const x0 = Math.min(prev, m.x) - 30;
+          const w = Math.abs(m.x - prev) + 60;
+          if (!m.lgHit && P.alive() && U.overlap({ x: x0, y: m.y - 50, w, h: 50 }, P.hitbox())) {
             m.lgHit = true;
-            P.hurt(Math.round(m.atk * 1.1), m.x);
+            P.hurt(Math.round(m.atk * 1.1), prev);
           }
-          if (m.lgT <= 0) {
-            m.fx.dash = false;
-            m.attackPhase = null;
-            // 殘影留在撲擊的終點，1 秒後再咬一次
-            const z = zone({ kind: 'echoghost', x: m.x, y: m.y, dir: m.dir, r: 40, life: 1.2, w: m.w, h: m.h });
-            echoes.push({ z, dmg: Math.round(m.atk * 0.9), hit: false });
+          if (k >= 1) {
+            m.lgDur = 0;
+            m.lgPasses -= 1;
+            if (m.lgPasses > 0) {
+              // 頓一下，轉身再掠回來
+              m.lgPause = 0.35;
+              m.fx.dash = false;
+              m.attackPhase = 'wind';
+            } else {
+              m.fx.dash = false;
+              m.attackPhase = null;
+              const z = zone({ kind: 'echoghost', x: m.x, y: m.y, dir: m.dir, r: 40, life: 1.2, w: m.w, h: m.h });
+              echoes.push({ z, dmg: Math.round(m.atk * 0.9), hit: false });
+            }
+          }
+          return true;
+        }
+        if (m.lgPause > 0) {
+          m.lgPause -= dt;
+          m.vx = 0;
+          if (m.lgPause <= 0) {
+            m.dir = U.sign(P.x - m.x) || -m.dir;
+            pass(m.x);
           }
           return true;
         }
         m.lgCd = (m.lgCd == null ? U.rand(1, 2) : m.lgCd) - dt;
-        if (aggro && m.lgCd <= 0 && near(m, P, 230)) {
-          m.lgCd = U.rand(2.6, 3.4);
-          m.lgWind = 0.4;
+        if (aggro && m.lgCd <= 0 && near(m, P, 320)) {
+          m.lgCd = U.rand(2.8, 3.6);
+          m.lgWind = 0.45;
           m.dir = U.sign(P.x - m.x) || m.dir;
           return true;
         }
