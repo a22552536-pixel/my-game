@@ -2092,9 +2092,13 @@
     if (!far) crescent(ctx, hind, 1.2, 1.2, '#b8a8ff', 0.45);
     strokeOut(ctx, hind, 1.9);
     ctx.restore();
-    // ── 前翅 ──
+    // ── 前翅：招牌的大翅膀（以翅根為中心放大 1.42 倍，星盤跟著變大、更好讀） ──
+    const FK = 1.42;
     ctx.save();
     ctx.scale(foreK, 1);
+    ctx.translate(3, -50);
+    ctx.scale(FK, FK);
+    ctx.translate(-3, 50);
     const fg = ctx.createRadialGradient(4, -50, 2, 12, -62, 50);
     fg.addColorStop(0, A.c(far ? BF.night : '#2a1f6e'));
     fg.addColorStop(0.3, A.c(far ? BF.night2 : '#5b47d6'));
@@ -2129,7 +2133,7 @@
     });
     bfMargin(ctx, fore, BF_FDOTS, far, 1);
     if (!far) crescent(ctx, fore, 1.3, 1.3, '#c8b8ff', 0.5);
-    strokeOut(ctx, fore, 2);
+    strokeOut(ctx, fore, 2.3 / FK);
     // 星盤
     astrolabe(ctx, 30, -71, 9.5, t, rot, hr, mn, (far ? 0.2 : 0.4) * (0.4 + tick));
     ctx.restore();
@@ -2167,16 +2171,16 @@
     ctx.save();
     ctx.translate(hurt ? Math.sin(t * 60) * 1.2 : strike ? 5 : 0, lift);
     // 身後的光暈、時停的符文圈
-    glowH(ctx, 0, -50, 70, BF.violet, 0.22 + tick * 0.25);
+    glowH(ctx, 0, -56, 84, BF.violet, 0.22 + tick * 0.25);
     if (tick > 0) {
-      runeRing(ctx, 0, -52, 58 + tick * 6, -t * 0.4, rgbOf(BF.gold), tick * 0.8, 12);
+      runeRing(ctx, 0, -58, 72 + tick * 6, -t * 0.4, rgbOf(BF.gold), tick * 0.8, 12);
       ctx.strokeStyle = rgba(BF.gold, tick * 0.8);
       ctx.lineWidth = 2;
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * TAU;
         ctx.beginPath();
-        ctx.moveTo(Math.sin(a) * 66, -52 - Math.cos(a) * 66);
-        ctx.lineTo(Math.sin(a) * (i % 3 ? 70 : 74), -52 - Math.cos(a) * (i % 3 ? 70 : 74));
+        ctx.moveTo(Math.sin(a) * 80, -58 - Math.cos(a) * 80);
+        ctx.lineTo(Math.sin(a) * (i % 3 ? 84 : 89), -58 - Math.cos(a) * (i % 3 ? 84 : 89));
         ctx.stroke();
       }
     }
@@ -2237,7 +2241,8 @@
     // 羽狀觸角：主軸往外上捲、兩側細細的羽枝，尖端一顆星
     [-1, 1].forEach((s) => {
       const sw = Math.sin(t * 2 + s) * 1.5 + (wind ? -2 : 0);
-      const fn = cb(hx + s * 1.5, hy - 4, hx + s * 5, hy - 16, hx + s * 14 + sw, hy - 24, hx + s * 19 + sw, hy - 21);
+      // 觸角往上直直伸、尖端往外捲（不蓋住前翅上的星盤）
+      const fn = cb(hx + s * 1.5, hy - 4, hx + s * 2.5, hy - 16, hx + s * 3 + sw * 0.5, hy - 26, hx + s * 8 + sw, hy - 28);
       ctx.strokeStyle = A.c(BF.goldS);
       ctx.lineWidth = 0.8;
       ctx.beginPath();
