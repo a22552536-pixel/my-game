@@ -3357,6 +3357,7 @@
     A.shape(ctx, (c) => taper(c, qb(el[0], el[1], (el[0] + wr[0]) / 2, (el[1] + wr[1]) / 2 - 5, wr[0], wr[1]), (q) => 15 - q * 4, 8), bone, null, { lw: 2.6 });
     tips.forEach((tp, i) => {
       A.shape(ctx, (c) => taper(c, qb(wr[0], wr[1], (wr[0] + tp[0]) / 2 + 3, (wr[1] + tp[1]) / 2 - 3, tp[0], tp[1]), (q) => (i ? 9 : 11) * (1 - q * 0.65), 8), bone, null, { lw: 2.2 });
+      if (back) return; // 遠側的翅膀只畫骨頭（指節、鉤爪省略）
       // 指關節
       const kx = lerp(wr[0], tp[0], 0.55);
       const ky = lerp(wr[1], tp[1], 0.55);
@@ -3368,8 +3369,10 @@
       const ang = Math.atan2(tp[1] - wr[1], tp[0] - wr[0]);
       brClaw(ctx, tp[0], tp[1], 13, ang + 0.5, 6);
     });
-    A.ellipse(ctx, el[0], el[1], 9, 9, bone, null, { lw: 2.4, hl: false });
-    A.ellipse(ctx, wr[0], wr[1], 10, 10, bone, null, { lw: 2.4, hl: false });
+    if (!back) {
+      A.ellipse(ctx, el[0], el[1], 9, 9, bone, null, { lw: 2.4, hl: false });
+      A.ellipse(ctx, wr[0], wr[1], 10, 10, bone, null, { lw: 2.4, hl: false });
+    }
     // 腕上的拇指爪
     if (!back) brClaw(ctx, wr[0] + 2, wr[1] - 6, 26, a2 + 1.2, 10);
     // 前緣的熔岩裂縫
@@ -3559,7 +3562,7 @@
     if (dead) {
       drop = 44;
       lean = 0.3;
-      headTilt = 0.45;
+      headTilt = 0.18;
       mouth = 0.3;
       spread = 0.3;
       flapAmp = 0;
@@ -3801,18 +3804,96 @@
     // 岩片跟著真正的肌肉分塊：鋸肌（肋側三指）→ 腹外斜肌（斜斜收進髖部）→ 六塊腹肌（成對、往下收窄，中間是白線）→ 胸大肌（最上層）
     const M = (p) => p.map((v, i) => (i % 2 ? v : 22 - v)); // 以身體中線 x = 11 鏡射
     const serr = [
-      [-100, -256, -74, -252, -64, -240, -96, -240],
-      [-98, -236, -70, -232, -60, -220, -92, -220],
-      [-92, -216, -64, -212, -56, -200, -86, -200],
-    ];
-    const abs = [
-      [-31, -246, 7, -249, 7, -224, -28, -221],
-      [-27, -216, 7, -218, 7, -194, -24, -191],
-      [-22, -186, 7, -188, 7, -166, -17, -163],
+      [-100, -256, -72, -251, -62, -234, -96, -232],
+      [-95, -226, -66, -221, -56, -204, -88, -202],
     ];
     const pecL = [-104, -278, -96, -302, -40, -328, 6, -318, 7, -270, -24, -252, -70, -256];
-    const plates = [...serr, ...serr.map(M), [-58, -244, -34, -240, -32, -164, -46, -152, -82, -198, -60, -206], M([-58, -244, -34, -240, -32, -164, -46, -152, -82, -198, -60, -206]), ...abs, ...abs.map(M), pecL, M(pecL)];
-    plates.forEach((p, i) => brPlate(ctx, p, rock, P.rockS, P.sheen, i >= plates.length - 2 ? 0.6 : i < 6 ? 0 : 0.45));
+    [...serr, ...serr.map(M)].forEach((p) => brPlate(ctx, p, rock, P.rockS, P.sheen, 0));
+    // 曲線的岩片：底色＝陰影色＋描邊，再蓋上往左上縮一點的本體（右下留下彎的陰影），上緣補一條亮邊
+    const soft = (path, top, cx, cy, sa) => {
+      ctx.beginPath();
+      path(ctx);
+      ctx.fillStyle = A.c(P.rockS);
+      ctx.fill();
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(cx - 2, cy - 2.6);
+      ctx.scale(0.88, 0.86);
+      ctx.translate(-cx, -cy);
+      ctx.beginPath();
+      path(ctx);
+      ctx.fillStyle = A.c(rock);
+      ctx.fill();
+      ctx.restore();
+      if (sa > 0) {
+        ctx.save();
+        ctx.translate(0.5, 2.6);
+        ctx.beginPath();
+        top(ctx);
+        ctx.strokeStyle = rgba(P.sheen, sa);
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+    // 腹外斜肌：從肋側往下包到髖部的彎曲外形（右邊比左邊低一點）
+    [-1, 1].forEach((sd) => {
+      const X = (x) => (sd < 0 ? x : 22 - x);
+      const dy = sd < 0 ? 0 : 3;
+      const path = (c) => {
+        c.moveTo(X(-58), -244 + dy);
+        c.quadraticCurveTo(X(-36), -246 + dy, X(-33), -228 + dy);
+        c.quadraticCurveTo(X(-31), -190 + dy, X(-27), -160 + dy);
+        c.quadraticCurveTo(X(-32), -148 + dy, X(-46), -150 + dy);
+        c.quadraticCurveTo(X(-74), -168 + dy, X(-86), -200 + dy);
+        c.quadraticCurveTo(X(-88), -226 + dy, X(-58), -244 + dy);
+        c.closePath();
+      };
+      const top = (c) => {
+        c.moveTo(X(-80), -224 + dy);
+        c.quadraticCurveTo(X(-70), -242 + dy, X(-44), -244 + dy);
+      };
+      soft(path, top, X(-56), -200 + dy, 0.45);
+    });
+    // 腹直肌：兩排、上寬下窄、左右錯開半格（右邊低 5），每塊上緣鼓起、下緣圓收，中間是一條白線；最下面一對收成 V 指向腰帶
+    const ABS = [
+      [-248, -222, 36],
+      [-218, -194, 33],
+      [-190, -168, 29],
+      [-164, -148, 21],
+    ];
+    ABS.forEach(([t0, b0, w], row) => {
+      [-1, 1].forEach((sd) => {
+        const off = sd > 0 ? 5 : 0;
+        const top = t0 + off;
+        const bot = b0 + off;
+        const xi = 11 + sd * 3;
+        const xo = xi + sd * w;
+        const last = row === ABS.length - 1;
+        const topC = (c) => {
+          c.moveTo(xi, top + 2);
+          c.bezierCurveTo(xi + sd * w * 0.3, top - 5, xo - sd * w * 0.15, top - 4, xo, top + 3);
+        };
+        const path = (c) => {
+          topC(c);
+          if (last) {
+            // V：外緣斜斜收到白線底部
+            c.quadraticCurveTo(xo - sd * w * 0.2, bot - 6, xi, bot + 4);
+          } else {
+            c.quadraticCurveTo(xo + sd * 3, (top + bot) / 2, xo - sd * w * 0.08, bot - 3);
+            c.bezierCurveTo(xo - sd * w * 0.3, bot + 2, xi + sd * w * 0.3, bot + 3, xi, bot);
+          }
+          c.quadraticCurveTo(xi - sd, (top + bot) / 2, xi, top + 2);
+          c.closePath();
+        };
+        soft(path, topC, xi + sd * w * 0.5, (top + bot) / 2, row < 2 ? 0.45 : 0);
+      });
+    });
+    [pecL, M(pecL)].forEach((p) => brPlate(ctx, p, rock, P.rockS, P.sheen, 0.6));
     // 胸大肌下緣的厚度（往下投的影子）＋腹肌上緣的邊緣光
     ctx.strokeStyle = rgba('#000000', 0.35);
     ctx.lineWidth = 4;
@@ -3955,26 +4036,29 @@
     ctx.restore();
 
     // ── 頭：只有一頂牛角戰盔（四分之三側，朝右）──
-    // 看不到臉：T 字面甲開口裡、盔緣下都是純黑的虛空（暴走時開口深處只有一點點暗紅）。
-    // 雙角從頭盔兩側往外橫掃、到尖端才往上勾，角展比肩膀寬得多；盔頂噴出火冠。
+    // 看不到臉：唯一的暗處是面甲上的 T 字開口（純黑；暴走時開口深處只有一點點暗紅）。盔底由護頸甲收口，直接坐在脖子上。
+    // 雙角從頭盔兩側往外橫掃（角展約肩寬的 2 倍）、到尖端才往上勾；盔頂噴出火冠。
     ctx.fillStyle = rgba('#000000', 0.35);
     ctx.beginPath();
-    ctx.ellipse(36, -318, 74, 20, 0, 0, TAU);
+    ctx.ellipse(11, -318, 70, 20, 0, 0, TAU);
     ctx.fill();
-    A.shape(ctx, (c) => taper(c, qb(12, -324, 22, -350, 30, -366), (q) => 84 - q * 10, 6), rock, P.rockS, { cel: [5, 6], lw: 3 });
+    A.shape(ctx, (c) => taper(c, qb(11, -322, 11, -342, 11, -360), (q) => 78 - q * 10, 6), rock, P.rockS, { cel: [5, 6], lw: 3 });
     ctx.save();
-    ctx.translate(30, -364);
+    // 頭盔的中軸（面甲 T 字開口、脊、火冠）在頭的座標 x = 8：對準身體中線 x = 11（胸骨、腹肌白線、骷髏扣）
+    ctx.translate(11, -356);
     ctx.rotate(headTilt);
-    ctx.scale(1.04, 1.04);
+    ctx.scale(0.83, 0.83);
+    ctx.translate(-8, 0);
     const hornHeat = dead ? 0 : rage ? 1 : meteor ? 0.6 : 0.3;
     const HI = rage ? '#4a3a40' : '#433e4a'; // 盔鐵
     const HIS = rage ? '#281a1e' : '#221e28';
     const HIL = '#7a7488';
     // 雙角（從盔側的角座長出，往外掃再往上勾）
-    const lHorn = cb(-50, -34, -120, -30, -196, -40, -204, -104);
-    const rHorn = cb(62, -36, 132, -32, 208, -42, 214, -108);
-    horn(ctx, lHorn, 38, U.mix(BR.horn, '#6a5040', 0.2), U.mix(BR.hornS, '#3a2a20', 0.2), BR.hornTip, hornHeat * 0.8, '#ff5a1e');
-    horn(ctx, rHorn, 40, BR.horn, BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
+    // 兩支角對稱於 x = 8
+    const lHorn = cb(-46, -35, -206, -26, -366, -32, -384, -116);
+    const rHorn = cb(62, -35, 222, -26, 382, -32, 400, -116);
+    horn(ctx, lHorn, 49, U.mix(BR.horn, '#6a5040', 0.2), U.mix(BR.hornS, '#3a2a20', 0.2), BR.hornTip, hornHeat * 0.8, '#ff5a1e');
+    horn(ctx, rHorn, 49, BR.horn, BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
     // 盔頂噴出的火冠（後層）
     if (!dead) {
       const fk = rage ? 1.4 : 1;
@@ -3985,15 +4069,6 @@
         flame(ctx, x, -58 - k * 12, (9 + k * 5) * fk, (26 + k * 34) * fk, t, i + 92, P.fo, P.fi, 2);
       }
     }
-    // 盔緣下的黑暗（看不到下巴，只有一片虛空）
-    A.shape(ctx, (c) => {
-      c.moveTo(-40, 4);
-      c.lineTo(56, 4);
-      c.quadraticCurveTo(52, 26, 30, 30);
-      c.lineTo(-14, 30);
-      c.quadraticCurveTo(-36, 26, -40, 4);
-      c.closePath();
-    }, '#000000', null, { lw: 2.4 });
     // 頭盔：圓頂＋盔緣
     const helm = (c) => {
       c.moveTo(-50, 8);
@@ -4019,6 +4094,23 @@
     ctx.moveTo(-46, 4);
     ctx.quadraticCurveTo(8, -2, 60, 5);
     ctx.stroke();
+    // 護頸甲：頰甲之間往下收成一個 V，把盔底封起來（沒有嘴）
+    const bevor = (c) => brRound(c, [-42, 0, 58, 0, 52, 16, 8, 30, -36, 16], 0.25);
+    A.shape(ctx, bevor, HI, HIS, { cel: [3, 5], lw: 2.8 });
+    ctx.strokeStyle = A.c(BR.gold);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-34, 14);
+    ctx.lineTo(8, 27);
+    ctx.lineTo(50, 14);
+    ctx.stroke();
+    ctx.fillStyle = A.c('#c8c0d0');
+    ctx.beginPath();
+    [[-22, 10], [8, 18], [38, 10]].forEach(([x, y]) => {
+      ctx.moveTo(x + 2.2, y);
+      ctx.arc(x, y, 2.2, 0, TAU);
+    });
+    ctx.fill();
     // 盔上的裂紋（暴走時燒紅；平常是暗色刻痕）
     const helmCracks = (c) => {
       crack(c, -40, -26, -1.2, 26, 2, 501);
@@ -4035,7 +4127,7 @@
       ctx.stroke();
     }
     // 中央的脊（從盔頂一路壓到眉帶）
-    A.shape(ctx, (c) => taper(c, qb(8, -44, 12, -64, 4, -80), (q) => 13 - q * 8, 8), HIL, HI, { lw: 2.4, shadeY: -58 });
+    A.shape(ctx, (c) => taper(c, qb(8, -44, 8, -64, 8, -80), (q) => 13 - q * 8, 8), HIL, HI, { lw: 2.4, shadeY: -58 });
     // 面甲的 T 字開口：斜下壓的眼縫＋往下張開的口縫
     const slot = (c) => {
       c.moveTo(-34, -34);
@@ -4106,7 +4198,7 @@
     ctx.lineTo(64, -21);
     ctx.stroke();
     // 角座：鉚在盔側的鐵環＋金角環
-    [[lHorn, 38], [rHorn, 40]].forEach(([fn, w0]) => {
+    [[lHorn, 49], [rHorn, 49]].forEach(([fn, w0]) => {
       const q = 0.14;
       const w = w0 * (1 - q * 0.92) * 0.56;
       const a = along(fn, q, w);
@@ -4127,7 +4219,7 @@
     });
     // 角上燒紅的裂紋（暴走、流星時）
     if (hornHeat > 0.5) {
-      [[lHorn, 38, 0.7], [rHorn, 40, 1]].forEach(([fn, w0, k]) => {
+      [[lHorn, 49, 0.7], [rHorn, 49, 1]].forEach(([fn, w0, k]) => {
         brVein(ctx, (c) => {
           for (let i = 0; i <= 10; i++) {
             const p = along(fn, 0.3 + i * 0.05, (i % 2 ? 1 : -1) * w0 * 0.08);
@@ -4145,7 +4237,7 @@
     // 火冠（前層：從脊頂竄出）
     if (!dead) {
       const fk = rage ? 1.4 : 1;
-      flame(ctx, 5, -74, 7 * fk, 30 * fk, t, 99, P.fo, P.fi, 2);
+      flame(ctx, 8, -76, 7 * fk, 30 * fk, t, 99, P.fo, P.fi, 2);
     }
     ctx.restore();
 

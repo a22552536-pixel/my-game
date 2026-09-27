@@ -45,6 +45,8 @@
     { no: '終', theme: 'timeCorridor', ids: ['hourowl', 'mirrordeer', 'stopmoth', 'ouroboros', 'clocksnail', 'pouchroo', 'gravjelly', 'parallelfox', 'constellfish'] },
   ];
   const FIELD_BOSSES = ['fb_shroom', 'fb_kraken', 'fb_balrog', 'fb_zakum', 'fb_voiddragon'];
+  // 章節 Boss：直接進 Boss 房，打的是遊戲中的真實血量與招式
+  const CHAPTER_BOSSES = [['1-B', 'queenShroom'], ['2-B', 'hermitCrab'], ['3-B', 'lavaTortoise'], ['4-B', 'frostSpirit'], ['5-B', 'timeItself']];
   function chapterMobs(ids) {
     const ok = ids.filter((id) => G.data.monsters[id]);
     const out = [];
@@ -88,6 +90,17 @@
       const P = G.player;
       G.world.load('DEMO', { x: P.x, y: P.y });
       this.renderPanel();
+    },
+
+    fightBoss(mapId) {
+      if (!G.data.maps[mapId]) return;
+      // 清掉「打倒過」的旗標，進去就是第一次的正式戰（不是回憶模式）
+      const f = G.world.flags;
+      ['queenShroomDefeated', 'hermitCrabDefeated', 'lavaTortoiseDefeated', 'frostSpiritDefeated', 'timeItselfDefeated'].forEach((k) => delete f[k]);
+      G.evolve.canEvolve = () => false;
+      G.ui.closeAll();
+      G.world.changeMap(mapId, 'l');
+      G.hud.toast('試打章節 Boss：正常血量。點「練功場」的章節按鈕可以回來', '#ffe14a');
     },
 
     summon(id) {
@@ -154,6 +167,11 @@
       // 怪物耐打：連段技能的每一下都看得到（至少 3 萬血）
       for (const m of G.world.monsters) {
         if (m.dead || m.demoHp === this.tough) continue;
+        // Boss 一律保持遊戲中的真實血量
+        if (m.isBoss || (m.def && m.def.boss)) {
+          m.demoHp = this.tough;
+          continue;
+        }
         if (this.tough) {
           m.demoBase = m.demoBase || m.maxHp;
           // 野外魔王保持遊戲中的真實血量（試的是實際手感）
@@ -187,6 +205,7 @@
           G.player.useSkill(arg);
         } else if (act === 'chapter') this.loadChapter(+arg);
         else if (act === 'summon') this.summon(arg);
+        else if (act === 'boss') this.fightBoss(arg);
         else if (act === 'gallery') G.ui.open('gallery');
         else if (act === 'tough') {
           this.tough = !this.tough;
@@ -230,6 +249,8 @@
       CHAPTERS.forEach((c, i) => (h += '<button data-d="chapter:' + (i + 1) + '" class="' + (this.chapter === i + 1 ? 'on' : '') + '">' + (c.no === '終' ? '終章' : '第' + c.no + '章') + '</button>'));
       h += '</div><div class="dp-lbl">召喚野外魔王</div><div class="dp-forms">';
       FIELD_BOSSES.filter((id) => G.data.monsters[id]).forEach((id) => (h += '<button data-d="summon:' + id + '">' + G.data.monsters[id].name + '</button>'));
+      h += '</div><div class="dp-lbl">挑戰章節 Boss（正常血量）</div><div class="dp-forms">';
+      CHAPTER_BOSSES.filter(([mid, bid]) => G.data.maps[mid] && G.data.monsters[bid]).forEach(([mid, bid]) => (h += '<button data-d="boss:' + mid + '">' + G.data.monsters[bid].name + '</button>'));
       h += '</div><div class="dp-row"><button data-d="gallery">全部形態與怪物圖鑑</button><button data-d="tough" class="' + (this.tough ? 'on' : '') + '">怪物耐打：' + (this.tough ? '開' : '關') + '</button><button data-d="respawn">怪物重生</button><button data-d="exit">離開試玩</button></div>';
       this.panel.innerHTML = h;
     },
