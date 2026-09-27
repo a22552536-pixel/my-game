@@ -1711,23 +1711,9 @@
       }
       return list;
     });
-    // 地面擺設：依主題挑選（樹樁、倒木、灌木、蘑菇叢、石頭、花叢、水晶、發光菇）
-    const propSets = {
-      forestMorning: ['stump', 'bush', 'log', 'flowers', 'rock', 'bush'],
-      forestMushroom: ['mushCluster', 'bigMush', 'bush', 'stump', 'flowers', 'mushCluster'],
-      forestDeep: ['fern', 'log', 'rock', 'stump', 'fern', 'bush'],
-      rootCave: ['crystal', 'glowCluster', 'rock', 'root', 'crystal'],
-      queenHall: ['crystal', 'bigMush', 'mushCluster'],
-    };
-    const set = th.props || propSets[map.theme] || propSets.forestMorning;
-    const g = map.platforms[0];
-    const avoid = [].concat((map.portals || []).map((p) => p.x), (map.npcs || []).map((n) => n.x), (map.signs || []).map((s) => s.x), (map.springs || []).map((s) => s.x), map.camp ? [map.camp.x1 - 60, (map.camp.x1 + map.camp.x2) / 2, map.camp.x2 + 60] : []);
+    // 地面與平台上不再放擺設（樹樁、石頭、柱子、沙漏……比例怪、太雜）；
+    // 只在狩獵／探索地圖放幾個裝飾用的寶箱（見 placeChests）
     map._props = [];
-    for (let x = g[0] + 140; x < g[1] - 100; x += 180 + rnd() * 160) {
-      if (avoid.some((a) => Math.abs(a - x) < 90)) continue;
-      if (map.camp && x > map.camp.x1 - 80 && x < map.camp.x2 + 80) continue;
-      map._props.push({ kind: set[Math.floor(rnd() * set.length)], x, y: g[2], s: 0.8 + rnd() * 0.5, flip: rnd() < 0.5 ? -1 : 1 });
-    }
     // 平台底下垂著的藤蔓／樹根
     map._hang = [];
     map.platforms.forEach((p, i) => {
@@ -1736,9 +1722,8 @@
       for (let k = 0; k < n; k++) map._hang.push({ x: p[0] + 30 + rnd() * (p[1] - p[0] - 60), y: p[2] + 20, len: 20 + rnd() * 40, seed: rnd() * 6 });
     });
     if (th.hang === 'none') map._hang = [];
-    // 前景的高草（畫在角色前面）
+    // 前景（畫在角色前面的高草、石頭）拿掉了：地面前緣只留地形本身
     map._fore = [];
-    for (let x = g[0] + 60; x < g[1]; x += 220 + rnd() * 260) map._fore.push({ x, s: 0.8 + rnd() * 0.6 });
     map._motes = [];
     for (let i = 0; i < 40; i++) {
       map._motes.push({ x: rnd() * G.W, y: rnd() * G.H, s: 1 + rnd() * 2.5, p: rnd() * 6, v: 6 + rnd() * 14 });
@@ -8219,80 +8204,189 @@
     }
   }
 
-  // ── 平台上加放的小擺設（原本只有地面有擺設） ──
-  const PLAT_PROPS = {
-    forestMorning: ['flowerPatch', 'mossRock', 'sapling', 'pebbleSet'],
-    forestMushroom: ['toadstools', 'flowerPatch', 'mossRock'],
-    forestDeep: ['fernClump', 'mossRock', 'sapling', 'toadstools'],
-    rootCave: ['glowMoss', 'stalagmite', 'pebbleSet'],
-    queenHall: ['gemCluster', 'toadstools', 'glowMoss'],
-    coastCamp: ['ropeCoil', 'pebbleSet', 'seaGlass'],
-    tidepool: ['seaGlass', 'pebbleSet', 'beachGrass'],
-    shipwreck: ['ropeCoil', 'seaGlass', 'lantern'],
-    reef: ['coralTuft', 'seaGlass', 'pebbleSet'],
-    crabNest: ['coralTuft', 'pebbleSet', 'seaGlass'],
-    hotspringCamp: ['dryBush', 'pebbleSet', 'lantern'],
-    redRift: ['dryBush', 'pebbleSet', 'desertFlower'],
-    steamPass: ['dryBush', 'pebbleSet', 'crystalSmall'],
-    lavaBed: ['emberRock', 'crystalSmall'],
-    volcanoNest: ['emberRock', 'crystalSmall'],
-    snowCamp: ['snowLump', 'lantern', 'frostTuft'],
-    snowField: ['snowLump', 'frostTuft', 'pebbleSet'],
-    iceFall: ['iceSpike', 'frostTuft', 'snowLump'],
-    bellShrine: ['snowLump', 'frostTuft', 'lantern'],
-    frostAltar: ['iceSpike', 'snowLump'],
-    templeCourt: ['goldPot', 'petalPile', 'crystalSmall'],
-    timeCorridor: ['goldPot', 'crystalSmall', 'petalPile'],
-    reverseGarden: ['petalPile', 'flowerPatch', 'goldPot'],
-    starStair: ['crystalSmall', 'starMote'],
-    timeThrone: ['crystalSmall', 'goldPot', 'starMote'],
-  };
-  const GROUND_EXTRA = {
-    forestMorning: ['oakTree', 'flowerPatch'],
-    forestMushroom: ['oakTree', 'toadstools'],
-    forestDeep: ['oakTree', 'fernClump'],
-    rootCave: ['stalagmite', 'glowMoss'],
-    tidepool: ['beachGrass'],
-    coastCamp: ['beachGrass'],
-    redRift: ['desertFlower'],
-    snowField: ['frostTuft'],
-    reverseGarden: ['petalPile'],
-  };
-
-  function extraProps(map) {
-    const th = map._theme;
-    const rnd = U.seeded(map.w * 5 + map.h * 11 + 3);
-    const set = PLAT_PROPS[map.theme];
-    if (!set) return;
-    const avoidX = [].concat((map.portals || []).map((p) => p.x), (map.npcs || []).map((n) => n.x), (map.signs || []).map((s) => s.x), (map.springs || []).map((s) => s.x));
+  // ── 裝飾用寶箱：取代原本的地面／平台擺設（每張狩獵、探索地圖 1～3 個；營地、Boss 房沒有） ──
+  // 位置挑「看起來會藏東西」的地方：最高層平台的尾端（獎勵爬上去）、中層平台的尾端、地面靠邊的角落。
+  // 只是佈景，不能開；真正的寶箱（map.chests）仍由 world 畫，這裡會避開它們。
+  function placeChests(map) {
+    if ((map.type !== 'hunt' && map.type !== 'explore') || map.camp || map.boss) return;
+    const P = map.platforms;
+    const g = P[0];
+    const rnd = U.seeded(map.w * 5 + map.h * 11 + (map.region || 1) * 97 + 3);
     const ropes = map.ropes || [];
-    map.platforms.forEach((p, i) => {
-      if (i === 0) return;
-      const len = p[1] - p[0];
-      if (len < 110) return;
-      for (let x = p[0] + 30 + rnd() * 40; x < p[1] - 30; x += 150 + rnd() * 150) {
-        if (rnd() < 0.35) continue;
-        if (avoidX.some((a) => Math.abs(a - x) < 60)) continue;
-        if (ropes.some((r) => Math.abs(r[0] - x) < 34 && r[1] <= p[2] + 10 && r[2] >= p[2] - 10)) continue;
-        map._props.push({ kind: set[Math.floor(rnd() * set.length)], x, y: p[2], s: 0.7 + rnd() * 0.3, flip: rnd() < 0.5 ? -1 : 1 });
-      }
-    });
-    // 地面：在原本擺設之間的空檔補幾個
-    const gx = GROUND_EXTRA[map.theme];
-    if (gx) {
-      const g = map.platforms[0];
-      const taken = map._props.filter((q) => q.y === g[2]).map((q) => q.x);
-      for (let x = g[0] + 220; x < g[1] - 160; x += 420 + rnd() * 380) {
-        if (taken.some((a) => Math.abs(a - x) < 90)) continue;
-        if (avoidX.some((a) => Math.abs(a - x) < 110)) continue;
-        if (map.camp && x > map.camp.x1 - 120 && x < map.camp.x2 + 120) continue;
-        if (ropes.some((r) => Math.abs(r[0] - x) < 60)) continue;
-        map._props.push({ kind: gx[Math.floor(rnd() * gx.length)], x, y: g[2], s: 0.85 + rnd() * 0.35, flip: rnd() < 0.5 ? -1 : 1 });
-      }
+    const near = (list, i, x, d) => (list || []).some((o) => (o.p || 0) === i && Math.abs(o.x - x) < d);
+    const clear = (i, x) => {
+      const y = P[i][2];
+      if (near(map.portals, i, x, 160) || near(map.npcs, i, x, 150) || near(map.signs, i, x, 120) || near(map.springs, i, x, 100)) return false;
+      // 真寶箱：不管在哪一層，水平 220 以內都不放（免得上下疊在一起、讓人以為能開）
+      if ((map.chests || []).some((c) => Math.abs(c.x - x) < 220)) return false;
+      // 繩子的上端（掛在這個平台下）或下端（落在這個平台上）附近不放
+      return !ropes.some((r) => Math.abs(r[0] - x) < 52 && (Math.abs(r[1] - y) < 12 || Math.abs(r[2] - y) < 12));
+    };
+    const ups = [];
+    for (let i = 1; i < P.length; i++) if (P[i][1] - P[i][0] >= 160) ups.push(i);
+    const topY = ups.length ? Math.min.apply(null, ups.map((i) => P[i][2])) : 0;
+    const ends = (list) => {
+      const out = [];
+      for (const i of list) out.push([i, P[i][0] + 40], [i, P[i][1] - 40]);
+      return out;
+    };
+    const high = ends(ups.filter((i) => P[i][2] === topY));
+    const mid = ends(ups.filter((i) => P[i][2] !== topY));
+    // 地面：從左右兩端往內找第一個空位（隨機先試一邊）
+    const left = rnd() < 0.5;
+    const ground = [];
+    for (let d = 170; d <= 560; d += 35) ground.push([0, left ? g[0] + d : g[1] - d]);
+    for (let d = 170; d <= 560; d += 35) ground.push([0, left ? g[1] - d : g[0] + d]);
+    const tiers = map.type === 'explore' ? [[ground, true]] : [[high, false], [mid, false], [ground, true]];
+    if (map.type === 'hunt' && rnd() < 0.4) tiers.splice(1, 1);
+    const chosen = [];
+    for (const [cands, inOrder] of tiers) {
+      const ok = cands.filter(([i, x]) => clear(i, x) && chosen.every((c) => Math.abs(c.x - x) > 420));
+      if (!ok.length) continue;
+      const [i, x] = inOrder ? ok[0] : ok[Math.floor(rnd() * ok.length)];
+      chosen.push({ kind: 'chest', x, y: P[i][2], s: 1.1, flip: 1, style: map.region || 1 });
     }
-    // 大樹先畫（在其他擺設後面）
-    map._props.sort((q, r) => (q.kind === 'oakTree' ? 0 : 1) - (r.kind === 'oakTree' ? 0 : 1));
+    for (const c of chosen) map._props.push(c);
   }
+
+  // 各章的寶箱配色（木頭／蓋子／鐵箍／鎖）
+  const CHEST_STYLE = {
+    1: { body: ['#9a6a3a', '#76502a'], lid: ['#a8743e', '#86592e'], band: ['#6a5a48', '#4e4236'], lock: ['#d8b050', '#a8842e'], seam: 'rgba(60,36,18,0.55)' },
+    2: { body: ['#9a8a70', '#766a56'], lid: ['#a89a7c', '#847860'], band: ['#6e9486', '#4e7266'], lock: ['#c8b060', '#9a8640'], seam: 'rgba(56,48,36,0.5)' },
+    3: { body: ['#3a3446', '#262230'], lid: ['#44404f', '#2e2a38'], band: ['#7a7480', '#57515e'], lock: ['#8a8490', '#605a68'], seam: 'rgba(150,140,170,0.35)' },
+    4: { body: ['#b83a3e', '#8c2a32'], lid: ['#c8484a', '#9a3238'], band: ['#e8c060', '#b89030'], lock: ['#f0cc6a', '#c09a38'], seam: 'rgba(90,20,24,0.45)' },
+    5: { body: ['#f2ece2', '#d6cabb'], lid: ['#f8f2e8', '#dcd0c0'], band: ['#f2cf6a', '#c8962a'], lock: ['#f6d878', '#c8962a'], seam: 'rgba(150,130,110,0.4)' },
+  };
+  const chestLid = (c) => {
+    c.moveTo(-20, -22);
+    c.lineTo(-20, -30);
+    c.quadraticCurveTo(0, -42, 20, -30);
+    c.lineTo(20, -22);
+    c.closePath();
+  };
+  const chestBody = (c) => A.roundRect(c, -20, -22, 40, 22, 4);
+
+  Object.assign(PROP, {
+    chest(ctx, t, p) {
+      // 形狀沿用 world 的寶箱（npcs.js 的 drawChest）：箱身 40×22、拱形蓋、正面的鎖；不發光，一看就知道是佈景
+      const st = p.style || 1;
+      const C = CHEST_STYLE[st] || CHEST_STYLE[1];
+      A.groundShadow(ctx, 0, 0, 24);
+      if (st === 5) {
+        // 聖物匣：四隻金色小腳
+        for (const x of [-17, 13]) A.shape(ctx, (c) => A.roundRect(c, x, -4, 4, 4, 1), C.band[0], null, { lw: 1.4 });
+      }
+      A.shape(ctx, chestBody, C.body[0], C.body[1], { shadeY: -8 });
+      A.shape(ctx, chestLid, C.lid[0], C.lid[1], { shadeY: -27 });
+      // 木紋／石紋
+      ctx.strokeStyle = C.seam;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      if (st === 5) {
+        ctx.moveTo(-17, -15); ctx.quadraticCurveTo(-12, -9, -14, -4);
+        ctx.moveTo(4, -19); ctx.quadraticCurveTo(8, -12, 6, -6);
+        ctx.moveTo(-6, -35); ctx.quadraticCurveTo(-2, -31, -4, -26);
+      } else {
+        ctx.moveTo(-18, -11); ctx.lineTo(18, -11);
+        ctx.moveTo(-18, -28); ctx.quadraticCurveTo(0, -37, 18, -28);
+      }
+      ctx.stroke();
+      // 兩道箍（剪在箱子輪廓裡）
+      ctx.save();
+      ctx.beginPath();
+      chestBody(ctx);
+      chestLid(ctx);
+      ctx.clip();
+      for (const x of [-15.5, 10.5]) {
+        ctx.fillStyle = A.c(C.band[0]);
+        ctx.fillRect(x, -44, 5, 44);
+        ctx.fillStyle = A.c(C.band[1]);
+        ctx.fillRect(x + 3, -44, 2, 44);
+      }
+      ctx.restore();
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (const x of [-15.5, -10.5, 10.5, 15.5]) {
+        // 拱形蓋的頂邊：y = -30 - 24u(1-u)，u = (x+20)/40
+        const u = (x + 20) / 40;
+        ctx.moveTo(x, -30 - 24 * u * (1 - u));
+        ctx.lineTo(x, 0);
+      }
+      ctx.stroke();
+      if (st === 3) {
+        // 鐵箍上的鉚釘
+        ctx.fillStyle = A.c('#c0b8c8');
+        for (const x of [-13, 13]) for (const y of [-17, -6, -27]) { ctx.beginPath(); ctx.arc(x, y, 1.2, 0, PI2); ctx.fill(); }
+      }
+      // 蓋子與箱身的接縫
+      ctx.strokeStyle = A.outline();
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(-20, -22);
+      ctx.lineTo(20, -22);
+      ctx.stroke();
+      // 鎖
+      A.shape(ctx, (c) => A.roundRect(c, -5, -28, 10, 11, 2), C.lock[0], C.lock[1], { shadeY: -21, lw: 1.8 });
+      ctx.fillStyle = A.c(st === 3 ? '#ff9a3c' : '#3a2a1c');
+      ctx.beginPath();
+      ctx.arc(0, -24, 1.6, 0, PI2);
+      ctx.fillRect(-0.7, -24, 1.4, 3.6);
+      ctx.fill();
+      if (st === 1) {
+        // 森林：蓋子上的青苔、箱腳一小撮苔和兩片葉
+        A.shape(ctx, (c) => { c.moveTo(-19, -31); c.quadraticCurveTo(-10, -39.5, 2, -40.5); c.quadraticCurveTo(-1, -37, -5, -36.5); c.quadraticCurveTo(-9, -33, -13, -34); c.quadraticCurveTo(-16, -30, -19, -28); c.closePath(); }, '#6fae4a', '#4f8a36', { shadeY: -34, lw: 1.4 });
+        A.shape(ctx, (c) => { c.moveTo(-20, -30); c.quadraticCurveTo(-22, -25, -19.5, -22); c.quadraticCurveTo(-18, -26, -17, -29); c.closePath(); }, '#5a9a3e', null, { lw: 1.2 });
+        A.ellipse(ctx, 8, -38.5, 5, 2.2, '#7cbc52', null, { lw: 1.2, hl: false });
+        A.ellipse(ctx, -17, -1.5, 6, 2.6, '#5a9a3e', null, { lw: 1.2, hl: false });
+        A.ellipse(ctx, 22, -3, 5, 2, '#6fae4a', null, { rot: -0.9, lw: 1.1, hl: false });
+      } else if (st === 2) {
+        // 海邊：藤壺、一條掛在蓋上的海帶
+        for (const [x, y, r] of [[-17, -4, 2.8], [-13, -2.5, 2.2], [-17.5, -9, 2], [16, -30, 2.4], [17.5, -26, 1.8], [7, -3, 1.9]]) {
+          A.ellipse(ctx, x, y, r, r * 0.85, '#ece6d6', '#c8c0ac', { lw: 1.1, hl: false, shadeAt: 0 });
+          ctx.fillStyle = A.c('#5a5a5e');
+          ctx.beginPath(); ctx.arc(x, y - r * 0.2, r * 0.35, 0, PI2); ctx.fill();
+        }
+        const sw = Math.sin(t * 1.2 + p.x) * 1.2;
+        ctx.strokeStyle = A.outline();
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 4.4;
+        const kelp = () => { ctx.beginPath(); ctx.moveTo(-6, -36); ctx.quadraticCurveTo(-12, -30, -9 + sw, -24); ctx.quadraticCurveTo(-7 + sw, -19, -10 + sw, -14); ctx.stroke(); };
+        kelp();
+        ctx.strokeStyle = A.c('#5a8a3e');
+        ctx.lineWidth = 2.4;
+        kelp();
+      } else if (st === 3) {
+        // 峽谷：黑曜石上一道發著熔岩光的裂紋
+        ctx.strokeStyle = A.c('#ff8a3a');
+        ctx.globalAlpha = 0.65 + 0.25 * Math.sin(t * 2 + p.x);
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-8, -3); ctx.lineTo(-6, -8); ctx.lineTo(-9, -12); ctx.lineTo(-7, -17);
+        ctx.moveTo(15, -2); ctx.lineTo(17, -7);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = A.c('#9a90b4');
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-17, -30.5); ctx.quadraticCurveTo(-9, -36, -2, -37.4);
+        ctx.stroke();
+      } else if (st === 4) {
+        // 雪山：漆盒蓋上積一層雪、箱腳堆一點雪、金色小流蘇
+        A.shape(ctx, (c) => { c.moveTo(-21, -30); c.quadraticCurveTo(0, -47, 21, -30); c.quadraticCurveTo(17, -28, 14, -30); c.quadraticCurveTo(10, -27, 6, -30.5); c.quadraticCurveTo(0, -32, -5, -30.5); c.quadraticCurveTo(-10, -27.5, -13, -30); c.quadraticCurveTo(-17, -27, -21, -30); c.closePath(); }, '#f6faff', '#cfdcee', { shadeY: -32, lw: 1.5 });
+        A.ellipse(ctx, -16, -1.5, 8, 3.4, '#f2f6fc', '#cfdcee', { lw: 1.3, hl: false, shadeAt: 0 });
+        A.ellipse(ctx, 18, -1.2, 6, 2.8, '#f2f6fc', null, { lw: 1.2, hl: false });
+        ctx.strokeStyle = A.c('#e8c060');
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(0, -12); ctx.stroke();
+        A.ellipse(ctx, 0, -10.5, 1.8, 2.4, '#e84a4a', null, { lw: 1, hl: false });
+      } else if (st === 5) {
+        // 神殿：蓋頂的金色寶珠、鎖上一顆藍寶石
+        A.ellipse(ctx, 0, -37.5, 3.6, 3.2, '#f6d878', '#c8962a', { lw: 1.5 });
+        A.ellipse(ctx, 0, -24, 2.4, 2.8, '#7ad0ff', '#3a8ad0', { lw: 1.1 });
+      }
+    },
+  });
 
   Object.assign(PROP, {
     oakTree(ctx, t) {
@@ -8774,50 +8868,6 @@
     });
   })();
 
-  // ── 前景補充：小石頭、落葉、小花苞，讓地面前緣更有層次（低矮，不擋角色） ──
-  function drawForeBits(ctx, map, cam, t) {
-    const list = map._fore2;
-    if (!list || !list.length) return;
-    const y = map.platforms[0][2];
-    const x0 = cam.x - 40;
-    const x1 = cam.x + G.W + 40;
-    const kind = map._fore2Kind;
-    for (const f of list) {
-      if (f.x < x0 || f.x > x1) continue;
-      if (kind === 'lava') {
-        A.ellipse(ctx, f.x, y + 12, 9 * f.s, 5 * f.s, '#2a1e22', null, { lw: 1.6, hl: false });
-        ctx.fillStyle = 'rgba(255,' + Math.round(140 + Math.sin(t * 3 + f.x) * 40) + ',60,0.9)';
-        ctx.fillRect(f.x - 3, y + 9, 2, 2);
-        continue;
-      }
-      // 兩三顆前景小石
-      const col = kind === 'snow' ? '#e8f0fa' : kind === 'marble' ? '#f4eee4' : kind === 'sand' ? '#d8c4a0' : '#8e887e';
-      const sh = kind === 'snow' ? '#b8c8e0' : kind === 'marble' ? '#d8ccbc' : kind === 'sand' ? '#b8a07a' : '#6e6a60';
-      A.ellipse(ctx, f.x, y + 12, 7 * f.s, 4.5 * f.s, col, sh, { lw: 1.6, hl: false, shadeAt: 0 });
-      A.ellipse(ctx, f.x + 9 * f.s, y + 13, 4 * f.s, 3 * f.s, col, null, { lw: 1.4, hl: false });
-      if (kind === 'grass') {
-        const sw = Math.sin(t * 2 + f.x * 0.02) * 1.5;
-        ctx.strokeStyle = '#3f7f2a';
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.moveTo(f.x - 8, y + 13);
-        ctx.quadraticCurveTo(f.x - 9, y + 2, f.x - 6 + sw, y - 4 * f.s);
-        ctx.stroke();
-        if (f.k > 0.5) A.ellipse(ctx, f.x - 6 + sw, y - 5 * f.s, 2.4, 2.4, f.k > 0.75 ? '#ffe36b' : '#ff9fbf', null, { lw: 1, hl: false });
-      } else if (kind === 'leaf' && f.k > 0.4) {
-        ctx.fillStyle = f.k > 0.7 ? '#d88a3a' : '#c8a060';
-        ctx.beginPath();
-        ctx.ellipse(f.x - 10, y + 12, 4, 2, 0.4, 0, PI2);
-        ctx.fill();
-      } else if (kind === 'marble' && f.k > 0.5) {
-        ctx.fillStyle = '#ffc4d8';
-        ctx.beginPath();
-        ctx.ellipse(f.x - 9, y + 11, 3, 1.6, f.k * 5, 0, PI2);
-        ctx.fill();
-      }
-    }
-  }
-
   // 平台底下垂吊物補細節
   (function enrichHang() {
     const wrap = (name, extra) => {
@@ -8871,20 +8921,13 @@
     });
   })();
 
-  // ── 接上：prepareMap 多算一份地形細節；平台繪製時記住目前的地圖；前景多畫一層 ──
+  // ── 接上：prepareMap 多算一份地形細節、放裝飾寶箱；平台繪製時記住目前的地圖 ──
   (function hookTerrain() {
     const basePrep = A.prepareMap;
     A.prepareMap = function (map) {
       basePrep(map);
       buildTerrain(map);
-      extraProps(map);
-      const rnd = U.seeded(map.w * 3 + 17);
-      const th = map._theme;
-      const g = map.platforms[0];
-      const gs = (th.ground && th.ground.style) || th.plat.style || 'grass';
-      map._fore2Kind = TERR_LAVA[map.theme] ? 'lava' : gs === 'snow' || gs === 'ice' ? 'snow' : gs === 'marble' ? 'marble' : gs === 'sand' ? 'sand' : TERR_DRY[map.theme] ? 'leaf' : 'grass';
-      map._fore2 = [];
-      for (let x = g[0] + 90; x < g[1] - 40; x += 240 + rnd() * 320) map._fore2.push({ x, s: 0.8 + rnd() * 0.5, k: rnd() });
+      placeChests(map);
     };
     // 平台整段是靜態的（沒有時間參數），所以第一次看到時把每個平台（地面切成數塊）畫進離屏畫布，
     // 之後每格只貼圖。解析度跟著實際的螢幕縮放（最高 2 倍）；換地圖或一陣子沒看到的塊會被釋放。
@@ -8970,11 +9013,6 @@
       if (pcFrame % 120 === 0) {
         for (const [k, e] of pcTiles) if (pcFrame - e.used > 600) pcTiles.delete(k);
       }
-    };
-    const baseFore = A.drawForeground;
-    A.drawForeground = function (ctx, map, cam, t) {
-      baseFore(ctx, map, cam, t);
-      drawForeBits(ctx, map, cam, t);
     };
   })();
 
