@@ -405,7 +405,7 @@
 
   // ───────────── 魔王級精修（跟章節 Boss 同一套質感）─────────────
   // 月牙光：形狀內、被自己往 (dx,dy) 平移的副本蓋不到的那一條邊（dx,dy 往右下 → 左上亮邊）
-  function crescent(ctx, path, dx, dy, col, a) {
+  function crescent(ctx, path, dx, dy, col, a, bb) {
     if (!(a > 0)) return;
     ctx.save();
     ctx.beginPath();
@@ -418,7 +418,8 @@
     ctx.translate(-dx, -dy);
     ctx.clip('evenodd');
     ctx.fillStyle = rgba(col, a);
-    ctx.fillRect(-3000, -3000, 6000, 6000);
+    if (bb) ctx.fillRect(bb[0] - 12, bb[1] - 12, bb[2] - bb[0] + 24, bb[3] - bb[1] + 24);
+    else ctx.fillRect(-3000, -3000, 6000, 6000);
     ctx.restore();
   }
   // 一個主形狀的完工層：左上→右下的體積漸層、左上的柔和邊緣光（兩層）、右下的反光（魔化光色）、材質斑點
@@ -461,9 +462,9 @@
     }
     ctx.restore();
     const rw = o.rimW || Math.max(2.5, sz * 0.06);
-    crescent(ctx, path, rw, rw * 1.1, o.rim || '#fff4d0', o.rimA != null ? o.rimA : 0.22);
-    crescent(ctx, path, rw * 0.4, rw * 0.45, o.rim || '#fff4d0', (o.rimA != null ? o.rimA : 0.22) * 1.2);
-    if (o.bounce && o.bounceA > 0) crescent(ctx, path, -rw * 0.9, -rw * 0.7, o.bounce, o.bounceA);
+    crescent(ctx, path, rw, rw * 1.1, o.rim || '#fff4d0', o.rimA != null ? o.rimA : 0.22, b);
+    crescent(ctx, path, rw * 0.4, rw * 0.45, o.rim || '#fff4d0', (o.rimA != null ? o.rimA : 0.22) * 1.2, b);
+    if (o.bounce && o.bounceA > 0) crescent(ctx, path, -rw * 0.9, -rw * 0.7, o.bounce, o.bounceA, b);
     // 月牙光蓋掉了一半的描邊：補回來
     if (o.lw !== 0) {
       ctx.beginPath();
@@ -499,13 +500,19 @@
       const bx = x + Math.cos(a) * d;
       const by = y + Math.sin(a) * d * 0.7;
       const rr = r * (0.55 + hash(seed + i + 7) * 0.5);
-      A.shape(ctx, (c) => {
-        c.moveTo(bx - rr, by + rr * 0.4);
-        c.lineTo(bx - rr * 0.55, by - rr * 0.7);
-        c.lineTo(bx + rr * 0.55, by - rr * 0.7);
-        c.lineTo(bx + rr, by + rr * 0.4);
-        c.closePath();
-      }, '#d8d0bc', '#a09880', { lw: 1.6, shadeY: by });
+      ctx.beginPath();
+      ctx.moveTo(bx - rr, by + rr * 0.4);
+      ctx.lineTo(bx - rr * 0.55, by - rr * 0.7);
+      ctx.lineTo(bx + rr * 0.55, by - rr * 0.7);
+      ctx.lineTo(bx + rr, by + rr * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = A.c('#d8d0bc');
+      ctx.fill();
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = A.outline();
+      ctx.stroke();
+      ctx.fillStyle = A.c('#a09880');
+      ctx.fillRect(bx - rr * 0.8, by - rr * 0.05, rr * 1.6, rr * 0.35);
       ctx.fillStyle = A.c('#3a3028');
       ctx.beginPath();
       ctx.ellipse(bx, by - rr * 0.62, rr * 0.36, rr * 0.16, 0, 0, TAU);
@@ -1695,25 +1702,149 @@
   }
   function tentacle(ctx, fn, w0, col, colS, o) {
     o = o || {};
+    w0 *= 1.18;
     const wf = (s) => w0 * (1 - s * 0.86);
+    const side = o.side || 1;
     if (o.glowTip) {
       const p = fn(0.92);
       glow(ctx, p[0], p[1], w0 * 1.8, o.glowTip, o.glowA || 0.6);
     }
-    A.shape(ctx, (c) => taper(c, fn, wf, 22), col, colS, { cel: [w0 * 0.12, w0 * 0.12], lw: 3 });
-    // 吸盤（下緣）
-    const side = o.side || 1;
-    for (let i = 1; i <= 7; i++) {
-      const s = 0.1 + i * 0.11;
-      if (s > 0.92) break;
-      const p = along(fn, s, side * wf(s) * 0.34);
-      const r = wf(s) * 0.22;
-      A.shape(ctx, (c) => c.ellipse(p[0], p[1], r, r * 0.8, p[2], 0, TAU), KR.sucker, null, { lw: 1.6 });
-      ctx.fillStyle = A.c(KR.suckerS);
+    const path = (c) => taper(c, fn, wf, 22);
+    A.shape(ctx, path, col, colS, { cel: [w0 * 0.12, w0 * 0.12], lw: 3 });
+    if (!o.back) {
+    ctx.save();
+    ctx.beginPath();
+    path(ctx);
+    ctx.clip();
+    // 淺色的腹面（吸盤那一側）
+    ctx.beginPath();
+    taper(ctx, (q) => {
+      const p = along(fn, q, side * wf(q) * 0.3);
+      return [p[0], p[1]];
+    }, (q) => wf(q) * 0.5, 18);
+    ctx.fillStyle = A.c(U.mix(col, '#ffc8d4', 0.32));
+    ctx.fill();
+    // 背面的深色斑紋與舊傷疤
+    ctx.fillStyle = A.c(colS);
+    for (let i = 0; i < 6; i++) {
+      const q = 0.08 + i * 0.14 + hash(i + (o.seed || 0)) * 0.04;
+      const p = along(fn, q, -side * wf(q) * (0.18 + hash(i + 3) * 0.14));
       ctx.beginPath();
-      ctx.arc(p[0], p[1], r * 0.4, 0, TAU);
+      ctx.ellipse(p[0], p[1], wf(q) * 0.12, wf(q) * 0.08, p[2], 0, TAU);
       ctx.fill();
     }
+    ctx.strokeStyle = A.c(U.mix(col, '#ffe0e6', 0.55));
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (let i = 0; i < 2; i++) {
+      const q = 0.22 + i * 0.3 + hash((o.seed || 0) + 11 + i) * 0.1;
+      const p1 = along(fn, q, -side * wf(q) * 0.42);
+      const p2 = along(fn, q + 0.06, -side * wf(q) * 0.05);
+      ctx.moveTo(p1[0], p1[1]);
+      ctx.lineTo(p2[0], p2[1]);
+      for (let k = 1; k < 4; k++) {
+        const x = lerp(p1[0], p2[0], k / 4);
+        const y = lerp(p1[1], p2[1], k / 4);
+        ctx.moveTo(x - 2.5, y - 2.5);
+        ctx.lineTo(x + 2.5, y + 2.5);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+    }
+    // 背側的亮邊（邊緣光）：沿著背緣內側一條淡淡的亮線，不用裁切比較省
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= 14; i++) {
+      const q = i / 14 * 0.9;
+      const p = along(fn, q, -side * wf(q) * 0.36);
+      if (!i) ctx.moveTo(p[0], p[1]);
+      else ctx.lineTo(p[0], p[1]);
+    }
+    ctx.strokeStyle = rgba('#ffd6e4', 0.3);
+    ctx.lineWidth = Math.max(2, w0 * 0.12);
+    ctx.stroke();
+    // 兩排吸盤（外排大、內排小）：一次畫完同一種東西
+    const cups = [];
+    for (let i = 1; i <= 8; i++) {
+      const s = 0.06 + i * 0.1;
+      if (s > 0.93) break;
+      const p = along(fn, s, side * wf(s) * 0.36);
+      cups.push([p[0], p[1], wf(s) * 0.21, p[2], 1]);
+      const q = s + 0.05;
+      if (q < 0.9) {
+        const p2 = along(fn, q, side * wf(q) * 0.1);
+        cups.push([p2[0], p2[1], wf(q) * 0.12, p2[2], 0]);
+      }
+    }
+    ctx.beginPath();
+    cups.forEach(([x, y, r, a]) => {
+      ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      ctx.ellipse(x, y, r, r * 0.8, a, 0, TAU);
+    });
+    ctx.fillStyle = A.c(KR.sucker);
+    ctx.fill();
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    cups.forEach(([x, y, r]) => {
+      ctx.moveTo(x + r * 0.42, y);
+      ctx.arc(x, y, r * 0.42, 0, TAU);
+    });
+    ctx.fillStyle = A.c(KR.suckerS);
+    ctx.fill();
+    ctx.beginPath();
+    cups.forEach(([x, y, r, a, big]) => {
+      if (!big) return;
+      ctx.moveTo(x - r * 0.35 + r * 0.18, y - r * 0.35);
+      ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.18, 0, TAU);
+    });
+    ctx.fillStyle = A.c('#fff2f4');
+    ctx.fill();
+  }
+  // 砲門（方框＋砲口正對畫面）
+  function cannonPort(ctx, x, y, s, glowCol, k) {
+    A.shape(ctx, (c) => A.roundRect(c, x - 11 * s, y - 10 * s, 22 * s, 20 * s, 3), KR.woodD, null, { lw: 2.4 });
+    ctx.fillStyle = A.c('#140c08');
+    ctx.fillRect(x - 7 * s, y - 6 * s, 14 * s, 12 * s);
+    A.ellipse(ctx, x, y + 1 * s, 8 * s, 8 * s, KR.iron, KR.ironS, { lw: 2.2, hl: [x - 3 * s, y - 3 * s, 2.4 * s, 1.6 * s] });
+    ctx.strokeStyle = A.c('#8e8888');
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(x, y + 1 * s, 6 * s, 0, TAU);
+    ctx.stroke();
+    ctx.fillStyle = A.c('#0a0606');
+    ctx.beginPath();
+    ctx.arc(x, y + 1 * s, 4 * s, 0, TAU);
+    ctx.fill();
+    if (k > 0) glow(ctx, x, y + 1 * s, 10 * s, glowCol, 0.7 * k);
+  }
+  // 繩索（兩點之間、帶麻繩紋路）
+  function rope(ctx, x1, y1, x2, y2, sag) {
+    const fn = qb(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2 + sag, x2, y2);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= 10; i++) {
+      const p = fn(i / 10);
+      if (!i) ctx.moveTo(p[0], p[1]);
+      else ctx.lineTo(p[0], p[1]);
+    }
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 4.4;
+    ctx.stroke();
+    ctx.strokeStyle = A.c('#c0a070');
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    ctx.strokeStyle = A.c('#7a5a34');
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < 14; i++) {
+      const p = along(fn, i / 14, 0);
+      ctx.moveTo(p[0] - Math.cos(p[2] + 0.8) * 2, p[1] - Math.sin(p[2] + 0.8) * 2);
+      ctx.lineTo(p[0] + Math.cos(p[2] + 0.8) * 2, p[1] + Math.sin(p[2] + 0.8) * 2);
+    }
+    ctx.stroke();
   }
   function fb_kraken(ctx, m) {
     const S = atk(m);
@@ -1745,9 +1876,9 @@
     // ── 桅杆（最後面）＋破帆＋燈籠 ──
     ctx.save();
     ctx.translate(0, bob * 0.6);
-    const mx = -52;
+    const mx = -78;
     limb(ctx, (c) => {
-      c.moveTo(mx, -90);
+      c.moveTo(mx + 10, -90);
       c.lineTo(mx - 16, -196);
     }, 15, KR.wood);
     // 斷口
@@ -1792,6 +1923,49 @@
     ctx.moveTo(mx - 10 + sw * 0.5, spY + 34);
     ctx.lineTo(mx - 30 + sw * 0.5, spY + 42);
     ctx.stroke();
+    // 帆上的破洞與縫補
+    ctx.fillStyle = A.c('#2a2018');
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.ellipse(mx - 4 + sw * 0.7, spY + 30, 4, 6, 0.4, 0, TAU);
+    ctx.ellipse(mx - 36 + sw * 0.4, spY + 22, 3, 4, -0.3, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    A.shape(ctx, (c) => A.roundRect(c, mx - 42 + sw * 0.6, spY + 36, 12, 10, 2), '#b09a6a', null, { lw: 1.6 });
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) {
+      ctx.moveTo(mx - 41 + sw * 0.6 + k * 3.4, spY + 34);
+      ctx.lineTo(mx - 40 + sw * 0.6 + k * 3.4, spY + 38);
+    }
+    ctx.stroke();
+    // 桅頂的破旗
+    const fw = Math.sin(t * 5) * 4;
+    A.shape(ctx, (c) => {
+      c.moveTo(mx - 15, -196);
+      c.quadraticCurveTo(mx - 34, -200 + fw, mx - 50, -196 + fw);
+      c.lineTo(mx - 42, -190 + fw * 0.5);
+      c.lineTo(mx - 50, -184 + fw);
+      c.quadraticCurveTo(mx - 32, -186 + fw * 0.5, mx - 14, -184);
+      c.closePath();
+    }, rage ? '#6a1020' : '#2a2a34', null, { lw: 2 });
+    // 桅杆上的索具：繩梯斜拉到船殼兩側
+    rope(ctx, mx - 16, -190, -104, -80, 10);
+    rope(ctx, mx - 14, -186, 20, -104, 8);
+    rope(ctx, mx - 84, spY + 12, -100, -84, 6);
+    for (let k = 1; k < 5; k++) {
+      const q = k / 5;
+      rope(ctx, lerp(mx - 16, -104, q), lerp(-190, -80, q) + 3, lerp(mx - 14, 20, q) - 6, lerp(-186, -104, q), 2);
+    }
+    // 瞭望台殘骸
+    A.shape(ctx, (c) => {
+      c.moveTo(mx - 30, -156);
+      c.lineTo(mx + 4, -160);
+      c.lineTo(mx + 2, -150);
+      c.lineTo(mx - 28, -146);
+      c.closePath();
+    }, KR.woodS, KR.woodD, { lw: 2.2, shadeY: -152 });
     ctx.restore();
 
     // ── 舉起來的觸手（拍地預備）在身體後面 ──
@@ -1869,6 +2043,59 @@
       crack(c, 10, -194, 1.9, 50, 3, 43);
       if (rage) crack(c, 60, -150, 2.4, 44, 3, 47);
     }, gh, heat, rage ? 3.2 : 2.4);
+    // 頭頂一道道隆起的肉脊（亮邊＋暗邊，做出厚度）
+    for (let k = 0; k < 4; k++) {
+      const off = 14 + k * 17;
+      const r1 = qb(-80 + off * 0.3, -150 + k * 10, -24 + k * 6, -214 + off, 60 - k * 6, -176 + k * 12);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= 12; i++) {
+        const p = r1(i / 12);
+        if (!i) ctx.moveTo(p[0], p[1] + 3);
+        else ctx.lineTo(p[0], p[1] + 3);
+      }
+      ctx.strokeStyle = A.c(U.mix(skinS, '#000000', 0.25));
+      ctx.lineWidth = 3.4;
+      ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i <= 12; i++) {
+        const p = r1(i / 12);
+        if (!i) ctx.moveTo(p[0], p[1]);
+        else ctx.lineTo(p[0], p[1]);
+      }
+      ctx.strokeStyle = A.c(U.mix(skin, '#ffd0e0', 0.3));
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+    }
+    // 肉疣
+    [[-40, -140], [-18, -120], [30, -176], [-56, -160], [6, -130], [60, -140]].forEach(([x, y], i) => {
+      const r = 3 + hash(i + 70) * 3;
+      ctx.fillStyle = A.c(skinS);
+      ctx.beginPath();
+      ctx.arc(x + 1, y + 1, r, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = A.c(U.mix(skin, '#ffd0e0', 0.25));
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.8, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath();
+      ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.3, 0, TAU);
+      ctx.fill();
+    });
+    // 舊傷疤（縫線）
+    ctx.strokeStyle = A.c(U.mix(skin, '#ffe8ec', 0.55));
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-70, -130);
+    ctx.lineTo(-44, -100);
+    for (let k = 1; k < 5; k++) {
+      const x = lerp(-70, -44, k / 5);
+      const y = lerp(-130, -100, k / 5);
+      ctx.moveTo(x - 4, y + 3);
+      ctx.lineTo(x + 4, y - 3);
+    }
+    ctx.stroke();
     ctx.restore();
     finish(ctx, mantle, [-104, -206, 96, -80], { rim: '#ffd6e4', rimA: 0.34, dark: '#1a0410', darkA: 0.38, bounce: gh, bounceA: 0.22, tex: skinS, texA: 0.3, seed: 3, lw: 3.4 });
     barnacles(ctx, -70, -122, 4, 5, 3);
@@ -1990,7 +2217,8 @@
       const tx = bx + dir * len;
       return cb(bx, -34, bx + dir * len * 0.35, 6, tx - dir * 20, 2 + wv * 0.3, tx + wv * 0.4, -18 - Math.abs(wv));
     };
-    tentacle(ctx, gtent(-50, -1, 80, 0, 28), 28, skinS, KR.skinRS, { side: 1 });
+    tentacle(ctx, gtent(-66, -1, 70, 5, 24), 24, skinS, KR.skinRS, { side: 1, seed: 4, back: true });
+    tentacle(ctx, gtent(-50, -1, 80, 0, 28), 28, skinS, KR.skinRS, { side: 1, seed: 1, back: true });
     tentacle(ctx, gtent(-20, -1, 94, 2, 30), 30, skin, skinS, { side: 1 });
 
     // 錨鏈：纏在後面的觸手上
@@ -2076,8 +2304,34 @@
     barnacles(ctx, 30, -32, 2, 4, 19);
     starfish(ctx, 70, -88, 7, -0.4, '#ffb04a', '#c8782a');
     [-70, -40, 6, 44, 84].forEach((x, i) => weed(ctx, x, x < 0 ? -30 : -28, 18 + hash(i + 4) * 22, t, i * 1.7, i % 2 ? '#4a8a4a' : '#3a6e3e', '#285030'));
+    // 甲板的欄杆（船緣上方一排短柱＋扶手）
+    ctx.save();
+    const railY = (x) => lerp(-98, -110, (x + 64) / 130);
+    for (let x = -60; x <= 60; x += 13) {
+      A.shape(ctx, (c) => A.roundRect(c, x - 2.5, railY(x) - 13, 5, 13, 2), KR.woodS, null, { lw: 1.6 });
+    }
+    limb(ctx, (c) => {
+      c.moveTo(-64, railY(-64) - 14);
+      c.lineTo(34, railY(34) - 14);
+    }, 7, KR.wood);
+    limb(ctx, (c) => {
+      c.moveTo(44, railY(44) - 14);
+      c.lineTo(66, railY(66) - 16);
+    }, 7, KR.wood);
+    ctx.restore();
+    // 砲門
+    cannonPort(ctx, -40, -76, 1, gh, rage && !dead ? 0.6 + 0.4 * Math.sin(t * 6) : 0);
+    cannonPort(ctx, 28, -84, 0.9, gh, rage && !dead ? 0.6 + 0.4 * Math.sin(t * 6 + 1) : 0);
+    // 水線上一整排的藤壺殼
+    for (let i = 0; i < 12; i += 2) {
+      const x = -86 + i * 15 + hash(i + 300) * 5;
+      const y = x < 20 ? -28 - hash(i) * 3 : -28 - (x - 20) * 0.35;
+      barnacles(ctx, x, y, 2, 3.2 + hash(i + 301) * 1.5, 40 + i);
+    }
+    // 垂在船殼上的鐵鏈
+    chain(ctx, -92, -70, 10, -42, 18, 4, KR.iron, KR.ironS);
     // 舷窗（發幽光）
-    [[-6, -70], [62, -74]].forEach(([x, y], i) => {
+    [[-6, -70], [62, -74], [88, -84]].forEach(([x, y], i) => {
       const k = dead ? 0 : 0.7 + 0.3 * Math.sin(t * 3 + i * 2) + (rage ? 0.4 : 0);
       glow(ctx, x, y, 30, gh, 0.6 * k);
       A.ellipse(ctx, x, y, 11, 11, KR.iron, KR.ironS, { lw: 2.6, hl: false });
@@ -2109,7 +2363,8 @@
 
     // ── 前排觸手 ──
     tentacle(ctx, gtent(20, 1, 80, 1, 30), 30, skin, skinS, { side: -1 });
-    tentacle(ctx, gtent(56, 1, 72, 3, 26), 26, skin, skinS, { side: -1 });
+    tentacle(ctx, gtent(56, 1, 72, 3, 26), 26, skin, skinS, { side: -1, seed: 7 });
+    tentacle(ctx, gtent(-4, 1, 110, 5, 30), 30, skin, skinS, { side: -1, seed: 9 });
     if (rise > 0 || slamDown) bigTent(1);
 
     // ── 抓著錨的觸手 ──
@@ -2190,6 +2445,60 @@
     lava: '#ff7a1e', lavaR: '#ffd23a', eye: '#ffd23a', eyeR: '#fff6c8', cloth: '#3a1c1c', clothS: '#241010',
     iron: '#6a6060', ironS: '#443c3c', gold: '#e0a84a', goldS: '#a8742a', whip: '#3a1a12',
   };
+  // 鐵肩甲：疊兩層的弧形甲片、鉚釘、尖刺
+  function brPauldron(ctx, x, y, s, side, heat, lava) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s * side, s);
+    for (let k = 0; k < 3; k++) {
+      const a = 0.35 - k * 0.5;
+      const L = 30 - k * 6;
+      A.shape(ctx, (c) => {
+        c.moveTo(Math.cos(a + 0.3) * 18, Math.sin(a + 0.3) * 18 - 8);
+        c.lineTo(Math.cos(a - 0.9) * (18 + L), Math.sin(a - 0.9) * (18 + L) - 8);
+        c.lineTo(Math.cos(a - 0.4) * 16, Math.sin(a - 0.4) * 16 - 8);
+        c.closePath();
+      }, '#9a9090', '#5a5252', { lw: 2.2, shadeY: -8 });
+    }
+    const plate = (c, r0, r1) => {
+      c.moveTo(-r0, 6);
+      c.quadraticCurveTo(-r0, -r1, 0, -r1);
+      c.quadraticCurveTo(r0 + 6, -r1, r0 + 4, 8);
+      c.quadraticCurveTo(0, 2, -r0, 6);
+      c.closePath();
+    };
+    A.shape(ctx, (c) => plate(c, 30, 30), BR.iron, BR.ironS, { cel: [4, 5], lw: 2.8 });
+    A.shape(ctx, (c) => {
+      c.moveTo(-24, 14);
+      c.quadraticCurveTo(-22, -14, 2, -16);
+      c.quadraticCurveTo(26, -14, 28, 18);
+      c.quadraticCurveTo(2, 10, -24, 14);
+      c.closePath();
+    }, '#7e7474', BR.ironS, { cel: [3, 4], lw: 2.4 });
+    // 鑲邊＋鉚釘
+    ctx.strokeStyle = A.c(BR.gold);
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-22, 10);
+    ctx.quadraticCurveTo(2, 2, 26, 14);
+    ctx.stroke();
+    ctx.fillStyle = A.c('#c8bcbc');
+    [[-14, -4], [2, -8], [18, -2], [-24, -14], [14, -24]].forEach(([px, py]) => {
+      ctx.beginPath();
+      ctx.arc(px, py, 2.2, 0, TAU);
+      ctx.fill();
+    });
+    // 甲片縫裡透出的熔岩
+    if (heat > 0) {
+      hotLines(ctx, (c) => {
+        c.moveTo(-26, 4);
+        c.lineTo(-10, -2);
+        c.moveTo(8, -12);
+        c.lineTo(20, -6);
+      }, lava, heat * 0.8, 1.6);
+    }
+    ctx.restore();
+  }
   function fb_balrog(ctx, m) {
     const S = atk(m);
     const { fx, ph, t, rage, dead, kind } = S;
@@ -2318,12 +2627,50 @@
         flame(ctx, tp[0], tp[1] + 6, big ? 11 : 8, big ? 38 : 26, t, i + 1, '#ff7a1e', '#ffe27a', 2);
       });
     };
-    const wOpts = { tatter: rage, boneW: 9, tailY: 60, vein: lava, veinHeat: heat, glowCol: '#ff7a1e', glowA: rage ? 0.55 : 0.3 };
+    const wOpts = { tatter: true, boneW: 10, tailY: 60, vein: lava, veinHeat: heat, glowCol: '#ff7a1e', glowA: rage ? 0.55 : 0.34 };
+    // 翼膜上燒穿的洞（邊緣發紅）與骨節
+    const wingDetail = (rx, ry, tips, back) => {
+      tips.forEach((tp, i) => {
+        if (!i) return;
+        const a = tips[i - 1];
+        const hx = lerp(rx, (a[0] + tp[0]) / 2, 0.62);
+        const hy = lerp(ry, (a[1] + tp[1]) / 2, 0.62);
+        const r = 5 + hash(i + (back ? 9 : 0)) * 4;
+        if (!dead) glow(ctx, hx, hy, r * 2.4, lava, 0.5 * heat);
+        ctx.fillStyle = A.c(back ? '#1a0604' : '#240806');
+        ctx.strokeStyle = A.c(lava);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(hx + r, hy);
+        for (let k = 1; k <= 7; k++) {
+          const aa = (k / 7) * TAU;
+          const rr = r * (0.7 + hash(k + i * 3) * 0.5);
+          ctx.lineTo(hx + Math.cos(aa) * rr, hy + Math.sin(aa) * rr * 0.8);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+      // 翼骨上的骨節
+      tips.forEach((tp) => {
+        const kx = lerp(rx, tp[0], 0.72);
+        const ky = lerp(ry, tp[1], 0.72);
+        ctx.fillStyle = A.c(back ? '#1a100e' : BR.boneS);
+        ctx.beginPath();
+        ctx.arc(kx, ky, 4.4, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = A.outline();
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      });
+    };
     ctx.save();
     upper();
     const tF = batWing(ctx, 22, -184, wingF(1), rage ? BR.wingRS : BR.wingS, rage ? '#3a0804' : '#2e0a08', BR.boneS, '#1a100e', Object.assign({}, wOpts, { tailX: 10 }));
+    wingDetail(22, -184, tF, true);
     if (!dead) wingFlames(tF, rage);
     const tN = batWing(ctx, -42, -180, wingF(-1), rage ? BR.wingR : BR.wing, rage ? BR.wingRS : BR.wingS, BR.bone, BR.boneS, wOpts);
+    wingDetail(-42, -180, tN, false);
     if (!dead) wingFlames(tN, rage);
     ctx.restore();
 
@@ -2472,6 +2819,16 @@
     ctx.moveTo(-10, -120);
     ctx.lineTo(28, -120);
     ctx.stroke();
+    // 焦黑的岩殼：一塊塊不規則的甲片刻線
+    ctx.strokeStyle = A.c('#1a0c0a');
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    [[-60, -180, -40, -150, -58, -128], [40, -190, 60, -160, 46, -130], [-30, -200, -10, -186, 10, -196], [30, -120, 44, -104, 20, -100], [-40, -120, -24, -106, -46, -100]].forEach(([a, b, c2, d, e, f2]) => {
+      ctx.moveTo(a, b);
+      ctx.lineTo(c2, d);
+      ctx.lineTo(e, f2);
+    });
+    ctx.stroke();
     // 熔岩裂縫（胸口是熔核）
     glow(ctx, 8, -158, 44, lava, 0.5 * heat);
     hotLines(ctx, (c) => {
@@ -2490,6 +2847,32 @@
     ctx.fill();
     ctx.restore();
     finish(ctx, torso, [-82, -210, 78, -90], { rim: '#ffd8a8', rimA: 0.30, dark: '#12040a', darkA: 0.40, bounce: lava, bounceA: 0.3, tex: '#1a0a08', texA: 0.3, seed: 9, lw: 3.4 });
+    // 交叉的皮帶挽具（鐵環扣在胸口熔核兩側）
+    ctx.save();
+    ctx.beginPath();
+    torso(ctx);
+    ctx.clip();
+    [[-74, -186, 60, -104], [74, -186, -48, -104]].forEach(([x1, y1, x2, y2]) => {
+      limb(ctx, (c) => {
+        c.moveTo(x1, y1);
+        c.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + 8, x2, y2);
+      }, 11, '#3a2218');
+      ctx.fillStyle = A.c('#b0a4a0');
+      for (let k = 1; k < 5; k++) {
+        const q = k / 5;
+        ctx.beginPath();
+        ctx.arc(lerp(x1, x2, q), lerp(y1, y2, q) + Math.sin(q * PI) * 4, 1.8, 0, TAU);
+        ctx.fill();
+      }
+    });
+    ctx.restore();
+    [[-20, -150], [36, -150]].forEach(([x, y]) => {
+      A.ellipse(ctx, x, y, 7, 7, BR.iron, BR.ironS, { lw: 2.2, hl: false });
+      ctx.fillStyle = A.c('#1a1010');
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, TAU);
+      ctx.fill();
+    });
     // 肩上的岩石骨刺
     [[-66, -186, -2.3], [-52, -198, -2.0], [62, -194, -1.1], [72, -182, -0.8]].forEach(([x, y, a], i) => {
       const L = 26 + (i % 2) * 8;
@@ -2501,6 +2884,12 @@
       }, '#3a2a26', '#221614', { lw: 2.4, shadeY: y });
       if (rage) flame(ctx, x + Math.cos(a) * L * 0.4, y + Math.sin(a) * L * 0.4, 9, 30, t, i + 7, '#ff7a1e', '#ffe27a', 2);
     });
+    // 肩甲
+    brPauldron(ctx, -60, -178, 0.95, -1, heat, lava);
+    brPauldron(ctx, 64, -180, 0.9, 1, heat, lava);
+    // 腰上掛著的斷鐵鏈
+    chain(ctx, -38, -100, -52, -40, 10, 4, BR.iron, BR.ironS);
+    chain(ctx, 36, -100, 48, -52, 8, 4, BR.iron, BR.ironS);
     // 腰帶＋骷髏扣＋破爛腰布
     A.shape(ctx, (c) => {
       c.moveTo(-40, -108);
@@ -2533,6 +2922,28 @@
     upper();
     const armBehindHead = whipWind || meteor;
     if (armBehindHead) frontArm();
+    // 角上套的金屬角環（兩道）
+    function hornRings(fn, w0, col) {
+      [0.2, 0.36].forEach((q) => {
+        const w = w0 * (1 - q * 0.92) * 0.56;
+        const a = along(fn, q, w);
+        const b = along(fn, q, -w);
+        const d = along(fn, q + 0.05, 0);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(a[0], a[1]);
+        ctx.quadraticCurveTo(d[0] + (d[0] - (a[0] + b[0]) / 2) * 0.2, d[1] + (d[1] - (a[1] + b[1]) / 2) * 0.2, b[0], b[1]);
+        ctx.strokeStyle = A.outline();
+        ctx.lineWidth = 7.4;
+        ctx.stroke();
+        ctx.strokeStyle = A.c(col);
+        ctx.lineWidth = 4.4;
+        ctx.stroke();
+        ctx.strokeStyle = A.c(U.mix(col, '#ffffff', 0.5));
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+      });
+    }
     // ── 牛頭 ──
     ctx.save();
     ctx.translate(38, -204);
@@ -2541,12 +2952,26 @@
     ctx.scale(hk, hk);
     // 後面的角（在頭後）
     const hornHeat = rage ? 1 : meteor ? 0.6 : 0.25;
-    horn(ctx, cb(-12, -20, -52, -34, -84, -70, -64, -104), 24, U.mix(BR.horn, '#8a7060', 0.3), BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
-    // 燃燒的鬃毛
+    const bHorn = cb(-12, -20, -52, -34, -84, -70, -64, -104);
+    horn(ctx, bHorn, 29, U.mix(BR.horn, '#8a7060', 0.3), BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
+    hornRings(bHorn, 29, U.mix(BR.gold, '#6a4a2a', 0.3));
+    // 燃燒的鬃毛：先是一圈焦黑的粗鬃（岩塊般的毛束），再從裡面竄出一整排火舌
+    A.shape(ctx, (c) => {
+      c.moveTo(-6, 14);
+      for (let i = 0; i <= 9; i++) {
+        const a = 1.9 + i * 0.36;
+        const r = 30 + (i % 2 ? 8 : 18);
+        c.lineTo(-14 + Math.cos(a) * r, -6 + Math.sin(a) * r);
+        c.lineTo(-14 + Math.cos(a + 0.18) * 22, -6 + Math.sin(a + 0.18) * 22);
+      }
+      c.lineTo(10, -30);
+      c.closePath();
+    }, '#2a1612', '#160a08', { cel: [3, 4], lw: 2.6 });
     if (!dead) {
-      for (let i = 0; i < (rage ? 6 : 4); i++) {
-        const a = -2.2 + i * 0.35;
-        flame(ctx, -14 + Math.cos(a) * 20, -8 + Math.sin(a) * 18 + 6, 10 + (rage ? 4 : 0), (rage ? 52 : 34) - i * 3, t, i + 11, '#ff6a1a', '#ffd23a', 2);
+      glow(ctx, -20, -10, 50, '#ff6a1a', 0.45 + (rage ? 0.2 : 0));
+      for (let i = 0; i < (rage ? 9 : 7); i++) {
+        const a = -2.9 + i * 0.36;
+        flame(ctx, -16 + Math.cos(a) * 26, -6 + Math.sin(a) * 24 + 6, 10 + (rage ? 4 : 0) - (i % 2) * 2, (rage ? 56 : 40) - Math.abs(i - 3) * 4, t, i + 11, '#ff6a1a', '#ffd23a', 2);
       }
     }
     // 耳朵
@@ -2667,7 +3092,9 @@
       }, skinS, null, { lw: 2.4 });
     }
     // 前面的角
-    horn(ctx, cb(8, -24, 34, -56, 86, -58, 96, -102), 26, BR.horn, BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
+    const fHorn = cb(8, -24, 34, -56, 86, -58, 96, -102);
+    horn(ctx, fHorn, 31, BR.horn, BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
+    hornRings(fHorn, 31, BR.gold);
     ctx.restore();
 
     if (!armBehindHead) frontArm();
@@ -2708,6 +3135,33 @@
       ctx.restore();
     }
     A.shape(ctx, (c) => taper(c, wfn, (s) => 11 - s * 7, 30), BR.whip, null, { lw: 2.6 });
+    // 鞭身：一節節的骨節＋倒鉤
+    ctx.fillStyle = A.c('#5a2a1a');
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 1.6;
+    for (let i = 1; i < 16; i++) {
+      const q = i / 16;
+      const p = along(wfn, q, 0);
+      const w = (11 - q * 7) * 0.62;
+      ctx.beginPath();
+      ctx.ellipse(p[0], p[1], w * 0.55, w, p[2], 0, TAU);
+      ctx.fill();
+      ctx.stroke();
+      if (i % 3 === 0) {
+        const b1 = along(wfn, q, w + 1);
+        const b2 = along(wfn, q - 0.035, w * 2.4 + 3);
+        ctx.beginPath();
+        ctx.moveTo(b1[0], b1[1]);
+        ctx.lineTo(b2[0], b2[1]);
+        ctx.lineTo(along(wfn, q - 0.02, w)[0], along(wfn, q - 0.02, w)[1]);
+        ctx.closePath();
+        ctx.save();
+        ctx.fillStyle = A.c('#d8ccb0');
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
     ctx.save();
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -3087,6 +3541,43 @@
         c.lineTo(p[0], p[1] + 5);
         c.lineTo(p[0] + 5, p[1] - 5);
       }, gcol, dead ? 0 : Math.max(0.35, P.hot, rage ? 1 : 0), 2);
+      // 石臂上的雕花：上臂一串回紋、前臂一排符文（出招時發光）
+      ctx.strokeStyle = A.c(stoneD);
+      ctx.lineWidth = 1.6;
+      ctx.lineJoin = 'miter';
+      ctx.beginPath();
+      [0.14, 0.26, 0.72, 0.84].forEach((q) => {
+        const p = along(ua, q, 0);
+        const w = uw(q) * 0.2;
+        const ca = Math.cos(p[2]);
+        const sa = Math.sin(p[2]);
+        const P2 = (u, v) => [p[0] + ca * u - sa * v, p[1] + sa * u + ca * v];
+        const pts = [P2(-w, w), P2(-w, -w), P2(w, -w), P2(w, w * 0.4), P2(-w * 0.3, w * 0.4), P2(-w * 0.3, -w * 0.3)];
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        pts.slice(1).forEach((pp) => ctx.lineTo(pp[0], pp[1]));
+      });
+      ctx.stroke();
+      const runeK = dead ? 0 : Math.max(0.3, P.hot, rage ? 0.9 : 0);
+      hotLines(ctx, (c) => {
+        [0.2, 0.32, 0.58].forEach((q, k) => {
+          const p = along(fr, q, 0);
+          const ca = Math.cos(p[2]);
+          const sa = Math.sin(p[2]);
+          const P2 = (u, v) => [p[0] + ca * u - sa * v, p[1] + sa * u + ca * v];
+          const g = [[[-3, -5], [-3, 5], [3, 0]], [[-3, -5], [3, -5], [0, 5]], [[-3, 5], [0, -5], [3, 5]]][k];
+          const a0 = P2(g[0][0], g[0][1]);
+          c.moveTo(a0[0], a0[1]);
+          g.slice(1).forEach((gg) => {
+            const pp = P2(gg[0], gg[1]);
+            c.lineTo(pp[0], pp[1]);
+          });
+        });
+      }, gcol, runeK, 1.4);
+      // 前臂下緣垂著的冰柱
+      [0.3, 0.52].forEach((q, k) => {
+        const p = along(fr, q, fw(q) * 0.46);
+        icicle(ctx, p[0], p[1] - 2, 10 + k * 5 + (rage ? 6 : 0), 3);
+      });
       // 手肘：石塊關節＋冰晶
       A.ellipse(ctx, ex, ey, 19, 18, stoneS, stoneD, { lw: 2.8, hl: false });
       iceCrystal(ctx, ex, ey - 8, rage ? 34 : 24, rage ? 9 : 7, -0.5 + P.a1 * 0.3, ZK.ice, ZK.iceS);
@@ -3153,6 +3644,51 @@
       ctx.lineTo(x + 7, -96);
     }
     ctx.stroke();
+    // 胸口上緣的鋸齒雕花帶、胸肌上的符文圓章、下腹的回紋
+    ctx.strokeStyle = A.c(stoneD);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let k = 0; k < 14; k++) {
+      const x = -78 + k * 12;
+      ctx.moveTo(x, -186);
+      ctx.lineTo(x + 6, -178);
+      ctx.lineTo(x + 12, -186);
+    }
+    ctx.moveTo(-80, -190);
+    ctx.lineTo(80, -190);
+    ctx.moveTo(-80, -174);
+    ctx.lineTo(80, -174);
+    for (let k = 0; k < 8; k++) {
+      const x = -72 + k * 19;
+      ctx.moveTo(x, -44);
+      ctx.lineTo(x, -54);
+      ctx.lineTo(x + 12, -54);
+      ctx.lineTo(x + 12, -46);
+      ctx.lineTo(x + 5, -46);
+    }
+    ctx.stroke();
+    [-1, 1].forEach((sd) => {
+      const x = 44 * sd;
+      const y = -140;
+      ctx.strokeStyle = A.c(stoneD);
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(x, y, 13, 0, TAU);
+      ctx.moveTo(x + 8, y);
+      ctx.arc(x, y, 8, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = A.c(U.mix(stone, '#ffffff', 0.3));
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(x - 1, y - 1, 13, PI * 1.05, PI * 1.6);
+      ctx.stroke();
+      hotLines(ctx, (c) => {
+        c.moveTo(x, y - 5);
+        c.lineTo(x, y + 5);
+        c.moveTo(x - 4, y - 2);
+        c.lineTo(x + 4, y + 2);
+      }, gcol, dead ? 0 : 0.4 + heat * 0.4, 1.4);
+    });
     // 發光裂紋
     hotLines(ctx, (c) => {
       crack(c, -62, -30, -1.0, 60, 4, 81);
@@ -3245,6 +3781,28 @@
       c.lineTo(-10, -68);
       c.closePath();
     }, rage ? ZK.gemR : ZK.gem, U.mix(rage ? ZK.gemR : ZK.gem, '#101040', 0.45), { lw: 2.2, shadeY: -68 });
+    // 腰帶下垂的金墜飾與冰柱
+    [-66, -48, 48, 66].forEach((x, k) => {
+      const sw2 = Math.sin(t * 2 + k) * 1.5;
+      ctx.strokeStyle = A.c(goldS);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, -60);
+      ctx.lineTo(x + sw2, -48);
+      ctx.stroke();
+      A.shape(ctx, (c) => {
+        c.moveTo(x + sw2, -50);
+        c.lineTo(x + 5 + sw2, -42);
+        c.lineTo(x + sw2, -32);
+        c.lineTo(x - 5 + sw2, -42);
+        c.closePath();
+      }, gold, goldS, { lw: 1.8, shadeY: -42 });
+      ctx.fillStyle = A.c(k % 2 ? ZK.iceD : rage ? ZK.gemR : ZK.gem);
+      ctx.beginPath();
+      ctx.arc(x + sw2, -42, 2.4, 0, TAU);
+      ctx.fill();
+    });
+    [-76, -56, -40, 40, 56, 76].forEach((x, k) => icicle(ctx, x + 6, -61, 8 + hash(k + 400) * 10 + (rage ? 5 : 0), 2.6));
     // 巨大的石肩甲（金邊＋冰刺）
     [-1, 1].forEach((sd) => {
       const px = 76 * sd;
@@ -3298,6 +3856,24 @@
       ctx.fill();
       ctx.restore();
     }
+    // 項鍊正中的大墜飾（金框裡的冰魔石）
+    A.shape(ctx, (c) => {
+      c.moveTo(0, -190);
+      c.lineTo(14, -176);
+      c.lineTo(0, -156);
+      c.lineTo(-14, -176);
+      c.closePath();
+    }, gold, goldS, { lw: 2.4, shadeY: -176 });
+    if (!dead) glow(ctx, 0, -176, 18, gcol, 0.6);
+    A.shape(ctx, (c) => {
+      c.moveTo(0, -184);
+      c.lineTo(8, -176);
+      c.lineTo(0, -164);
+      c.lineTo(-8, -176);
+      c.closePath();
+    }, rage ? ZK.gemR : ZK.iceD, null, { lw: 1.6 });
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillRect(-3, -180, 2, 5);
     ctx.restore();
 
     // ── 頭（巨大的雕刻石臉）──
@@ -3327,6 +3903,13 @@
       c.lineTo(44, -14);
       c.closePath();
     };
+    // 後層的高刺冠（更暗、更高，做出層次）
+    ctx.save();
+    ctx.translate(0, -14);
+    ctx.scale(1.16, 1.2);
+    ctx.translate(0, 14);
+    A.shape(ctx, crown, stoneD, U.mix(stoneD, '#000010', 0.4), { cel: [6, 6], lw: 3 });
+    ctx.restore();
     const crownTips = [[-86, -60, -1.1], [-60, -88, -0.5], [-30, -104, -0.25], [0, -114, 0], [30, -104, 0.25], [60, -88, 0.5], [86, -60, 1.1]];
     crownTips.forEach(([x, y, a], k) => {
       const h = (k === 3 ? 34 : k % 2 ? 20 : 16) * (rage ? 1.45 : 1);
@@ -3348,7 +3931,28 @@
       c.lineTo(40, -24);
       c.closePath();
     };
+    // 石冠上的金色鑲邊
+    ctx.strokeStyle = A.c(gold);
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-64, -34);
+    ctx.lineTo(-74, -54);
+    ctx.lineTo(-54, -56);
+    ctx.lineTo(-54, -78);
+    ctx.lineTo(-34, -68);
+    ctx.lineTo(-28, -92);
+    ctx.moveTo(64, -34);
+    ctx.lineTo(74, -54);
+    ctx.lineTo(54, -56);
+    ctx.lineTo(54, -78);
+    ctx.lineTo(34, -68);
+    ctx.lineTo(28, -92);
+    ctx.stroke();
     A.shape(ctx, crownIn, gold, goldS, { cel: [4, 5], lw: 2.8 });
+    // 金冠尖上的寶石
+    [[-46, -56], [-20, -78], [20, -78], [46, -56]].forEach(([x, y], k) => {
+      A.ellipse(ctx, x, y + 4, 4, 4, k % 3 ? ZK.iceD : rage ? ZK.gemR : ZK.gem, null, { lw: 1.6, hl: [x - 1.4, y + 2.6, 1.4, 1] });
+    });
     hotLines(ctx, (c) => {
       c.moveTo(-20, -60);
       c.lineTo(-20, -44);
@@ -3893,7 +4497,33 @@
       const fl2 = dead ? 0 : Math.sin(t * (rage ? 4 : 2.4)) * 0.12;
       const root = along(spine, 0.16, -wf(0.16) * 0.2);
       const fing = [[-2.05, 160], [-1.68, 176], [-1.3, 150], [-0.95, 112]].map(([a, l], i) => [a + (1 - sp) * 0.5 - fl2 * (1 + i * 0.2), l * (0.8 + sp * 0.2)]);
-      const tips = batWing(ctx, root[0], root[1], fing, rage ? '#2a1446' : '#241e5c', rage ? '#170a2a' : '#15103a', VD.gold, VD.goldS, { tatter: false, boneW: 7, tailX: 20, tailY: 40, glowCol: neb, glowA: rage ? 0.5 : 0.3 });
+      const tips = batWing(ctx, root[0], root[1], fing, rage ? '#2a1446' : '#241e5c', rage ? '#170a2a' : '#15103a', VD.gold, VD.goldS, { tatter: false, boneW: 8, tailX: 20, tailY: 40, glowCol: neb, glowA: rage ? 0.5 : 0.3, vein: neb, veinHeat: rage ? 0.9 : 0.5 });
+      // 翼膜上被星光燒穿的小洞（透出星星）
+      for (let i = 1; i < tips.length; i++) {
+        const a = tips[i - 1];
+        const b = tips[i];
+        [[0.55, 0.4], [0.78, 0.6]].forEach(([q, u], k) => {
+          const mx2 = lerp(a[0], b[0], u);
+          const my2 = lerp(a[1], b[1], u);
+          const hx = lerp(root[0], mx2, q);
+          const hy = lerp(root[1], my2, q);
+          const r = 3.4 + hash(i * 3 + k) * 3;
+          if (!dead) glow(ctx, hx, hy, r * 3, '#e8e0ff', 0.45);
+          ctx.fillStyle = A.c('#0a0618');
+          ctx.strokeStyle = A.c(VD.gold);
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.ellipse(hx, hy, r, r * 0.8, 0.3, 0, TAU);
+          ctx.fill();
+          ctx.stroke();
+          starShape(ctx, hx, hy, r * 0.8, '#ffffff');
+        });
+      }
+      // 翼指末端的金爪
+      tips.forEach((tp, i) => {
+        const a = Math.atan2(tp[1] - root[1], tp[0] - root[0]);
+        A.shape(ctx, (c) => taper(c, qb(tp[0], tp[1], tp[0] + Math.cos(a) * 8, tp[1] + Math.sin(a) * 8, tp[0] + Math.cos(a + 0.9) * 13, tp[1] + Math.sin(a + 0.9) * 13), (q) => 6 * (1 - q) + 0.5, 8), gold, null, { lw: 1.6 });
+      });
       ctx.fillStyle = A.c(VD.star);
       for (let i = 0; i < 12; i++) {
         const k = Math.floor(hash(i + 300) * tips.length);
@@ -3923,12 +4553,56 @@
     limbAt(0.52, 34, 2.2 + wv * 0.1, true);
     limbAt(0.27, 34, 1.9 + wv2 * 0.1, true);
 
+    // 背脊的骨板（鑲金邊，根部被身體蓋住）
+    for (let i = 0; i < 14; i++) {
+      const s2 = 0.08 + i * 0.062;
+      if (s2 > 0.94) break;
+      const w = wf(s2);
+      const p0 = along(spine, s2 - 0.02, -w * 0.42);
+      const p1 = along(spine, s2 + 0.012, -w * 0.5 - 8 - w * 0.25);
+      const p2 = along(spine, s2 + 0.028, -w * 0.42);
+      A.shape(ctx, (c) => {
+        c.moveTo(p0[0], p0[1]);
+        c.quadraticCurveTo((p0[0] + p1[0]) / 2 - 2, (p0[1] + p1[1]) / 2, p1[0], p1[1]);
+        c.lineTo(p2[0], p2[1]);
+        c.closePath();
+      }, rage ? '#3a1a5a' : '#2e2870', null, { lw: 2 });
+      ctx.strokeStyle = A.c(gold);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(lerp(p0[0], p1[0], 0.3), lerp(p0[1], p1[1], 0.3));
+      ctx.lineTo(p1[0], p1[1]);
+      ctx.stroke();
+    }
     // 本體
     A.shape(ctx, (c) => taper(c, spine, wf, 40), sky, skyS, { cel: [0, 7], lw: 3.4 });
     ctx.save();
     ctx.beginPath();
     taper(ctx, spine, wf, 40);
     ctx.clip();
+    // 身體裡翻湧的星雲
+    if (!dead) {
+      for (let i = 0; i < 6; i++) {
+        const p = along(spine, 0.06 + i * 0.13, (hash(i + 40) - 0.5) * 26);
+        glow(ctx, p[0] + Math.sin(t * 0.8 + i) * 6, p[1], 30 + hash(i) * 14, i % 2 ? neb : rage ? VD.nebR : '#5a7aff', 0.3 + Math.sin(t * 1.6 + i) * 0.08);
+      }
+    }
+    // 鱗片：沿著身體一排排的小弧（亮邊）
+    ctx.strokeStyle = rgba(rage ? '#a070e0' : '#6a60d0', 0.55);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 30; i++) {
+      const s2 = 0.03 + i * 0.03;
+      const w = wf(s2);
+      for (let r = -1; r <= 1; r++) {
+        const p = along(spine, s2 + (r & 1) * 0.015, r * w * 0.26);
+        const rr = w * 0.12;
+        const a = p[2] + PI / 2;
+        ctx.moveTo(p[0] + Math.cos(a - 1.2) * rr, p[1] + Math.sin(a - 1.2) * rr);
+        ctx.arc(p[0], p[1], rr, a - 1.2, a + 1.2);
+      }
+    }
+    ctx.stroke();
     // 腹甲（下緣一節一節）
     for (let i = 0; i < 12; i++) {
       const s = 0.06 + i * 0.07;
@@ -3991,7 +4665,6 @@
     }
     ctx.restore();
     finish(ctx, (c) => taper(c, spine, wf, 40), [-220, -240, 110, 0], { rim: '#dcd0ff', rimA: 0.36, rimW: 6, dark: '#04020c', darkA: 0.36, bounce: gold, bounceA: 0.2, lw: 3.4 });
-    if (!dead) for (let i = 0; i < 6; i++) { const p = along(spine, 0.08 + i * 0.13, 0); ctx.save(); ctx.globalAlpha *= 0.55; glow(ctx, p[0], p[1], 26 + hash(i) * 12, neb, 0.35 + Math.sin(t * 2 + i) * 0.1); ctx.restore(); }
     if (!dead) for (let i = 0; i < 8; i++) { const p = along(spine, 0.05 + i * 0.11, (hash(i + 9) - 0.5) * 50); sparkle4(ctx, p[0], p[1], 3 + hash(i) * 3, i % 2 ? '#ffffff' : gold, 0.5 + 0.5 * Math.sin(t * 4 + i * 1.3)); }
     // 尾巴尖：一顆星
     const tip = spine(1);
@@ -4015,6 +4688,43 @@
       clockShard(ctx, r, i * 1.3, rage, t, rage && !dead);
       ctx.restore();
     });
+    // 胸前的錶盤護甲（金框、羅馬刻度、慢慢走的指針）
+    {
+      const p = along(spine, 0.22, wf(0.22) * 0.1);
+      ctx.save();
+      ctx.translate(p[0], p[1]);
+      ctx.rotate(p[2] + 0.2);
+      A.shape(ctx, (c) => c.ellipse(0, 0, 21, 17, 0, 0, TAU), VD.face, VD.faceS, { lw: 2.6, shadeY: 5 });
+      ctx.strokeStyle = A.c(gold);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 21, 17, 0, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = A.c('#6a4a2a');
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * TAU;
+        const L = i % 3 ? 0.84 : 0.7;
+        ctx.moveTo(Math.cos(a) * 17, Math.sin(a) * 13.5);
+        ctx.lineTo(Math.cos(a) * 17 * L, Math.sin(a) * 13.5 * L);
+      }
+      ctx.stroke();
+      const ha = t * (rage ? 2 : 0.3);
+      ctx.strokeStyle = A.c(rage ? '#ff5a3a' : '#3a2a1a');
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ha) * 12, Math.sin(ha) * 9);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ha * 0.1 + 2) * 8, Math.sin(ha * 0.1 + 2) * 6);
+      ctx.stroke();
+      ctx.fillStyle = A.c(gold);
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.4, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
     // 前腳（黑洞球時往前捧）
     let claw;
     if (orb) {
@@ -4033,7 +4743,12 @@
     ctx.translate(hbX, hbY);
     ctx.rotate(-headUp);
     // 角（往後掠，金色）
-    horn(ctx, cb(-6, -18, -30, -40, -62, -52, -96, -48), 18, U.mix(gold, '#8a6a3a', 0.25), VD.goldS, '#4a2a1a', rage ? 0.8 : 0.2, VD.nebR);
+    // 角冠：後面一支暗金長角、中間主角、再加一排短的冠刺
+    horn(ctx, cb(-10, -14, -40, -28, -74, -30, -104, -18), 14, U.mix(gold, '#4a3a2a', 0.5), VD.goldS, '#2a1a10', rage ? 0.6 : 0, VD.nebR);
+    horn(ctx, cb(-6, -18, -30, -40, -62, -52, -96, -48), 20, U.mix(gold, '#8a6a3a', 0.25), VD.goldS, '#4a2a1a', rage ? 0.8 : 0.2, VD.nebR);
+    [[4, -22, -1.9, 22], [16, -24, -1.6, 18], [26, -20, -1.35, 13]].forEach(([x, y, a, L]) => {
+      horn(ctx, qb(x, y + 4, x + Math.cos(a) * L * 0.5 - 3, y + Math.sin(a) * L * 0.5, x + Math.cos(a - 0.5) * L, y + Math.sin(a - 0.5) * L), 8, gold, VD.goldS, '#4a2a1a', rage ? 0.8 : 0, VD.nebR);
+    });
     // 下顎
     ctx.save();
     ctx.translate(4, 10);
