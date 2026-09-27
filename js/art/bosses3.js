@@ -2309,6 +2309,9 @@
       glowK = k;
     }
     if (dead) A4 = [PI * 0.55, PI * 0.45, PI * 0.6, PI * 0.4];
+    // 眼睛只在預警與出招時睜開（預警一開始就很快睜大），平常閉著
+    const ATK_ST = ['sweepPrep', 'sweep', 'stab', 'stopPrep', 'stop', 'rewindPrep', 'rewind', 'clockworkPrep', 'clockwork', 'echo', 'transform'];
+    const openK = dead || portrait || !ATK_ST.includes(st) ? 0 : /Prep$/.test(st) ? clamp(k * 5, 0.25, 1) : 1;
 
     ctx.save();
     ctx.scale(K, K);
@@ -2802,22 +2805,58 @@
         return;
       }
       const col = P2 ? '225,190,255' : '255,220,130';
-      glow(ctx, x, y, (30 + eyeK * 24) * s, col, 0.7 + eyeK * 0.3);
-      sh(ctx, (c) => {
-        c.moveTo(x - 12 * s, y - 1 * s * d);
-        c.quadraticCurveTo(x, y - 8 * s, x + 12 * s, y + 1 * s * d);
-        c.quadraticCurveTo(x, y + 8 * s, x - 12 * s, y - 1 * s * d);
-        c.closePath();
-      }, m.hurtFlash > 0.05 ? '#ffffff' : P2 ? '#f4ecff' : '#fff3c0', null, { lw: 2.6, hl: false });
-      ctx.fillStyle = A.c(P2 ? '#6a3ad0' : '#d07a10');
-      ctx.beginPath();
-      ctx.ellipse(x + 2 * s, y, 2.4 * s, 5.5 * s, 0, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(x - 3 * s, y - 3 * s, 1.8 * s, 0, TAU);
-      ctx.fill();
-      if (P2 || eyeK > 0.6) {
+      // 平常閉著眼（沉睡的石像），只有預警與出招時睜開；睜開的眼沒有眼白，整顆是發光的金色／星光虹膜
+      if (openK <= 0.02) {
+        glow(ctx, x, y + 2 * s, 16 * s, col, 0.28);
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = rgba(col, 0.75);
+        ctx.lineWidth = 2 * s;
+        ctx.beginPath();
+        ctx.moveTo(x - 10 * s, y + 1 * s * d);
+        ctx.quadraticCurveTo(x, y + 6 * s, x + 10 * s, y + 2 * s * d);
+        ctx.stroke();
+        ctx.strokeStyle = A.outline();
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 12 * s, y - 1 * s * d);
+        ctx.quadraticCurveTo(x, y + 5 * s, x + 12 * s, y + 1 * s * d);
+        ctx.stroke();
+      } else {
+        const hs = openK;
+        glow(ctx, x, y, (30 + eyeK * 24) * s, col, (0.7 + eyeK * 0.3) * hs);
+        const eyeP = (c) => {
+          c.moveTo(x - 12 * s, y - 1 * s * d);
+          c.quadraticCurveTo(x, y - 8 * s * hs, x + 12 * s, y + 1 * s * d);
+          c.quadraticCurveTo(x, y + 8 * s * hs, x - 12 * s, y - 1 * s * d);
+          c.closePath();
+        };
+        const rg = (hex, al) => 'rgba(' + U.hexToRgb(A.c(hex)).join(',') + ',' + al + ')';
+        const ig = ctx.createRadialGradient(x + 1 * s, y, 0.5 * s, x + 1 * s, y, 12 * s);
+        ig.addColorStop(0, rg(P2 ? '#fbeeff' : '#fff2b0', 1));
+        ig.addColorStop(0.3, rg(P2 ? '#b77aff' : '#ffc43a', 1));
+        ig.addColorStop(0.75, rg(P2 ? '#7a30e8' : '#f09a14', 1));
+        ig.addColorStop(1, rg(P2 ? '#4a1e9a' : '#a85a06', 1));
+        sh(ctx, eyeP, m.hurtFlash > 0.05 ? '#ffffff' : P2 ? '#b07aff' : '#ffb42a', null, { lw: 2.6, hl: false, noStroke: true });
+        if (!(m.hurtFlash > 0.05)) {
+          ctx.beginPath();
+          eyeP(ctx);
+          ctx.fillStyle = ig;
+          ctx.fill();
+        }
+        ctx.fillStyle = A.c(P2 ? '#2a0a5a' : '#5a2400');
+        ctx.beginPath();
+        ctx.ellipse(x + 2 * s, y, 1.8 * s, 5.5 * s * hs, 0, 0, TAU);
+        ctx.fill();
+        sparkle(ctx, x - 3.5 * s, y - 2 * s * hs, 2.6 * s, A.c(P2 ? '#fbeeff' : '#fff8d8'));
+        ctx.beginPath();
+        eyeP(ctx);
+        ctx.strokeStyle = A.outline();
+        ctx.lineWidth = 2.6;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        glow(ctx, x, y, 13 * s, P2 ? '200,140,255' : '255,200,90', 0.45 * hs);
+      }
+      if (openK > 0.5 && (P2 || eyeK > 0.6)) {
         ctx.strokeStyle = rgba(col, 0.7);
         ctx.lineWidth = 3 * s;
         ctx.lineCap = 'round';
