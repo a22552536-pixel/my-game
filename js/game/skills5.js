@@ -115,7 +115,10 @@
           ty = Math.min(G.cam.y + G.H * 0.28, m.y - m.h * (m.scale || 1) - 110);
           ty = Math.max(ty, G.cam.y + size + 20);
         }
-        m.chiBase = m.hover || 0;
+        // 原本的懸浮高度：牠如果還飄在上一顆地爆天星／冥道的半空中，用那時記下的高度，不能把半空當成地面
+        if (!m.chiLift) m.chiBase = (m.sucked ? m.baseHover : m.hover) || 0;
+        m.chiLift = true;
+        m.chiFall = false;
         ults.push({ kind: 'chibaku', phase: 'throw', m, S, lv: a.lv, t: 0, pt: 0, dir, sx: P.x + dir * 20, sy: P.y - 50, tx, ty, ox: P.x + dir * 20, oy: P.y - 50, R: 7, n: 0, flashT: 0, spin: 0, size, groundY: m.y, rocks: [], shell: [], flying: [], spawnT: 0 });
       },
     },
@@ -137,6 +140,8 @@
         if (!m.sucked || m.suckedBy !== u) return;
         m.sucked = false;
         m.suckedBy = null;
+        // 同時被地爆天星抓著／正在摔回地面：交給地爆天星那邊處理高度
+        if (m.chiLift) return;
         const lift = (m.hover || 0) - (m.baseHover || 0);
         m.hover = m.baseHover || 0;
         if (m.dead) return;
@@ -199,7 +204,7 @@
           if (!m.sucked) {
             m.sucked = true;
             m.suckedBy = u;
-            m.baseHover = m.hover || 0;
+            m.baseHover = m.chiLift ? m.chiBase || 0 : m.hover || 0;
             u.sucked.push(m);
           }
           const d = U.dist(m.x, midY(m), u.x, u.y);
@@ -671,7 +676,15 @@
   const MP = G.Monster && G.Monster.prototype;
   if (!MP) return;
   const base = MP.update;
+  const held = (m) => G.skillExec.ults.some((u) => u.kind === 'chibaku' && u.m === m && u.phase !== 'end');
   MP.update = function (dt) {
+    // 保險：被抬上去的怪只要沒有黑洞或石球還抓著牠，就一定要摔回原本的高度（不會停在半空走路）
+    if (this.chiLift && !this.chiFall && !this.sucked && !held(this)) {
+      if ((this.hover || 0) > (this.chiBase || 0) + 1) {
+        this.chiFall = true;
+        this.chiFallV = 0;
+      } else this.chiLift = false;
+    }
     if (this.chiFall) {
       this.chiFallV = (this.chiFallV || 0) + 2200 * dt;
       this.hover = (this.hover || 0) - this.chiFallV * dt;
@@ -679,6 +692,7 @@
       if (this.hover <= floor) {
         this.hover = floor;
         this.chiFall = false;
+        this.chiLift = false;
         if (!this.dead) {
           G.fx.burst(this.x, this.y - 6, ['#6a6470', '#3a3640', '#9a94a0'], 10, 220, { angle: -Math.PI / 2, spread: 1.4, life: 0.5 });
           G.audio.play('land');
