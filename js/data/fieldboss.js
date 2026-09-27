@@ -12,7 +12,7 @@
     M[id] = Object.assign({ fieldBoss: true, band: true, behavior: 'aggressive', sight: 900, hpMul: 25, atkMul: 1.3, drops: {} }, o);
   };
 
-  add('fb_shroom', { hpMul: 50, name: '苔冠蛙王', lv: 12, art: 'fb_shroom', map: '1-4', abilities: ['fbShroom'], speed: 55, w: 240, h: 190, fallback: ['mushroom', 2] });
+  add('fb_shroom', { hpMul: 50, name: '苔冠鱷王', lv: 12, art: 'fb_shroom', map: '1-4', abilities: ['fbShroom'], speed: 55, w: 340, h: 165, fallback: ['mushroom', 2] });
   add('fb_kraken', { hpMul: 55, name: '沉船海魔', lv: 25, art: 'fb_kraken', map: '2-4', abilities: ['fbKraken'], speed: 45, w: 240, h: 170, fallback: ['bulbjelly', 0] });
   add('fb_balrog', { hpMul: 65, name: '赤焰炎魔', lv: 37, art: 'fb_balrog', map: '3-4', abilities: ['fbBalrog'], speed: 60, w: 230, h: 260, fallback: ['potgoat', 0] });
   add('fb_zakum', { hpMul: 100, name: '千手冰像', lv: 49, art: 'fb_zakum', map: '4-4', abilities: ['fbZakum'], speed: 0, w: 260, h: 300, fallback: ['shieldbear', 0] });
