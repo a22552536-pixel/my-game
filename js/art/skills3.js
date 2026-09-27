@@ -1829,6 +1829,11 @@
     return cv;
   })();
 
+  // 雷雨雲的柔邊雲塊（沒有描邊）：深色、中間色、被閃電照亮的亮邊
+  const CL_D = radial(64, [[0, 'rgba(18,19,30,1)'], [0.6, 'rgba(22,24,37,0.92)'], [0.86, 'rgba(28,30,46,0.45)'], [1, 'rgba(30,32,48,0)']]);
+  const CL_M = radial(64, [[0, 'rgba(70,76,104,0.95)'], [0.5, 'rgba(58,64,90,0.8)'], [0.85, 'rgba(46,51,74,0.3)'], [1, 'rgba(44,49,70,0)']]);
+  const CL_L = radial(64, [[0, 'rgba(170,185,235,0.7)'], [0.5, 'rgba(130,145,205,0.3)'], [1, 'rgba(110,125,190,0)']]);
+
   const J = [];
   const JP = pool(260);
   function hitboxOf(m) {
@@ -1864,6 +1869,29 @@
     }
     e.puffs.sort((p, q) => p.ay - q.ay);
     e.pp = new Float32Array(n * 3);
+    // 雷雨雲的「天花板」：蓋住整個畫面上緣，雲底高低起伏、有垂下的乳房雲和被風扯碎的雲絮
+    const L = lite();
+    const span = G.W * 1.5;
+    e.baseX = cam.x + G.W / 2;
+    e.span = span;
+    e.ceil = [];
+    const nc = L ? 14 : 24;
+    for (let i = 0; i < nc; i++) {
+      const k = i / (nc - 1);
+      e.ceil.push({ x: (k - 0.5) * span + rr(-30, 30), y: rr(-H * 0.3, -H * 0.02), rx: rr(100, 190), ry: rr(70, 120), ph: rr(0, TAU) });
+    }
+    e.lobes = [];
+    const nl = L ? 9 : 16;
+    for (let i = 0; i < nl; i++) {
+      const x = (rnd() - 0.5) * span * 0.95;
+      const near = Math.max(0, 1 - Math.abs(x - (e.cx - e.baseX)) / (W * 0.8)); // 越靠近要劈的地方雲底垂得越低
+      e.lobes.push({ x, y: rr(0, 22) + near * H * 0.12, rx: rr(60, 115) * (1 + near * 0.3), ry: rr(38, 66) * (1 + near * 0.4), ph: rr(0, TAU) });
+    }
+    e.wisps = [];
+    const nw = L ? 4 : 9;
+    for (let i = 0; i < nw; i++) {
+      e.wisps.push({ x: (rnd() - 0.5) * span, y: rr(10, 46), len: rr(90, 210), th: rr(8, 16), v: rr(18, 40) * (rnd() < 0.5 ? -1 : 1) });
+    }
   }
   function newJudge(P, list, hitAt) {
     const e = {
@@ -2256,18 +2284,68 @@
       pp[i * 3 + 1] = cyB + p.ay + Math.sin(t * p.sp + p.ph) * p.orb * 0.6;
       pp[i * 3 + 2] = s <= 0 ? 0 : p.r * s * (1 + 0.05 * Math.sin(t * 3.1 + p.ph)) * (hk > 0.5 ? 1 - (hk - 0.5) * 0.4 : 1);
     }
+    // 雷雨雲：由上往下長出來（form），散掉時往上收、變淡
+    const H = e.H;
+    const grow = eOut(clamp(t / 0.35, 0, 1)) * (hk > 0.5 ? 1 - (hk - 0.5) * 0.5 : 1);
+    const bx = e.baseX;
+    const span = e.span;
+    const topY = G.cam.y - 40;
+    const drop = (cyB - topY) * grow; // 雲底目前往下長到哪裡
+    const yb = topY + drop;
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = ca;
-    for (let i = 0; i < n; i++) {
-      const r = pp[i * 3 + 2] + 2.6;
-      if (r > 3) ctx.drawImage(PF_OUT, pp[i * 3] - r, pp[i * 3 + 1] - r, r * 2, r * 2);
+    // 1) 天花板的底色：上深下淺的帶子（邊緣柔化）
+    const band = ctx.createLinearGradient(0, topY, 0, yb);
+    band.addColorStop(0, 'rgba(14,15,24,0.96)');
+    band.addColorStop(0.7, 'rgba(26,28,42,0.9)');
+    band.addColorStop(1, 'rgba(34,37,54,0)');
+    ctx.fillStyle = band;
+    ctx.fillRect(bx - span / 2, topY, span, drop + 4);
+    // 2) 起伏的雲底：一團團扁平的深色雲塊，慢慢翻滾
+    for (const c of e.ceil) {
+      const rx = c.rx * (1 + 0.06 * Math.sin(t * 1.3 + c.ph));
+      const ry = c.ry * grow;
+      const y = yb + c.y * grow;
+      ctx.drawImage(CL_D, bx + c.x + Math.sin(t * 0.8 + c.ph) * 6 - rx, y - ry, rx * 2, ry * 2);
     }
-    for (let i = 0; i < n; i++) {
-      const r = pp[i * 3 + 2];
-      if (r > 1) ctx.drawImage(PF_FILL, pp[i * 3] - r, pp[i * 3 + 1] - r, r * 2, r * 2);
+    // 3) 垂下來的乳房雲：中間色、下緣被底下的電光照出一點亮邊
+    for (const l of e.lobes) {
+      const rx = l.rx;
+      const ry = l.ry * grow;
+      const x = bx + l.x + Math.sin(t * 1.1 + l.ph) * 4;
+      const y = yb + l.y * grow;
+      ctx.drawImage(CL_M, x - rx, y - ry, rx * 2, ry * 2);
+      ctx.drawImage(CL_D, x - rx * 0.85, y - ry * 1.25, rx * 1.7, ry * 1.6);
     }
+    // 雲塊的下緣被底下的電光照出冷色亮邊
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = ca * 0.35;
+    for (const l of e.lobes) {
+      const x = bx + l.x + Math.sin(t * 1.1 + l.ph) * 4;
+      const y = yb + l.y * grow + l.ry * grow * 0.55;
+      ctx.drawImage(CL_L, x - l.rx * 0.7, y - l.ry * 0.28 * grow, l.rx * 1.4, l.ry * 0.56 * grow);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = ca;
+    // 4) 被風扯碎的雲絮：細長、往兩邊飄
+    ctx.globalAlpha = ca * 0.7;
+    for (const w of e.wisps) {
+      const x = bx + w.x + ((w.v * t) % 60);
+      const y = yb + w.y * grow;
+      ctx.drawImage(CL_M, x - w.len / 2, y - w.th / 2, w.len, w.th);
+    }
+    ctx.globalAlpha = ca;
+    // 5) 要劈的地方：雲底往下凹成一個旋轉的漏斗，邊緣被電光照亮
+    ctx.save();
+    ctx.translate(cx, yb + H * 0.02);
+    ctx.scale(1, 0.32);
+    ctx.rotate(t * 1.4);
+    for (let k = 0; k < 3; k++) {
+      const R = (H * 0.2 + k * H * 0.12) * grow;
+      ctx.drawImage(k ? CL_M : CL_D, -R, -R, R * 2, R * 2);
+    }
+    ctx.restore();
     // 雲底的漩渦
-    const H = e.H;
     const form = clamp(t / 0.3, 0, 1);
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'rgba(150,162,205,0.32)';
