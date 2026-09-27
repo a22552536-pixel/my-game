@@ -1048,19 +1048,19 @@
     if (k >= 0.6) glow(ctx, 0, -30, 56, '255,70,40', (0.15 + Math.sin(t * 8) * 0.08) * (k + 0.2));
 
     // 石腿：大腿石塊→膝蓋圓石→小腿→扁平的石腳掌，膝往前彎，踏地時腳掌平貼
-    const lift0 = (dead ? 3 : -8) + (walk ? -(1 - stomp) * 1.6 : Math.sin(t * 2) * 0.4) + (wind ? 2 : 0);
+    const lift0 = (dead ? 2 : -3.5) + (walk ? -(1 - stomp) * 1.2 : Math.sin(t * 2) * 0.4) + (wind ? 2 : 0);
     const rleg = (hx, px, off, far) => {
       const s = far ? 0.88 : 1;
       const P = far ? [ST[1], mixq('#4a3e32', '#5a1a14', k * 0.8), null] : ST;
-      const g = walk && !dead ? stepFoot(cyc + off, 11, 6, 0.6) : [0, 0, -1];
+      const g = walk && !dead ? stepFoot(cyc + off, 8, 3.8, 0.6) : [0, 0, -1];
       const sw = g[2] >= 0 ? Math.sin(g[2] * PI) : 0;
       const fX = px + g[0] + (strike ? 3 : 0);
       const fY = -g[1];
-      const hy = -9 + lift0;
+      const hy = -4.5 + lift0;
       const ax = fX - 1;
-      const ay = fY - 5 * s;
-      const kn = ik2(hx, hy, ax, ay, 6 * s, 6 * s, 1);
-      vol(ctx, (c) => taper(c, [[hx, hy], kn, [ax, ay]], [13 * s, 10 * s, 8.5 * s]), P[0], P[1], P[2], { cel: 1.8, rim: 1.1, lw: 2.3, tex: (c) => {
+      const ay = fY - 3.4 * s;
+      const kn = ik2(hx, hy, ax, ay, 3.2 * s, 3.2 * s, 1);
+      vol(ctx, (c) => taper(c, [[hx, hy], kn, [ax, ay]], [15 * s, 13 * s, 11.5 * s]), P[0], P[1], P[2], { cel: 1.8, rim: 1.1, lw: 2.3, tex: (c) => {
         speckle(c, Math.min(hx, ax) - 8, hy - 6, 20, 16, 8, 21 + (far ? 5 : 0), 'rgba(60,40,30,0.4)', 0.4, 1);
         c.strokeStyle = 'rgba(40,24,16,0.5)';
         c.lineWidth = 1;
@@ -1071,7 +1071,7 @@
         c.stroke();
       } });
       // 膝蓋的圓石
-      vol(ctx, (c) => c.ellipse(kn[0] + 1, kn[1], 4.6 * s, 4 * s, 0.3, 0, TAU), far ? P[0] : TOP, P[1], P[2], { cel: 1.2, rim: 0.9, lw: 2 });
+      vol(ctx, (c) => c.ellipse(kn[0] + 1.5, kn[1], 3.4 * s, 3 * s, 0.3, 0, TAU), far ? P[0] : TOP, P[1], P[2], { cel: 1.2, rim: 0.9, lw: 2 });
       if (lava > 0 && !far) {
         ctx.strokeStyle = A.c(mixq('#ff7a2a', '#ffe070', lava));
         ctx.lineWidth = 1 + lava * 0.6;
@@ -1085,23 +1085,23 @@
       ctx.translate(ax, ay);
       ctx.rotate(-sw * 0.35);
       vol(ctx, (c) => {
-        c.moveTo(-8 * s, 5 * s);
+        c.moveTo(-8 * s, 3.4 * s);
         c.lineTo(-7.5 * s, -0.5);
-        c.lineTo(1 * s, -2.5 * s);
-        c.lineTo(8.5 * s, 0.5);
-        c.lineTo(10 * s, 5 * s);
+        c.lineTo(1 * s, -2 * s);
+        c.lineTo(8.5 * s, 0.2);
+        c.lineTo(10 * s, 3.4 * s);
         c.closePath();
       }, P[0], P[1], P[2], { cel: 1.6, rim: 1, lw: 2.2, tex: (c) => {
         c.fillStyle = A.c(far ? P[1] : SIDE);
         c.beginPath();
-        c.moveTo(5 * s, 5 * s); c.lineTo(6 * s, 0); c.lineTo(8.5 * s, 0.5); c.lineTo(10 * s, 5 * s); c.closePath();
+        c.moveTo(5 * s, 3.4 * s); c.lineTo(6 * s, 0); c.lineTo(8.5 * s, 0.2); c.lineTo(10 * s, 3.4 * s); c.closePath();
         c.fill();
         // 腳趾縫
         c.strokeStyle = 'rgba(40,24,16,0.55)';
         c.lineWidth = 1;
         c.beginPath();
-        c.moveTo(6 * s, 5 * s); c.lineTo(6.5 * s, 2.5 * s);
-        c.moveTo(3 * s, 5 * s); c.lineTo(3.3 * s, 2.8 * s);
+        c.moveTo(6 * s, 3.4 * s); c.lineTo(6.5 * s, 1.6 * s);
+        c.moveTo(3 * s, 3.4 * s); c.lineTo(3.3 * s, 1.8 * s);
         c.stroke();
       } });
       ctx.restore();
@@ -2561,44 +2561,82 @@
       c.quadraticCurveTo(L - hw / 2 - 1, -hh / 2 - 2, L - hw / 2 + 2, -hh / 2 - 2);
       c.closePath();
     };
-    vol(ctx, hd, '#3e6a62', '#16322c', '#9af0d0', { cel: 2.4, rim: 1.4, lw: 2.5, grad: [-hh / 2, hh / 2, '#4e867a', '#2a4e46'], tex: (c) => {
-      // 甲殼的虹彩與鏡面高光
-      const g = c.createLinearGradient(L - hw / 2, -hh / 2, L + hw / 2, hh / 2);
-      g.addColorStop(0, 'rgba(120,90,220,0.35)');
-      g.addColorStop(0.5, 'rgba(120,90,220,0)');
-      g.addColorStop(1, 'rgba(255,230,120,0.2)');
-      c.fillStyle = g;
-      c.fillRect(L - hw / 2 - 2, -hh / 2 - 3, hw + 4, hh + 6);
-      c.strokeStyle = 'rgba(255,255,255,0.85)';
-      c.lineWidth = 1.4;
-      c.lineCap = 'round';
+    // 鍛鋼鎚頭：角柄末端的甲殼長成一圈「套筒」包住一塊鍛鐵——鋼面上有亮帶與深色倒影、
+    //   倒角的邊、銅箍與鉚釘、刮痕；中央刻的符文槽發青光
+    vol(ctx, hd, '#b4bece', '#4e5868', '#ffffff', { cel: 2.4, rim: 1.2, lw: 2.5, grad: [-hh / 2, hh / 2, '#e2e8f2', '#7c8698'], tex: (c) => {
+      // 深色倒影帶＋明亮的鏡面帶（斜向）
+      c.fillStyle = 'rgba(30,36,52,0.45)';
       c.beginPath();
-      c.moveTo(L - hw / 2 + 3, -hh / 2 + 3); c.lineTo(L - hw / 2 + 3, hh / 2 - 8);
-      c.stroke();
-      // 兩端的厚甲層（像鎚面一樣的環節）
-      c.strokeStyle = 'rgba(4,30,24,0.55)';
-      c.lineWidth = 1.2;
+      c.moveTo(L - hw / 2, 4); c.lineTo(L + hw / 2, -4); c.lineTo(L + hw / 2, 6); c.lineTo(L - hw / 2, 14); c.closePath();
+      c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.8)';
       c.beginPath();
-      c.moveTo(L - hw / 2, -hh / 2 + 5); c.quadraticCurveTo(L, -hh / 2 + 7, L + hw / 2, -hh / 2 + 5);
-      c.moveTo(L - hw / 2, hh / 2 - 5); c.quadraticCurveTo(L, hh / 2 - 7, L + hw / 2, hh / 2 - 5);
-      c.stroke();
-      speckle(c, L - hw / 2, -hh / 2, hw, hh, 12, 23, 'rgba(4,30,24,0.4)', 0.3, 0.8);
-      // 發光的符文紋：像螢光斑紋一樣長在甲殼上，順著溝流到兩端
-      const rc = 'rgba(140,240,255,' + (0.45 + runeA * 0.5).toFixed(2) + ')';
-      if (runeA > 0) glow(c, L, 0, 13, '140,240,255', runeA * 0.7);
-      rune(c, L, 0, 6.5, 3, 'rgba(10,60,80,0.7)', 3.2);
-      rune(c, L, 0, 6.5, 3, rc, 1.6);
-      c.strokeStyle = rc;
+      c.moveTo(L - hw / 2, -6); c.lineTo(L + hw / 2, -13); c.lineTo(L + hw / 2, -9.5); c.lineTo(L - hw / 2, -2.5); c.closePath();
+      c.fill();
+      // 倒角：內側一圈亮線、外側一圈暗線
+      c.strokeStyle = 'rgba(255,255,255,0.75)';
       c.lineWidth = 1;
       c.beginPath();
-      c.moveTo(L, -7.5); c.lineTo(L, -hh / 2 + 6);
-      c.moveTo(L, 7.5); c.lineTo(L, hh / 2 - 6);
+      A.roundRect(c, L - hw / 2 + 2.2, -hh / 2 + 0.4, hw - 4.4, hh - 0.8, 2);
       c.stroke();
-      for (let k = 0; k < 3; k++) {
-        rune(c, L - 6.8, -9 + k * 9, 1.4, k + 1, rc, 0.8);
-        rune(c, L + 6.8, -9 + k * 9, 1.4, k + 4, rc, 0.8);
-      }
+      c.strokeStyle = 'rgba(30,36,52,0.55)';
+      c.beginPath();
+      A.roundRect(c, L - hw / 2 + 3.4, -hh / 2 + 1.6, hw - 6.8, hh - 3.2, 1.5);
+      c.stroke();
+      // 刮痕
+      c.strokeStyle = 'rgba(40,46,60,0.6)';
+      c.lineWidth = 0.7;
+      c.beginPath();
+      c.moveTo(L - 7, -14); c.lineTo(L - 3, -11.5);
+      c.moveTo(L + 4, 12); c.lineTo(L + 8, 14.5);
+      c.moveTo(L + 5, -15); c.lineTo(L + 7.5, -12);
+      c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,0.6)';
+      c.beginPath();
+      c.moveTo(L - 6.6, -14.6); c.lineTo(L - 2.6, -12.1);
+      c.stroke();
+      // 符文槽
+      c.fillStyle = A.c('#1e2430');
+      c.beginPath();
+      A.roundRect(c, L - 5.5, -9, 11, 18, 2.5);
+      c.fill();
+      if (runeA > 0) glow(c, L, 0, 13, '140,240,255', runeA * 0.8);
+      rune(c, L, 0, 6, 3, 'rgba(40,160,220,' + (0.5 + runeA * 0.4).toFixed(2) + ')', 3.2);
+      rune(c, L, 0, 6, 3, A.c(runeA > 0.6 ? '#f0ffff' : '#8aeeff'), 1.5);
     } });
+    // 兩端的銅箍＋鉚釘
+    [-1, 1].forEach((sg) => {
+      const yb = sg < 0 ? -hh / 2 - 2.6 : hh / 2 - 4.2;
+      vol(ctx, (c) => A.roundRect(c, L - hw / 2 - 1.6, yb, hw + 3.2, 6.8, 2), '#d89a4a', '#8a5a1e', '#ffe0a8', { cel: 0.8, rim: 0.8, lw: 2 });
+      [L - hw / 2 + 1.8, L, L + hw / 2 - 1.8].forEach((x) => rivet(ctx, x, yb + 3.4, 0.9, '#6a4a1e'));
+    });
+    // 角柄的甲殼長成套筒，包住鎚頭的中段（甲殼與鍛鐵長在一起）
+    vol(ctx, (c) => {
+      c.moveTo(L - 14, -6.5);
+      c.quadraticCurveTo(L - 9, -9.5, L - hw / 2 + 3, -7.5);
+      c.lineTo(L - hw / 2 + 3, 7.5);
+      c.quadraticCurveTo(L - 9, 9.5, L - 14, 6.5);
+      c.closePath();
+    }, '#2e4a3e', '#142820', '#7aa898', { cel: 1, rim: 0.9, lw: 2.2, tex: (c) => {
+      c.strokeStyle = 'rgba(200,255,235,0.6)';
+      c.lineWidth = 0.9;
+      c.beginPath();
+      c.moveTo(L - 13, -4.5); c.quadraticCurveTo(L - 9, -7, L - hw / 2 + 2, -5.5);
+      c.stroke();
+      // 甲殼爬上鋼面的指狀邊
+      c.fillStyle = A.c('#2e4a3e');
+    } });
+    // 甲殼的指狀邊緣往鎚面延伸
+    A.shape(ctx, (c) => {
+      c.moveTo(L - hw / 2 + 2, -7);
+      c.lineTo(L - hw / 2 + 6.5, -5.5);
+      c.lineTo(L - hw / 2 + 3, -2.5);
+      c.lineTo(L - hw / 2 + 7, 0);
+      c.lineTo(L - hw / 2 + 3, 2.5);
+      c.lineTo(L - hw / 2 + 6.5, 5.5);
+      c.lineTo(L - hw / 2 + 2, 7);
+      c.closePath();
+    }, '#2e4a3e', '#142820', { lw: 1.6 });
     ctx.restore();
 
     // 頭與頭角
@@ -4142,22 +4180,80 @@
     // 星空翅膀：外緣是一根根羽毛，翅面上有星座與一隻眼紋
     const SPREAD = [[5, 4], [-3, -20], [-16, -36], [-44, -48], [-45, -40], [-39, -36], [-42, -29], [-33, -27], [-34, -19], [-25, -17], [-24, -9], [-15, -7], [-12, 3]];
     const FOLD = [[8, -7], [-8, -11], [-28, -8], [-44, 2], [-38, 5], [-41, 10], [-30, 9], [-28, 14], [-18, 11], [-12, 15], [-4, 10], [4, 9]];
+    const horusEye = (c, x, y, k, rot, back) => {
+      const look = Math.sin(t * 0.7) > 0.4 ? 1 : Math.sin(t * 0.7) < -0.5 ? -1 : 0;
+      c.save();
+      c.translate(x, y);
+      c.rotate(rot);
+      c.scale(k, k);
+      if (seeing && !dead) glow(c, 0, 0, 16, '255,210,90', 0.6 + Math.sin(t * 12) * 0.12);
+      else glow(c, 0, 0, 11, '255,210,90', back ? 0.12 : 0.22);
+      // 杏仁形的眼白
+      const alm = (q) => { q.moveTo(-7.5, 0); q.quadraticCurveTo(-0.5, -6, 7.5, -0.5); q.quadraticCurveTo(0, 4.8, -7.5, 0); q.closePath(); };
+      c.beginPath();
+      alm(c);
+      c.fillStyle = A.c(seeing ? '#fff6d8' : '#f4eeff');
+      c.fill();
+      // 瞳孔（金環＋深色瞳，會張望）
+      const px = look * 2.2;
+      c.save();
+      c.beginPath();
+      alm(c);
+      c.clip();
+      c.fillStyle = A.c('#f0c64a');
+      c.beginPath();
+      c.arc(px, -0.6, 3.3, 0, TAU);
+      c.fill();
+      c.fillStyle = A.c(seeing ? '#c8202a' : '#1a1030');
+      c.beginPath();
+      c.arc(px, -0.6, 2.2, 0, TAU);
+      c.fill();
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.arc(px - 0.8, -1.5, 0.7, 0, TAU);
+      c.fill();
+      c.restore();
+      // 金色的描線：眼眶＋眼尾延長線＋眉＋下方的淚滴線與螺旋尾
+      const lines = () => {
+        c.beginPath();
+        alm(c);
+        c.moveTo(7.5, -0.5); c.lineTo(12.5, -0.8);
+        c.moveTo(-7, -5.5); c.quadraticCurveTo(0, -9.5, 9, -5.2);
+        c.moveTo(-1.5, 2.8); c.lineTo(-2.4, 9.5);
+        c.moveTo(1.8, 3); c.quadraticCurveTo(3, 8.5, 6.5, 9.5); c.quadraticCurveTo(9.5, 10, 9, 7.5); c.quadraticCurveTo(8.2, 6, 6.8, 7.2);
+      };
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      lines();
+      c.strokeStyle = A.outline();
+      c.lineWidth = 3.4;
+      c.stroke();
+      lines();
+      c.strokeStyle = A.c(seeing && !dead ? '#fff0a0' : '#f0c64a');
+      c.lineWidth = 1.7;
+      c.stroke();
+      c.restore();
+    };
     const mapWing = (back) => {
       ctx.save();
       ctx.translate(-2, by - 8);
-      const spread = fly && !dive;
-      const up = spread || (wind && !dive);
+      // 雙翼大張（展翅的鷹）：平常也張開、慢慢起伏；飛行時上下拍；只有俯衝時收翅
+      const spread = !dive;
+      const up = spread;
       const pts = up ? SPREAD : FOLD;
+      if (back) {
+        // 另一隻翅膀往前方（頭的那一側）張開：鏡像
+        ctx.translate(6, -2);
+        ctx.scale(-0.92, 0.92);
+      }
       if (spread) {
+        const wf = fly ? flap : 0.72 + Math.sin(t * 1.8) * 0.08 + (walk ? Math.sin(cyc * 2 * TAU) * 0.1 : 0) + (wind ? 0.2 : 0) - (dead ? 0.45 : 0);
         // 上抬時翅膀立起來、下拍時翻到身體下面（scaleY 變負）
-        ctx.rotate(-flap * 0.18 + (back ? 0.12 : 0));
-        const sy = 0.25 + flap * 0.8 - (back ? 0.12 : 0);
-        ctx.scale(1, Math.abs(sy) < 0.12 ? (sy < 0 ? -0.12 : 0.12) : sy);
-      } else if (up) {
-        ctx.scale(1, 0.9);
+        ctx.rotate(-wf * 0.18);
+        const sy = 0.25 + wf * 0.8;
+        ctx.scale(1.15, 1.15 * (Math.abs(sy) < 0.12 ? (sy < 0 ? -0.12 : 0.12) : sy));
       }
       if (dive) ctx.rotate(-0.25);
-      if (back) ctx.translate(4, -3);
       const wingP = (c) => {
         pts.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])));
         c.closePath();
@@ -4252,22 +4348,11 @@
       ctx.lineTo(S[4][0], S[4][1]);
       ctx.stroke();
       S.forEach((p, i) => sparkle(ctx, p[0], p[1], back ? 1.6 : 2.4 + (i % 2) * 0.8 + Math.sin(t * 4 + i) * 0.4, starC));
-      if (!back) {
-        // 眼紋（杏仁形白眼、紫色虹膜）
-        const E = sp ? [-24, -30, 7, 3.6, -0.55] : [-24, 2, 7, 3.4, 0.1];
-        ctx.save();
-        ctx.translate(E[0], E[1]);
-        ctx.rotate(E[4]);
-        A.shape(ctx, (c) => { c.moveTo(-E[2], 0); c.quadraticCurveTo(0, -E[3] * 2, E[2], 0); c.quadraticCurveTo(0, E[3] * 2, -E[2], 0); c.closePath(); }, '#f4eeff', null, { lw: 1.6 });
-        A.ellipse(ctx, 0, 0, 2.6, 2.6, seeing ? '#e8384a' : '#9a6ae8', null, { lw: 1.2, hl: false });
-        ctx.fillStyle = A.c('#1a1030');
-        ctx.beginPath();
-        ctx.arc(0, 0, 1.1, 0, TAU);
-        ctx.fill();
-        ctx.restore();
-      }
       ctx.restore();
       outlineOf(ctx, wingP, 2.4);
+      // 每隻翅膀上一隻大大的金色荷魯斯之眼（Wedjat）；預言時發光、瞳孔會左右張望
+      if (sp) horusEye(ctx, -21, -21, 1.0, -0.8, back);
+      else horusEye(ctx, -22, 2, 0.9, 0.05, back);
       ctx.restore();
     };
     mapWing(true);
