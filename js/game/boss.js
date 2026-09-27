@@ -10,7 +10,7 @@
 // 菇菇女王：
 //   第一階段：跳躍前進、王者砸地（震波要跳）、孢子彈（毒雲）、裙擺旋轉衝刺、跳上平台灑孢子雨再俯衝下來、召喚小傘菇。
 //   第二階段「真正的女王」：傘蓋變成深紅、皇冠浮起。多了三連砸、旋轉來回兩趟（留下毒雲）、
-//     大招「孢子風暴」——站上中間平台，整個地面分兩波冒出孢子柱（第二波蓋住第一波的空隙，要邊看邊移動；爬上平台最安全）。
+//     大招「孢子風暴」——站上側邊平台，整個地面分兩波冒出孢子柱（第二波蓋住第一波的空隙，要邊看邊移動；爬上平台最安全）。
 (function () {
   'use strict';
   const U = G.util;
@@ -22,10 +22,11 @@
     const d = G.data.monsters[id];
     const map = G.world.map;
     Object.assign(b, {
-      id, def: d, isBoss: true, scale: 1, w: d.w, h: d.h, halfW: d.w / 2, level: d.lv,
+      id, def: d, isBoss: true, scale: 1, S: d.sizeK || 1, w: d.w, h: d.h, halfW: d.w / 2, level: d.lv,
       maxHp: d.hp, hp: d.hp, atk: d.atk, armor: d.def, exp: d.exp,
       x, y: map.platforms[0][2], vx: 0, vy: 0, dir: -1, onGround: true, plat: 0, ignorePlat: -1, ignoreT: 0,
       t: 0, state: 'intro', stateT: 1.6, stateT0: 1.6, enraged: false, phase: 1, p2k: 0, hurtFlash: 0, dead: false, deadT: 0,
+      // S：體型倍率（bosses.js 的 sizeK）。跟身體大小有關的固定距離都要乘上它。
       stackN: 0, stackT: 0, touchCd: 0, squash: 0, blink: false,
       hz: [], threats: [], fightT: 0, fury: false, lastAtk: 'touch', air: null, airT: 0, lastPick: '', pickT: {},
     });
@@ -571,7 +572,7 @@
       b.p2k = 1;
       G.fx.screenFlash(colors[0], 0.5);
       G.fx.shake(16, 0.6);
-      G.fx.ring(b.x, b.y - b.h * 0.5, colors[1], 380, 0.6, 10);
+      G.fx.ring(b.x, b.y - b.h * 0.5, colors[1], 380 * (b.S || 1), 0.6, 10);
       G.fx.burst(b.x, b.y - b.h * 0.5, colors, 60, 520);
       G.audio.play('slam');
       // 變身的衝擊波把玩家震開
@@ -602,7 +603,7 @@
       this.flushKill();
       this.deadT += dt;
       if (Math.random() < 0.5) {
-        G.fx.burst(this.x + U.rand(-100, 100), this.y - U.rand(20, 240), ['#fff', '#ff9fd0', '#ffd35a'], 6, 240);
+        G.fx.burst(this.x + U.rand(-100, 100) * this.S, this.y - U.rand(20, 240) * this.S, ['#fff', '#ff9fd0', '#ffd35a'], 6, 240);
       }
       if (!this.onGround) this.phys(dt);
       return this.deadT > 2.2;
@@ -638,7 +639,7 @@
       // 一跳一跳地逼近（在平台上就直接跳下來）
       case 'move': {
         if (this.onGround && this.plat !== 0) {
-          this.leap(P.x - U.sign(dx) * 140, 0, 0.6);
+          this.leap(P.x - U.sign(dx) * 140 * this.S, 0, 0.6);
           this.setState('fall', 2);
           break;
         }
@@ -646,7 +647,7 @@
         if (this.onGround) {
           this.vx *= 0.7;
           this.hopT -= dt;
-          if (this.hopT <= 0 && Math.abs(dx) > 150) {
+          if (this.hopT <= 0 && Math.abs(dx) > 150 * this.S) {
             this.vy = -460;
             this.vx = this.dir * this.def.speed * spd * 1.5;
             this.onGround = false;
@@ -696,7 +697,7 @@
           this.lastAtk = 'spore';
           for (let i = 0; i < n; i++) {
             const tx = U.clamp(P.x + (i - (n - 1) / 2) * 120 + U.rand(-25, 25), 60, map.w - 60);
-            const sx = this.x + this.dir * 50;
+            const sx = this.x + this.dir * 50 * this.S;
             const sy = this.y - this.h * 0.85;
             const tf = 0.85 + i * 0.07;
             G.world.projectiles.push({
@@ -724,12 +725,12 @@
         const sp = (this.phase === 2 ? 820 : 700) * (this.slowT > 0 ? 0.7 : 1);
         this.vx = this.dir * sp;
         this.threats.push(this.spinThreat());
-        if (Math.random() < 0.7) G.fx.burst(this.x - this.dir * 60, this.y - 10, ['#ff9fd0', '#fff0dc', '#c9a0e8'], 1, 120, { life: 0.35 });
+        if (Math.random() < 0.7) G.fx.burst(this.x - this.dir * 60 * this.S, this.y - 10, ['#ff9fd0', '#fff0dc', '#c9a0e8'], 1, 120, { life: 0.35 });
         if (this.phase === 2) {
           this.trailT = (this.trailT || 0) - dt;
           if (this.trailT <= 0) {
             this.trailT = 0.16;
-            G.world.zones.push({ x: this.x, y: this.groundY(), r: 46, t: 0, life: 2.4, tick: 0.35, pct: 0.025 });
+            G.world.zones.push({ x: this.x, y: this.groundY(), r: 46 * this.S, t: 0, life: 2.4, tick: 0.35, pct: 0.025 });
           }
         }
         const gone = Math.abs(this.x - this.spinFrom) > 640;
@@ -798,7 +799,7 @@
         this.vx = 0;
         if (this.stateT <= 0) {
           const n = this.phase === 2 ? 3 : 2;
-          for (let i = 0; i < n; i++) G.world.spawnAdd('capshroom', this.x + (i - (n - 1) / 2) * 110 + this.dir * 60);
+          for (let i = 0; i < n; i++) G.world.spawnAdd('capshroom', this.x + ((i - (n - 1) / 2) * 110 + this.dir * 60) * this.S);
           G.audio.play('quest');
           this.setState('recover', 0.4 * this.cd());
         }
@@ -808,8 +809,10 @@
       case 'stormPrep':
         this.vx = 0;
         if (this.stateT <= 0) {
-          const p = map.platforms[3];
-          this.leap((p[0] + p[1]) / 2, 3, 0.8);
+          // 站上離玩家比較遠的側邊平台（中間的高平台留給玩家躲）
+          const tp = this.perchPlat();
+          const p = map.platforms[tp];
+          this.leap((p[0] + p[1]) / 2, tp, 0.8);
           this.setState('stormAir', 3);
         }
         break;
@@ -836,7 +839,7 @@
       case 'storm':
         this.vx = 0;
         this.dir = U.sign(dx) || this.dir;
-        if (Math.random() < 0.5) G.fx.burst(this.x + U.rand(-80, 80), this.y - this.h * 0.9, ['#e8c8ff', '#c070ff', '#ffffff'], 1, 160, { grav: -60, life: 0.8 });
+        if (Math.random() < 0.5) G.fx.burst(this.x + U.rand(-80, 80) * this.S, this.y - this.h * 0.9, ['#e8c8ff', '#c070ff', '#ffffff'], 1, 160, { grav: -60, life: 0.8 });
         if (this.stateT <= 0) {
           this.setState('divePrep', 0.35);
           this.warn();
@@ -872,8 +875,8 @@
   Queen.prototype.perchPlat = function () {
     const P = G.player;
     const map = G.world.map;
-    // 挑離玩家比較遠的側邊平台，第二階段有時站到中間
-    if (this.phase === 2 && Math.random() < 0.4) return 3;
+    // 挑離玩家比較遠的側邊平台。
+    // （v1.6 體型放大後女王站上中間的高平台，頭會超出畫面上緣，所以只用兩側平台。）
     const l = map.platforms[1];
     const r = map.platforms[2];
     return Math.abs(P.x - (l[0] + l[1]) / 2) > Math.abs(P.x - (r[0] + r[1]) / 2) ? 1 : 2;
@@ -916,7 +919,7 @@
     const y = this.y;
     [-1, 1].forEach((d) => {
       G.world.projectiles.push({
-        kind: 'wave', x: this.x + d * 80, y, vx: d * spd, vy: 0, dir: d,
+        kind: 'wave', x: this.x + d * 80 * this.S, y, vx: d * spd, vy: 0, dir: d,
         h: 46, r: 22, dmg: this.dmg(1.1), life: 5, t: 0, owner: 'boss', seed: 0,
       });
     });
@@ -956,7 +959,7 @@
         }
       }
       if (this.state === 'transform' || this.state === 'storm' || this.state === 'stormAir') {
-        const r = 200 + Math.sin(this.t * 6) * 12;
+        const r = (200 + Math.sin(this.t * 6) * 12) * this.S;
         const g = ctx.createRadialGradient(this.x, y - this.h * 0.5, 10, this.x, y - this.h * 0.5, r);
         g.addColorStop(0, 'rgba(210,120,255,0.35)');
         g.addColorStop(1, 'rgba(210,120,255,0)');

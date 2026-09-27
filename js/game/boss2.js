@@ -242,12 +242,12 @@
     if (!fromBack) {
       if (!this.blockMsgT || this.t - this.blockMsgT > 0.8) {
         this.blockMsgT = this.t;
-        G.fx.text(this.x - this.dir * 60, this.y - 140, '擋住了！繞到背後', '#bfe8ff', 16, 0.9);
+        G.fx.text(this.x - this.dir * 60 * this.S, this.y - 140 * this.S, '擋住了！繞到背後', '#bfe8ff', 16, 0.9);
       }
       G.audio.play('rockHit');
       return 0;
     }
-    G.fx.burst(this.x - this.dir * 90, this.y - 150, ['#fff6a8', '#ffffff'], 8, 200);
+    G.fx.burst(this.x - this.dir * 90 * this.S, this.y - 150 * this.S, ['#fff6a8', '#ffffff'], 8, 200);
     return Math.round(dmg * 1.5);
   };
 
@@ -258,7 +258,7 @@
     if (this.dead) {
       this.flushKill();
       this.deadT += dt;
-      if (Math.random() < 0.5) G.fx.burst(this.x + U.rand(-110, 110), this.y - U.rand(20, 220), ['#fff', '#8fd8ff', '#ffd35a'], 6, 240);
+      if (Math.random() < 0.5) G.fx.burst(this.x + U.rand(-110, 110) * this.S, this.y - U.rand(20, 220) * this.S, ['#fff', '#8fd8ff', '#ffd35a'], 6, 240);
       if (!this.onGround) this.phys(dt);
       return this.deadT > 2.2;
     }
@@ -294,14 +294,14 @@
       // 橫著走：一小段一小段地快速碎步，保持在玩家附近
       case 'move': {
         if (this.onGround && this.plat !== 0) {
-          this.leap(P.x - U.sign(dx) * 180, 0, 0.6);
+          this.leap(P.x - U.sign(dx) * 180 * this.S, 0, 0.6);
           this.setState('fall', 2);
           break;
         }
         this.dir = U.sign(dx) || this.dir;
         this.burstT -= dt;
         if (this.burstT <= 0) {
-          const want = Math.abs(dx) > 230 ? U.sign(dx) : Math.abs(dx) < 150 ? -U.sign(dx) : 0;
+          const want = Math.abs(dx) > 230 * this.S ? U.sign(dx) : Math.abs(dx) < 150 * this.S ? -U.sign(dx) : 0;
           this.scuttle = want || (Math.random() < 0.5 ? -1 : 1);
           this.burstT = 0.5;
         }
@@ -476,7 +476,7 @@
         break;
       case 'tsunami':
         this.vx = 0;
-        if (Math.random() < 0.3) G.fx.burst(this.x + U.rand(-60, 60), this.y - this.h * 0.8, ['#8fd8ff', '#ffffff'], 1, 120, { grav: -40, life: 0.6 });
+        if (Math.random() < 0.3) G.fx.burst(this.x + U.rand(-60, 60) * this.S, this.y - this.h * 0.8, ['#8fd8ff', '#ffffff'], 1, 120, { grav: -40, life: 0.6 });
         if (this.stateT <= 0) this.setState('recover', 0.5);
         break;
 
@@ -485,7 +485,7 @@
         this.vx = 0;
         if (this.stateT <= 0) {
           const id = G.data.monsters.postcrab ? 'postcrab' : null;
-          if (id) for (let i = 0; i < 2; i++) G.world.spawnAdd(id, this.x + (i ? 1 : -1) * 130);
+          if (id) for (let i = 0; i < 2; i++) G.world.spawnAdd(id, this.x + (i ? 1 : -1) * 130 * this.S);
           this.say('小的們，上！', '#ffe9a0');
           G.audio.play('quest');
           this.setState('recover', 0.4);
@@ -512,7 +512,7 @@
   HermitCrab.prototype.perchPlat = function () {
     const P = G.player;
     const map = G.world.map;
-    if (Math.random() < 0.35) return 3;
+    // 只挑兩側平台：v1.6 放大後站上中間的高平台，舉起的巨鉗會超出畫面上緣
     const l = map.platforms[1];
     const r = map.platforms[2];
     return Math.abs(P.x - (l[0] + l[1]) / 2) > Math.abs(P.x - (r[0] + r[1]) / 2) ? 1 : 2;
@@ -521,9 +521,9 @@
   // 在 x 放一個巨鉗的紅圈，prep 秒後砸下（蟹會先衝到旁邊）
   HermitCrab.prototype.clawAt = function (x, prep) {
     const map = G.world.map;
-    this.slamX = U.clamp(x, 100, map.w - 100);
+    this.slamX = U.clamp(x, 100 * this.S, map.w - 100 * this.S);
     this.dir = U.sign(this.slamX - this.x) || this.dir;
-    this.addHz({ type: 'mark', style: 'claw', x: this.slamX, y: this.groundY(), r: 100, delay: prep, mult: 1.45, src: 'claw', hgt: 140, sound: 'slam' });
+    this.addHz({ type: 'mark', style: 'claw', x: this.slamX, y: this.groundY(), r: 100 * this.S, delay: prep, mult: 1.45, src: 'claw', hgt: 140 * this.S, sound: 'slam' });
     this.setState('clawPrep', prep);
   };
 
@@ -569,7 +569,7 @@
     this.lastAtk = 'tide';
     [-1, 1].forEach((d) => {
       G.world.projectiles.push({
-        kind: 'tide', x: this.x + d * 110, y: this.y, vx: d * spd, vy: 0, dir: d,
+        kind: 'tide', x: this.x + d * 110 * this.S, y: this.y, vx: d * spd, vy: 0, dir: d,
         h, r: 26, dmg: this.dmg(1.1), life: 6, t: 0, owner: 'boss', seed: 0,
       });
     });
@@ -656,7 +656,7 @@
     if (this.dead) {
       this.flushKill();
       this.deadT += dt;
-      if (Math.random() < 0.5) G.fx.burst(this.x + U.rand(-120, 120), this.y - U.rand(20, 200), ['#fff', '#ff9a3a', '#ffd35a'], 6, 240);
+      if (Math.random() < 0.5) G.fx.burst(this.x + U.rand(-120, 120) * this.S, this.y - U.rand(20, 200) * this.S, ['#fff', '#ff9a3a', '#ffd35a'], 6, 240);
       if (!this.onGround) this.phys(dt);
       return this.deadT > 2.2;
     }
@@ -691,15 +691,15 @@
       // 沉重地走，每隔一下跳起來踩地
       case 'move': {
         if (this.onGround && this.plat !== 0) {
-          this.leap(P.x - U.sign(dx) * 200, 0, 0.65);
+          this.leap(P.x - U.sign(dx) * 200 * this.S, 0, 0.65);
           this.setState('fall', 2);
           break;
         }
         this.dir = U.sign(dx) || this.dir;
         if (this.onGround) {
-          this.vx = Math.abs(dx) > 190 ? this.dir * this.def.speed * spd : 0;
+          this.vx = Math.abs(dx) > 190 * this.S ? this.dir * this.def.speed * spd : 0;
           this.hopT -= dt;
-          if (this.hopT <= 0 && Math.abs(dx) > 260) {
+          if (this.hopT <= 0 && Math.abs(dx) > 260 * this.S) {
             this.hopT = this.phase === 2 ? 0.7 : 1.0;
             this.vy = -560;
             this.vx = this.dir * this.def.speed * spd * 2.2;
@@ -751,7 +751,7 @@
           G.fx.shake(5, 0.12);
           G.fx.burst(this.x, this.y - 6, ['#ff9a3a', '#5a3a2a', '#ffd35a'], 8, 200, { angle: -Math.PI / 2, spread: 1 });
           G.audio.play('rockHit');
-          if (this.phase === 2) G.world.zones.push({ kind: 'lava', x: this.x, y: this.y, r: 40, t: 0, life: 2.2, tick: 0.3, pct: 0.035, noSlow: true });
+          if (this.phase === 2) G.world.zones.push({ kind: 'lava', x: this.x, y: this.y, r: 40 * this.S, t: 0, life: 2.2, tick: 0.3, pct: 0.035, noSlow: true });
         }
         const nx = this.x + this.vx * dt;
         if (nx < this.halfW + 12 || nx > map.w - this.halfW - 12) {
@@ -838,7 +838,7 @@
           const T = 0.85;
           this.slamX = this.leap(P.x + P.vx * 0.3, tp, T, 1);
           this.slamPlat = tp;
-          this.addHz({ type: 'mark', style: 'lava', x: this.slamX, y: map.platforms[tp][2], r: 130, delay: T, mult: 1.45, src: 'cannon', hgt: 160, sound: 'slam' });
+          this.addHz({ type: 'mark', style: 'lava', x: this.slamX, y: map.platforms[tp][2], r: 130 * this.S, delay: T, mult: 1.45, src: 'cannon', hgt: 160 * this.S, sound: 'slam' });
           this.setState('cannonAir', 3);
           G.audio.play('sweep');
         }
@@ -848,7 +848,7 @@
         if (this.onGround) {
           this.squash = 1;
           G.fx.shake(14, 0.35);
-          for (let i = 0; i < 2; i++) this.addHz({ type: 'rock', style: 'lava', x: U.clamp(this.x + (i ? 1 : -1) * U.rand(170, 300), 60, map.w - 60), y: this.groundY(), r: 38, delay: 0.7, mult: 0.7, src: 'cannonRock', seed: Math.random() * 6 });
+          for (let i = 0; i < 2; i++) this.addHz({ type: 'rock', style: 'lava', x: U.clamp(this.x + (i ? 1 : -1) * U.rand(170, 300) * this.S, 60, map.w - 60), y: this.groundY(), r: 38, delay: 0.7, mult: 0.7, src: 'cannonRock', seed: Math.random() * 6 });
           if (this.cannonLeft > 0) {
             this.cannonLeft--;
             this.setState('cannonPrep', 0.35);
@@ -894,7 +894,7 @@
         this.vx = 0;
         if (this.stateT <= 0) {
           const id = G.data.monsters.angerrock ? 'angerrock' : null;
-          if (id) for (let i = 0; i < 2; i++) G.world.spawnAdd(id, this.x + (i ? 1 : -1) * 150);
+          if (id) for (let i = 0; i < 2; i++) G.world.spawnAdd(id, this.x + (i ? 1 : -1) * 150 * this.S);
           G.audio.play('quest');
           this.setState('recover', 0.4);
         }

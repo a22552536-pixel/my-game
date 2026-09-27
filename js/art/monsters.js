@@ -2414,6 +2414,25 @@
 
   const DRAW = (A.MONSTER_DRAW = { snail, mushroom, sprite, queen });
 
+  // 章節 Boss 被 sizeK 等比放大（bosses.js）：美術整個 ctx.scale 上去，描邊也會跟著變粗。
+  // 跟 variants.js 對 m.scale 的做法一樣，把線寬縮回去一部分：螢幕上的粗細 ≈ 原本 × sizeK^0.35。
+  const LWD = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'lineWidth');
+  function bossFn(fn, ctx, m) {
+    const sk = (m.def && m.def.sizeK) || 1;
+    if (sk <= 1.05 || !LWD || Object.prototype.hasOwnProperty.call(ctx, 'lineWidth')) return fn(ctx, m);
+    const k = Math.pow(sk, -0.65);
+    Object.defineProperty(ctx, 'lineWidth', {
+      configurable: true,
+      get() { return LWD.get.call(this) / k; },
+      set(v) { LWD.set.call(this, v * k); },
+    });
+    try {
+      return fn(ctx, m);
+    } finally {
+      delete ctx.lineWidth;
+    }
+  }
+
   A.drawMonster = function (ctx, m) {
     let fn = A.MONSTER_DRAW[m.def.art];
     // 新怪物的美術還沒載入：先借用舊怪物的外觀
@@ -2426,7 +2445,7 @@
     ctx.translate(m.x, m.y);
     const sc = m.scale || 1;
     if (!m.def.boss && !(m.fx && m.fx.shadowless)) A.groundShadow(ctx, 0, 0, (m.w * 0.55) * sc * (m.hover ? Math.max(0.4, 1 - m.hover / 300) : 1));
-    else if (m.def.boss) A.groundShadow(ctx, 0, 0, 90);
+    else if (m.def.boss) A.groundShadow(ctx, 0, 0, 90 * (m.def.sizeK || 1));
     // 飛行怪：影子留在地上，身體往上畫
     if (m.hover) ctx.translate(0, -m.hover);
     if (m.elite) {
@@ -2469,7 +2488,7 @@
       A.modeColor = V.tint;
       A.modeAmt = V.tintAmt;
     }
-    fn(ctx, m);
+    bossFn(fn, ctx, m);
     A.mode = null;
     ctx.restore();
     ctx.globalAlpha = 1;

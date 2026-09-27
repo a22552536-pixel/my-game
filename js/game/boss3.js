@@ -1023,7 +1023,7 @@
       if (!e.did && e.t >= 0.9 && !this.dead) {
         e.did = true;
         const say = { queenShroom: '（孢子……）', hermitCrab: '（哈哈哈！）', lavaTortoise: '（……火。）', frostSpirit: '（噹——）' }[e.id];
-        G.fx.text(e.x, gy - 260, say, '#e8dcff', 18, 1.2);
+        G.fx.text(e.x, gy - 260 * ((G.data.monsters[e.id] && G.data.monsters[e.id].sizeK) || 1), say, '#e8dcff', 18, 1.2);
         if (e.id === 'queenShroom') {
           for (let k = -1; k <= 1; k++) this.addHz({ type: 'mark', style: 'spore', x: U.clamp(P.x + k * 170, 40, map.w - 40), y: gy, r: 60, delay: 1.0 + (k + 1) * 0.2, mult: 0.9, src: 'echoSpore', hgt: 150, sound: 'spore', small: true });
         } else if (e.id === 'hermitCrab') {
@@ -1062,7 +1062,7 @@
       ctx.strokeStyle = '#c8b0ff';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.ellipse(e.x, gy, 110, 16, 0, 0, TAU);
+      ctx.ellipse(e.x, gy, 110 * (d.sizeK || 1), 16, 0, 0, TAU);
       ctx.stroke();
       ctx.restore();
       G.art.drawMonster(ctx, fake);

@@ -10,11 +10,14 @@
   'use strict';
   const M = G.data.monsters;
   const set = (id, o) => M[id] && Object.assign(M[id], o);
+  // v1.6 體型：章節 Boss 一定要比野外魔王（約 100～130k 像素面積）大一截 → 前三隻再等比放大 sizeK 倍。
+  // w/h 直接乘上 sizeK（美術依 h 等比例縮放）；boss.js／boss2.js 裡跟身體有關的固定距離（生成點、判定、門檻）都乘 this.S = sizeK。
+  const big = (id, o, k) => set(id, Object.assign(o, { w: Math.round(o.w * k), h: Math.round(o.h * k), sizeK: k }));
 
   // 第一章 Lv12（玩家：一轉、二階裝備、紅漿果 150）
-  set('queenShroom', { lv: 12, hp: 6800, atk: 42, def: 10, speed: 150, w: 215, h: 280, furyAt: 150 });
+  big('queenShroom', { lv: 12, hp: 6800, atk: 42, def: 10, speed: 150, w: 215, h: 280, furyAt: 150 }, 1.2);
   // 第二章 Lv25（玩家：二轉、四階裝備 +2、大紅漿果 400）
-  set('hermitCrab', { lv: 25, hp: 24000, atk: 105, def: 18, speed: 150, w: 270, h: 250, furyAt: 160 });
+  big('hermitCrab', { lv: 25, hp: 24000, atk: 105, def: 18, speed: 150, w: 270, h: 250, furyAt: 160 }, 1.16);
   // 第三章 Lv37（玩家：三轉、六階裝備 +2、大紅漿果 400）
-  set('lavaTortoise', { lv: 37, hp: 58000, atk: 135, def: 26, speed: 120, w: 330, h: 230, furyAt: 170 });
+  big('lavaTortoise', { lv: 37, hp: 58000, atk: 135, def: 26, speed: 120, w: 330, h: 230, furyAt: 170 }, 1.15);
 })();
