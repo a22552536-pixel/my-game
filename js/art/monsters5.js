@@ -4137,20 +4137,93 @@
     }
     ctx.restore();
   }
-  // ── 玄武（id 仍是 shieldbear）：鎮守北方的神獸。巨大古老的龜，高聳的背甲是深黑靛色，每片甲都用金線鑲出星宿的連線，
-  //    星點微微發光；甲頂積著雪與霜，甲緣是朱漆與金鋲，掛著小冰柱。柱子般的鱗腳沉重地走，龜頭有隆起的眉骨、沉靜的金眼、鳥喙般的嘴。
-  //    一條黑底淡青腹的冰蛇從甲下繞過甲上，蛇頭高高昂起，吐著信、淡青的豎瞳；兩顆頭各自擺動。
-  //    fx.guard：龜頭與腳縮進甲裡，甲上的星宿連線發光、罩上一層結界光；蛇緊緊盤在甲頂。
-  //    fx.bash：蛇從甲上猛然往前咬、龜往前頂；recover：龜探出頭、蛇縮回來喘著白霜 ──
-  const GB = { shell: '#1d2244', shellS: '#11142c', shellL: '#3c4784', skin: '#4a5578', skinS: '#2e3656', skinL: '#7f8cb4', snake: '#1b1f3a', snakeS: '#0f1226', belly: P4.teal };
-  // 星宿：每片甲裡一組星點（x, y 相對甲中心）與連線
-  const GB_STARS = [
-    [[-7, -3], [-2, -6], [3, -4], [6, 1]],
-    [[-5, 4], [-1, -2], [4, 0], [2, 5]],
-    [[-6, -2], [0, 2], [5, -3]],
-    [[-4, -5], [-3, 2], [3, 3], [6, -2]],
-    [[-5, 1], [0, -4], [5, 2]],
-  ];
+  // ── 鎧武者亡靈（id 仍是 shieldbear）：被亡魂驅動的古老空鎧。裡面沒有身體——臉、脖子、關節的位置只有冰冷的淡青鬼火。
+  //    黑漆的兜（頭盔）上立著金色的新月鍬形前立、面具（面頰）裡面一片漆黑，只亮著兩點鬼火；大鎧的小札一排排用深靛與朱色的絲繩縅起，
+  //    大袖、草摺；漆面結霜、繩子斷了幾根、縫裡積雪，下面是破爛的靛色袴。雙腳的臑當幾乎不沾雪，拖著寒霧；手裡握著一把結霜的長太刀。
+  //    fx.guard：雙手橫舉太刀格擋，鬼火變旺、前方一道淡青的結界弧；fx.bash：居合一閃，往前衝出一道寬大的新月斬；
+  //    recover：刀尖垂下、鬼火閃爍變暗；受傷時甲片喀啦作響；死亡時整副鎧甲崩落成一堆甲片、鬼火飄散 ──
+  // 赤備え：朱紅的漆為主、黑漆為點綴、金色的金具與前立；縅繩用深靛與黑，和紅色對比
+  const AR = { lac: '#b3262a', lacS: '#6e1418', lacL: '#ec6a50', blk: '#1b1d2e', blkS: '#0d0e1a', blkL: '#3e4466', cordA: '#1f2447', cordB: '#0d0e1a', hak: '#2c3466', hakS: '#1a1f44', fire: P4.teal, fireL: '#e8fffb' };
+  // 鬼火（淡青、白芯，不描邊）
+  function ghostFire(ctx, x, y, w, h, t, seed, a) {
+    spiritFlame(ctx, x, y, w, h, Math.sin(t * 7 + seed) * w * 0.6 - w * 0.4, '#5fd0c4', AR.fireL, null, a);
+  }
+  // 一片小札板（赤漆）：一排排往下疊的小札，每排上緣一道亮邊、下緣一道暗邊，並在下一排的上端投下一道影；
+  //   每排用深靛／黑的絲繩縅起，露出一個個十字結；部分繩子斷掉；可選霜與縫裡的雪
+  function lamellar(ctx, P, x0, y0, w, h, rows, seed, frost, black) {
+    const base = black ? AR.blk : AR.lac;
+    const sh = black ? AR.blkS : AR.lacS;
+    const lit = black ? AR.blkL : AR.lacL;
+    rimShape(ctx, P, base, sh, lit, { cel: 2, rim: 1, lw: 2, inner: () => {
+      const rh = h / rows;
+      const n = Math.max(2, Math.round(w / 4.2));
+      // 每排下緣的暗邊＋投在下一排上端的影（一次畫完）
+      ctx.fillStyle = A.c(sh);
+      ctx.beginPath();
+      for (let r = 0; r < rows; r++) {
+        const yb = y0 + (r + 1) * rh;
+        ctx.rect(x0 - 20, yb - rh * 0.22, w + 40, rh * 0.22);
+        ctx.rect(x0 - 20, yb, w + 40, rh * 0.18);
+      }
+      ctx.fill();
+      // 每排上緣的亮邊
+      ctx.strokeStyle = A.c(lit);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let r = 0; r < rows; r++) {
+        const yt = y0 + r * rh + (r ? rh * 0.2 : 0) + 0.6;
+        ctx.moveTo(x0 - 20, yt);
+        ctx.lineTo(x0 + w + 20, yt);
+      }
+      ctx.stroke();
+      // 縅：縱向穿過每排的深靛絲繩（一對對），最下一排打成十字結（菱縫）
+      ctx.strokeStyle = A.c(AR.cordA);
+      ctx.lineWidth = 0.9;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const nc = Math.max(2, Math.round(w / 6));
+      for (let r = 0; r < rows; r++) {
+        const yt = y0 + r * rh + rh * 0.3;
+        const yb = y0 + (r + 1) * rh - rh * 0.25;
+        for (let i = 0; i < nc; i++) {
+          if (hash(seed + r * 7 + i) < 0.1) continue; // 斷掉的繩
+          const x = x0 + (w * (i + 0.5)) / nc;
+          ctx.moveTo(x - 0.8, yt);
+          ctx.lineTo(x - 0.8, yb);
+          ctx.moveTo(x + 0.8, yt);
+          ctx.lineTo(x + 0.8, yb);
+        }
+      }
+      ctx.stroke();
+      if (rows > 2) {
+        ctx.strokeStyle = A.c(black ? AR.lac : '#f0d8b0');
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        const yc = y0 + (rows - 0.5) * rh;
+        for (let i = 0; i < nc; i++) {
+          const x = x0 + (w * (i + 0.5)) / nc;
+          ctx.moveTo(x - 1.1, yc - 1.1);
+          ctx.lineTo(x + 1.1, yc + 1.1);
+          ctx.moveTo(x + 1.1, yc - 1.1);
+          ctx.lineTo(x - 1.1, yc + 1.1);
+        }
+        ctx.stroke();
+      }
+      if (frost) {
+        ctx.fillStyle = A.c('#e6eef8');
+        ctx.globalAlpha *= 0.75;
+        ctx.beginPath();
+        for (let r = 0; r < rows; r += 2) {
+          const y = y0 + (r + 1) * rh;
+          const x = x0 + hash(seed + r * 3.3) * w;
+          ctx.moveTo(x + 2.6, y);
+          ctx.ellipse(x, y - 0.3, 2.6, 0.7, 0, 0, TAU);
+        }
+        ctx.fill();
+        ctx.globalAlpha /= 0.75;
+      }
+    } });
+  }
   function shieldbear(ctx, m) {
     const fx = m.fx || {};
     const t = m.t || 0;
@@ -4158,329 +4231,305 @@
     const hurt = m.hurtT > 0;
     const dead = !!m.dead;
     const walk = walking(m) && !dead;
-    const kind = eyeKind(m);
     const guardF = fx.guard == null ? true : !!fx.guard;
     const bash = clamp(num(fx.bash, 0), 0, 1);
     const wind = ph === 'wind';
-    const recover = !dead && (ph === 'recover' || !guardF);
     const striking = !dead && (bash > 0.05 || ph === 'strike');
-    // 縮進甲裡的程度：守備（沒在走、沒在攻擊）時縮起來，走路時半縮，攻擊時伸出
-    const tuck = dead ? 0.3 : striking || recover ? 0 : wind ? 0.8 : walk ? 0.25 : guardF ? 0.75 : 0;
-    const u = walk ? t * 3.4 : 0;
-    const bob = walk ? Math.abs(Math.sin(u)) * 1.4 : Math.sin(t * 1.2) * 0.5;
-    const sy = -bob + tuck * 5 + (dead ? 8 : 0);
-    const shove = striking ? 6 : 0;
+    const recover = !dead && !striking && (ph === 'recover' || !guardF);
+    const guarding = !dead && !striking && !recover && (wind || (guardF && !walk));
+    const fireK = dead ? 0 : recover ? 0.45 + 0.35 * Math.abs(Math.sin(t * 13)) : guarding ? 1.3 : striking ? 1.2 : 1;
+    const rattle = hurt ? Math.sin(t * 70) : 0;
     ctx.save();
-    if (hurt) {
-      ctx.translate(Math.sin(t * 60) * 1.5, 0);
-      ctx.rotate(-0.04);
-    }
-    ctx.translate(shove, 0);
-    // 腳邊的寒霧
+    // 腳下的寒霧
     if (!dead) {
       for (let i = 0; i < 4; i++) {
-        const q = (t * 0.5 + i / 4) % 1;
-        puff(ctx, -40 + i * 26 + q * 6, -2 - q * 4, 5 + q * 4, '#ffffff', (1 - q) * 0.5);
+        const q = (t * 0.6 + i / 4) % 1;
+        puff(ctx, -22 + i * 14 + q * 6, -2 - q * 5, 5 + q * 5, '#ffffff', (1 - q) * 0.55);
       }
     }
-    // ── 柱腳：粗壯的鱗腳、三根爪；緩慢沉重的對角步態 ──
-    const leg = (x, ph2, near, front) => {
-      const g = gaitFoot(u + ph2, walk ? 7 : 0, 4);
-      const len = 1 - tuck * 0.55;
-      const top = [x, -26 + sy];
-      const fxp = x + (front ? 4 : -2) + g[0];
-      const fyp = -g[1];
-      const foot = [fxp, fyp - 3 + (1 - len) * 12];
-      const knee = [x + (front ? 7 : -6) + g[0] * 0.5, top[1] + (foot[1] - top[1]) * 0.45];
-      const col = near ? GB.skin : '#3a4466';
-      const sh = near ? GB.skinS : '#232a44';
-      limb2(ctx, [top, knee, foot], [22, 17, 16], col, sh, near ? GB.skinL : null, { lw: 2.3, round: 0.95, inner: (fn) => {
-        // 疊起來的大鱗片（圓瓣，亮面在上）
-        ctx.fillStyle = A.c(near ? GB.skinL : '#4a5578');
-        ctx.strokeStyle = A.c(sh);
-        ctx.lineWidth = 0.9;
-        for (let r = 0; r < 3; r++) {
-          for (let k = -1; k <= 1; k += 2) {
-            const q = along(fn, 0.28 + r * 0.22, k * 3.4 + (r % 2) * 1.5);
-            ctx.beginPath();
-            ctx.ellipse(q[0], q[1], 3.2, 2.4, 0, PI * 1.05, TAU * 0.98);
-            ctx.quadraticCurveTo(q[0], q[1] + 2.6, q[0] - 3.1, q[1] - 0.3);
-            ctx.globalAlpha *= 0.45;
-            ctx.fill();
-            ctx.globalAlpha /= 0.45;
-            ctx.stroke();
-          }
-        }
-      } });
-      // 象腳般的圓掌＋三根爪
-      A.shape(ctx, (c) => { c.moveTo(foot[0] - 10, fyp); c.quadraticCurveTo(foot[0] - 10, foot[1] - 3, foot[0], foot[1] - 3.5); c.quadraticCurveTo(foot[0] + 10, foot[1] - 3, foot[0] + 10, fyp); c.closePath(); }, col, sh, { lw: 2.1, shadeY: fyp - 2 });
-      ctx.fillStyle = A.c('#e8e4d6');
-      ctx.beginPath();
-      [-5, 0.5, 6].forEach((dx) => {
-        ctx.moveTo(foot[0] + dx - 1.4, fyp - 1);
-        ctx.lineTo(foot[0] + dx + 2.8, fyp + 0.8);
-        ctx.lineTo(foot[0] + dx + 1.4, fyp - 2.6);
-      });
-      ctx.fill();
-    };
-    leg(-30, PI, false, false);
-    leg(26, 0, false, true);
-    // ── 冰蛇：尾巴從甲後下方出來，身體從甲後繞上來（後半段在甲後面） ──
-    const sw = Math.sin(t * 1.7) * 3;
-    const sway2 = Math.sin(t * 2.3 + 1) * 2;
-    const snakeBody = (fn, w0, w1) => {
-      const wf = (s) => w0 + (w1 - w0) * s;
-      rimShape(ctx, (c) => taper(c, fn, wf, 18), GB.snake, GB.snakeS, P4.teal, { cel: 1.6, rim: 1, lw: 2, inner: () => {
-        // 淡青的腹線與鱗點
-        ctx.strokeStyle = A.c(P4.teal);
-        ctx.lineWidth = 1.3;
+    if (dead) {
+      // ── 崩落成一堆甲片，頭盔滾在上面，鬼火往上飄散 ──
+      const plate = (x, y, w, h, rot) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+        lamellar(ctx, (c) => A.roundRect(c, -w / 2, -h / 2, w, h, 2), -w / 2, -h / 2, w, h, 2, x, true);
+        ctx.restore();
+      };
+      plate(-18, -5, 26, 9, 0.15);
+      plate(14, -5, 24, 9, -0.2);
+      plate(-4, -10, 30, 10, 0.05);
+      plate(-26, -12, 16, 14, 0.9);
+      plate(18, -13, 16, 13, -0.7);
+      // 倒下的太刀
+      A.shape(ctx, (c) => { c.moveTo(-40, -1.5); c.lineTo(38, -3); c.quadraticCurveTo(44, -2.8, 46, -1.5); c.lineTo(-40, 0.5); c.closePath(); }, '#d6e2ee', '#8fa0c0', { lw: 1.5, shadeY: -1 });
+      A.shape(ctx, (c) => A.roundRect(c, -50, -3, 11, 4, 1.5), AR.blk, AR.blkS, { lw: 1.4, shadeY: -1 });
+      // 頭盔
+      ctx.save();
+      ctx.translate(0, -22);
+      ctx.rotate(-0.35);
+      A.shape(ctx, (c) => { c.moveTo(-10, 2); c.bezierCurveTo(-10, -12, 10, -12, 10, 2); c.closePath(); }, AR.blk, AR.blkS, { lw: 2, cel: [1.4, 1.4] });
+      A.shape(ctx, (c) => { c.moveTo(-3, -8); c.quadraticCurveTo(-12, -16, -14, -24); c.quadraticCurveTo(-8, -18, -1, -12); c.closePath(); }, P4.gold, P4.goldS, { lw: 1.4, shadeY: -12 });
+      ctx.restore();
+      // 飄散的鬼火
+      for (let i = 0; i < 4; i++) {
+        const q = (t * 0.7 + i / 4) % 1;
+        ghostFire(ctx, -16 + i * 11 + Math.sin(t * 2 + i) * 4, -18 - q * 40, 3 * (1 - q * 0.5), 9 * (1 - q * 0.4), t, i, (1 - q) * 0.8);
+      }
+      ctx.restore();
+      return;
+    }
+    // 身體浮在地面上方一點
+    const fl = -3 + Math.sin(t * 1.6) * 1.5;
+    const u = walk ? t * 5 : 0;
+    const lunge = striking ? 8 : 0;
+    ctx.translate(lunge, fl);
+    if (striking) {
+      ctx.translate(0, -30);
+      ctx.rotate(0.12);
+      ctx.translate(0, 30);
+    }
+    // ── 腳：破爛的靛色袴＋臑當（脛甲），幾乎不沾地 ──
+    const legFn = (near) => {
+      const q = u + (near ? 0 : PI);
+      const fx2 = (near ? 9 : -13) + (walk ? Math.cos(q) * 7 : 0) + (guarding ? (near ? 4 : -4) : 0);
+      const fy2 = walk ? -Math.max(0, -Math.sin(q)) * 4 : 0;
+      const hip = [near ? 3 : -3, -30];
+      const knee = [(hip[0] + fx2) / 2 + 3, -16 + fy2 * 0.5];
+      // 袴（寬鬆、下緣破爛）
+      const hk = (c) => {
+        c.moveTo(hip[0] - 9, hip[1]);
+        c.lineTo(hip[0] + 8, hip[1]);
+        c.quadraticCurveTo(knee[0] + 9, knee[1] - 2, knee[0] + 8, knee[1] + 3);
+        c.lineTo(knee[0] + 4, knee[1] + 1);
+        c.lineTo(knee[0] + 1, knee[1] + 5);
+        c.lineTo(knee[0] - 3, knee[1] + 1);
+        c.lineTo(knee[0] - 7, knee[1] + 4);
+        c.quadraticCurveTo(hip[0] - 11, hip[1] + 10, hip[0] - 9, hip[1]);
+        c.closePath();
+      };
+      rimShape(ctx, hk, near ? AR.hak : '#222a55', AR.hakS, near ? '#4a55a0' : null, { cel: 2, rim: 1, lw: 2 });
+      // 膝的鬼火
+      ghostFire(ctx, knee[0], knee[1] + 3, 2.5, 7, t, near ? 1 : 2, 0.8 * fireK);
+      // 臑當（黑漆的脛甲、金色的鉸具）
+      const sh = (c) => { c.moveTo(knee[0] - 4, knee[1] + 3); c.lineTo(knee[0] + 4, knee[1] + 3); c.lineTo(fx2 + 4, fy2 - 4); c.lineTo(fx2 - 3, fy2 - 4); c.closePath(); };
+      rimShape(ctx, sh, near ? AR.blk : '#141626', AR.blkS, near ? AR.blkL : null, { cel: 1.4, rim: 0.8, lw: 1.8, inner: () => {
+        ctx.strokeStyle = A.c(AR.lac);
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        for (let i = 0; i <= 12; i++) {
-          const q = along(fn, i / 12, wf(i / 12) * 0.3);
-          i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]);
+        for (let k = 0; k < 3; k++) {
+          const yy = knee[1] + 5 + k * ((fy2 - 4 - knee[1] - 5) / 3);
+          ctx.moveTo(knee[0] - 6, yy);
+          ctx.lineTo(knee[0] + 8, yy);
         }
         ctx.stroke();
-        ctx.fillStyle = A.c('#3a4a7a');
-        ctx.beginPath();
-        for (let i = 1; i < 10; i++) {
-          const q = along(fn, i / 10, -wf(i / 10) * 0.15);
-          ctx.moveTo(q[0] + 0.8, q[1]);
-          ctx.arc(q[0], q[1], 0.8, 0, TAU);
-        }
-        ctx.fill();
       } });
+      goldStud(ctx, (knee[0] + fx2) / 2, (knee[1] + fy2) / 2, 1.1);
+      A.shape(ctx, (c) => { c.moveTo(fx2 - 5, fy2 - 1); c.quadraticCurveTo(fx2 - 4, fy2 - 5, fx2 + 1, fy2 - 5); c.quadraticCurveTo(fx2 + 7, fy2 - 4, fx2 + 7, fy2 - 1); c.closePath(); }, near ? AR.blk : '#141626', AR.blkS, { lw: 1.7, shadeY: fy2 - 2 });
     };
-    // 尾巴＋後段（在甲後）
-    snakeBody(cb(-60 + sw * 0.3, -10 + sy, -52, -18 + sy, -46, -44 + sy, -30, -70 + sy), 2, 7);
-    // ── 背甲 ──
-    const shellP = (c) => {
-      c.moveTo(-50, -22 + sy);
-      c.bezierCurveTo(-50, -62 + sy, -22, -82 + sy, 0, -82 + sy);
-      c.bezierCurveTo(24, -82 + sy, 48, -62 + sy, 48, -22 + sy);
-      c.quadraticCurveTo(0, -14 + sy, -50, -22 + sy);
-      c.closePath();
-    };
-    // ── 龜頭（在甲前緣；縮進時往甲裡退） ──
-    const headOut = 1 - tuck;
-    const hbx = 40;
-    const hby = -30 + sy;
-    const hx = hbx + 2 + headOut * 20 + (striking ? 4 : 0) + (recover ? -4 : 0);
-    const hy = hby - 2 + (walk ? Math.sin(u * 2 + 0.8) * 1.2 : Math.sin(t * 1.2 + 0.6) * 0.8) + (dead ? 8 : 0);
-    limb2(ctx, [[hbx - 6, hby + 2], [(hbx + hx) / 2, hby - 3], [hx - 6, hy]], [16, 13, 12], GB.skin, GB.skinS, GB.skinL, { lw: 2.2, round: 0.8, inner: (fn) => {
-      ctx.strokeStyle = A.c(GB.skinS);
-      ctx.lineWidth = 0.9;
-      ctx.beginPath();
-      for (let i = 0; i < 4; i++) {
-        const q = along(fn, 0.3 + i * 0.18, 0);
-        ctx.moveTo(q[0] - 1, q[1] - 5);
-        ctx.quadraticCurveTo(q[0] + 1.5, q[1], q[0] - 1, q[1] + 5);
-      }
-      ctx.stroke();
-    } });
-    // 頭：厚重的龜頭、隆起的眉骨、鳥喙般的嘴
+    legFn(false);
+    // ── 太刀的姿勢（手與刀的角度） ──
+    let hand;
+    let bladeA;
+    let hand2 = null;
+    if (guarding) {
+      hand = [16, -64];
+      hand2 = [6, -63];
+      bladeA = -0.12 + Math.sin(t * 2) * 0.02;
+    } else if (striking) {
+      hand = [30, -60];
+      bladeA = -0.55;
+    } else if (recover) {
+      hand = [18, -42];
+      bladeA = 1.15;
+    } else {
+      hand = [18, -44 + (walk ? Math.sin(u) : 0)];
+      bladeA = 0.8 + Math.sin(t * 1.3) * 0.03;
+    }
+    // 遠側的手臂（守備時雙手握刀）＋遠側大袖
+    const armFar = hand2 || [-12, -46];
+    ghostFire(ctx, (-6 + armFar[0]) / 2, (-66 + armFar[1]) / 2 + 4, 2.4, 7, t, 3, 0.8 * fireK);
+    A.shape(ctx, (c) => { c.moveTo(-10, -66); c.lineTo(-2, -66); c.lineTo(armFar[0] + 3, armFar[1] + 2); c.lineTo(armFar[0] - 3, armFar[1] + 4); c.closePath(); }, '#141626', AR.blkS, { lw: 1.8 });
+    const sodeFar = (c) => A.roundRect(c, -28, -70, 16, 22, 2.5);
+    ctx.save();
+    ctx.translate(rattle * 0.6, 0);
+    lamellar(ctx, sodeFar, -28, -70, 16, 22, 6, 11, true);
+    ctx.restore();
+    // ── 草摺（腰下垂著的甲片裙）──
+    [[-22, 0], [-12, 0], [-1, 0], [9, 0]].forEach((q, i) => {
+      const sw = Math.sin(t * 2 - i * 0.6) * 0.8 + (walk ? Math.sin(u - i) * 1.4 : 0) + rattle * 0.8 + (striking ? -1.5 : 0);
+      const P = (c) => { c.moveTo(q[0], -46); c.lineTo(q[0] + 12, -46); c.lineTo(q[0] + 13.5 + sw, -24); c.lineTo(q[0] - 1.5 + sw, -24); c.closePath(); };
+      lamellar(ctx, P, q[0], -46, 12, 22, 5, 20 + i, i === 2);
+    });
+    // ── 胴（胸甲）：黑漆、上段一塊素板、下面一排排小札 ──
+    const doP = (c) => { c.moveTo(-15, -72); c.lineTo(15, -72); c.quadraticCurveTo(19, -60, 16, -46); c.lineTo(-17, -46); c.quadraticCurveTo(-20, -60, -15, -72); c.closePath(); };
+    ctx.save();
+    ctx.translate(rattle * 0.4, 0);
+    lamellar(ctx, doP, -18, -65, 36, 19, 5, 31, true);
+    // 胸板與金色的鉸具、朱色的總角結
+    A.shape(ctx, (c) => { c.moveTo(-14, -73); c.lineTo(14, -73); c.lineTo(15, -65); c.lineTo(-15, -65); c.closePath(); }, AR.blk, AR.blkS, { lw: 1.8, shadeY: -68 });
+    goldStud(ctx, -9, -69, 1.3);
+    goldStud(ctx, 9, -69, 1.3);
+    A.shape(ctx, (c) => { c.moveTo(-2, -50); c.quadraticCurveTo(-6, -46, -4, -41); c.lineTo(-1, -44); c.lineTo(2, -41); c.quadraticCurveTo(4, -46, 0, -50); c.closePath(); }, AR.cordA, AR.blkS, { lw: 1.2, shadeY: -46 });
+    ctx.restore();
+    // 脖子的位置：只有鬼火
+    ghostFire(ctx, 1, -71, 5, 12, t, 4, fireK);
+    // ── 兜（頭盔）：錣（層層的護頸）、黑漆的缽、吹返、金色新月鍬形前立；面具裡一片漆黑、兩點鬼火 ──
+    const hx = 2;
+    const hy = -86;
     ctx.save();
     ctx.translate(hx, hy);
-    ctx.scale(1.3, 1.3);
-    ctx.translate(-hx, -hy);
-    const headP = (c) => {
-      c.moveTo(hx - 9, hy - 3);
-      c.quadraticCurveTo(hx - 6, hy - 11, hx + 4, hy - 10);
-      c.quadraticCurveTo(hx + 12, hy - 9, hx + 15, hy - 3);
-      c.quadraticCurveTo(hx + 17, hy + 1, hx + 13, hy + 4);
-      c.quadraticCurveTo(hx + 4, hy + 8, hx - 8, hy + 5);
+    ctx.rotate(guarding ? 0.08 : striking ? 0.05 : recover ? 0.12 : Math.sin(t * 1.2) * 0.02);
+    ctx.translate(rattle * 0.5, 0);
+    // 錣：五層往外張開、一層層往下疊的赤漆護頸（每層在下一層投影）
+    for (let i = 4; i >= 0; i--) {
+      const wq = 11 + i * 1.8;
+      const y1 = -1 + i * 3.2;
+      const sw2 = Math.sin(t * 2 - i * 0.5) * 0.4 * i;
+      const P = (c) => { c.moveTo(-wq + 3, y1); c.quadraticCurveTo(0, y1 - 2, wq - 4, y1); c.lineTo(wq - 2 + sw2, y1 + 4.4); c.quadraticCurveTo(-2, y1 + 2.2, -wq - 4 + sw2, y1 + 4.6); c.closePath(); };
+      lamellar(ctx, P, -wq - 3, y1, wq * 2 + 4, 4.2, 1, 60 + i, i === 0);
+    }
+    // 缽
+    const bowl = (c) => { c.moveTo(-11, 0); c.bezierCurveTo(-11, -14, 11, -14, 11, 0); c.closePath(); };
+    rimShape(ctx, bowl, AR.blk, AR.blkS, AR.blkL, { cel: 2, rim: 1.2, lw: 2, inner: () => {
+      ctx.strokeStyle = A.c(AR.blkL);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let k = -2; k <= 2; k++) {
+        ctx.moveTo(k * 4, -0.5);
+        ctx.quadraticCurveTo(k * 2.8, -8, 0, -11);
+      }
+      ctx.stroke();
+      ctx.fillStyle = A.c('#e6eef8');
+      ctx.beginPath();
+      ctx.ellipse(-2, -10, 6, 1.6, -0.1, 0, TAU);
+      ctx.fill();
+    } });
+    // 吹返（兩側往後翻的小耳）
+    A.shape(ctx, (c) => { c.moveTo(-10, -1); c.lineTo(-17, -5); c.lineTo(-16, 2); c.closePath(); }, AR.lac, AR.lacS, { lw: 1.6, shadeY: 0 });
+    goldStud(ctx, -14.5, -1.5, 1);
+    // 眉庇與面具（面頰）：裡面一片漆黑、兩點鬼火眼
+    A.shape(ctx, (c) => { c.moveTo(-9, 0); c.lineTo(12, -1); c.lineTo(12, 2); c.lineTo(-9, 2.5); c.closePath(); }, AR.blk, AR.blkS, { lw: 1.6 });
+    A.shape(ctx, (c) => { c.moveTo(-6, 2.5); c.lineTo(10, 2); c.quadraticCurveTo(12, 8, 8, 12); c.lineTo(-2, 12); c.quadraticCurveTo(-7, 8, -6, 2.5); c.closePath(); }, '#07080f', null, { lw: 1.6 });
+    const eyeA = fireK;
+    glowH(ctx, 4, 5, 9, P4.teal, 0.5 * eyeA);
+    ctx.fillStyle = A.c(AR.fireL);
+    ctx.globalAlpha *= Math.min(1, 0.4 + eyeA * 0.6);
+    ctx.beginPath();
+    ctx.ellipse(1.5, 5.2, 1.3, 0.8, 0.1, 0, TAU);
+    ctx.ellipse(7.5, 5, 1.1, 0.7, -0.1, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha /= Math.min(1, 0.4 + eyeA * 0.6);
+    // 面具下半（黑漆、朱唇的線、垂著的垂）
+    A.shape(ctx, (c) => { c.moveTo(-3, 8); c.lineTo(11, 7.5); c.quadraticCurveTo(12, 12, 8, 14); c.lineTo(-1, 14); c.closePath(); }, AR.lac, AR.lacS, { lw: 1.6, shadeY: 12 });
+    ctx.strokeStyle = A.c(AR.blk);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(3, 10.5);
+    ctx.quadraticCurveTo(7, 11.5, 10, 10);
+    ctx.stroke();
+    lamellar(ctx, (c) => A.roundRect(c, -1, 14, 11, 6, 1.2), -1, 14, 11, 6, 3, 41, false);
+    // 金色的新月鍬形前立
+    if (fireK > 1.05) glowH(ctx, 1, -14, 16, P4.goldL, 0.2);
+    const crest = (c) => {
+      c.moveTo(-1, -9);
+      c.bezierCurveTo(-12, -14, -18, -26, -14, -38);
+      c.bezierCurveTo(-11, -28, -5, -20, 1, -17);
+      c.bezierCurveTo(7, -20, 13, -28, 16, -38);
+      c.bezierCurveTo(20, -26, 14, -14, 3, -9);
       c.closePath();
     };
-    rimShape(ctx, headP, GB.skin, GB.skinS, GB.skinL, { cel: 2.2, rim: 1.2, lw: 2.2, inner: () => {
-      // 頭頂的鱗片
-      ctx.strokeStyle = A.c(GB.skinS);
-      ctx.lineWidth = 0.9;
-      ctx.beginPath();
-      ctx.moveTo(hx - 4, hy - 9);
-      ctx.lineTo(hx - 2, hy - 5);
-      ctx.lineTo(hx + 3, hy - 6);
-      ctx.moveTo(hx + 3, hy - 6);
-      ctx.lineTo(hx + 5, hy - 9.5);
-      ctx.stroke();
-    } });
-    // 鳥喙（上喙勾起、下喙；攻擊時張開）
-    const bo = striking ? 2.5 : recover ? 1.5 : 0;
-    A.shape(ctx, (c) => { c.moveTo(hx + 8, hy + 2 + bo); c.quadraticCurveTo(hx + 14, hy + 3 + bo, hx + 16, hy + 1); c.quadraticCurveTo(hx + 13, hy + 6 + bo, hx + 7, hy + 5 + bo); c.closePath(); }, '#5a4a3a', '#3a2e24', { lw: 1.5, shadeY: hy + 4 + bo });
-    A.shape(ctx, (c) => { c.moveTo(hx + 7, hy - 1); c.quadraticCurveTo(hx + 15, hy - 3, hx + 18, hy + 2.5); c.quadraticCurveTo(hx + 14, hy + 2, hx + 8, hy + 2.5); c.closePath(); }, '#6e5c48', '#4a3c30', { lw: 1.6, shadeY: hy + 1 });
-    // 隆起的眉骨＋沉靜的金眼
-    const eyeK = recover && kind === 'normal' ? 'closed' : kind;
-    almondEye(ctx, hx + 5, hy - 3.5, 2.6, 1.6, P4.gold, eyeK === 'angry' ? 'angry' : eyeK, { white: P4.goldL, lw: 1.6, irisK: 1.1 });
-    A.shape(ctx, (c) => { c.moveTo(hx - 1, hy - 5.5); c.quadraticCurveTo(hx + 5, hy - 10, hx + 10, hy - 6); c.quadraticCurveTo(hx + 5, hy - 7.5, hx - 1, hy - 5.5); c.closePath(); }, GB.skinL, GB.skin, { lw: 1.4, shadeY: hy - 6.5 });
+    rimShape(ctx, crest, P4.gold, P4.goldS, P4.goldL, { cel: 1.6, rim: 1, lw: 1.9 });
+    A.shape(ctx, (c) => c.arc(1, -10, 2.6, 0, TAU), AR.blk, AR.blkS, { lw: 1.3, cel: [0.6, 0.6] });
     ctx.restore();
-    // ── 背甲本體（蓋住腳與頸的根部） ──
-    const glowK = dead ? 0 : Math.min(1, tuck * 1.2 + (wind ? 0.4 : 0));
-    rimShape(ctx, shellP, GB.shell, GB.shellS, GB.shellL, { cel: 5, rim: 2, lw: 2.8, inner: () => {
-      // 甲片：兩圈沿著甲弧的分界＋放射狀的分界，全部鑲金線
-      ctx.strokeStyle = A.c(glowK > 0.3 ? P4.goldL : P4.gold);
-      ctx.lineWidth = 1.4;
-      ctx.lineJoin = 'round';
+    // 頭頂飄起的鬼火
+    for (let i = 0; i < 3; i++) {
+      const q = (t * 0.9 + i / 3) % 1;
+      ghostFire(ctx, hx - 4 + i * 4 + Math.sin(t * 2 + i) * 2, hy - 12 - q * 16, 2.2 * (1 - q * 0.4), 7 * (1 - q * 0.3), t, i + 5, (1 - q) * 0.75 * Math.min(1, fireK));
+    }
+    // ── 近側的手臂（鬼火的肘）與太刀 ──
+    const sh0 = [12, -66];
+    const el = [(sh0[0] + hand[0]) / 2 + 3, (sh0[1] + hand[1]) / 2 + 3];
+    A.shape(ctx, (c) => { c.moveTo(sh0[0] - 3, sh0[1]); c.lineTo(sh0[0] + 4, sh0[1]); c.lineTo(el[0] + 3, el[1]); c.lineTo(el[0] - 3, el[1]); c.closePath(); }, AR.blk, AR.blkS, { lw: 1.8 });
+    ghostFire(ctx, el[0], el[1] + 3, 2.6, 7, t, 6, 0.85 * fireK);
+    // 籠手（前臂）：黑漆底上一排排赤漆的小篠
+    const kote = (c) => { c.moveTo(el[0] - 3.5, el[1] + 2); c.lineTo(el[0] + 3.5, el[1] + 2); c.lineTo(hand[0] + 3.2, hand[1]); c.lineTo(hand[0] - 3.2, hand[1] + 1); c.closePath(); };
+    A.shape(ctx, kote, AR.blk, AR.blkS, { lw: 1.8 });
+    ctx.fillStyle = A.c(AR.lac);
+    ctx.beginPath();
+    for (let k = 1; k < 4; k++) {
+      const p = lerp2(el, hand, k / 4);
+      ctx.moveTo(p[0] - 2.4, p[1] - 0.4 + 2 * (1 - k / 4));
+      ctx.lineTo(p[0] + 2.4, p[1] - 0.8 + 2 * (1 - k / 4));
+      ctx.lineTo(p[0] + 2.2, p[1] + 1 + 2 * (1 - k / 4));
+      ctx.lineTo(p[0] - 2.2, p[1] + 1.4 + 2 * (1 - k / 4));
+    }
+    ctx.fill();
+    // 太刀：柄（黑＋朱的柄卷）、金色的鍔、結霜的長刃
+    ctx.save();
+    ctx.translate(hand[0], hand[1]);
+    ctx.rotate(bladeA);
+    const BL = 52;
+    const bladeP = (c) => { c.moveTo(3, -1.4); c.lineTo(BL - 6, -2.2); c.quadraticCurveTo(BL, -2, BL + 2, 0.8); c.lineTo(3, 1.2); c.closePath(); };
+    rimShape(ctx, bladeP, '#dbe6f1', '#90a2c4', '#ffffff', { cel: 0.9, rim: 0.6, lw: 1.5, inner: () => {
+      ctx.fillStyle = A.c('#f6fbff');
+      ctx.fillRect(3, -0.2, BL, 0.8);
+      ctx.fillStyle = A.c(P4.tealL);
+      ctx.globalAlpha *= 0.8;
       ctx.beginPath();
-      ctx.moveTo(-40, -30 + sy);
-      ctx.bezierCurveTo(-38, -58 + sy, -18, -70 + sy, 0, -70 + sy);
-      ctx.bezierCurveTo(20, -70 + sy, 38, -58 + sy, 38, -30 + sy);
-      ctx.moveTo(-26, -44 + sy);
-      ctx.bezierCurveTo(-22, -58 + sy, -10, -62 + sy, 0, -62 + sy);
-      ctx.bezierCurveTo(12, -62 + sy, 22, -56 + sy, 24, -44 + sy);
-      [[-40, -30, -26, -44], [-24, -62, -14, -51], [0, -70, 0, -62], [24, -62, 14, -52], [38, -30, 24, -44], [-26, -44, -30, -22], [0, -62, 0, -38], [24, -44, 28, -20], [-26, -44, 0, -38], [0, -38, 24, -44], [-30, -22, -14, -18], [28, -20, 14, -17]].forEach((q) => {
-        ctx.moveTo(q[0], q[1] + sy);
-        ctx.lineTo(q[2], q[3] + sy);
+      [[14, 2], [26, 3], [38, 2.5]].forEach((q) => {
+        ctx.moveTo(q[0] + q[1], -1.5);
+        ctx.ellipse(q[0], -1.5, q[1], 0.7, 0, 0, TAU);
       });
-      ctx.stroke();
-      // 星宿：每片甲裡一組金線連起的星點（守備時發亮）
-      const cells = [[-14, -30], [12, -30], [-33, -40], [30, -40], [-12, -58], [12, -58], [-26, -58]];
-      if (glowK > 0) glowH(ctx, 0, -46 + sy, 52, P4.goldL, glowK * 0.25);
-      ctx.strokeStyle = A.c(P4.goldS);
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      cells.forEach((c0, i) => {
-        const st = GB_STARS[i % GB_STARS.length];
-        st.forEach((p, j) => (j ? ctx.lineTo(c0[0] + p[0], c0[1] + p[1] + sy) : ctx.moveTo(c0[0] + p[0], c0[1] + p[1] + sy)));
-      });
-      ctx.stroke();
-      cells.forEach((c0, i) => {
-        GB_STARS[i % GB_STARS.length].forEach((p, j) => {
-          const tw = 0.55 + 0.45 * Math.sin(t * 3 + i * 1.7 + j * 2.1);
-          ctx.fillStyle = A.c(j === 0 ? '#ffffff' : P4.tealL);
-          ctx.globalAlpha *= 0.5 + tw * 0.5 + glowK * 0.3;
-          ctx.beginPath();
-          ctx.arc(c0[0] + p[0], c0[1] + p[1] + sy, j === 0 ? 1.3 : 0.9, 0, TAU);
-          ctx.fill();
-          ctx.globalAlpha /= 0.5 + tw * 0.5 + glowK * 0.3;
-        });
-      });
-      // 甲頂厚厚的積雪（下緣垂成一團團）與霜
-      ctx.fillStyle = A.c('#ffffff');
-      ctx.beginPath();
-      ctx.moveTo(-40, -50 + sy);
-      ctx.bezierCurveTo(-34, -90 + sy, 30, -92 + sy, 40, -52 + sy);
-      [[34, -56], [28, -52], [20, -58], [12, -54], [4, -59], [-4, -55], [-12, -60], [-20, -55], [-27, -58], [-34, -52]].forEach((p, i) => {
-        if (i % 2) ctx.quadraticCurveTo(p[0] + 3, p[1] + 6 + sy, p[0], p[1] + sy);
-        else ctx.quadraticCurveTo(p[0] + 3, p[1] - 2 + sy, p[0], p[1] + sy);
-      });
-      ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = A.c(P4.snowS);
-      ctx.beginPath();
-      ctx.moveTo(-30, -56 + sy);
-      ctx.quadraticCurveTo(0, -62 + sy, 32, -56 + sy);
-      ctx.quadraticCurveTo(0, -59 + sy, -30, -56 + sy);
-      ctx.fill();
+      ctx.globalAlpha /= 0.8;
     } });
-    // 甲緣：朱漆的邊、金鋲、垂下的小冰柱
-    const rimP = (c) => {
-      c.moveTo(-52, -24 + sy);
-      c.quadraticCurveTo(0, -14 + sy, 50, -24 + sy);
-      c.lineTo(49, -18 + sy);
-      c.quadraticCurveTo(0, -8 + sy, -51, -18 + sy);
-      c.closePath();
-    };
-    rimShape(ctx, rimP, P4.verm, P4.vermS, P4.vermL, { cel: 1.4, rim: 0.9, lw: 2 });
-    [-40, -24, -8, 8, 24, 40].forEach((x) => goldStud(ctx, x, -18.5 + sy + Math.abs(x) * 0.06, 1.6));
-    [[-34, 5], [-16, 7], [0, 5], [16, 6], [32, 5]].forEach((q) => {
-      const y0 = -12.6 + sy + Math.abs(q[0]) * 0.07;
-      A.shape(ctx, (c) => poly(c, [[q[0] - 1.6, y0], [q[0] + 1.6, y0], [q[0] + 0.2, y0 + q[1]]]), P4.tealL, P4.teal, { lw: 1.1, shadeY: y0 + q[1] * 0.4 });
-    });
-    // 守備時罩在甲上的結界光
-    if (glowK > 0.3) {
+    if (fireK > 1.05 || striking) glowH(ctx, BL * 0.6, 0, 14, P4.teal, 0.3);
+    A.shape(ctx, (c) => c.ellipse(2.5, 0, 1.4, 3.6, 0, 0, TAU), P4.gold, P4.goldS, { lw: 1.3, cel: [0.5, 0.5] });
+    A.shape(ctx, (c) => A.roundRect(c, -12, -1.6, 13.5, 3.2, 1.4), AR.blk, AR.blkS, { lw: 1.4, shadeY: 0.5 });
+    ctx.strokeStyle = A.c(AR.lac);
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) {
+      ctx.moveTo(-10 + k * 3, -1.5);
+      ctx.lineTo(-8.5 + k * 3, 1.5);
+    }
+    ctx.stroke();
+    ctx.restore();
+    // 手的位置：鬼火（沒有手）
+    ghostFire(ctx, hand[0] - 1, hand[1] + 2, 2.4, 6, t, 7, 0.9 * fireK);
+    if (hand2) ghostFire(ctx, hand2[0], hand2[1] + 2, 2.2, 6, t, 8, 0.9 * fireK);
+    // 近側的大袖（最前面，支配輪廓）
+    ctx.save();
+    ctx.translate(rattle * 0.8, 0);
+    const sodeA = guarding ? -0.1 : striking ? -0.25 : 0.08 + Math.sin(t * 1.6 - 0.8) * 0.03 + (walk ? Math.sin(u - 0.8) * 0.04 : 0);
+    ctx.translate(10, -71);
+    ctx.rotate(sodeA);
+    lamellar(ctx, (c) => { c.moveTo(-2, 0); c.lineTo(17, 0); c.lineTo(19, 26); c.lineTo(0, 26); c.closePath(); }, -2, 0, 20, 26, 6, 51, true);
+    // 冠板（大袖最上面一片黑漆）
+    A.shape(ctx, (c) => A.roundRect(c, -3, -2, 21, 4, 1.4), AR.blk, AR.blkS, { lw: 1.6, shadeY: 0.5 });
+    goldStud(ctx, 7.5, 2.2, 1.3);
+    ctx.restore();
+    // 守備：前方一道淡青的結界弧；鬼火變旺
+    if (guarding) {
       ctx.save();
-      ctx.globalAlpha *= (glowK - 0.3) * 0.9;
+      ctx.globalAlpha *= 0.55 + Math.sin(t * 4) * 0.1;
       ctx.strokeStyle = A.c(P4.tealL);
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(-1, -40 + sy, 58, 48, 0, PI * 1.02, TAU * 0.99);
+      ctx.arc(10, -52, 40, -1.1, 1.0);
       ctx.stroke();
-      ctx.globalAlpha *= 0.35;
-      ctx.fillStyle = A.c(P4.teal);
-      ctx.fill();
+      ctx.globalAlpha *= 0.3;
+      ctx.lineWidth = 7;
+      ctx.stroke();
       ctx.restore();
     }
-    // 近側的兩隻腳（甲前面）
-    leg(-20, 0, true, false);
-    leg(22, PI, true, true);
-    // ── 冰蛇的前段：從甲後繞過甲頂往前，脖子昂起；蛇頭 ──
-    let snx;
-    let sny;
-    if (dead) {
-      snx = 44;
-      sny = -26 + sy;
-    } else if (striking) {
-      snx = 78 + bash * 6;
-      sny = -54 + sy;
-    } else if (tuck > 0.6) {
-      snx = 10 + sway2 * 0.4;
-      sny = -90 + sy;
-    } else if (recover) {
-      snx = 6 + sway2;
-      sny = -86 + sy;
-    } else {
-      snx = 16 + sw;
-      sny = -104 + sy + sway2 * 0.6;
-    }
-    const neck = dead
-      ? cb(-30, -70 + sy, 0, -86 + sy, 30, -74 + sy, snx - 3, sny - 1)
-      : tuck > 0.6
-        ? cb(-30, -70 + sy, -6, -96 + sy, 22, -90 + sy, snx - 5, sny + 2)
-        : cb(-30, -70 + sy, 0, -94 + sy, snx - 22 + sw * 0.5, sny + 26, snx - 6, sny + 2);
-    snakeBody(neck, 7, 5.2);
-    // 蛇頭：扁長的三角頭、淡青豎瞳、朱色的信
-    ctx.save();
-    ctx.translate(snx, sny);
-    const dirA = striking ? 0.15 : dead ? 0.6 : -0.1 + Math.sin(t * 2 + 0.5) * 0.08;
-    ctx.rotate(dirA);
-    const jaw = striking ? 4 : recover ? 2 : 0;
-    if (jaw) A.shape(ctx, (c) => { c.moveTo(-4, 2); c.quadraticCurveTo(6, 3 + jaw, 11, 2 + jaw * 1.2); c.quadraticCurveTo(4, 5 + jaw, -4, 4); c.closePath(); }, GB.snake, GB.snakeS, { lw: 1.6, shadeY: 3 });
-    const shP = (c) => { c.moveTo(-6, 3); c.quadraticCurveTo(-7, -5, 0, -5); c.quadraticCurveTo(8, -5, 12, 0.5); c.quadraticCurveTo(10, 3, 4, 3.4); c.closePath(); };
-    rimShape(ctx, shP, GB.snake, GB.snakeS, P4.teal, { cel: 1.2, rim: 0.9, lw: 1.9, inner: () => {
-      ctx.fillStyle = A.c(P4.teal);
-      ctx.beginPath();
-      ctx.moveTo(-5, 2.8);
-      ctx.quadraticCurveTo(4, 1.5, 11, 1.2);
-      ctx.quadraticCurveTo(5, 3.5, -5, 3.4);
-      ctx.fill();
-    } });
-    if (jaw) {
-      fang(ctx, 8, 1.8, 1.6, false);
-    }
-    // 豎瞳的眼
-    if (kind === 'x' || dead) A.eye(ctx, 3, -1.5, 1.5, 1.5, 'x');
-    else {
-      if (!dead) glowH(ctx, 3, -1.5, 5, P4.teal, 0.5);
-      ctx.fillStyle = A.c(P4.tealL);
-      ctx.beginPath();
-      ctx.ellipse(3, -1.6, 2, 1.4, 0, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = A.c('#0e1c22');
-      ctx.beginPath();
-      ctx.ellipse(3.3, -1.6, 0.45, 1.3, 0, 0, TAU);
-      ctx.fill();
-    }
-    // 吐信（一閃一閃）
-    if (!dead && (Math.sin(t * 5) > 0.3 || striking)) {
-      const L = 4 + Math.sin(t * 30) * 1.2;
-      ctx.strokeStyle = A.c(P4.verm);
-      ctx.lineWidth = 0.9;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(11, 1.2 + jaw * 0.5);
-      ctx.lineTo(11 + L, 1.5 + jaw * 0.5);
-      ctx.lineTo(13 + L, 0.2 + jaw * 0.5);
-      ctx.moveTo(11 + L, 1.5 + jaw * 0.5);
-      ctx.lineTo(13 + L, 2.8 + jaw * 0.5);
-      ctx.stroke();
-    }
     ctx.restore();
-    // 收招時蛇喘著白霜
-    if (recover) {
-      const q = (t * 1.3) % 1;
-      puff(ctx, snx + 14 + q * 8, sny - q * 5, 1.5 + q * 3, '#ffffff', (1 - q) * 0.75);
+    // 居合一閃：寬大的淡青新月斬（在身體前方）
+    if (striking) {
+      windSlash(ctx, 44 + lunge, -48, 40, 0.1, 0.85);
+      windSlash(ctx, 40 + lunge, -44, 30, 0.2, 0.5);
     }
-    // 衝撞：往前咬的速度線
-    if (striking) speedLines(ctx, snx - 20, sny, 14, 3, 14, t, 'rgba(216,247,241,0.8)');
-    ctx.restore();
   }
   // ═════════════ 投射物 ═════════════
   function projAngle(p) {
@@ -5122,42 +5171,19 @@
       shide(ctx, 5, 1, 2, -0.1);
       sparkle(ctx, 11, -11, 3.5, '#ffffff');
     },
-    // 玄武甲片：一片黑靛色的龜甲碎片，金線連著幾顆發光的星（星宿），邊緣一抹朱漆
+    // 亡靈鎧片：一片結霜的赤漆小札板，縅著深靛的繩（十字結）、垂著一段斷掉的朱繩，縫隙裡透出淡青鬼火
     shieldshard(ctx) {
-      const P = (c) => poly(c, [[-13, 9], [-10, -10], [2, -14], [13, -4], [11, 9], [0, 13]]);
-      glowH(ctx, 0, 0, 18, P4.goldL, 0.3);
-      rimShape(ctx, P, '#1d2244', '#11142c', '#3c4784', { cel: 3, rim: 1.4, lw: 2.4, inner: () => {
-        ctx.strokeStyle = A.c(P4.gold);
-        ctx.lineWidth = 1.3;
-        ctx.beginPath();
-        ctx.moveTo(-13, 3);
-        ctx.lineTo(-2, -2);
-        ctx.lineTo(11, 2);
-        ctx.moveTo(-2, -2);
-        ctx.lineTo(1, -14);
-        ctx.stroke();
-        ctx.strokeStyle = A.c(P4.goldS);
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        [[-8, -5], [-4, -8], [3, -7], [6, -3]].forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-        [[-7, 7], [-3, 5], [2, 8]].forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-        ctx.stroke();
-        ctx.fillStyle = A.c(P4.tealL);
-        [[-8, -5], [-4, -8], [3, -7], [6, -3], [-7, 7], [-3, 5], [2, 8]].forEach((p, i) => {
-          ctx.beginPath();
-          ctx.arc(p[0], p[1], i === 0 || i === 4 ? 1.3 : 0.9, 0, TAU);
-          ctx.fill();
-        });
-        ctx.fillStyle = A.c(P4.verm);
-        ctx.beginPath();
-        ctx.moveTo(-13, 9);
-        ctx.lineTo(0, 13);
-        ctx.lineTo(0, 10.5);
-        ctx.lineTo(-12.4, 6.6);
-        ctx.closePath();
-        ctx.fill();
-      } });
-      sparkle(ctx, 10, -11, 3.5, '#ffffff');
+      glowH(ctx, 0, 0, 18, P4.teal, 0.35);
+      ctx.save();
+      ctx.rotate(-0.25);
+      lamellar(ctx, (c) => A.roundRect(c, -12, -11, 24, 20, 2.5), -12, -11, 24, 20, 4, 7, true);
+      A.shape(ctx, (c) => A.roundRect(c, -13, -13, 26, 4, 1.4), AR.blk, AR.blkS, { lw: 1.6, shadeY: -11 });
+      goldStud(ctx, -8, -11, 1.3);
+      goldStud(ctx, 8, -11, 1.3);
+      ctx.restore();
+      ropeStroke(ctx, (c) => { c.moveTo(6, 8); c.quadraticCurveTo(10, 13, 7, 17); }, 1.8, P4.verm, P4.vermS);
+      ghostFire(ctx, -3, 12, 2.6, 7, 0.5, 1, 0.9);
+      sparkle(ctx, 10, -12, 3.2, '#ffffff');
     },
   };
 
