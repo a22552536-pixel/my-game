@@ -395,9 +395,10 @@
         });
       });
 
-      // Boss
-      const BY = 1432 + 460;
-      title('Boss', BY);
+      // 野外魔王在上、章節 Boss 在下（章節 Boss 比較大，放在最後壓軸）
+      const FY = 1432 + 460;
+      const BY = FY + 538;
+      title('章節 Boss', BY);
       [['queenShroom', 1], ['hermitCrab', 2], ['lavaTortoise', 3], ['frostSpirit', 4], ['timeItself', 5]].filter(([id]) => M[id] && A.MONSTER_DRAW[M[id].art]).forEach(([id, ch], i) => {
         const d = M[id];
         const x = 40 + (i % 3) * 580;
@@ -423,7 +424,6 @@
       });
 
       // 野外魔王（js/data/fieldboss.js）：新美術還沒到時用備援外觀放大
-      const FY = BY + 538;
       title('野外魔王', FY);
       ['fb_shroom', 'fb_kraken', 'fb_balrog', 'fb_zakum', 'fb_voiddragon'].filter((id) => M[id]).forEach((id, i) => {
         const d = M[id];
