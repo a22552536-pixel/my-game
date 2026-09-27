@@ -2877,20 +2877,16 @@
   function ropeArt(ctx, r, x, top0, bottom, t, map) {
     const M = MAT[map.refinedGround];
     if (!M) return;
-    // 上端藏進上層平台裡（平台比繩子晚畫，會蓋住），看起來像從平台底下的鐵環／橫樑垂下來
-    const top = r[1] + 6;
+    // 上端接到上層平台的表面（翻過平台正面的那一段與表面上的固定樁由 A.drawRopeFronts 在平台之後畫）
+    const top = r[1];
     const key = r[0] + ':' + r[1] + ':' + r[2] + ':' + (map._aged || 0) + ':' + map.refinedGround;
     let e = ropeCache.get(key);
     if (!e) {
       if (ropeCache.size > 64) ropeCache.clear();
-      e = buildRope(map, M, x, top, bottom);
+      e = A.ropeEnhance(buildRope(map, M, x, top, bottom), map, r, bottom - top);
       ropeCache.set(key, e);
     }
-    const k = Math.sin(t * 0.9 + x * 0.013) * (2 / Math.max(40, bottom - top));
-    ctx.save();
-    ctx.transform(1, 0, k, 1, -k * top, 0);
-    ctx.drawImage(e.c, x - e.W / 2, top - e.y0, e.W, e.H);
-    ctx.restore();
+    A.blitRope(ctx, e, x, top, bottom, t, 2);
   }
 
   // ── 註冊 ──

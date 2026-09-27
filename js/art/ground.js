@@ -1132,7 +1132,7 @@
   // 通用：給一個「畫一次成貼圖」的函數 build(map, r, x, top, bottom) → { c, W, H, y0 }，
   // 回傳 ROPE_ART 用的函數（快取＋以上端為軸的擺動）。opts.topOff：上端往下藏幾 px（預設 6）
   function ropeArt(build, opts) {
-    const topOff = opts && opts.topOff !== undefined ? opts.topOff : 6;
+    const topOff = opts && opts.topOff !== undefined ? opts.topOff : 0;
     const sway = opts && opts.sway !== undefined ? opts.sway : 2;
     const tag = (opts && opts.tag) || '';
     return function (ctx, r, x, top0, bottom, t, map) {
@@ -1141,32 +1141,24 @@
       let e = ropeCache.get(key);
       if (!e) {
         if (ropeCache.size > 64) ropeCache.clear();
-        e = build(map, r, x, top, bottom);
+        e = A.ropeEnhance(build(map, r, x, top, bottom), map, r, bottom - top);
         ropeCache.set(key, e);
       }
-      const k = Math.sin(t * 0.9 + x * 0.013) * (sway / Math.max(40, bottom - top));
-      ctx.save();
-      ctx.transform(1, 0, k, 1, -k * top, 0);
-      ctx.drawImage(e.c, x - e.W / 2, top - e.y0, e.W, e.H);
-      ctx.restore();
+      A.blitRope(ctx, e, x, top, bottom, t, sway);
     };
   }
   A.ROPE_ART.forest = function (ctx, r, x, top0, bottom, t, map) {
-    // 上端藏進上層土塊裡（土塊比繩子晚畫，會蓋住），看起來像從底面長出來的藤
-    const top = r[1] + 6;
+    // 上端接到上層土塊的表面（翻過土塊正面的那一段與表面上的木樁由 A.drawRopeFronts 在平台之後畫）
+    const top = r[1];
     const key = r[0] + ':' + r[1] + ':' + r[2] + ':' + (map._aged || 0) + ':' + map.refinedGround;
     let e = ropeCache.get(key);
     if (!e) {
       if (ropeCache.size > 64) ropeCache.clear();
-      e = buildVine(map, r, x, top, bottom);
+      e = A.ropeEnhance(buildVine(map, r, x, top, bottom), map, r, bottom - top);
       ropeCache.set(key, e);
     }
     // 以上端為軸輕輕擺動（水平錯切）：下端最多偏 2px 左右
-    const k = Math.sin(t * 0.9 + x * 0.013) * (2 / Math.max(40, bottom - top));
-    ctx.save();
-    ctx.transform(1, 0, k, 1, -k * top, 0);
-    ctx.drawImage(e.c, x - e.W / 2, top - e.y0, e.W, e.H);
-    ctx.restore();
+    A.blitRope(ctx, e, x, top, bottom, t, 2);
   };
 
   // ── groundKit：給其他章節的地形檔重複使用（說明見檔頭與 scratchpad 的 groundkit_api.md；只做加法，不改既有介面） ──

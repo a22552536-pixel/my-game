@@ -3265,20 +3265,622 @@
     A.shape(ctx, (c) => A.roundRect(c, x - 10, top - 6, 20, 9, 3), style === 'chain' ? '#6a6070' : '#8a6446', style === 'chain' ? '#4a4250' : '#6e4e36', { lw: 2.2, hl: false });
   }
 
+  // ════════════════════════════════════════════════════════════
+  // 繩子一眼就看得出來可以爬：
+  // ・A.ropeEnhance：把各章預先畫好的繩子貼圖再加工一次（只在建貼圖時做）——身體加粗、外亮內暗的雙色描邊、
+  //   背後一條柔和的光帶；另外做一張「亮面剪影」給往上流的微光用
+  // ・A.blitRope：每格只貼一張圖（以上端為軸輕擺）＋（非省效能模式）兩片微光切片
+  // ・A.drawRopeFronts：平台畫完之後再畫——繩子翻過上層平台正面的那一段、平台表面上的固定樁（依材質），
+  //   以及下端落地的一小盤繩／鏈／根鬚，讓人看得出「這條繩子通到上面那層」
+  // ════════════════════════════════════════════════════════════
+  const ROPE_LOOK = {
+    vine: { halo: '255,244,170', haloA: 0.2, rim: '236,255,200', rimA: 0.7, ink: '#16240e' },
+    root: { halo: '140,255,225', haloA: 0.34, rim: '200,255,240', rimA: 0.95, ink: '#0c120c', rimR: 3.2 },
+    hemp: { halo: '255,232,180', haloA: 0.22, rim: '255,240,205', rimA: 0.78, ink: '#14110d' },
+    dryrope: { halo: '255,226,170', haloA: 0.2, rim: '255,244,214', rimA: 0.75, ink: '#2a180c' },
+    chain: { halo: '255,160,80', haloA: 0.24, rim: '255,214,170', rimA: 0.72, ink: '#0c0808' },
+    bellrope: { halo: '255,170,110', haloA: 0.26, rim: '255,250,240', rimA: 0.8, ink: '#3a0c0c' },
+    icechain: { halo: '120,190,255', haloA: 0.26, rim: '235,248,255', rimA: 0.8, ink: '#0e1626' },
+    thread: { halo: '255,214,110', haloA: 0.28, rim: '255,250,220', rimA: 0.8, ink: '#3a2806' },
+    flowervine: { halo: '255,236,190', haloA: 0.2, rim: '240,255,220', rimA: 0.72, ink: '#162612' },
+  };
+  // 很亮的地圖（雪地、大理石）：光帶換成偏深的色帶，暗描邊加重
+  const BRIGHT_GROUND = { snow: 1, shrine: 1, ice: 1, frost: 1, temple: 1 };
+  function ropeKind(map) {
+    if (!map) return 'vine';
+    if (map._rope45) return map._rope45;
+    const M23 = A.GROUND23_MAT && A.GROUND23_MAT[map.refinedGround];
+    if (M23 && M23.rope) return M23.rope;
+    if (map.refinedGround === 'rootCave') return 'root';
+    const th = map._theme && map._theme.rope;
+    if (th === 'chain') return 'chain';
+    if (th === 'rope') return 'hemp';
+    return 'vine';
+  }
+  A.ropeKind = ropeKind;
+  function ropeLook(map) {
+    const kind = ropeKind(map);
+    const L = ROPE_LOOK[kind] || ROPE_LOOK.vine;
+    if (!map || !BRIGHT_GROUND[map.refinedGround]) return { kind, look: L, bright: false };
+    return { kind, look: L, bright: true };
+  }
+  // 只留下夠不透明的部分（柔光、陰影不算進剪影），回傳同尺寸的剪影畫布
+  function solidMask(src) {
+    const s = document.createElement('canvas');
+    s.width = src.width;
+    s.height = src.height;
+    const g = s.getContext('2d', { willReadFrequently: true });
+    g.drawImage(src, 0, 0);
+    try {
+      const im = g.getImageData(0, 0, s.width, s.height);
+      const d = im.data;
+      for (let k = 3; k < d.length; k += 4) {
+        const a = d[k];
+        d[k] = a < 90 ? 0 : a > 170 ? 255 : Math.round((a - 90) * 3.2);
+      }
+      g.putImageData(im, 0, 0);
+    } catch (e) {}
+    return s;
+  }
+  function tint(mask, col) {
+    const s = document.createElement('canvas');
+    s.width = mask.width;
+    s.height = mask.height;
+    const g = s.getContext('2d');
+    g.drawImage(mask, 0, 0);
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = col;
+    g.fillRect(0, 0, s.width, s.height);
+    return s;
+  }
+  const ROPE_PAD = 10;
+  const ROPE_WIDEN = 1.18;
+  // e = { c, W, H, y0 }（c 是 W×H 的 SC 倍）；len：繩長（世界 px）
+  A.ropeEnhance = function (e, map, r, len) {
+    if (!e || !e.c || typeof document === 'undefined') return e;
+    const SC = e.c.width / e.W;
+    const { kind, look: L, bright } = ropeLook(map);
+    const W = e.W + ROPE_PAD * 2;
+    const H = e.H;
+    const cw = Math.ceil(W * SC);
+    const ch = e.c.height;
+    // 加粗：水平放寬 18%（以中線為準）
+    const wide = document.createElement('canvas');
+    wide.width = cw;
+    wide.height = ch;
+    const wg = wide.getContext('2d');
+    const ww = e.c.width * ROPE_WIDEN;
+    wg.drawImage(e.c, (cw - ww) / 2, 0, ww, ch);
+    const mask = solidMask(wide);
+    const c = document.createElement('canvas');
+    c.width = cw;
+    c.height = ch;
+    const g = c.getContext('2d');
+    const cx = cw / 2;
+    const y0 = e.y0 * SC;
+    const yb = (e.y0 + len) * SC;
+    // 背後的光帶（亮地圖是淡淡的深色帶）
+    {
+      const hw = 15 * SC;
+      const gr = g.createLinearGradient(cx - hw, 0, cx + hw, 0);
+      const col = bright ? '40,52,96' : L.halo;
+      const a = bright ? 0.16 : L.haloA;
+      gr.addColorStop(0, 'rgba(' + col + ',0)');
+      gr.addColorStop(0.5, 'rgba(' + col + ',' + a + ')');
+      gr.addColorStop(1, 'rgba(' + col + ',0)');
+      g.fillStyle = gr;
+      g.fillRect(cx - hw, y0, hw * 2, yb - y0);
+      // 兩端淡出
+      g.globalCompositeOperation = 'destination-out';
+      const fade = (ya, yb2) => {
+        const fg = g.createLinearGradient(0, ya, 0, yb2);
+        fg.addColorStop(0, 'rgba(0,0,0,1)');
+        fg.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = fg;
+        g.fillRect(cx - hw, Math.min(ya, yb2), hw * 2, Math.abs(yb2 - ya));
+      };
+      fade(yb + 2 * SC, yb - 26 * SC);
+      g.globalCompositeOperation = 'source-over';
+    }
+    // 外圈亮邊（暗背景上看得到）→ 內圈暗描邊（亮背景上看得到）→ 原圖
+    const ring = (col, rad, n, alpha) => {
+      const t = tint(mask, col);
+      const tmp = document.createElement('canvas');
+      tmp.width = cw;
+      tmp.height = ch;
+      const tg = tmp.getContext('2d');
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * PI2;
+        tg.drawImage(t, Math.cos(a) * rad * SC, Math.sin(a) * rad * SC);
+      }
+      g.globalAlpha = alpha;
+      g.drawImage(tmp, 0, 0);
+      g.globalAlpha = 1;
+    };
+    ring('rgb(' + L.rim + ')', L.rimR || 2.6, 12, bright ? 0.5 : L.rimA);
+    ring(L.ink, 1.3, 8, bright ? 1 : 0.9);
+    g.drawImage(wide, 0, 0);
+    const out = { c, W, H, y0: e.y0, len, SC, kind, shine: tint(mask, bright ? 'rgb(255,255,255)' : 'rgb(255,252,230)') };
+    if (map && r) (map._ropeSpr || (map._ropeSpr = {}))[r[0] + ':' + r[1] + ':' + r[2]] = out;
+    return out;
+  };
+  // 以上端為軸的輕擺＋往上流的微光
+  A.blitRope = function (ctx, e, x, top, bottom, t, sway) {
+    const k = Math.sin(t * 0.9 + x * 0.013) * ((sway == null ? 2 : sway) / Math.max(40, bottom - top));
+    e._k = k;
+    const dx = x - e.W / 2;
+    const dy = top - e.y0;
+    const SC = e.SC;
+    // 以上端為軸的擺動：切成幾段、每段依高度水平偏移（不用錯切變形，貼圖走快速路徑；段與段的錯位 < 1px）
+    const N = e.H > 90 ? 3 : 1;
+    const bh = Math.ceil(e.H / N);
+    for (let j = 0; j < N; j++) {
+      const sy = j * bh;
+      const h = Math.min(bh, e.H - sy);
+      if (h <= 0) break;
+      const off = k * (sy + h * 0.5 - e.y0);
+      ctx.drawImage(e.c, 0, sy * SC, e.W * SC, h * SC, dx + off, dy + sy, e.W, h);
+    }
+    if (!G.lowFx && e.shine && e.len > 20) {
+      const ph = (t * 0.32 + x * 0.0007) % 1.5;
+      if (ph < 1) {
+        const yy = e.y0 + 4 + e.len * (1 - ph);
+        const a = Math.sin(ph * Math.PI);
+        const hh = 18;
+        const sy = Math.max(0, yy - hh / 2);
+        const sh = Math.min(e.H - sy, hh);
+        if (sh > 0) {
+          ctx.globalAlpha = 0.26 * a;
+          ctx.drawImage(e.shine, 0, sy * SC, e.W * SC, sh * SC, dx + k * (sy + sh * 0.5 - e.y0), dy + sy, e.W, sh);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+  };
+
+  // ── 固定樁與落地：依材質預先畫好的小貼圖 ──
+  const anchorCache = new Map();
+  function anchorSprite(kind, map, part, draw, w, h, oy) {
+    const key = kind + ':' + part + ':' + ((map && map._aged) || 0) + ':' + ((map && map.refinedGround) || '');
+    let s = anchorCache.get(key);
+    if (s) return s;
+    const SC = 2;
+    const c = document.createElement('canvas');
+    c.width = w * SC;
+    c.height = h * SC;
+    const g = c.getContext('2d');
+    g.scale(SC, SC);
+    g.translate(w / 2, oy);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    const L = ropeLook(map).look;
+    const run = () => draw(g, L);
+    if (map && map._aged && A.withAge) A.withAge(g, map, run);
+    else run();
+    // 同樣的雙色描邊，讓樁在任何背景上都分得出來
+    const mask = solidMask(c);
+    const o = document.createElement('canvas');
+    o.width = c.width;
+    o.height = c.height;
+    const og = o.getContext('2d');
+    const ring = (col, rad, n, alpha) => {
+      const tt = tint(mask, col);
+      og.globalAlpha = alpha;
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * PI2;
+        og.drawImage(tt, Math.cos(a) * rad * SC, Math.sin(a) * rad * SC);
+      }
+      og.globalAlpha = 1;
+    };
+    ring('rgba(' + L.rim + ',0.22)', 2.2, 10, 1);
+    ring(L.ink, 1.1, 8, 0.9);
+    og.drawImage(c, 0, 0);
+    s = { c: o, w, h, oy };
+    if (anchorCache.size > 48) anchorCache.clear();
+    anchorCache.set(key, s);
+    return s;
+  }
+  const sh = (g, pathFn, fill, lw, stroke) => {
+    g.beginPath();
+    pathFn();
+    if (fill) {
+      g.fillStyle = fill;
+      g.fill();
+    }
+    if (stroke) {
+      g.strokeStyle = stroke;
+      g.lineWidth = lw || 1;
+      g.stroke();
+    }
+  };
+  // 木樁：上窄下寬、頂端有切面；wraps：纏繞幾圈、繩色
+  function stake(g, o) {
+    const w = o.w || 7;
+    const h = o.h || 20;
+    const lean = o.lean || 0;
+    sh(g, () => {
+      g.moveTo(-w / 2 - 0.5, 1);
+      g.lineTo(-w / 2 + lean + 0.6, -h + 2);
+      g.quadraticCurveTo(lean, -h - 1.5, w / 2 + lean - 0.6, -h + 2);
+      g.lineTo(w / 2 + 0.5, 1);
+      g.closePath();
+    }, o.wood || '#8a6440');
+    // 木紋與暗面
+    g.fillStyle = o.woodDark || 'rgba(60,36,18,0.55)';
+    g.fillRect(w / 2 - 2.2, -h + 3, 1.8, h + 2);
+    g.fillStyle = o.woodHi || 'rgba(255,230,190,0.45)';
+    g.fillRect(-w / 2 + 1, -h + 3, 1.2, h - 2);
+    // 切面
+    sh(g, () => g.ellipse(lean, -h + 1.8, w / 2 - 0.4, 1.6, 0, 0, PI2), o.cut || '#c8a070');
+    if (o.cap) sh(g, () => g.ellipse(lean, -h + 0.8, w / 2 + 1, 2.2, 0, 0, PI2), o.cap);
+  }
+  function wraps(g, y0, n, col, colDark, w) {
+    for (let k = 0; k < n; k++) {
+      const y = y0 - k * 3;
+      sh(g, () => g.ellipse(0, y, (w || 5) + 0.8, 1.9, -0.12, 0, PI2), k % 2 ? colDark : col);
+    }
+  }
+  // 從樁子下緣繞到平台邊緣的一小段繩（往下接前面那段繩）
+  function tail(g, col, lw, y1) {
+    g.strokeStyle = col;
+    g.lineWidth = lw;
+    g.beginPath();
+    g.moveTo(1.5, y1);
+    g.quadraticCurveTo(3, 1, 0, 4);
+    g.stroke();
+  }
+  const ANCHOR = {
+    vine(g) {
+      stake(g, { h: 19, w: 7, lean: -1, wood: '#7a5634' });
+      wraps(g, -2, 3, '#5f9e38', '#3f7a26', 4.2);
+      // 冒出來的嫩芽
+      sh(g, () => g.ellipse(-6, -14, 4.2, 2, -0.6, 0, PI2), '#8ad458');
+      sh(g, () => g.ellipse(5, -9, 3.6, 1.8, 0.7, 0, PI2), '#7cc84a');
+      tail(g, '#5f9e38', 4, -2);
+    },
+    flowervine(g) {
+      stake(g, { h: 18, w: 7, wood: '#e8e0d0', woodDark: 'rgba(120,110,100,0.5)', woodHi: 'rgba(255,255,255,0.6)', cut: '#f4efe4', cap: '#d8b25a' });
+      wraps(g, -2, 3, '#5a9a42', '#3e7630', 4.2);
+      for (let k = 0; k < 5; k++) sh(g, () => g.arc(6 + Math.cos(k * 1.2566) * 2.4, -10 + Math.sin(k * 1.2566) * 2.4, 1.9, 0, PI2), '#ffb0cc');
+      sh(g, () => g.arc(6, -10, 1.2, 0, PI2), '#ffc24a');
+      tail(g, '#5a9a42', 4, -2);
+    },
+    root(g) {
+      // 從地裡拱起來的樹根結，頂著一顆發光的根瘤
+      sh(g, () => {
+        g.moveTo(-9, 2);
+        g.quadraticCurveTo(-8, -10, -1, -15);
+        g.quadraticCurveTo(6, -12, 9, 2);
+        g.closePath();
+      }, '#5a4030');
+      g.strokeStyle = 'rgba(30,20,14,0.6)';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(-5, 0);
+      g.quadraticCurveTo(-4, -8, 0, -12);
+      g.moveTo(3, 0);
+      g.quadraticCurveTo(4, -6, 2, -11);
+      g.stroke();
+      const gg = g.createRadialGradient(3, -15, 0, 3, -15, 9);
+      gg.addColorStop(0, 'rgba(160,255,230,0.75)');
+      gg.addColorStop(1, 'rgba(160,255,230,0)');
+      g.fillStyle = gg;
+      g.fillRect(-6, -24, 18, 18);
+      sh(g, () => g.arc(3, -15, 3, 0, PI2), '#9ff4dc');
+      sh(g, () => g.arc(2.2, -15.8, 1.1, 0, PI2), '#ffffff');
+      tail(g, '#6a4c36', 4.4, -4);
+    },
+    hemp(g) {
+      // 矮胖的繫船樁
+      stake(g, { h: 17, w: 10, wood: '#6e5438', cut: '#a88a64', cap: '#3e3a36' });
+      g.fillStyle = '#3e3a36';
+      g.fillRect(-5.5, -11, 11, 2.2);
+      wraps(g, -2, 3, '#b08a58', '#7a5e3a', 5.6);
+      tail(g, '#a07e50', 4.4, -2);
+    },
+    dryrope(g) {
+      stake(g, { h: 19, w: 7, lean: 1, wood: '#9a7248', cut: '#d8b484' });
+      wraps(g, -2, 3, '#c8a878', '#9a7a4e', 4.4);
+      // 紅布條
+      sh(g, () => {
+        g.moveTo(3, -9);
+        g.lineTo(10, -4);
+        g.lineTo(8, -2.5);
+        g.lineTo(3, -6.5);
+        g.closePath();
+      }, '#b8442e');
+      g.fillStyle = '#a8402e';
+      g.fillRect(-4, -10, 8, 2.6);
+      tail(g, '#b8986a', 4.2, -2);
+    },
+    chain(g) {
+      // 打進岩石的鐵樁＋大鐵環
+      sh(g, () => {
+        g.moveTo(-3, 2);
+        g.lineTo(-2.4, -12);
+        g.lineTo(2.4, -12);
+        g.lineTo(3, 2);
+        g.closePath();
+      }, '#4a4450');
+      sh(g, () => g.ellipse(0, -13, 4.6, 2.2, 0, 0, PI2), '#6a6270');
+      g.strokeStyle = '#2a262e';
+      g.lineWidth = 3.4;
+      g.beginPath();
+      g.ellipse(0, -5, 6, 5, 0, 0, PI2);
+      g.stroke();
+      g.strokeStyle = '#8a8494';
+      g.lineWidth = 2;
+      g.stroke();
+      g.strokeStyle = 'rgba(255,170,110,0.7)';
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.arc(0, -5, 5.6, Math.PI * 1.1, Math.PI * 1.7);
+      g.stroke();
+      g.strokeStyle = '#57525c';
+      g.lineWidth = 2.4;
+      g.beginPath();
+      g.ellipse(0, 1.5, 2.6, 4, 0, 0, PI2);
+      g.stroke();
+    },
+    icechain(g) {
+      // 鐵眼螺栓＋底板，頂上一層霜
+      sh(g, () => g.roundRect ? g.roundRect(-7, -3, 14, 4, 1.5) : g.rect(-7, -3, 14, 4), '#4a5664');
+      sh(g, () => g.rect(-2, -9, 4, 7), '#5a6674');
+      g.strokeStyle = '#26303c';
+      g.lineWidth = 3.4;
+      g.beginPath();
+      g.ellipse(0, -13, 5.2, 4.6, 0, 0, PI2);
+      g.stroke();
+      g.strokeStyle = '#a8b8c8';
+      g.lineWidth = 2;
+      g.stroke();
+      sh(g, () => g.ellipse(-1, -17.2, 5, 1.8, 0, 0, PI2), 'rgba(240,250,255,0.95)');
+      sh(g, () => g.ellipse(0, -3.2, 7.4, 1.4, 0, 0, PI2), 'rgba(240,250,255,0.9)');
+      g.strokeStyle = '#6a7686';
+      g.lineWidth = 2.2;
+      g.beginPath();
+      g.ellipse(0, 2, 2.4, 3.6, 0, 0, PI2);
+      g.stroke();
+    },
+    bellrope(g) {
+      // 朱漆小柱＋金頂，繩子繞兩圈，掛一顆小鈴
+      stake(g, { h: 20, w: 7, wood: '#b8342a', woodDark: 'rgba(80,10,10,0.5)', woodHi: 'rgba(255,200,180,0.5)', cut: '#d8b25a', cap: '#e8c460' });
+      wraps(g, -3, 3, '#e04a3a', '#a82e24', 4.4);
+      g.strokeStyle = '#8a2a20';
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.moveTo(4, -9);
+      g.lineTo(7, -6);
+      g.stroke();
+      sh(g, () => {
+        g.moveTo(4.5, -6);
+        g.quadraticCurveTo(7, -9, 9.5, -6);
+        g.lineTo(10, -3);
+        g.lineTo(4, -3);
+        g.closePath();
+      }, '#f0c850');
+      sh(g, () => g.arc(7, -2.6, 1, 0, PI2), '#8a6420');
+      tail(g, '#d8443a', 4, -3);
+    },
+    thread(g) {
+      // 金色的釘環＋一點星光
+      sh(g, () => {
+        g.moveTo(-2.4, 2);
+        g.lineTo(-1.8, -9);
+        g.lineTo(1.8, -9);
+        g.lineTo(2.4, 2);
+        g.closePath();
+      }, '#c8962e');
+      g.strokeStyle = '#8a6418';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(0, -13, 4.4, 0, PI2);
+      g.stroke();
+      g.strokeStyle = '#ffd86a';
+      g.lineWidth = 1.8;
+      g.stroke();
+      const gg = g.createRadialGradient(0, -13, 0, 0, -13, 10);
+      gg.addColorStop(0, 'rgba(255,240,170,0.6)');
+      gg.addColorStop(1, 'rgba(255,240,170,0)');
+      g.fillStyle = gg;
+      g.fillRect(-10, -23, 20, 20);
+      g.fillStyle = '#fffbe0';
+      g.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * PI2;
+        const rr = k % 2 ? 1.1 : 3.4;
+        k ? g.lineTo(Math.cos(a) * rr, -13 + Math.sin(a) * rr) : g.moveTo(Math.cos(a) * rr, -13 + Math.sin(a) * rr);
+      }
+      g.fill();
+    },
+  };
+  // 下端落地：盤起來的繩尾／堆著的鏈節／扎進土裡的根鬚
+  const FOOT = {
+    vine(g) {
+      g.strokeStyle = '#4a7e2e';
+      g.lineWidth = 2.4;
+      g.beginPath();
+      g.moveTo(0, -8);
+      g.quadraticCurveTo(-1, -2, -7, 0.5);
+      g.moveTo(0, -8);
+      g.quadraticCurveTo(2, -2, 8, 0.5);
+      g.moveTo(0, -8);
+      g.lineTo(0.5, 0.5);
+      g.stroke();
+      sh(g, () => g.ellipse(-8, -3, 3.4, 1.6, -0.5, 0, PI2), '#7cc84a');
+      sh(g, () => g.ellipse(7, -4, 3, 1.5, 0.6, 0, PI2), '#8ad458');
+    },
+    flowervine(g) {
+      FOOT.vine(g);
+      sh(g, () => g.arc(-4, -1.5, 1.8, 0, PI2), '#ffb0cc');
+    },
+    root(g) {
+      g.strokeStyle = '#5a4030';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(0, -9);
+      g.quadraticCurveTo(-2, -2, -10, 1);
+      g.moveTo(0, -9);
+      g.quadraticCurveTo(3, -2, 10, 1);
+      g.stroke();
+      sh(g, () => g.arc(-9, -1, 1.8, 0, PI2), '#9ff4dc');
+    },
+    hemp(g, L, c) {
+      coil(g, c || ['#a07e50', '#7a5e3a']);
+    },
+    dryrope(g) {
+      coil(g, ['#c8a878', '#9a7a4e']);
+    },
+    bellrope(g) {
+      coil(g, ['#e04a3a', '#a82e24']);
+      // 流蘇
+      g.strokeStyle = '#f0c850';
+      g.lineWidth = 1;
+      g.beginPath();
+      for (let k = -2; k <= 2; k++) {
+        g.moveTo(9, -3);
+        g.lineTo(9 + k * 1.2, 0.5);
+      }
+      g.stroke();
+    },
+    chain(g) {
+      links(g, '#57525c', '#8a8494');
+      sh(g, () => g.arc(7, -3.4, 3.4, 0, PI2), '#3a363e');
+      sh(g, () => g.arc(6, -4.4, 1, 0, PI2), 'rgba(255,170,110,0.8)');
+    },
+    icechain(g) {
+      links(g, '#6a7686', '#a8b8c8');
+      sh(g, () => g.ellipse(0, 0, 9, 1.4, 0, 0, PI2), 'rgba(240,250,255,0.85)');
+    },
+    thread(g) {
+      // 金色的鉛錘
+      g.strokeStyle = '#ffd86a';
+      g.lineWidth = 1.4;
+      g.beginPath();
+      g.moveTo(0, -12);
+      g.lineTo(0, -8);
+      g.stroke();
+      sh(g, () => {
+        g.moveTo(0, 0);
+        g.lineTo(-3.4, -5);
+        g.quadraticCurveTo(0, -10, 3.4, -5);
+        g.closePath();
+      }, '#e0aa3a');
+      sh(g, () => g.ellipse(-1, -6, 0.9, 2, 0, 0, PI2), 'rgba(255,250,210,0.9)');
+      const gg = g.createRadialGradient(0, -4, 0, 0, -4, 9);
+      gg.addColorStop(0, 'rgba(255,230,150,0.4)');
+      gg.addColorStop(1, 'rgba(255,230,150,0)');
+      g.fillStyle = gg;
+      g.fillRect(-9, -13, 18, 18);
+    },
+  };
+  function coil(g, c) {
+    // 地上兩圈盤繩，繩尾從上面垂進來
+    sh(g, () => g.ellipse(0, -2.2, 10, 3, 0, 0, PI2), null, 3.2, c[1]);
+    sh(g, () => g.ellipse(-0.5, -4, 7.4, 2.4, 0, 0, PI2), null, 3.2, c[0]);
+    g.strokeStyle = c[0];
+    g.lineWidth = 3.6;
+    g.beginPath();
+    g.moveTo(0, -10);
+    g.quadraticCurveTo(0.5, -6, 4, -4.5);
+    g.stroke();
+  }
+  function links(g, dark, lite) {
+    for (const [x, y, w, h, a] of [[-6, -2, 4.2, 2.4, 0], [1, -3, 2.4, 4, 0.3], [0, -8, 2.6, 4, 0]]) {
+      g.strokeStyle = dark;
+      g.lineWidth = 2.6;
+      g.beginPath();
+      g.ellipse(x, y, w, h, a, 0, PI2);
+      g.stroke();
+      g.strokeStyle = lite;
+      g.lineWidth = 1;
+      g.stroke();
+    }
+  }
+  // 上層平台正面（繩子要翻過去的那一段）有多高
+  function faceDepth(map, pi, x) {
+    for (const k of ['_gnd', '_g23', '_g45']) {
+      const D = map[k] && map[k][pi];
+      if (!D) continue;
+      if (typeof D.depth === 'function') {
+        const d = D.depth(x);
+        if (d > 0 && d < 200) return d;
+      }
+      if (D.kind === 'deck') return 20;
+    }
+    return 26;
+  }
+  A.ropeFaceDepth = faceDepth;
+  const ANCHOR_KIND = { hemp: 'hemp', dryrope: 'dryrope', chain: 'chain', icechain: 'icechain', bellrope: 'bellrope', thread: 'thread', flowervine: 'flowervine', root: 'root', vine: 'vine' };
+  A.drawRopeFronts = function (ctx, map, t, cam) {
+    if (!map || !map.ropes || !map.ropes.length) return;
+    const kind = ANCHOR_KIND[ropeKind(map)] || 'vine';
+    const x0 = cam ? cam.x - 80 : -Infinity;
+    const x1 = cam ? cam.x + G.W + 80 : Infinity;
+    const y0 = cam ? cam.y - 80 : -Infinity;
+    const y1 = cam ? cam.y + G.H + 80 : Infinity;
+    if (!map._ropeFront) map._ropeFront = {};
+    const top = anchorSprite(kind, map, 'top', ANCHOR[kind], 32, 34, 28);
+    const foot = anchorSprite(kind, map, 'foot', FOOT[kind], 32, 22, 18);
+    for (const r of map.ropes) {
+      const x = r[0];
+      if (x < x0 || x > x1 || r[2] < y0 || r[1] > y1) continue;
+      const key = x + ':' + r[1] + ':' + r[2];
+      let info = map._ropeFront[key];
+      if (!info) {
+        const pi = G.physics.platformAt(map, x, r[1]);
+        info = map._ropeFront[key] = { d: pi >= 0 ? faceDepth(map, pi, x) : 0 };
+      }
+      const e = map._ropeSpr && map._ropeSpr[key];
+      if (r[3] === 'ladder') continue;
+      // 繩子翻過上層平台正面的那一段（切自後面那條繩子的同一張貼圖，接得起來）＋表面上的固定樁：
+      // 合成一張小貼圖，每格只貼一次（上端是擺動的軸心，不用跟著錯切）
+      if (info.e !== e || info.top !== top || !info.c) {
+        info.e = e;
+        info.top = top;
+        info.c = null;
+        if (top) {
+          const SC = 2;
+          const hh = e && info.d > 0 ? Math.min(e.H - e.y0, info.d + 8) : 0;
+          const w = Math.max(top.w, e ? e.W : 0);
+          const h = Math.max(top.h, top.oy + hh + 2);
+          const c = document.createElement('canvas');
+          c.width = Math.ceil(w * SC);
+          c.height = Math.ceil(h * SC);
+          const g = c.getContext('2d');
+          if (hh > 0) g.drawImage(e.c, 0, (e.y0 - 1) * e.SC, e.W * e.SC, (hh + 1) * e.SC, ((w - e.W) / 2) * SC, (top.oy - 1) * SC, e.W * SC, (hh + 1) * SC);
+          g.drawImage(top.c, ((w - top.w) / 2) * SC, 0, top.w * SC, top.h * SC);
+          info.c = { c, w, h, oy: top.oy };
+        }
+      }
+      if (info.c) ctx.drawImage(info.c.c, x - info.c.w / 2, r[1] - info.c.oy, info.c.w, info.c.h);
+      if (foot) ctx.drawImage(foot.c, x - foot.w / 2, r[2] - foot.oy + 1, foot.w, foot.h);
+    }
+  };
+
   // 可以爬的藤蔓／梯子：粗一點、亮一點、有呼吸光；教學時靠近會跳出「↑」
   A.drawRope = function (ctx, r, t, near) {
     const x = r[0];
+    // 畫面外的繩子不畫（平台前面那一段也一樣會略過）
+    const cam = G.cam;
+    if (cam && (x < cam.x - 80 || x > cam.x + G.W + 80 || r[2] < cam.y - 80 || r[1] > cam.y + G.H + 80)) return;
     const top = r[1] - 8;
-    const bottom = r[2] - 34;
+    // 下端垂到下層地面上方一點點（落地的盤繩由 drawRopeFronts 畫）；教學提示的位置維持原本的高度
+    const bottom = r[2] - 12;
+    const hintBottom = r[2] - 34;
     const pulse = 0.5 + Math.sin(t * 2.4) * 0.5;
-    // 呼吸光
-    const g = ctx.createLinearGradient(x - 30, 0, x + 30, 0);
-    const ga = (near ? 0.55 : 0.3 + pulse * 0.2).toFixed(3);
-    g.addColorStop(0, 'rgba(255,248,170,0)');
-    g.addColorStop(0.5, 'rgba(255,248,170,' + ga + ')');
-    g.addColorStop(1, 'rgba(255,248,170,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x - 30, top - 6, 60, bottom - top + 26);
+    const rm0 = G.world && G.world.map;
+    const baked = rm0 && rm0.refinedGround && A.ROPE_ART && A.ROPE_ART[rm0.refinedGround] && r[3] !== 'ladder';
+    // 呼吸光（精修地圖的繩子已經自帶光帶：只在靠近時補一層，平常很淡）
+    if (!baked || near) {
+      const g = ctx.createLinearGradient(x - 30, 0, x + 30, 0);
+      const ga = (near ? (baked ? 0.32 : 0.55) : 0.3 + pulse * 0.2).toFixed(3);
+      g.addColorStop(0, 'rgba(255,248,170,0)');
+      g.addColorStop(0.5, 'rgba(255,248,170,' + ga + ')');
+      g.addColorStop(1, 'rgba(255,248,170,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 30, top - 6, 60, bottom - top + 14);
+    }
     // 往上飄的小光點，一眼就知道「這條可以爬」
     for (let k = 0; k < 4; k++) {
       const ph = (t * 0.5 + k / 4) % 1;
@@ -3391,7 +3993,7 @@
     // 底部提示：只在操作教學的「爬藤蔓」這一步出現
     const tut = G.tutorial && G.tutorial.current();
     if (!tut || tut.id !== 'climb') return;
-    const by = bottom + 8 - Math.abs(Math.sin(t * 4)) * 6;
+    const by = hintBottom + 8 - Math.abs(Math.sin(t * 4)) * 6;
     if (near) {
       const label = G.input.label('up');
       ctx.font = 'bold 16px ' + A.FONT;

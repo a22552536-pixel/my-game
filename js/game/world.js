@@ -566,6 +566,8 @@
         G.art.drawRope(ctx, r, t, near);
       });
       G.art.drawPlatforms(ctx, map, cam);
+      // 繩子翻過上層平台正面的那一段、平台表面上的固定樁、下端落地的盤繩（要蓋在平台前面）
+      if (G.art.drawRopeFronts) G.art.drawRopeFronts(ctx, map, t, cam);
       G.art.drawProps(ctx, map, cam, t);
       (map.portals || []).forEach((p) => {
         const dest = G.data.maps[p.to];

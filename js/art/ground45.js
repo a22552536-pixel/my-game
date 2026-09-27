@@ -2721,21 +2721,17 @@
     },
   };
   function ropeArt(ctx, r, x, top0, bottom, t, map) {
-    const top = r[1] + 6;
+    // 上端接到上層平台的表面（翻過平台正面的那一段與表面上的固定樁由 A.drawRopeFronts 在平台之後畫）
+    const top = r[1];
     const key = r[0] + ':' + r[1] + ':' + r[2] + ':' + (map._aged || 0) + ':' + map.refinedGround + ':' + map._rope45;
     let e = ropeCache.get(key);
     if (!e) {
       if (ropeCache.size > 64) ropeCache.clear();
-      e = makeRope(map, r, x, top, bottom);
+      e = A.ropeEnhance(makeRope(map, r, x, top, bottom), map, r, bottom - top);
       ropeCache.set(key, e);
     }
     // 以上端為軸輕輕擺動（鏈子重、擺得少）
-    const sway = map._rope45 === 'icechain' ? 1 : 2;
-    const k = Math.sin(t * 0.9 + x * 0.013) * (sway / Math.max(40, bottom - top));
-    ctx.save();
-    ctx.transform(1, 0, k, 1, -k * top, 0);
-    ctx.drawImage(e.c, x - e.W / 2, top - e.y0, e.W, e.H);
-    ctx.restore();
+    A.blitRope(ctx, e, x, top, bottom, t, map._rope45 === 'icechain' ? 1 : 2);
   }
   for (const k of ['snow', 'shrine', 'ice', 'frost', 'temple', 'garden', 'star', 'throne']) A.ROPE_ART[k] = ropeArt;
 
