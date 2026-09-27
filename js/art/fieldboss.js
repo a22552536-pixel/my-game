@@ -3954,26 +3954,27 @@
     }
     ctx.restore();
 
-    // ── 頭：戴著牛角戰盔的炎魔（四分之三側，朝右）──
-    // 盔下露出的下顎與獠牙、T 字面甲開口裡的火眼；雙角從頭盔兩側長出，盔頂噴出火冠。
+    // ── 頭：只有一頂牛角戰盔（四分之三側，朝右）──
+    // 看不到臉：T 字面甲開口裡、盔緣下都是純黑的虛空（暴走時開口深處只有一點點暗紅）。
+    // 雙角從頭盔兩側往外橫掃、到尖端才往上勾，角展比肩膀寬得多；盔頂噴出火冠。
     ctx.fillStyle = rgba('#000000', 0.35);
     ctx.beginPath();
     ctx.ellipse(36, -318, 74, 20, 0, 0, TAU);
     ctx.fill();
     A.shape(ctx, (c) => taper(c, qb(12, -324, 22, -350, 30, -366), (q) => 84 - q * 10, 6), rock, P.rockS, { cel: [5, 6], lw: 3 });
     ctx.save();
-    ctx.translate(30, -372);
+    ctx.translate(30, -364);
     ctx.rotate(headTilt);
-    ctx.scale(1.3, 1.3);
+    ctx.scale(1.04, 1.04);
     const hornHeat = dead ? 0 : rage ? 1 : meteor ? 0.6 : 0.3;
     const HI = rage ? '#4a3a40' : '#433e4a'; // 盔鐵
     const HIS = rage ? '#281a1e' : '#221e28';
     const HIL = '#7a7488';
     // 雙角（從盔側的角座長出，往外掃再往上勾）
-    const lHorn = cb(-48, -36, -96, -42, -138, -62, -130, -104);
-    const rHorn = cb(60, -38, 104, -46, 140, -66, 130, -108);
-    horn(ctx, lHorn, 30, U.mix(BR.horn, '#6a5040', 0.2), U.mix(BR.hornS, '#3a2a20', 0.2), BR.hornTip, hornHeat * 0.8, '#ff5a1e');
-    horn(ctx, rHorn, 32, BR.horn, BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
+    const lHorn = cb(-50, -34, -120, -30, -196, -40, -204, -104);
+    const rHorn = cb(62, -36, 132, -32, 208, -42, 214, -108);
+    horn(ctx, lHorn, 38, U.mix(BR.horn, '#6a5040', 0.2), U.mix(BR.hornS, '#3a2a20', 0.2), BR.hornTip, hornHeat * 0.8, '#ff5a1e');
+    horn(ctx, rHorn, 40, BR.horn, BR.hornS, BR.hornTip, hornHeat, '#ff5a1e');
     // 盔頂噴出的火冠（後層）
     if (!dead) {
       const fk = rage ? 1.4 : 1;
@@ -3984,67 +3985,15 @@
         flame(ctx, x, -58 - k * 12, (9 + k * 5) * fk, (26 + k * 34) * fk, t, i + 92, P.fo, P.fi, 2);
       }
     }
-    // 嘴裡（熔岩喉嚨）＋下顎
-    const ja = mouth * 0.42;
-    const jr = (x, y) => [-18 + x * Math.cos(ja) - y * Math.sin(ja), 8 + x * Math.sin(ja) + y * Math.cos(ja)];
-    const j1 = jr(74, 4);
-    const j2 = jr(2, 6);
+    // 盔緣下的黑暗（看不到下巴，只有一片虛空）
     A.shape(ctx, (c) => {
-      c.moveTo(-22, 6);
-      c.lineTo(60, 6);
-      c.lineTo(j1[0], j1[1]);
-      c.lineTo(j2[0], j2[1]);
+      c.moveTo(-40, 4);
+      c.lineTo(56, 4);
+      c.quadraticCurveTo(52, 26, 30, 30);
+      c.lineTo(-14, 30);
+      c.quadraticCurveTo(-36, 26, -40, 4);
       c.closePath();
-    }, BR.mouth, null, { lw: 2 });
-    if (mouth > 0.25 && !dead) {
-      glow(ctx, 20, 18, 18 + 30 * mouth, P.lava, 0.5 + 0.4 * mouth + (meteor ? 0.2 : 0));
-      ctx.fillStyle = A.c(P.hot);
-      ctx.beginPath();
-      ctx.ellipse(20, 16 + mouth * 8, 14 * mouth + 4, 3 + mouth * 5, 0, 0, TAU);
-      ctx.fill();
-    }
-    const jaw = (c) => {
-      c.moveTo(-4, -4);
-      c.lineTo(78, -4);
-      c.quadraticCurveTo(84, 14, 70, 28);
-      c.quadraticCurveTo(36, 42, 6, 30);
-      c.quadraticCurveTo(-6, 18, -4, -4);
-      c.closePath();
-    };
-    ctx.save();
-    ctx.translate(-18, 8);
-    ctx.rotate(ja);
-    // 下排牙
-    ctx.fillStyle = A.c(BR.tooth);
-    ctx.strokeStyle = A.outline();
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    [[26, 7], [38, 8], [50, 7]].forEach(([x, h]) => {
-      ctx.moveTo(x - 4, 0);
-      ctx.lineTo(x, -h);
-      ctx.lineTo(x + 4, 0);
-      ctx.closePath();
-    });
-    ctx.fill();
-    ctx.stroke();
-    A.shape(ctx, jaw, U.mix(rock, '#8a747c', 0.22), P.rockS, { cel: [3, 5], lw: 3 });
-    brSheen(ctx, 30, 6, 30, 0.05, 0.4);
-    brVein(ctx, (c) => {
-      c.moveTo(8, 18);
-      c.lineTo(28, 22);
-      c.lineTo(46, 18);
-      c.lineTo(66, 20);
-    }, P.lava, hp(8) * 0.9, 1.8, t);
-    // 下巴的尖刺
-    A.shape(ctx, (c) => {
-      c.moveTo(14, 30);
-      c.lineTo(12, 46);
-      c.lineTo(26, 34);
-      c.moveTo(40, 34);
-      c.lineTo(42, 50);
-      c.lineTo(52, 32);
-    }, P.rockL, null, { lw: 2 });
-    ctx.restore();
+    }, '#000000', null, { lw: 2.4 });
     // 頭盔：圓頂＋盔緣
     const helm = (c) => {
       c.moveTo(-50, 8);
@@ -4100,50 +4049,15 @@
       c.lineTo(-34, -23);
       c.closePath();
     };
-    A.shape(ctx, slot, '#0c0406', null, { lw: 2.6 });
-    if (!dead) {
+    A.shape(ctx, slot, '#000000', null, { lw: 2.6 });
+    if (rage && !dead) {
+      // 暴走：開口最深處一點點暗紅的霧（沒有眼睛）
       ctx.save();
       ctx.beginPath();
       slot(ctx);
       ctx.clip();
-      glow(ctx, 8, -8, 26, P.lava, 0.35 + (rage ? 0.25 : 0) + mouth * 0.25);
+      glow(ctx, 8, -18, 16, '#6a0a0a', 0.3 + Math.sin(t * 3) * 0.08);
       ctx.restore();
-      // 眼：眼縫裡兩團火光（暴走時白熱）
-      const eg = 0.9 + Math.sin(t * 5) * 0.12 + (rage ? 0.45 : 0);
-      const eh = squint ? 1.8 : 4.6;
-      ctx.save();
-      ctx.translate(-14, -27);
-      ctx.scale(-1, 1);
-      solidEye(ctx, 0, 0, 12, eh, P.eye, eg * 1.1, false, 0.22);
-      ctx.restore();
-      solidEye(ctx, 31, -28, 13, eh, P.eye, eg * 1.2, false, 0.28);
-      if (rage || whipWind || meteor) {
-        // 眼縫裡往外噴的火光
-        const k = rage ? 1 : 0.6;
-        ctx.save();
-        ctx.globalAlpha *= 0.8 * k;
-        ctx.fillStyle = A.c(P.hot);
-        ctx.beginPath();
-        ctx.moveTo(-30, -30);
-        ctx.quadraticCurveTo(-48, -40 - Math.sin(t * 12) * 3, -66, -48);
-        ctx.quadraticCurveTo(-48, -30, -30, -24);
-        ctx.closePath();
-        ctx.moveTo(46, -32);
-        ctx.quadraticCurveTo(62, -44 - Math.sin(t * 12 + 1) * 3, 80, -52);
-        ctx.quadraticCurveTo(64, -32, 46, -26);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-    } else {
-      ctx.strokeStyle = rgba('#3a1a10', 1);
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-24, -28);
-      ctx.lineTo(-6, -24);
-      ctx.moveTo(24, -24);
-      ctx.lineTo(42, -30);
-      ctx.stroke();
     }
     // 眉帶：跟著眼縫往中間壓的 V、金邊、一排鉚釘
     const band = (c) => {
@@ -4191,38 +4105,8 @@
     ctx.moveTo(50, -18);
     ctx.lineTo(64, -21);
     ctx.stroke();
-    // 上排尖牙（從盔緣下伸出來）
-    A.shape(ctx, (c) => {
-      c.moveTo(-18, 8);
-      c.quadraticCurveTo(-18, 24, -24, 32);
-      c.quadraticCurveTo(-26, 20, -27, 8);
-      c.closePath();
-      c.moveTo(48, 8);
-      c.quadraticCurveTo(48, 24, 42, 32);
-      c.quadraticCurveTo(40, 20, 39, 8);
-      c.closePath();
-      c.moveTo(6, 8);
-      c.lineTo(3, 18);
-      c.lineTo(0, 8);
-      c.closePath();
-      c.moveTo(22, 8);
-      c.lineTo(19, 18);
-      c.lineTo(16, 8);
-      c.closePath();
-    }, BR.tooth, BR.toothS, { lw: 2, shadeY: 20 });
-    // 下顎往上翹的獠牙（在頰甲外面）
-    {
-      const tk = (x) => {
-        const b = jr(x, 2);
-        const tp = jr(x - 4, -26);
-        const md = jr(x + 8, -12);
-        A.shape(ctx, (c) => taper(c, qb(b[0], b[1], md[0], md[1], tp[0], tp[1]), (q) => 12 * (1 - q) + 1, 8), BR.tooth, BR.toothS, { lw: 2.2, shadeY: tp[1] + 10 });
-      };
-      tk(2);
-      tk(76);
-    }
     // 角座：鉚在盔側的鐵環＋金角環
-    [[lHorn, 30], [rHorn, 32]].forEach(([fn, w0]) => {
+    [[lHorn, 38], [rHorn, 40]].forEach(([fn, w0]) => {
       const q = 0.14;
       const w = w0 * (1 - q * 0.92) * 0.56;
       const a = along(fn, q, w);
@@ -4232,10 +4116,10 @@
       ctx.moveTo(a[0], a[1]);
       ctx.lineTo(b[0], b[1]);
       ctx.strokeStyle = A.outline();
-      ctx.lineWidth = 9;
+      ctx.lineWidth = 10;
       ctx.stroke();
       ctx.strokeStyle = A.c(BR.gold);
-      ctx.lineWidth = 5.4;
+      ctx.lineWidth = 6.4;
       ctx.stroke();
       ctx.strokeStyle = rgba('#ffffff', 0.5);
       ctx.lineWidth = 1.6;
@@ -4243,7 +4127,7 @@
     });
     // 角上燒紅的裂紋（暴走、流星時）
     if (hornHeat > 0.5) {
-      [[lHorn, 30, 0.7], [rHorn, 32, 1]].forEach(([fn, w0, k]) => {
+      [[lHorn, 38, 0.7], [rHorn, 40, 1]].forEach(([fn, w0, k]) => {
         brVein(ctx, (c) => {
           for (let i = 0; i <= 10; i++) {
             const p = along(fn, 0.3 + i * 0.05, (i % 2 ? 1 : -1) * w0 * 0.08);
