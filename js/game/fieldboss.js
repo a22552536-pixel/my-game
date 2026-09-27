@@ -555,6 +555,9 @@
             G.fx.burst(h.x, h.gy - 10, ['#bfe9ff', '#7cc4ee', '#ffffff'], 22, 340, { angle: -Math.PI / 2, spread: 1.4 });
             hitBox(m, { x: h.x - 110, y: h.gy - 150, w: 220, h: 152 }, 1.4, h.x);
             m.fx.slam = 1;
+            // 美術用：剛砸下的那隻手臂停在砸下的姿勢、0.45 秒內收回（暴走時下一隻手同時在舉）
+            m.fx.hitArm = h.arm;
+            m.fx.hitT = 0.45;
           }
           if (active) {
             m.fx.arm = active.arm;
@@ -575,7 +578,8 @@
       ok: (m, P) => Math.abs(P.x - m.x) < 900,
       run(m, P) {
         return beamMove(m, P, {
-          eye: () => ({ x: m.x + m.dir * m.halfW * 0.15, y: topY(m) + m.h * m.scale * 0.28 }),
+          // 額頭的藍魔石：js/art/fieldboss.js fb_zakum 的 (0, ZK_HY − 34·ZK_HS) = (0, −272) × (h / 320) → 離腳底 0.85·h
+          eye: () => ({ x: m.x, y: topY(m) + m.h * m.scale * 0.15 }),
           len: 1000, w: 56, k: 1.45, color: '#9ae4ff', flag: 'beam', times: m.fx.rage ? 2 : 1,
         });
       },
@@ -820,10 +824,11 @@
     },
     fbZakum: {
       init(m) {
-        Object.assign(m.fx, { arm: -1, slam: 0, beam: 0, beamFire: false, rage: false });
+        Object.assign(m.fx, { arm: -1, slam: 0, beam: 0, beamFire: false, rage: false, hitArm: -1, hitT: 0 });
       },
       update(m, dt, P) {
         // 半埋在地裡：不移動，只轉向
+        if (m.fx.hitT > 0) m.fx.hitT = Math.max(0, m.fx.hitT - dt);
         brain(m, dt, P, zakumMoves);
         m.vx = 0;
         if (!m.fbAct && P.alive()) m.dir = U.sign(P.x - m.x) || m.dir;

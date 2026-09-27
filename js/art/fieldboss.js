@@ -4544,11 +4544,15 @@
   }
 
   // ═════════════════════════ 千手冰像 fb_zakum（260×300） ═════════════════════════
-  // 殘暴炎魔風的上古冰石神像：半埋在雪堆裡的巨大石雕神像。刺冠頭飾＋高聳的雕刻石臉（倒 V 眉骨、深眼窩裡的冰藍光、
-  // 眼下的淚紋符文、咬緊的石牙與冰獠牙、金耳璫）、額頭金框裡嵌著藍色魔石；厚重石肩甲、胸口的日輪浮雕、金項鍊與結冰的垂布；
-  // 六隻有金臂環與符文護腕的巨大石臂，末端是真正的手（張開的掌、握起的拳），指尖是冰爪。
-  // 暴走：石頭轉為深藍、背後展開一圈冰晶光輪（旋轉的符文環）、全身符文與裂紋發亮、眼睛與魔石轉為白紫。
+  // 上古冰石神像（帶一點百式觀音「背後一圈千手」的感覺）：半埋在雪堆裡的巨大石雕神像。
+  // 小一號的刺冠石臉（倒 V 眉骨、深眼窩、淚紋符文、金耳璫、額頭金框裡的藍魔石）；平常半闔著眼、閉著嘴，暴走時睜眼露牙。
+  // 層層疊起的身軀：兩層石肩甲、金邊胸甲＋金項鍊、腹部的日輪浮雕與橫紋帶、腰帶下一圈石裙甲與結冰的垂布。
+  // 八隻細長的石臂：正面一對合掌；背後左右各三隻排成一圈手的光背（上：施無畏印、中：說法印、下：與願印），
+  // 每隻都有肩球＋金環、臂釧、肘球＋金環、兩圈金手鐲，手是細長微翹的佛像手指；待機時依序擺動。
+  // 出招：fx.arm 那隻手舉起、掌心聚光 → 平掌砸下（殘影弧光）；光束從額頭的魔石射出。
+  // 暴走：石頭轉為深藍、背後的冰晶光輪、全身符文與裂紋發亮、眼睛與魔石轉為白紫、雙眼怒睜、冰獠牙。
   // 手臂索引：js/game/fieldboss.js 以世界座標分邊（0～2 = 世界左側、3～5 = 世界右側），各自是上／中／下。
+  // 光束起點＝額頭魔石：頭在 (0, ZK_HY) 縮放 ZK_HS，魔石在頭座標 (0, −34) → 設計座標 y = ZK_HY − 34·ZK_HS。
   const ZK = {
     stone: '#8492a8', stoneS: '#5c687e', stoneD: '#3c465a', stoneL: '#a6b3c6', stoneLS: '#7a889e',
     stoneR: '#566286', stoneRS: '#394366', stoneRD: '#232a46', stoneRL: '#7684aa', stoneRLS: '#4e5a80',
@@ -4593,98 +4597,170 @@
       c.closePath();
     }, col, colS, { lw: 2.6, shadeY: (a1[1] + b1[1]) / 2 + 2 });
   }
-  // 石手（原點在手腕、手指朝 +x、拇指在 -y 側）。grip 0 = 張開的掌，1 = 握拳
-  function zkHand(ctx, grip, col, colS, heat, gcol) {
-    const g = clamp(grip, 0, 1);
-    if (g >= 0.6) {
-      // 拳頭：方正的掌塊＋四個指節＋包住的拇指＋冰刺指虎
-      for (let i = 0; i < 4; i++) {
-        const y = -12 + i * 8;
-        A.shape(ctx, (c) => {
-          c.moveTo(34, y - 3.5);
-          c.lineTo(46, y);
-          c.lineTo(34, y + 3.5);
-          c.closePath();
-        }, ZK.ice, ZK.iceS, { lw: 1.6, shadeY: y });
-      }
-      A.shape(ctx, (c) => A.roundRect(c, -6, -18, 42, 36, 11), col, colS, { cel: [4, 4], lw: 3, hl: [4, -10, 6, 3] });
-      ctx.strokeStyle = A.c(colS);
-      ctx.lineWidth = 2.4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      for (let i = 0; i < 3; i++) {
-        const y = -8 + i * 8;
-        ctx.moveTo(24, y);
-        ctx.lineTo(36, y);
-      }
-      ctx.moveTo(24, -16);
-      ctx.lineTo(24, 16);
-      ctx.stroke();
-      A.shape(ctx, (c) => {
-        c.moveTo(4, -18);
-        c.quadraticCurveTo(22, -20, 26, -8);
-        c.quadraticCurveTo(20, -4, 8, -8);
-        c.closePath();
-      }, col, colS, { lw: 2.4, shadeY: -10 });
-      if (heat > 0) {
-        glow(ctx, 16, 0, 40, gcol, 0.55 * heat);
-        hotLines(ctx, (c) => {
-          c.moveTo(6, -6);
-          c.lineTo(14, 0);
-          c.lineTo(6, 6);
-          c.moveTo(16, -6);
-          c.lineTo(16, 6);
-        }, gcol, heat, 1.8);
-      }
-      return;
-    }
-    const k = g / 0.6;
-    const fy = [-12, -4, 4, 12];
-    const fl = [26, 30, 28, 22];
-    for (let i = 3; i >= 0; i--) {
-      const sp = (i - 1.5) * 0.14 * (1 - k);
-      const a1 = sp + k * 0.7;
-      const a2 = a1 + 0.12 + k * 0.9;
-      const bx = 22;
-      const by = fy[i];
-      const jx = bx + Math.cos(a1) * fl[i] * 0.55;
-      const jy = by + Math.sin(a1) * fl[i] * 0.55;
-      const tx = jx + Math.cos(a2) * fl[i] * 0.5;
-      const ty = jy + Math.sin(a2) * fl[i] * 0.5;
-      limb(ctx, (c) => {
-        c.moveTo(bx, by);
-        c.lineTo(jx, jy);
-        c.lineTo(tx, ty);
-      }, 13, i % 2 ? U.mix(col, colS, 0.3) : col);
-      A.shape(ctx, (c) => {
-        c.moveTo(tx + Math.cos(a2 + 1.57) * 3.6, ty + Math.sin(a2 + 1.57) * 3.6);
-        c.lineTo(tx + Math.cos(a2) * 9, ty + Math.sin(a2) * 9);
-        c.lineTo(tx - Math.cos(a2 + 1.57) * 3.6, ty - Math.sin(a2 + 1.57) * 3.6);
-        c.closePath();
-      }, ZK.ice, null, { lw: 1.6 });
-    }
-    // 拇指
-    const ta = -0.95 + k * 0.6;
-    limb(ctx, (c) => {
-      c.moveTo(6, -12);
-      c.lineTo(6 + Math.cos(ta) * 14, -12 + Math.sin(ta) * 14);
-      c.lineTo(6 + Math.cos(ta) * 14 + Math.cos(ta + 0.5) * 11, -12 + Math.sin(ta) * 14 + Math.sin(ta + 0.5) * 11);
-    }, 14, col);
-    // 手掌＋掌心符文
-    A.shape(ctx, (c) => A.roundRect(c, -6, -17, 32, 34, 10), col, colS, { cel: [3, 4], lw: 3, hl: [2, -9, 5, 3] });
-    if (heat > 0) {
-      glow(ctx, 11, 0, 30, gcol, 0.5 * heat);
-      hotLines(ctx, (c) => {
-        c.moveTo(11, -7);
-        c.lineTo(18, 0);
-        c.lineTo(11, 7);
-        c.lineTo(4, 0);
-        c.closePath();
-      }, gcol, heat, 1.6);
-    }
+  // 關節：石球＋金環（不用裁切的陰影：左上一點亮面就好）
+  function zkJoint(ctx, x, y, r, col, colS, gold) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fillStyle = A.c(colS);
+    ctx.fill();
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 2.6;
+    ctx.stroke();
+    ctx.fillStyle = A.c(col);
+    ctx.beginPath();
+    ctx.arc(x - r * 0.22, y - r * 0.22, r * 0.62, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 4.6;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.64, 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = A.c(gold);
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
   }
+  // 細長的石臂段：填色＋陰影側一道暗帶＋亮側一道細光＋描邊（不用裁切，八隻手臂畫得起）
+  // sx：這個座標系有沒有被左右翻過（1 / −1），讓陰影永遠在世界的右下
+  function zkLimb(ctx, fn, wf, col, colS, colL, sx) {
+    ctx.beginPath();
+    taper(ctx, fn, wf, 12);
+    ctx.fillStyle = A.c(col);
+    ctx.fill();
+    const p0 = fn(0);
+    const p1 = fn(1);
+    const dx = p1[0] - p0[0];
+    const dy = p1[1] - p0[1];
+    const sg = -dy * 0.6 * sx + dx * 0.8 > 0 ? 1 : -1; // along() 的 +off 是左法線
+    const wm = (wf(0) + wf(1)) / 2;
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= 6; i++) {
+      const q = 0.04 + i * 0.15;
+      const p = along(fn, q, sg * wf(q) * 0.3);
+      if (i) ctx.lineTo(p[0], p[1]);
+      else ctx.moveTo(p[0], p[1]);
+    }
+    ctx.strokeStyle = A.c(colS);
+    ctx.lineWidth = wm * 0.36;
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i <= 5; i++) {
+      const q = 0.1 + i * 0.14;
+      const p = along(fn, q, -sg * wf(q) * 0.28);
+      if (i) ctx.lineTo(p[0], p[1]);
+      else ctx.moveTo(p[0], p[1]);
+    }
+    ctx.strokeStyle = A.c(colL);
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.beginPath();
+    taper(ctx, fn, wf, 12);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = 2.8;
+    ctx.stroke();
+  }
+  // 細的金手鐲／臂釧：沿著中心線 fn 在 s 處橫跨一條（只描線、不裁切，八隻手臂每幀要畫二十幾條）
+  function zkBangle(ctx, fn, s, wf, w, gold, goldS) {
+    const a = along(fn, s, wf(s) / 2 + 1.5);
+    const b = along(fn, s, -wf(s) / 2 - 1.5);
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+    ctx.strokeStyle = A.outline();
+    ctx.lineWidth = w + 2.6;
+    ctx.stroke();
+    ctx.strokeStyle = A.c(goldS);
+    ctx.lineWidth = w;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(a[0] + (b[0] - a[0]) * 0.1 - Math.cos(a[2]) * w * 0.2, a[1] + (b[1] - a[1]) * 0.1 - Math.sin(a[2]) * w * 0.2);
+    ctx.lineTo(a[0] + (b[0] - a[0]) * 0.62 - Math.cos(a[2]) * w * 0.2, a[1] + (b[1] - a[1]) * 0.62 - Math.sin(a[2]) * w * 0.2);
+    ctx.strokeStyle = A.c(gold);
+    ctx.lineWidth = w * 0.55;
+    ctx.stroke();
+  }
+  // 觀音手（原點在手腕、手指朝 +x、拇指在 −y 側、掌心朝前）：細長、微微外翹的佛像手指。
+  // mu = 每根手指（食、中、無名、小、拇）的彎曲量：> 0.6 是收進掌心的手指，其他是伸直時指尖的彎度
+  const ZK_MUDRA = {
+    abhaya: [-0.12, -0.15, -0.12, -0.08, 0.1], // 施無畏印：手指向上、掌心朝前
+    vitarka: [1, -0.1, -0.08, -0.14, 1], // 說法印：食指與拇指扣成圈
+    varada: [0.18, 0.24, 0.3, 0.36, 0.15], // 與願印：手往下垂、手指微彎
+    strike: [0.02, 0, 0.02, 0.04, 0.35], // 平掌（砸下）
+  };
+  const ZK_FY = [-6.2, -2.1, 2.1, 6];
+  const ZK_FL = [21, 23.5, 22, 17.5];
+  const ZK_FW = [6.4, 6.8, 6.4, 5.4];
+  function zkPalm(ctx, mu, col, colS, heat, gcol) {
+    if (heat > 0) glow(ctx, 18, 0, 34, gcol, 0.5 * heat);
+    const fingers = (c) => {
+      for (let i = 0; i < 4; i++) {
+        const cu = mu[i];
+        const bx = 16;
+        const by = ZK_FY[i];
+        let L = ZK_FL[i];
+        let a = (i - 1.5) * 0.07;
+        let bend = L * (0.07 + cu * 0.3);
+        if (cu > 0.6) {
+          // 收進掌心：短、往拇指那側收
+          L *= 0.46;
+          a = i === 0 ? -0.6 : -0.25;
+          bend = -2;
+        }
+        const ex = bx + Math.cos(a) * L;
+        const ey = by + Math.sin(a) * L;
+        const mx = (bx + ex) / 2 - Math.sin(a) * bend;
+        const my = (by + ey) / 2 + Math.cos(a) * bend;
+        taper(c, qb(bx, by, mx, my, ex, ey), (q) => ZK_FW[i] * (1 - q * 0.38), 5);
+      }
+      // 拇指
+      const ct = mu[4];
+      const ta = -0.95 + ct * 0.75;
+      const jx = 3 + Math.cos(ta) * 10;
+      const jy = -6 + Math.sin(ta) * 10;
+      const tb = ta + 0.25 + ct * 0.35;
+      taper(c, qb(3, -5, jx, jy, jx + Math.cos(tb) * 10, jy + Math.sin(tb) * 10), (q) => 7.4 * (1 - q * 0.35), 5);
+    };
+    A.shape(ctx, fingers, col, null, { lw: 1.7 });
+    // 手掌＋掌心的符文
+    A.shape(ctx, (c) => {
+      c.moveTo(-3, -7);
+      c.bezierCurveTo(4, -9.5, 11, -9.4, 18, -8.4);
+      c.lineTo(18.4, 8.2);
+      c.bezierCurveTo(11, 9.6, 4, 9, -3, 6.4);
+      c.closePath();
+    }, col, null, { lw: 2.4 });
+    if (heat > 0.05) {
+      hotLines(ctx, (c) => {
+        c.moveTo(9, -4.5);
+        c.lineTo(13.5, 0);
+        c.lineTo(9, 4.5);
+        c.lineTo(4.5, 0);
+        c.closePath();
+      }, gcol, heat, 1.4);
+    } else {
+      // 掌紋
+      ctx.strokeStyle = A.c(colS);
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(3, -4);
+      ctx.quadraticCurveTo(9, 1, 5, 6.5);
+      ctx.moveTo(7, -5.5);
+      ctx.quadraticCurveTo(12, -2, 16, -4);
+      ctx.stroke();
+    }
+    if (heat > 0.5) glow(ctx, 9, 0, 10, '#ffffff', 0.6 * (heat - 0.5));
+  }
+  // 頭的位置與縮放（光束起點在 js/game/fieldboss.js 用同一組數字算）
+  const ZK_HY = -240;
+  const ZK_HS = 0.94;
   function fb_zakum(ctx, m) {
     const S = atk(m);
+    // 剛砸下的手臂（js/game/fieldboss.js：fx.hitArm、fx.hitT 0.45 → 0）：停在砸下的姿勢，再收回待機
+    const hitArm0 = m.dead ? -1 : Math.floor(num(m.fx && m.fx.hitArm, -1));
+    const hitK = hitArm0 >= 0 ? clamp(num(m.fx.hitT, 0) / 0.45, 0, 1) : 0;
+    const hitArm = hitK > 0 ? hitArm0 : -1;
     const { fx, ph, t, rage, dead, kind } = S;
     const K = (m.h || 300) / 320;
     const armI = fx.arm != null && fx.arm >= 0 ? Math.floor(num(fx.arm, -1)) : -1;
@@ -4707,36 +4783,37 @@
     const heat = dead ? 0 : clamp(0.55 + Math.sin(t * 2.2) * 0.15 + (rage ? 0.5 : 0) + beam * 0.4 + (shard ? 0.3 : 0), 0, 1.4);
     const rumble = beamCharge || (armI >= 0 && !slamDown) || shard ? Math.sin(t * 45) * 1.4 : 0;
     const breathe = dead ? 8 : Math.sin(t * 1.2) * 2;
-    const hy0 = -232 + breathe;
+    const hy0 = ZK_HY + breathe;
 
     ctx.save();
     ctx.scale(K, K);
     ctx.translate(rumble, 0);
     if (!dead) {
       glow(ctx, 0, -170, 230 + (rage ? 50 : 0), rage ? '#8ab8ff' : '#6ab0ff', (rage ? 0.34 : 0.2) + Math.sin(t * 2) * 0.04);
-      // 飄落的細雪／冰塵
+      // 飄落的細雪／冰塵（暴走時往上飄）；一條路徑一次填
+      ctx.fillStyle = rgba(gcol, 0.8);
+      ctx.beginPath();
       for (let i = 0; i < (rage ? 16 : 9); i++) {
         const q = (t * 0.25 + hash(i + 200)) % 1;
         const x = (hash(i + 201) - 0.5) * 380 + Math.sin(t + i) * 10;
         const y = rage ? -20 - q * 320 : -320 + q * 300;
-        ctx.globalAlpha = Math.sin(q * PI) * 0.9;
-        ctx.fillStyle = A.c(i % 3 ? '#ffffff' : gcol);
-        ctx.beginPath();
-        ctx.arc(x, y, 1.6 + hash(i) * 1.6, 0, TAU);
-        ctx.fill();
-        ctx.globalAlpha = 1;
+        const r = (1.6 + hash(i) * 1.6) * Math.sin(q * PI);
+        ctx.moveTo(x + r, y);
+        ctx.arc(x, y, r, 0, TAU);
       }
+      ctx.fill();
     }
 
     // ── 暴走：背後展開的冰晶光輪 ──
     if (rage) {
       const op = dead ? 0.5 : 1;
       ctx.save();
-      ctx.translate(0, hy0 - 30);
+      ctx.translate(0, hy0 - 26);
+      ctx.scale(0.78, 0.78);
       glow(ctx, 0, 0, 230, '#9ad8ff', 0.4 * op);
-      for (let i = 0; i < 16; i++) {
-        const a = (i / 16) * TAU + PI / 16;
-        if (Math.sin(a) > 0.45) continue; // 下面被身體擋住
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * TAU + PI / 12;
+        if (Math.sin(a) > 0.3) continue; // 下面被身體擋住
         const L = (i % 2 ? 70 : 110) * op + Math.sin(t * 2 + i) * 4;
         iceCrystal(ctx, Math.cos(a) * 140, Math.sin(a) * 140, L, i % 2 ? 10 : 15, a + PI / 2, i % 2 ? ZK.ice : '#e6f7ff', ZK.iceS);
       }
@@ -4763,165 +4840,175 @@
       ctx.restore();
     }
 
-    // ── 手臂 ──
-    const sockets = [[74, -184], [82, -148], [80, -108]];
-    const LEN = [[66, 62], [58, 54], [64, 58]];
+    // ── 手臂：背後左右各三隻，手腕排在以胸口為圓心的一圈上、手指往外放射（一圈手的光背）──
+    // s 肩窩、L 上臂／前臂長、r/a 手腕在光背圓上的半徑與角度（從正上方往外量）、hs 手的大小、mu 手印（左、右）
+    // 手臂用兩段 IK：手腕到哪、手肘就自然往外下彎
+    const ZC = [0, -186];
+    const TIER = [
+      { s: [58, -198], L: [80, 72], r: 178, a: 0.5, tw: -0.1, hs: 1.3, mu: [ZK_MUDRA.abhaya, ZK_MUDRA.abhaya], dim: 0.26 },
+      { s: [72, -166], L: [80, 70], r: 186, a: 1.06, tw: -0.22, hs: 1.34, mu: [ZK_MUDRA.vitarka, ZK_MUDRA.vitarka], dim: 0.13 },
+      { s: [70, -126], L: [72, 64], r: 172, a: 1.66, tw: 0.3, hs: 1.34, mu: [ZK_MUDRA.varada, ZK_MUDRA.varada], dim: 0 },
+    ];
+    const onRing = (r, a) => [ZC[0] + Math.sin(a) * r, ZC[1] - Math.cos(a) * r];
     const armPose = (i) => {
       const lvl = i % 3;
-      const sw = t * 1.1 + i * 1.3;
-      const idle = [[-0.72, -0.95, 0.1], [0.2, -1.25, 0.15], [0.52, 0.5, 0]][lvl];
-      let a1 = idle[0] + Math.sin(sw) * (lvl === 2 ? 0.02 : 0.07);
-      let a2 = idle[1] + Math.sin(sw * 1.4 + 1) * (lvl === 2 ? 0.03 : 0.1);
-      let grip = idle[2];
+      const T = TIER[lvl];
+      // 依序擺動：上 → 中 → 下，右側晚半拍（一波一波的千手）
+      const sw = t * 1.15 - lvl * 0.9 - (i >= 3 ? 0.45 : 0);
+      let r = T.r + Math.sin(sw) * 5;
+      let a = T.a + Math.sin(sw - 0.7) * 0.05;
+      let w = onRing(r, a);
+      // 手的方向：沿著半徑往外（再依層微調）
+      let ha = a - PI / 2 + T.tw + Math.sin(sw - 1.5) * 0.12;
+      let mu = T.mu[i >= 3 ? 1 : 0];
       let hot = 0;
       if (beamCharge || beamFire) {
-        if (lvl === 0) {
-          a1 = -0.95;
-          a2 = -0.5;
-        }
-        if (lvl === 1) {
-          a1 = -0.1;
-          a2 = -0.7;
-        }
-        grip = 0;
-        hot = 0.4;
+        // 眾手往外張開一點、掌心聚光
+        const k = beamFire ? 1 : clamp(beam * 1.4, 0, 1);
+        w = onRing(r + 10 * k, a - 0.1 * k);
+        ha -= 0.12 * k;
+        hot = 0.45 * k;
       }
       if (shard) {
-        a1 = [-1.1, -0.62, -0.12][lvl] + Math.sin(t * 6 + i) * 0.04;
-        a2 = [-0.4, -0.75, -0.95][lvl];
-        grip = 0;
+        // 眾手托天
+        w = onRing([186, 190, 170][lvl], [0.34, 0.8, 1.3][lvl] + Math.sin(t * 6 + i) * 0.03);
+        ha = -PI / 2 + [0.1, 0.35, 0.6][lvl];
+        mu = ZK_MUDRA.abhaya;
         hot = 0.7;
       }
-      if (i === armI) {
+      // 平掌砸下的位置（往外下方、掌心朝下）
+      const DW = [[130 + lvl * 14, -62 + lvl * 12], 1.25];
+      if (i === hitArm && !(i === armI && slamDown && hitK < 0.9)) {
+        // 砸下 → 收回：前 45% 停在砸下的位置，之後緩緩回到待機姿勢
+        const q = hitK > 0.55 ? 1 : hitK / 0.55;
+        const e = q * q * (3 - 2 * q);
+        w = [lerp(w[0], DW[0][0], e), lerp(w[1], DW[0][1], e)];
+        ha = lerp(ha, DW[1], e);
+        mu = ZK_MUDRA.strike;
+        hot = e;
+      } else if (i === armI && !dead) {
         if (slamDown) {
-          a1 = 0.2 + lvl * 0.1;
-          a2 = 0.22;
+          w = DW[0];
+          ha = DW[1];
+          hot = 1;
         } else {
-          const k = clamp((slam || 0.4) / 0.7, 0, 1);
-          a1 = lerp(a1, -1.42, k);
-          a2 = lerp(a2, -0.18, k);
+          // 出招中（kind = 'arm'）slam 是 0 就是還沒開始舉；沒有招式資訊時（圖鑑等）給一個舉到一半的姿勢
+          const k = clamp((slam > 0 ? slam : kind === 'arm' ? 0 : 0.4) / 0.7, 0, 1);
+          const up = [T.s[0] + 18, T.s[1] - (T.L[0] + T.L[1]) * 0.92];
+          w = [lerp(w[0], up[0], k), lerp(w[1], up[1], k)];
+          ha = lerp(ha, -PI / 2 + 0.05, k);
+          hot = 0.2 + 0.8 * k;
         }
-        grip = 1;
-        hot = 1;
+        mu = ZK_MUDRA.strike;
       }
       if (dead) {
-        a1 = 0.9;
-        a2 = 0.45;
-        grip = 0.3;
+        w = [T.s[0] + 40 + lvl * 16, -50 + lvl * 10];
+        ha = 1.35;
+        mu = ZK_MUDRA.varada;
         hot = 0;
       }
-      return { a1, a2, grip, hot };
+      return { w, ha, mu, hot };
     };
     const drawArm = (i) => {
       const side = (i >= 3 ? 1 : -1) * (m.dir < 0 ? -1 : 1);
       const lvl = i % 3;
+      const T = TIER[lvl];
       const P = armPose(i);
-      const [L1, L2] = LEN[lvl];
+      const [L1, L2] = T.L;
+      const down = !dead && ((i === armI && slamDown) || (i === hitArm && hitK > 0.6));
       ctx.save();
       ctx.scale(side, 1);
-      const sx = sockets[lvl][0];
-      const sy = sockets[lvl][1] + breathe;
-      const ex = sx + Math.cos(P.a1) * L1;
-      const ey = sy + Math.sin(P.a1) * L1;
-      const fa = P.a1 + P.a2;
-      const hx = ex + Math.cos(fa) * L2;
-      const hy = ey + Math.sin(fa) * L2;
-      const dim = lvl === 1 ? 0.3 : 0;
-      const col = U.mix(stone, stoneS, dim);
+      const sx = T.s[0];
+      const sy = T.s[1] + breathe;
+      // 兩段 IK（手肘往外、往下彎）
+      const hx0 = P.w[0];
+      const hy0w = P.w[1] + breathe;
+      const dA = Math.atan2(hy0w - sy, hx0 - sx);
+      const d = clamp(Math.hypot(hx0 - sx, hy0w - sy), Math.abs(L1 - L2) + 2, L1 + L2 - 2);
+      const th = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
+      const a1 = dA + th;
+      const ex = sx + Math.cos(a1) * L1;
+      const ey = sy + Math.sin(a1) * L1;
+      const hx = sx + Math.cos(dA) * d;
+      const hy = sy + Math.sin(dA) * d;
+      const fa = Math.atan2(hy - ey, hx - ex);
+      P.a1 = a1;
+      P.wr = P.ha - fa;
+      // 後層比較暗（深度）；正在出招的手臂不壓暗
+      const dim = i === armI || i === hitArm ? 0 : T.dim;
+      const col = U.mix(stone, stoneD, dim * 0.8);
       const colS = U.mix(stoneS, stoneD, dim);
-      if (P.hot > 0 && !dead) glow(ctx, hx, hy, 70, gcol, 0.5 * P.hot);
-      // 砸下的殘影
-      if (i === armI && slamDown && !dead) {
-        ctx.strokeStyle = rgba('#e8f8ff', 0.4);
-        ctx.lineWidth = 4;
+      const colL = U.mix(stoneL, stoneS, dim);
+      const colLS = U.mix(stoneLS, stoneD, dim);
+      // 出招的那隻手多一圈大光暈（其他手只有掌心的小光）
+      if (P.hot > 0 && !dead && (i === armI || i === hitArm)) glow(ctx, hx + Math.cos(fa + P.wr) * 20, hy + Math.sin(fa + P.wr) * 20, 62, gcol, 0.5 * P.hot);
+      // 平掌砸下：揮過的弧光＋兩道殘影
+      if (down) {
         ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.arc(sx, sy, L1 + L2 + 10, -1.4, fa - 0.1);
-        ctx.stroke();
-        ctx.strokeStyle = rgba(gcol, 0.5);
+        ctx.strokeStyle = rgba(gcol, 0.45);
         ctx.lineWidth = 12;
         ctx.beginPath();
-        ctx.arc(sx, sy, L1 + L2 - 6, -1.2, fa - 0.15);
+        ctx.arc(sx, sy, L1 + L2 + 4, -1.4, fa - 0.1);
         ctx.stroke();
-      }
-      const ua = qb(sx, sy, (sx + ex) / 2, (sy + ey) / 2 - 4, ex, ey);
-      const uw = (s) => 42 - s * 12 + Math.sin(s * PI) * 9;
-      A.shape(ctx, (c) => taper(c, ua, uw), col, colS, { cel: [5, 4], lw: 3.2 });
-      zkBand(ctx, ua, 0.46, 0.6, uw, gold, goldS);
-      // 前臂
-      const fr = qb(ex, ey, (ex + hx) / 2, (ey + hy) / 2, hx, hy);
-      const fw = (s) => 36 - s * 12 + Math.sin(s * PI * 0.8) * 6;
-      A.shape(ctx, (c) => taper(c, fr, fw), col, colS, { cel: [4, 4], lw: 3.2 });
-      // 符文護腕
-      zkBand(ctx, fr, 0.74, 0.86, fw, gold, goldS);
-      hotLines(ctx, (c) => {
-        const p = along(fr, 0.45, 0);
-        c.moveTo(p[0] - 5, p[1] - 5);
-        c.lineTo(p[0], p[1] + 5);
-        c.lineTo(p[0] + 5, p[1] - 5);
-      }, gcol, dead ? 0 : Math.max(0.35, P.hot, rage ? 1 : 0), 2);
-      // 石臂上的雕花：上臂一串回紋、前臂一排符文（出招時發光）
-      ctx.strokeStyle = A.c(stoneD);
-      ctx.lineWidth = 1.6;
-      ctx.lineJoin = 'miter';
-      ctx.beginPath();
-      [0.14, 0.26, 0.72, 0.84].forEach((q) => {
-        const p = along(ua, q, 0);
-        const w = uw(q) * 0.2;
-        const ca = Math.cos(p[2]);
-        const sa = Math.sin(p[2]);
-        const P2 = (u, v) => [p[0] + ca * u - sa * v, p[1] + sa * u + ca * v];
-        const pts = [P2(-w, w), P2(-w, -w), P2(w, -w), P2(w, w * 0.4), P2(-w * 0.3, w * 0.4), P2(-w * 0.3, -w * 0.3)];
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        pts.slice(1).forEach((pp) => ctx.lineTo(pp[0], pp[1]));
-      });
-      ctx.stroke();
-      const runeK = dead ? 0 : Math.max(0.3, P.hot, rage ? 0.9 : 0);
-      hotLines(ctx, (c) => {
-        [0.2, 0.32, 0.58].forEach((q, k) => {
-          const p = along(fr, q, 0);
-          const ca = Math.cos(p[2]);
-          const sa = Math.sin(p[2]);
-          const P2 = (u, v) => [p[0] + ca * u - sa * v, p[1] + sa * u + ca * v];
-          const g = [[[-3, -5], [-3, 5], [3, 0]], [[-3, -5], [3, -5], [0, 5]], [[-3, 5], [0, -5], [3, 5]]][k];
-          const a0 = P2(g[0][0], g[0][1]);
-          c.moveTo(a0[0], a0[1]);
-          g.slice(1).forEach((gg) => {
-            const pp = P2(gg[0], gg[1]);
-            c.lineTo(pp[0], pp[1]);
-          });
+        ctx.strokeStyle = rgba('#e8f8ff', 0.6);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(sx, sy, L1 + L2 + 22, -1.3, fa - 0.15);
+        ctx.stroke();
+        [-0.9, -0.3].forEach((d, n) => {
+          const a = fa + d * 1.4;
+          ctx.save();
+          ctx.globalAlpha *= n ? 0.35 : 0.2;
+          ctx.translate(sx + Math.cos(a) * (L1 + L2 - 6), sy + Math.sin(a) * (L1 + L2 - 6));
+          ctx.rotate(a + 0.2);
+          zkPalm(ctx, ZK_MUDRA.strike, gcol, U.mix(gcol, '#2a4a8a', 0.5), 0, gcol);
+          ctx.restore();
         });
-      }, gcol, runeK, 1.4);
-      // 前臂下緣垂著的冰柱
-      [0.3, 0.52].forEach((q, k) => {
-        const p = along(fr, q, fw(q) * 0.46);
-        icicle(ctx, p[0], p[1] - 2, 10 + k * 5 + (rage ? 6 : 0), 3);
-      });
-      // 手肘：石塊關節＋冰晶
-      A.ellipse(ctx, ex, ey, 19, 18, stoneS, stoneD, { lw: 2.8, hl: false });
-      iceCrystal(ctx, ex, ey - 8, rage ? 34 : 24, rage ? 9 : 7, -0.5 + P.a1 * 0.3, ZK.ice, ZK.iceS);
-      if (rage) iceCrystal(ctx, ex + 8, ey - 2, 22, 6, 0.4, ZK.ice, ZK.iceS);
-      // 上臂的冰霜
-      const fp = along(ua, 0.28, -12);
-      iceCrystal(ctx, fp[0], fp[1], 18, 6, fp[2] - PI / 2, '#e6f7ff', ZK.iceS);
+      }
+      // 肩：石球＋金環
+      zkJoint(ctx, sx, sy, 13, col, colS, gold);
+      // 上臂（微微鼓起）＋臂釧
+      const ua = qb(sx, sy, (sx + ex) / 2 + Math.sin(P.a1) * 3, (sy + ey) / 2 - Math.cos(P.a1) * 3, ex, ey);
+      const uw = (q) => 25 - q * 6 + Math.sin(q * PI) * 4;
+      zkLimb(ctx, ua, uw, col, colS, colL, side);
+      zkBangle(ctx, ua, 0.46, uw, 6, gold, goldS);
+      const ag = along(ua, 0.46, 0);
+      A.ellipse(ctx, ag[0], ag[1], 3.2, 3.2, rage ? ZK.gemR : ZK.gem, null, { lw: 1.4, hl: false });
+      // 前臂（往手腕收細）＋符文＋兩圈金手鐲
+      const fr = qb(ex, ey, (ex + hx) / 2, (ey + hy) / 2, hx, hy);
+      const fw = (q) => 22 - q * 9 + Math.sin(q * PI * 0.7) * 2.5;
+      zkLimb(ctx, fr, fw, col, colS, colL, side);
+      if (!dead && (rage || P.hot > 0)) {
+        hotLines(ctx, (c) => {
+          const p = along(fr, 0.42, 0);
+          c.moveTo(p[0] - 4, p[1] - 4);
+          c.lineTo(p[0], p[1] + 4);
+          c.lineTo(p[0] + 4, p[1] - 4);
+        }, gcol, Math.max(P.hot, rage ? 1 : 0), 1.8);
+      }
+      zkBangle(ctx, fr, 0.8, fw, 3.6, gold, goldS);
+      zkBangle(ctx, fr, 0.91, fw, 3.6, gold, goldS);
+      // 肘：石球＋金環＋一根冰晶
+      zkJoint(ctx, ex, ey, 11, col, colS, gold);
+      if (lvl === 0) iceCrystal(ctx, ex, ey - 6, rage ? 24 : 15, rage ? 6 : 4.5, -0.5 + P.a1 * 0.3, ZK.ice, ZK.iceS);
       // 手
       ctx.save();
       ctx.translate(hx, hy);
-      ctx.rotate(fa);
-      ctx.scale(1.2, 1.2);
-      zkHand(ctx, P.grip, stoneL, stoneLS, dead ? 0 : P.hot, gcol);
+      ctx.rotate(fa + P.wr);
+      ctx.scale(T.hs, T.hs);
+      zkPalm(ctx, P.mu, colL, colLS, dead ? 0 : P.hot, gcol);
       ctx.restore();
-      // 砸下去：飛濺的冰塊
-      if (i === armI && slamDown && !dead) {
+      // 砸下：飛濺的冰塊
+      if (down) {
         for (let k = 0; k < 5; k++) {
           const q = (t * 2.5 + k / 5) % 1;
-          iceCrystal(ctx, hx + 30 + (k - 2) * 12 * (1 + q), hy + 20 - Math.sin(q * PI) * 40, 12, 4, (k - 2) * 0.5, ZK.ice, ZK.iceS);
+          iceCrystal(ctx, hx + 30 + (k - 2) * 12 * (1 + q), hy + 30 - Math.sin(q * PI) * 40, 12, 4, (k - 2) * 0.5, ZK.ice, ZK.iceS);
         }
       }
       ctx.restore();
     };
-    // 下 → 中 → 上的順序畫（上臂舉起的手不會被擋住）；正在出招的手臂最後畫在最前面
-    [2, 5, 1, 4, 0, 3].filter((i) => i !== armI).forEach(drawArm);
+    // 上 → 中 → 下（上層在最後面）；正在出招／剛砸下的手臂留到頭之後畫在最前面
+    [0, 3, 1, 4, 2, 5].filter((i) => i !== armI && i !== hitArm).forEach(drawArm);
 
     // ── 身軀（石像）──
     ctx.save();
@@ -5019,9 +5106,45 @@
       }
     }, gcol, heat, rage ? 3.4 : 2.6);
     ctx.restore();
-    finish(ctx, body, [-98, -206, 98, -20], { rim: '#eaf8ff', rimA: 0.34, dark: '#0a1424', darkA: 0.38, bounce: gcol, bounceA: 0.22, tex: stoneD, texA: 0.3, seed: 17, lw: 3.4 });
-    // 胸口的日輪浮雕
-    const dc = [0, -140];
+    finish(ctx, body, [-98, -206, 98, -20], { rim: '#eaf8ff', rimA: 0.34, dark: '#0a1424', darkA: 0.38, bounce: gcol, bounceA: 0.22, tex: stoneD, texA: 0.3, texN: 30, seed: 17, lw: 3.4 });
+    // 胸甲：一片疊在胸口的石板（下緣是一圈扇形＋金邊），下面露出腹部的橫紋帶
+    const plate = (c) => {
+      c.moveTo(-80, -198);
+      c.quadraticCurveTo(0, -212, 80, -198);
+      c.lineTo(84, -150);
+      c.quadraticCurveTo(70, -140, 56, -146);
+      c.quadraticCurveTo(44, -132, 28, -138);
+      c.quadraticCurveTo(14, -124, 0, -130);
+      c.quadraticCurveTo(-14, -124, -28, -138);
+      c.quadraticCurveTo(-44, -132, -56, -146);
+      c.quadraticCurveTo(-70, -140, -84, -150);
+      c.closePath();
+    };
+    A.shape(ctx, plate, stoneL, stoneLS, { cel: [6, 6], lw: 3.2, hl: [-50, -186, 10, 5] });
+        ctx.strokeStyle = A.c(gold);
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(-80, -154);
+    ctx.quadraticCurveTo(-70, -146, -56, -151);
+    ctx.quadraticCurveTo(-44, -138, -28, -143);
+    ctx.quadraticCurveTo(-14, -130, 0, -136);
+    ctx.quadraticCurveTo(14, -130, 28, -143);
+    ctx.quadraticCurveTo(44, -138, 56, -151);
+    ctx.quadraticCurveTo(70, -146, 80, -154);
+    ctx.stroke();
+    hotLines(ctx, (c) => {
+      [-1, 1].forEach((sd) => {
+        c.moveTo(40 * sd, -178);
+        c.lineTo(46 * sd, -166);
+        c.lineTo(40 * sd, -154);
+      });
+    }, gcol, dead ? 0 : 0.35 + heat * 0.4, 1.8);
+    // 胸口的日輪浮雕（移到腹部，合掌的手在它上面）
+    const dc = [0, -106];
+    ctx.save();
+    ctx.translate(dc[0], dc[1]);
+    ctx.scale(0.72, 0.72);
+    ctx.translate(-dc[0], -dc[1]);
     glow(ctx, dc[0], dc[1], 54, gcol, 0.3 * heat + (shard ? 0.3 : 0));
     A.ellipse(ctx, dc[0], dc[1], 30, 30, stoneS, stoneD, { lw: 3, hl: false });
     A.ellipse(ctx, dc[0], dc[1], 23, 23, gold, goldS, { lw: 2.6, hl: [-8, -150, 6, 3] });
@@ -5042,11 +5165,7 @@
       c.lineTo(dc[0] - 6, dc[1]);
       c.closePath();
     }, gcol, heat, 2.2);
-    // 側面的手臂關節石環
-    [[-82, -148], [82, -148], [-80, -108], [80, -108]].forEach(([x, y]) => {
-      A.ellipse(ctx, x, y, 12, 15, stoneS, stoneD, { lw: 2.6, hl: false });
-      A.ellipse(ctx, x, y, 5, 7, gcol, null, { lw: 1.8, hl: false });
-    });
+    ctx.restore();
     // 腰帶＋結冰的垂布
     const clothC = rage ? ZK.clothR : ZK.cloth;
     const clothS = rage ? ZK.clothRS : ZK.clothS;
@@ -5063,6 +5182,25 @@
       c.lineTo(-30 + sway, -8);
       c.closePath();
     };
+    // 石裙甲：腰帶下一圈互相疊著的石板（兩側），垂布在正中
+    [-1, 1].forEach((sd) => {
+      [[70, 22], [50, 20], [32, 18]].forEach(([x, w], k) => {
+        const tp = (c) => {
+          c.moveTo((x - w / 2) * sd, -66);
+          c.lineTo((x + w / 2) * sd, -66);
+          c.lineTo((x + w / 2 + 3) * sd, -26);
+          c.quadraticCurveTo(x * sd, -18, (x - w / 2 + 1) * sd, -26);
+          c.closePath();
+        };
+        A.shape(ctx, tp, k % 2 ? stoneS : stone, stoneD, { shadeY: -38, lw: 2.6 });
+        ctx.strokeStyle = A.c(gold);
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo((x + w / 2 + 2) * sd, -30);
+        ctx.quadraticCurveTo(x * sd, -23, (x - w / 2 + 1) * sd, -30);
+        ctx.stroke();
+      });
+    });
     A.shape(ctx, drape, clothC, clothS, { cel: [6, 0], lw: 3 });
     ctx.save();
     ctx.beginPath();
@@ -5132,10 +5270,25 @@
         c.quadraticCurveTo(px + 6 * sd, -162, px - 34 * sd, -186);
         c.closePath();
       };
+      // 下層的小肩甲（第二層）
+      const pd2 = (c) => {
+        c.moveTo(px - 18 * sd, -176);
+        c.quadraticCurveTo(px + 20 * sd, -186, px + 40 * sd, -168);
+        c.quadraticCurveTo(px + 42 * sd, -150, px + 30 * sd, -138);
+        c.quadraticCurveTo(px + 8 * sd, -148, px - 18 * sd, -176);
+        c.closePath();
+      };
+      A.shape(ctx, pd2, stoneS, stoneD, { cel: [4 * sd, 4], lw: 2.8 });
+      ctx.strokeStyle = A.c(gold);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(px + 36 * sd, -146);
+      ctx.quadraticCurveTo(px + 14 * sd, -150, px - 10 * sd, -170);
+      ctx.stroke();
       iceCrystal(ctx, px + 4 * sd, -214, rage ? 50 : 36, rage ? 12 : 10, 0.35 * sd, ZK.ice, ZK.iceS);
       iceCrystal(ctx, px + 24 * sd, -204, rage ? 38 : 26, rage ? 9 : 7, 0.8 * sd, '#e6f7ff', ZK.iceS);
       A.shape(ctx, pd, stone, stoneS, { cel: [6 * sd, 6], lw: 3.2, hl: [px - 6 * sd, -210, 8, 4] });
-      finish(ctx, pd, [px - 44, -228, px + 44, -160], { rim: '#eaf8ff', rimA: 0.34, dark: '#0a1424', darkA: 0.36, tex: stoneD, texA: 0.3, texN: 16, seed: 29 + sd, lw: 3.2 });
+      finish(ctx, pd, [px - 44, -228, px + 44, -160], { rim: '#eaf8ff', rimA: 0.34, dark: '#0a1424', darkA: 0.36, tex: stoneD, texA: 0.3, texN: 8, seed: 29 + sd, lw: 3.2 });
       ctx.strokeStyle = A.c(gold);
       ctx.lineWidth = 4;
       ctx.beginPath();
@@ -5193,12 +5346,66 @@
     }, rage ? ZK.gemR : ZK.iceD, null, { lw: 1.6 });
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.fillRect(-3, -180, 2, 5);
+    // 正面合掌的一對手（放光束／灑冰晶時上舉、掌間發光）
+    const gUp = (beamFire ? 1 : beamCharge ? beam : 0) * 12 + (shard ? 8 : 0);
+    [-1, 1].forEach((sd) => {
+      ctx.save();
+      ctx.scale(sd, 1);
+      const sh = [60, -170];
+      const el = dead ? [74, -96] : [72, -104];
+      const wr = dead ? [44, -70] : [9, -120 - gUp];
+      zkJoint(ctx, sh[0], sh[1], 12, stone, stoneS, gold);
+      const ua = qb(sh[0], sh[1], sh[0] + 10, (sh[1] + el[1]) / 2, el[0], el[1]);
+      const uw = (q) => 21 - q * 4 + Math.sin(q * PI) * 3;
+      zkLimb(ctx, ua, uw, stone, stoneS, stoneL, sd);
+      zkBangle(ctx, ua, 0.44, uw, 6, gold, goldS);
+      const fr = qb(el[0], el[1], (el[0] + wr[0]) / 2 + 4, (el[1] + wr[1]) / 2 + 6, wr[0], wr[1]);
+      const fw = (q) => 18 - q * 7;
+      zkLimb(ctx, fr, fw, stone, stoneS, stoneL, sd);
+      zkBangle(ctx, fr, 0.79, fw, 3.6, gold, goldS);
+      zkBangle(ctx, fr, 0.9, fw, 3.6, gold, goldS);
+      zkJoint(ctx, el[0], el[1], 10.5, stone, stoneS, gold);
+      if (dead) {
+        ctx.save();
+        ctx.translate(wr[0], wr[1]);
+        ctx.rotate(1.7);
+        zkPalm(ctx, ZK_MUDRA.varada, stoneL, stoneLS, 0, gcol);
+        ctx.restore();
+      } else {
+        // 合掌：從正面看到兩片貼在一起的手掌（中線＋指縫）
+        const hb = wr[1] + 3;
+        A.shape(ctx, (c) => {
+          c.moveTo(0.5, hb + 3);
+          c.lineTo(0.5, hb - 56);
+          c.quadraticCurveTo(12, hb - 52, 14.5, hb - 32);
+          c.quadraticCurveTo(15.5, hb - 8, 10.5, hb + 3);
+          c.closePath();
+        }, stoneL, stoneLS, { cel: [sd * 2.5, 2], lw: 2.6 });
+        ctx.strokeStyle = A.c(stoneLS);
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(4.4, hb - 51);
+        ctx.lineTo(4.8, hb - 33);
+        ctx.moveTo(8.4, hb - 48);
+        ctx.lineTo(8.8, hb - 31);
+        ctx.moveTo(12, hb - 40);
+        ctx.lineTo(12.2, hb - 29);
+        ctx.moveTo(10.5, hb);
+        ctx.quadraticCurveTo(4, hb - 10, 4, hb - 21);
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+    if (!dead && (gUp > 0 || rage)) {
+      const k = Math.max(gUp / 12, rage ? 0.4 : 0);
+      glow(ctx, 0, -146 - gUp, 26 + k * 16, gcol, 0.5 * k);
+    }
     ctx.restore();
 
-    // ── 頭（巨大的雕刻石臉）──
+    // ── 頭（雕刻石臉，縮小一號）──
     ctx.save();
     ctx.translate(0, hy0);
-    ctx.scale(1.42, 1.42);
+    ctx.scale(ZK_HS, ZK_HS);
     // 刺冠頭飾（在臉後面）
     const crown = (c) => {
       c.moveTo(-44, -14);
@@ -5236,7 +5443,7 @@
       iceCrystal(ctx, x, y + 6, h, k === 3 ? 10 : 7, a, k % 2 ? ZK.ice : '#e6f7ff', ZK.iceS);
     });
     A.shape(ctx, crown, stoneS, stoneD, { cel: [8, 8], lw: 3.4 });
-    finish(ctx, crown, [-86, -114, 86, -14], { rim: '#eaf8ff', rimA: 0.30, dark: '#0a1424', darkA: 0.36, bounce: gcol, bounceA: 0.2, tex: stoneD, texA: 0.3, seed: 19, lw: 3.4 });
+    finish(ctx, crown, [-86, -114, 86, -14], { rim: '#eaf8ff', rimA: 0.30, dark: '#0a1424', darkA: 0.36, tex: stoneD, texA: 0.3, texN: 12, seed: 19, lw: 3.4 });
     // 內層的金冠
     const crownIn = (c) => {
       c.moveTo(-40, -24);
@@ -5343,7 +5550,7 @@
       if (rage) crack(c, 32, -20, 1.3, 30, 3, 97);
     }, gcol, dead ? 0 : heat * 0.9, 2);
     ctx.restore();
-    finish(ctx, face, [-46, -38, 46, 54], { rim: '#f4fcff', rimA: 0.36, dark: '#0a1424', darkA: 0.36, bounce: gcol, bounceA: 0.22, tex: stoneS, texA: 0.28, seed: 23, lw: 3.4 });
+    finish(ctx, face, [-46, -38, 46, 54], { rim: '#f4fcff', rimA: 0.36, dark: '#0a1424', darkA: 0.36, tex: stoneS, texA: 0.28, texN: 8, seed: 23, lw: 3.4 });
     // 額頭的金框
     A.shape(ctx, (c) => {
       c.moveTo(-46, -34);
@@ -5366,7 +5573,10 @@
       c.closePath();
     }, stone, stoneS, { lw: 2.8, shadeY: 2 });
     // 眼窩＋冰藍光的眼
-    const eg = dead ? 0 : 0.9 + Math.sin(t * 4) * 0.1 + (rage ? 0.4 : 0) + beam * 0.8;
+    // 平常半闔著眼（暗、細）；出招時睜開一些；暴走時怒睜
+    const acting = beamCharge || beamFire || shard || armI >= 0 || hitArm >= 0;
+    const eo = rage || hurt ? 1 : acting ? 0.75 : 0.4;
+    const eg = dead ? 0 : (0.9 + Math.sin(t * 4) * 0.1 + (rage ? 0.4 : 0) + beam * 0.8) * (0.45 + eo * 0.55);
     const ecol = rage ? '#eef4ff' : gcol;
     [-1, 1].forEach((sd) => {
       const x = 21 * sd;
@@ -5387,7 +5597,7 @@
         return;
       }
       glow(ctx, x, 2, 22 + beam * 20, rage ? ZK.violet : gcol, (rage ? 0.55 : 0.75) * eg);
-      const eh = hurt ? 1.5 : 3.6 + beam * 2;
+      const eh = hurt ? 1.5 : (3.6 + beam * 2 + (rage ? 1.2 : 0)) * eo;
       ctx.fillStyle = A.c(ecol);
       ctx.beginPath();
       ctx.moveTo(x - 12 * sd, 2 - eh * 0.3);
@@ -5398,9 +5608,34 @@
       ctx.fill();
       ctx.fillStyle = A.c('#ffffff');
       ctx.beginPath();
-      ctx.ellipse(x + 1 * sd, 1, 5, 1.6, -0.2 * sd, 0, TAU);
+      ctx.ellipse(x + 1 * sd, 1 + (1 - eo) * 2.5, 5, 1.6 * eo, -0.2 * sd, 0, TAU);
       ctx.fill();
+      if (eo < 0.99) {
+        // 垂下的石眼瞼
+        A.shape(ctx, (c) => {
+          c.moveTo(x - 17 * sd, -1);
+          c.lineTo(x + 18 * sd, -10);
+          c.lineTo(x + 16 * sd, -10 + 13 * (1 - eo));
+          c.lineTo(x - 14 * sd, -1 + 6 * (1 - eo));
+          c.closePath();
+        }, stone, stoneS, { lw: 2.2, shadeY: 20 });
+      }
     });
+    // 暴走：眉頭往下壓的怒眉（眉骨上的深刻紋）
+    if (rage && !dead) {
+      A.shape(ctx, (c) => {
+        c.moveTo(-44, -20);
+        c.lineTo(-4, 6);
+        c.lineTo(0, 0);
+        c.lineTo(4, 6);
+        c.lineTo(44, -20);
+        c.lineTo(44, -12);
+        c.lineTo(5, 12);
+        c.lineTo(-5, 12);
+        c.lineTo(-44, -12);
+        c.closePath();
+      }, stoneD, null, { lw: 2.6 });
+    }
     // 鼻子
     A.shape(ctx, (c) => {
       c.moveTo(-5, 4);
@@ -5415,7 +5650,8 @@
     ctx.ellipse(6, 24, 3, 2, -0.3, 0, TAU);
     ctx.fill();
     // 嘴：往下撇的石嘴、方牙、冰獠牙；出招時張開發光
-    const mOpen = dead ? 2 : beamFire ? 14 : shard ? 11 : beamCharge ? 7 : hurt ? 9 : 4;
+    const mOpen = dead ? 2 : beamFire ? 14 : shard ? 11 : beamCharge ? 7 : hurt ? 9 : rage ? 8 : armI >= 0 ? 5 : 1.5;
+    const fangs = !dead && (rage || mOpen > 4);
     // 下巴垂下的冰柱鬍
     [[-18, 12], [-8, 22], [2, 26], [12, 18], [20, 10]].forEach(([x, h]) => {
       A.shape(ctx, (c) => {
@@ -5439,13 +5675,15 @@
     ctx.fillStyle = A.c('#e4ebf4');
     ctx.strokeStyle = A.outline();
     ctx.lineWidth = 1.6;
-    for (let k = -2; k <= 2; k++) {
-      ctx.beginPath();
-      A.roundRect(ctx, k * 8.4 - 3.6, 32, 7.2, 4 + mOpen * 0.2, 1.5);
-      ctx.fill();
-      ctx.stroke();
+    if (fangs) {
+      for (let k = -2; k <= 2; k++) {
+        ctx.beginPath();
+        A.roundRect(ctx, k * 8.4 - 3.6, 32, 7.2, 4 + mOpen * 0.2, 1.5);
+        ctx.fill();
+        ctx.stroke();
+      }
     }
-    [-1, 1].forEach((sd) => {
+    (fangs ? [-1, 1] : []).forEach((sd) => {
       A.shape(ctx, (c) => {
         c.moveTo(20 * sd, 36 + mOpen);
         c.lineTo(25 * sd, 22 + mOpen * 0.6);
@@ -5491,7 +5729,8 @@
     }
     ctx.restore();
 
-    // 正在出招的手臂（畫在最前面）
+    // 正在出招／剛砸下的手臂（畫在最前面）
+    if (hitArm >= 0 && hitArm < 6 && hitArm !== armI) drawArm(hitArm);
     if (armI >= 0 && armI < 6) drawArm(armI);
 
     // ── 地上的雪堆（半埋著）──
@@ -5557,9 +5796,10 @@
     // ── 雙眼冰光束 ──
     // 光束本身由地面區域 fb_beam 畫（瞄準玩家、可能是斜的）；這裡只畫眼睛蓄力與發射時的強光
     if (!dead && (beam > 0 || beamFire)) {
-      const ey = hy0 + 2;
+      const ey = hy0 - 34 * ZK_HS;
       const k = beamFire ? 1 : beam;
-      [-30, 30].forEach((x) => {
+      [-20, 20].forEach((x) => glow(ctx, x, hy0 + 2 * ZK_HS, 14 + k * 12, gcol, 0.5 + k * 0.4));
+      [0].forEach((x) => {
         glow(ctx, x, ey, 26 + k * 30 + (beamFire ? 20 : 0), gcol, 0.6 + k * 0.3);
         glow(ctx, x, ey, 12 + k * 10, '#ffffff', 0.5 + k * 0.5);
         if (beamFire) {
@@ -5583,7 +5823,7 @@
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * TAU + t * 4;
           const r = 80 * (1 - ((t * 2 + i / 12) % 1));
-          const x = i % 2 ? 30 : -30;
+          const x = 0;
           ctx.fillStyle = A.c('#e8f8ff');
           ctx.beginPath();
           ctx.arc(x + Math.cos(a) * r, ey + Math.sin(a) * r, 2.5, 0, TAU);
@@ -5593,19 +5833,18 @@
     }
     // 精修：飄落的雪花、冰晶閃光
     if (!dead) {
+      ctx.fillStyle = rgba('#ffffff', 0.85);
+      ctx.beginPath();
       for (let i = 0; i < 12; i++) {
         const q = (t * 0.25 + hash(i + 200)) % 1;
         const x = (hash(i + 201) - 0.5) * 300 + Math.sin(t * 1.3 + i) * 12;
         const y = -330 + q * 330;
-        ctx.save();
-        ctx.globalAlpha *= Math.sin(q * PI) * 0.9;
-        ctx.fillStyle = A.c('#ffffff');
-        ctx.beginPath();
-        ctx.arc(x, y, 1.6 + hash(i + 202) * 1.8, 0, TAU);
-        ctx.fill();
-        ctx.restore();
+        const r = (1.6 + hash(i + 202) * 1.8) * Math.sin(q * PI);
+        ctx.moveTo(x + r, y);
+        ctx.arc(x, y, r, 0, TAU);
       }
-      for (let i = 0; i < 7; i++) sparkle4(ctx, (hash(i + 210) - 0.5) * 220, -40 - hash(i + 211) * 250, 3 + hash(i) * 3, rage ? '#9ad8ff' : '#cfeeff', 0.5 + 0.5 * Math.sin(t * 3 + i * 2));
+      ctx.fill();
+      for (let i = 0; i < 4; i++) sparkle4(ctx, (hash(i + 210) - 0.5) * 220, -40 - hash(i + 211) * 250, 3 + hash(i) * 3, rage ? '#9ad8ff' : '#cfeeff', 0.5 + 0.5 * Math.sin(t * 3 + i * 2));
     }
     ctx.restore();
   }
@@ -6859,8 +7098,8 @@
     const col = ZK.stone;
     const colS = ZK.stoneS;
     // 巨大的石前臂（金臂環＋發光符文＋冰晶）
-    const fr = qb(-side * 46, -460, -side * 26, -280, 0, -92);
-    const fw = (s) => 58 + (1 - s) * 34 + Math.sin(s * PI) * 8;
+    const fr = qb(-side * 46, -480, -side * 26, -310, 0, -134);
+    const fw = (s) => 40 + (1 - s) * 24 + Math.sin(s * PI) * 6;
     A.shape(ctx, (c) => taper(c, fr, fw), col, colS, { cel: [10 * side, 6], lw: 3.6 });
     // 石紋：中線的刻槽＋橫向的裂痕
     ctx.strokeStyle = A.c(ZK.stoneD);
@@ -6894,13 +7133,13 @@
     iceCrystal(ctx, ip[0], ip[1], 46, 12, ip[2] - PI / 2 - 0.3, ZK.ice, ZK.iceS);
     const ip2 = along(fr, 0.36, -fw(0.36) * 0.44);
     iceCrystal(ctx, ip2[0], ip2[1], 32, 9, ip2[2] - PI / 2 - 0.5, '#e6f7ff', ZK.iceS);
-    // 拳頭（指節朝下、冰刺指虎砸進地面）
-    glow(ctx, 0, -40, 90, '#7ad8ff', 0.5);
+    // 張開的石掌（指尖朝下、掌心朝前、掌心符文發光）：千手冰像的平掌砸下
+    glow(ctx, 0, -60, 100, '#7ad8ff', 0.5);
     ctx.save();
-    ctx.translate(0, -96);
+    ctx.translate(0, -140);
     ctx.rotate(PI / 2);
-    ctx.scale(2.05, 2.05 * side);
-    zkHand(ctx, 1, ZK.stoneL, ZK.stoneLS, 0.9, '#7ad8ff');
+    ctx.scale(3.3, 3.3 * side);
+    zkPalm(ctx, ZK_MUDRA.strike, ZK.stoneL, ZK.stoneLS, 0.9, '#7ad8ff');
     ctx.restore();
     // 下墜的速度線
     if (drop < 1) {
