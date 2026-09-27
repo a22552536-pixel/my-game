@@ -3,7 +3,25 @@
   'use strict';
   const A = G.art;
   const TAU = Math.PI * 2;
-  const base = A.drawMonster;
+  // 越後面的怪物放得越大（最多約 1.9 倍），描邊也跟著被放大，看起來又粗又笨。
+  // 畫怪物的時候，把線寬按縮放倍率縮回去一部分：螢幕上的粗細 ≈ 原本 × 倍率^0.35。
+  const LWD = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'lineWidth');
+  const raw = A.drawMonster;
+  const base = function (ctx, m) {
+    const sc = m.scale || 1;
+    if (sc <= 1.05 || !LWD || Object.prototype.hasOwnProperty.call(ctx, 'lineWidth')) return raw(ctx, m);
+    const k = Math.pow(sc, -0.65);
+    Object.defineProperty(ctx, 'lineWidth', {
+      configurable: true,
+      get() { return LWD.get.call(this) / k; },
+      set(v) { LWD.set.call(this, v * k); },
+    });
+    try {
+      return raw(ctx, m);
+    } finally {
+      delete ctx.lineWidth;
+    }
+  };
 
   function geo(m) {
     const sc = m.scale || 1;

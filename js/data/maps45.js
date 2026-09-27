@@ -141,7 +141,7 @@
     npcs: [
       { id: 'tortoisesage', x: 860, p: 0 },
       { id: 'sphinxcat', x: 1060, p: 0 },
-      { id: 'greymane', x: 1260, p: 0 },
+      { id: 'greymane', x: 1260, p: 0, noFlag: 'timeItselfDefeated' },
       { id: 'squirrel', x: 1520, p: 0 },
     ],
     camp: { x1: 800, x2: 1700 },
