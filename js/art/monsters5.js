@@ -2982,7 +2982,7 @@
   //    白底和服上有淡青與靛藍的雪結晶紋、靛色的腰帶繫著金色帶締；袖口與下擺化成飄散的雪（看不到腳）。
   //    平常半垂著眼、唇色淡淡的，呼出一絲白霜；施法（fx.puff）時舉起長袖、眼睛睜大發出淡青的光，
   //    從唇間吹出一長道閃著細光的睡意霜氣。死亡時整個人散成雪花 ──
-  const YK = { skin: '#eef4fb', skinS: '#c4d0e8', hair: '#1c1d33', hairS: '#101122', hairL: '#44508a', lip: '#b7bfe0' };
+  const YK = { skin: '#eef4fb', skinS: '#c4d0e8', hair: '#1c1d33', hairS: '#101122', hairL: '#44508a', lip: '#a7a3d2' };
   // 雲紋渦卷（雕刻的描線：一條弧線收成渦）
   function scrollMark(ctx, x, y, r, dir, rot, col, lw) {
     ctx.save();
@@ -3107,7 +3107,7 @@
     // 蒙眼布的兩條長帶尾（在頭髮後面隨風飄；施法時揚起捲動、死亡時垂落）
     {
       const kx = hx - 14;
-      const ky = hy + 0.6;
+      const ky = hy + 1.2;
       const lift = cast * 10;
       const droop = dead ? 14 : 0;
       [[0, 30, 4.2], [1.3, 25, 3.4]].forEach((q) => {
@@ -3248,7 +3248,7 @@
     const sleeve = (near) => {
       const lift = puffK;
       const sx = hx + (near ? 6 : -6);
-      const sy = hy + 14;
+      const sy = hy + 14 + (near && !(lift > 0.05) && !pinDraw && !pinThrow ? 4 : 0);
       let ex = sx + (near ? 15 : 6) + lift * 1;
       let ey = sy + 17 - lift * 20;
       let drop = 30 - lift * 8;
@@ -3352,6 +3352,75 @@
       glowH(ctx, hx - 1.5, hy + 3, 3.5, '#b9c6ea', 0.45);
       glowH(ctx, hx + 4, hy - 3.5, 7, '#c8d2ee', 0.35);
     } });
+    // ── 蒙眼布：深靛的絲緊貼著臉，只蓋住雙眼。整條被臉的輪廓裁切：近側繞過太陽穴沒入頭髮、遠側隨臉轉過去；
+    //    眼窩處微微鼓起、鼻樑處往下凹，下緣在臉頰上落一道淡影 ──
+    {
+      const sl = dead ? 2.5 : 0;
+      const y0 = hy - 2.6 + sl;
+      const bandP = (c) => {
+        c.moveTo(hx - 13, y0 - 0.6);
+        c.bezierCurveTo(hx - 5, y0 - 2.8, hx + 1, y0 - 2.4, hx + 4, y0 - 1.2);
+        c.bezierCurveTo(hx + 6.5, y0 - 2.3, hx + 10, y0 - 2, hx + 14, y0 - 0.2);
+        c.lineTo(hx + 14, y0 + 3.4);
+        c.bezierCurveTo(hx + 10, y0 + 2.4, hx + 6.5, y0 + 2.6, hx + 4.2, y0 + 3.6);
+        c.bezierCurveTo(hx + 1, y0 + 2.4, hx - 5, y0 + 2.8, hx - 13, y0 + 3.2);
+        c.closePath();
+      };
+      ctx.save();
+      ctx.beginPath();
+      faceP(ctx);
+      ctx.clip();
+      // 下緣在臉頰上的影
+      ctx.save();
+      ctx.translate(0, 1.4);
+      ctx.beginPath();
+      bandP(ctx);
+      ctx.fillStyle = A.c('#b3bfe2');
+      ctx.fill();
+      ctx.restore();
+      rimShape(ctx, bandP, P4.ind, P4.indS, P4.indL, { cel: 0.9, rim: 0.6, lw: 1.3, inner: () => {
+        // 眼窩鼓起處的亮面與皺褶
+        ctx.fillStyle = A.c('#4652a0');
+        ctx.beginPath();
+        ctx.ellipse(hx + 0.5, y0, 3.4, 0.9, 0, 0, TAU);
+        ctx.ellipse(hx + 8, y0 - 0.2, 2.5, 0.8, 0, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = A.c(P4.indS);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(hx - 9, y0 + 0.6);
+        ctx.quadraticCurveTo(hx - 6, y0 + 0.2, hx - 3.5, y0 + 1);
+        ctx.moveTo(hx + 4, y0 - 0.6);
+        ctx.lineTo(hx + 4.2, y0 + 2.6);
+        ctx.stroke();
+        if (cast > 0.05 && !dead) {
+          glowH(ctx, hx + 0.5, y0 + 0.6, 4.5, P4.teal, 0.8 * cast);
+          glowH(ctx, hx + 8, y0 + 0.4, 3.6, P4.teal, 0.7 * cast);
+        }
+        snowflake(ctx, hx - 6.5, y0 + 0.6, 1.2, '#c9d2ea', 0.5);
+        snowflake(ctx, hx + 4.1, y0 + 1, 0.9, '#c9d2ea', 0.45);
+        snowflake(ctx, hx + 11, y0 + 1, 1, '#c9d2ea', 0.45);
+      } });
+      // 淡青的滾邊
+      ctx.strokeStyle = A.c(P4.teal);
+      ctx.lineWidth = 0.55;
+      ctx.beginPath();
+      ctx.moveTo(hx - 13, y0 - 0.1);
+      ctx.bezierCurveTo(hx - 5, y0 - 2.3, hx + 1, y0 - 1.9, hx + 4, y0 - 0.7);
+      ctx.bezierCurveTo(hx + 6.5, y0 - 1.8, hx + 10, y0 - 1.5, hx + 14, y0 + 0.3);
+      ctx.moveTo(hx - 13, y0 + 2.7);
+      ctx.bezierCurveTo(hx - 5, y0 + 2.3, hx + 1, y0 + 1.9, hx + 4.2, y0 + 3.1);
+      ctx.bezierCurveTo(hx + 6.5, y0 + 2.1, hx + 10, y0 + 1.9, hx + 14, y0 + 2.9);
+      ctx.stroke();
+      ctx.restore();
+      // 重描臉的輪廓（布在輪廓裡面）
+      ctx.beginPath();
+      faceP(ctx);
+      ctx.lineWidth = 1.9;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = A.outline();
+      ctx.stroke();
+    }
     // 小巧的鼻（一筆淡影）
     ctx.strokeStyle = A.c('#a9b5da');
     ctx.lineWidth = 0.9;
@@ -3388,51 +3457,8 @@
       ctx.arc(hx, hy - 6, 13, PI * 1.15, PI * 1.55);
       ctx.stroke();
     } });
-    // ── 蒙眼布：深靛的絲，銀色雪花刺繡、淡青的滾邊；順著 3/4 側臉的弧度橫過雙眼，在腦後打結 ──
-    {
-      ctx.save();
-      ctx.translate(0, 3.6);
-      const slip = dead ? 3.5 : 0;
-      const bandP = (c) => {
-        c.moveTo(hx - 12, hy - 7 + slip * 0.5);
-        c.bezierCurveTo(hx - 5, hy - 9.5 + slip, hx + 7, hy - 8.5 + slip, hx + 13.6, hy - 5 + slip * 1.4);
-        c.lineTo(hx + 13.2, hy + 0.5 + slip * 1.4);
-        c.bezierCurveTo(hx + 7, hy - 2.5 + slip, hx - 5, hy - 3 + slip, hx - 12, hy - 0.5 + slip * 0.5);
-        c.closePath();
-      };
-      rimShape(ctx, bandP, P4.ind, P4.indS, P4.indL, { cel: 1.2, rim: 0.8, lw: 1.8, inner: () => {
-        // 布的皺褶
-        ctx.strokeStyle = A.c(P4.indS);
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(hx - 8, hy - 6.5 + slip);
-        ctx.quadraticCurveTo(hx - 2, hy - 5.8 + slip, hx + 3, hy - 6.8 + slip);
-        ctx.moveTo(hx + 5, hy - 3.5 + slip);
-        ctx.quadraticCurveTo(hx + 9, hy - 4.5 + slip, hx + 12, hy - 2.5 + slip * 1.3);
-        ctx.stroke();
-        // 施法：眼睛的位置透出淡淡的青光
-        if (cast > 0.05 && !dead) {
-          glowH(ctx, hx + 1, hy - 4.8, 5.5, P4.teal, 0.75 * cast);
-          glowH(ctx, hx + 8.5, hy - 4.2, 4.5, P4.teal, 0.65 * cast);
-        }
-        // 銀色的雪花刺繡
-        snowflake(ctx, hx - 5.5, hy - 5.2 + slip * 0.8, 1.6, '#c9d2ea', 0.6);
-        snowflake(ctx, hx + 4.8, hy - 5.4 + slip, 1.5, '#c9d2ea', 0.6);
-        snowflake(ctx, hx + 11, hy - 2.8 + slip * 1.3, 1.1, '#c9d2ea', 0.5);
-      } });
-      // 淡青的滾邊（上下緣）
-      ctx.strokeStyle = A.c(P4.teal);
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      ctx.moveTo(hx - 11.5, hy - 6.4 + slip * 0.5);
-      ctx.bezierCurveTo(hx - 5, hy - 8.8 + slip, hx + 7, hy - 7.8 + slip, hx + 13, hy - 4.5 + slip * 1.4);
-      ctx.moveTo(hx - 11.5, hy - 1.2 + slip * 0.5);
-      ctx.bezierCurveTo(hx - 5, hy - 3.6 + slip, hx + 7, hy - 3.1 + slip, hx + 12.7, hy - 0.1 + slip * 1.4);
-      ctx.stroke();
-      // 腦後的結
-      A.shape(ctx, (c) => c.ellipse(hx - 12.5, hy - 3.8 + slip * 0.5, 2.3, 2.8, 0.2, 0, TAU), P4.ind, P4.indS, { lw: 1.4, shadeY: hy - 3 });
-      ctx.restore();
-    }
+    // 蒙眼布在腦後的結（帶子本身被頭髮蓋住）
+    A.shape(ctx, (c) => c.ellipse(hx - 12.3, hy + 0.2 + (dead ? 2.5 : 0), 2.2, 2.7, 0.2, 0, TAU), P4.ind, P4.indS, { lw: 1.4, shadeY: hy + 1 });
     // ── 髮飾：冰晶的櫛（梳子）、兩支冰簪＋垂下的冰珠流蘇（隨風搖） ──
     A.shape(ctx, (c) => { c.moveTo(hx - 11, hy - 12); c.quadraticCurveTo(hx - 4, hy - 21, hx + 5, hy - 18); c.lineTo(hx + 4, hy - 15.5); c.quadraticCurveTo(hx - 4, hy - 18, hx - 9, hy - 10.5); c.closePath(); }, P4.tealL, P4.teal, { lw: 1.4, shadeY: hy - 15 });
     ctx.fillStyle = A.c(P4.gold);
