@@ -1838,8 +1838,9 @@
     const hb = hitboxOf(m);
     e.cW = clamp(180 + hb.w * 0.9, 180, 460);
     const cam = G.cam;
-    let yb = hb.y - 120;
-    yb = Math.max(yb, cam.y + 36 + e.cW * 0.26);
+    // 雷雲壓在畫面最上方（神從天上劈下來）；只有目標本身就在畫面頂端時才往下讓一點
+    e.cW = Math.max(e.cW, 320);
+    let yb = cam.y + 30 + e.cW * 0.24;
     yb = Math.min(yb, hb.y - 36);
     e.cyB = yb;
     if (init) {
@@ -2688,25 +2689,32 @@
     c.beginPath();
     c.ellipse(38, -6.5, 1.6, 1.1, -0.3, 0, TAU);
     c.fill();
+    // 眼睛：沒有眼珠，整顆是發光的眼白；細長、往吻端斜壓的兇眼，上面壓著厚眉骨
+    const eg = c.createRadialGradient(16.5, -6.2, 0, 16.5, -6.2, 9);
+    eg.addColorStop(0, 'rgba(255,250,220,0.95)');
+    eg.addColorStop(0.45, 'rgba(255,210,120,0.45)');
+    eg.addColorStop(1, 'rgba(255,170,60,0)');
+    c.fillStyle = eg;
+    c.beginPath();
+    c.arc(16.5, -6.2, 9, 0, TAU);
+    c.fill();
     shp(() => {
-      c.moveTo(10, -9);
-      c.quadraticCurveTo(15, -13, 22, -10.5);
-      c.quadraticCurveTo(16, -9, 12, -6);
+      c.moveTo(10.5, -8.6);
+      c.quadraticCurveTo(16, -9.4, 22.5, -5.2); // 上緣：往吻端壓下來
+      c.quadraticCurveTo(16.5, -3.6, 11, -5.8); // 下緣
       c.closePath();
-    }, '#e07a20', 1.4);
-    shp(() => c.ellipse(16, -6.5, 3.6, 2.4, -0.25, 0, TAU), '#fffbe0', 1.4);
-    c.fillStyle = '#d42a10';
+    }, '#fffef4', 1.4);
+    c.fillStyle = 'rgba(255,255,255,0.95)';
     c.beginPath();
-    c.ellipse(17, -6.5, 1.6, 2.1, 0, 0, TAU);
+    c.ellipse(15.6, -6.6, 2.6, 0.9, 0.2, 0, TAU);
     c.fill();
-    c.fillStyle = '#1a0a04';
-    c.beginPath();
-    c.ellipse(17.2, -6.5, 0.55, 1.8, 0, 0, TAU);
-    c.fill();
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.arc(15.6, -7.6, 0.7, 0, TAU);
-    c.fill();
+    shp(() => {
+      c.moveTo(8.5, -9.5);
+      c.quadraticCurveTo(15, -14.5, 24, -7.2); // 眉骨往吻端下壓
+      c.lineTo(22.6, -5.6);
+      c.quadraticCurveTo(15.5, -10.6, 10, -7.6);
+      c.closePath();
+    }, '#c85e14', 1.4);
     // 頰上的鰭刺
     shp(() => {
       c.moveTo(4, 5);
