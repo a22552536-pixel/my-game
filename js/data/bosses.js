@@ -17,7 +17,7 @@
   // 第一章 Lv12（玩家：一轉、二階裝備、紅漿果 150）
   big('queenShroom', { lv: 12, hp: 6800, atk: 42, def: 10, speed: 150, w: 215, h: 280, furyAt: 150 }, 1.2);
   // 第二章 Lv25（玩家：二轉、四階裝備 +2、大紅漿果 400）
-  big('hermitCrab', { lv: 25, hp: 24000, atk: 105, def: 18, speed: 150, w: 270, h: 250, furyAt: 160 }, 1.16);
+  big('hermitCrab', { lv: 25, hp: 24000, atk: 105, def: 18, speed: 150, w: 270, h: 250, furyAt: 160 }, 2.32);
   // 第三章 Lv37（玩家：三轉、六階裝備 +2、大紅漿果 400）
-  big('lavaTortoise', { lv: 37, hp: 58000, atk: 135, def: 26, speed: 120, w: 330, h: 230, furyAt: 170 }, 1.15);
+  big('lavaTortoise', { lv: 37, hp: 58000, atk: 135, def: 26, speed: 120, w: 330, h: 230, furyAt: 170 }, 2.3);
 })();
