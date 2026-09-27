@@ -3,67 +3,123 @@
   'use strict';
   const U = G.util;
 
-  // ── 黑閃的閃電形狀池 ──
-  // 遞迴中點位移（每一層把每段中點往垂直方向推一點，推的量跟段長成比例 → 碎形的鋸齒）＋分岔。
-  // 座標是正規化的：主幹從 (0,0) 大致走到 (1,0)。每條線的粗細沿著線遞減，
-  // 所以「粗於某個門檻的部分」一定是線的前段 → 用 c3／c2 兩個前綴長度就能畫出三段漸細。
+  // ── 黑閃的「摺痕」形狀池 ──
+  // 不是樹根一樣的碎形分岔，而是像揉皺的紙、裂開的玻璃：幾段直線以銳角折來折去，
+  // 每一段是一條寬窄不一的黑色帶子（每個折角寬度就突然變），紅光只打在每一折的其中一側 → 一面一面的摺面。
+  // 座標是正規化的：主幹從 (0,0) 走到 (1,0)；寬度是另外的倍率（生成時再乘上實際的粗細）。
   const BF_MAX = 6;
-  const BF_T2 = 0.3; // 中段的粗細門檻
-  const BF_T3 = 0.62; // 粗段的粗細門檻
-  function bfPath(x0, y0, x1, y1, depth, rough) {
-    let pts = [x0, y0, x1, y1];
-    for (let d = 0; d < depth; d++) {
-      const out = [];
-      for (let i = 0; i < pts.length - 2; i += 2) {
-        const ax = pts[i], ay = pts[i + 1], bx = pts[i + 2], by = pts[i + 3];
-        const dx = bx - ax, dy = by - ay;
-        const off = (Math.random() * 2 - 1) * rough;
-        out.push(ax, ay, (ax + bx) / 2 - dy * off, (ay + by) / 2 + dx * off);
-      }
-      out.push(pts[pts.length - 2], pts[pts.length - 1]);
-      pts = out;
-    }
-    return pts;
+  // 一條帶子：v 頂點（x,y 交錯），w 每段的四個半寬（起點左、終點左、起點右、終點右），lit 每段哪一側受光，t0 從主幹哪裡長出來
+  function bfRibbon(v, w, lit, t0) {
+    return { v: new Float32Array(v), w: new Float32Array(w), lit: new Int8Array(lit), n: lit.length, t0 };
   }
-  function bfLine(pts, w0, w1, t0) {
-    const n = pts.length / 2;
-    let c2 = 0, c3 = 0;
+  // n 段折線；spurs：最多幾根短短的斜刺
+  function bfCrease(nMin, nMax, spurs) {
+    const n = nMin + ((Math.random() * (nMax - nMin + 1)) | 0);
+    let sg = Math.random() < 0.5 ? -1 : 1;
+    const pts = [[0, 0]];
+    const sgs = [];
+    const hd = [];
+    let x = 0;
+    let y = 0;
     for (let i = 0; i < n; i++) {
-      const w = w0 + (w1 - w0) * Math.pow(i / (n - 1), 0.75);
-      if (w >= BF_T2) c2 = i + 1;
-      if (w >= BF_T3) c3 = i + 1;
+      // 相鄰兩段的夾角很銳：方向在主軸兩側來回甩
+      const h = sg * U.rand(0.55, 1.2) + U.rand(-0.12, 0.12);
+      const len = U.rand(0.55, 1.45);
+      x += Math.cos(h) * len;
+      y += Math.sin(h) * len;
+      pts.push([x, y]);
+      sgs.push(sg);
+      hd.push(h);
+      if (Math.random() < 0.82) sg = -sg;
     }
-    return { p: new Float32Array(pts), n, c2, c3, t0 };
+    // 轉正、縮放：終點落在 (1,0)
+    const L = Math.hypot(x, y);
+    const ra = -Math.atan2(y, x);
+    const cr = Math.cos(ra) / L;
+    const sr = Math.sin(ra) / L;
+    const v = [];
+    for (const [px, py] of pts) v.push(px * cr - py * sr, px * sr + py * cr);
+    const w = [];
+    const lit = [];
+    for (let i = 0; i < n; i++) {
+      const u = i / n;
+      const base = U.rand(0.5, 1) * (1 - 0.55 * u) * (i === 0 ? 0.7 : 1);
+      const a0 = base * U.rand(0.35, 1.6);
+      const b0 = base * U.rand(0.35, 1.6);
+      const last = i === n - 1;
+      w.push(a0, last ? 0 : a0 * U.rand(0.2, 0.65), b0, last ? 0 : b0 * U.rand(0.2, 0.65));
+      lit.push(sgs[i]);
+    }
+    const out = [bfRibbon(v, w, lit, 0)];
+    // 一兩根短的斜刺，從折角往外岔出去（兩段、很細、尖頭）
+    for (let k = 0; k < spurs; k++) {
+      const j = 1 + ((Math.random() * (n - 1)) | 0);
+      const hx = hd[j] + ra + (Math.random() < 0.5 ? -1 : 1) * U.rand(0.9, 1.5);
+      const l1 = U.rand(0.07, 0.13);
+      const px = v[j * 2];
+      const py = v[j * 2 + 1];
+      const qx = px + Math.cos(hx) * l1;
+      const qy = py + Math.sin(hx) * l1;
+      const h2 = hx + (Math.random() < 0.5 ? -1 : 1) * U.rand(0.6, 1.1);
+      const l2 = l1 * U.rand(0.6, 1.1);
+      out.push(bfRibbon([px, py, qx, qy, qx + Math.cos(h2) * l2, qy + Math.sin(h2) * l2], [0.32, 0.22, 0.28, 0.18, 0.2, 0, 0.16, 0], [1, -1], j / n));
+    }
+    return out;
   }
-  function bfBolt() {
-    const lines = [];
-    const trunk = bfPath(0, 0, 1, U.rand(-0.22, 0.22), 5, 0.3);
-    lines.push(bfLine(trunk, 1, 0.06, 0));
-    const n = trunk.length / 2;
-    let forks = 0;
-    for (let i = 3; i < n - 4 && forks < 3; i++) {
-      if (Math.random() > 0.14) continue;
-      forks++;
-      const px = trunk[i * 2], py = trunk[i * 2 + 1];
-      const da = Math.atan2(trunk[i * 2 + 3] - trunk[i * 2 - 1], trunk[i * 2 + 2] - trunk[i * 2 - 2]);
-      const a = da + (Math.random() < 0.5 ? -1 : 1) * U.rand(0.35, 0.95);
-      const len = (1 - i / n) * U.rand(0.35, 0.7) + 0.08;
-      const w0 = (1 - 0.94 * Math.pow(i / (n - 1), 0.75)) * 0.6;
-      const b = bfPath(px, py, px + Math.cos(a) * len, py + Math.sin(a) * len, 4, 0.34);
-      lines.push(bfLine(b, w0, 0.03, i / (n - 1)));
-      if (Math.random() < 0.35) {
-        // 分岔上再分岔一次（很細）
-        const j = 4 + ((Math.random() * 6) | 0);
-        const qx = b[j * 2], qy = b[j * 2 + 1];
-        const a2 = a + (Math.random() < 0.5 ? -1 : 1) * U.rand(0.4, 0.9);
-        const l2 = len * U.rand(0.3, 0.5);
-        lines.push(bfLine(bfPath(qx, qy, qx + Math.cos(a2) * l2, qy + Math.sin(a2) * l2, 3, 0.36), w0 * 0.45, 0.02, i / (n - 1) + (j / 16) * len));
+  const BF_POOL = []; // 主要的大摺痕
+  const BF_SHARD = []; // 旁邊的小摺片
+  for (let i = 0; i < 24; i++) BF_POOL.push(bfCrease(4, 6, [0, 1, 1, 2][i % 4]));
+  for (let i = 0; i < 12; i++) BF_SHARD.push(bfCrease(2, 3, 0));
+  // 多邊形一律轉成同一個繞向，整批填在同一條路徑上時重疊處才不會變成洞
+  function bfPush(arr, pts) {
+    let area = 0;
+    for (let i = 0; i < pts.length; i += 2) {
+      const j = (i + 2) % pts.length;
+      area += pts[i] * pts[j + 1] - pts[j] * pts[i + 1];
+    }
+    if (area < 0) {
+      for (let i = pts.length - 2; i >= 0; i -= 2) arr.push(pts[i], pts[i + 1]);
+    } else for (let i = 0; i < pts.length; i++) arr.push(pts[i]);
+  }
+  // 把正規化的帶子（頂點已經轉到世界座標）展開成要畫的幾何：每段一個四邊形、折角兩個小三角、受光的半邊、受光的邊線
+  function bfBuild(wv, rb, W) {
+    const n = rb.n;
+    const fill = []; // 每段 20 個數：四邊形 8 ＋ 折角三角 12（最後一段補 0）
+    const lit = []; // 每段 8
+    const edge = []; // 每段 4
+    let pnx = 0;
+    let pny = 0;
+    let pa = 0;
+    let pb = 0;
+    for (let i = 0; i < n; i++) {
+      const ax = wv[i * 2], ay = wv[i * 2 + 1], bx = wv[i * 2 + 2], by = wv[i * 2 + 3];
+      const d = Math.hypot(bx - ax, by - ay) || 1;
+      const nx = -(by - ay) / d;
+      const ny = (bx - ax) / d;
+      const a0 = rb.w[i * 4] * W, a1 = rb.w[i * 4 + 1] * W, b0 = rb.w[i * 4 + 2] * W, b1 = rb.w[i * 4 + 3] * W;
+      const q = [ax + nx * a0, ay + ny * a0, bx + nx * a1, by + ny * a1, bx - nx * b1, by - ny * b1, ax - nx * b0, ay - ny * b0];
+      const seg = [];
+      bfPush(seg, q);
+      if (i > 0) {
+        // 折角：補上前一段尾端和這一段起點之間的縫（兩側各一個三角）
+        bfPush(seg, [ax, ay, ax + pnx * pa, ay + pny * pa, ax + nx * a0, ay + ny * a0]);
+        bfPush(seg, [ax, ay, ax - pnx * pb, ay - pny * pb, ax - nx * b0, ay - ny * b0]);
+      } else for (let k = 0; k < 12; k++) seg.push(ax);
+      for (const c of seg) fill.push(c);
+      if (rb.lit[i] > 0) {
+        bfPush(lit, [ax, ay, bx, by, q[2], q[3], q[0], q[1]]);
+        edge.push(q[0], q[1], q[2], q[3]);
+      } else {
+        bfPush(lit, [ax, ay, bx, by, q[4], q[5], q[6], q[7]]);
+        edge.push(q[6], q[7], q[4], q[5]);
       }
+      pnx = nx;
+      pny = ny;
+      pa = a1;
+      pb = b1;
     }
-    return lines;
+    return { n, t0: rb.t0, v: wv, fill: new Float32Array(fill), lit: new Float32Array(lit), edge: new Float32Array(edge) };
   }
-  const BF_POOL = [];
-  for (let i = 0; i < 24; i++) BF_POOL.push(bfBolt());
 
   // 預先畫好的貼圖：命中點的暗紅暈、空間扭曲用的柔邊遮罩
   const bfCanvas = (w, h) => {
@@ -245,9 +301,10 @@
     },
 
     // 黑閃（咒術迴戰式）：命中瞬間空間扭曲（放射狀鼓起＋紅黑色差、極短的反相/壓暗），
-    // 接著一叢細的、分岔的黑色閃電從命中點劈啪竄出，有幾道貼著目標身體繞過去。
-    // 閃電形狀事先生成一組（BF_POOL），每次只做旋轉、縮放、彎曲。
-    // s：放大倍率（五轉的地爆天星用大黑閃）；r：目標的大小（繞身閃電的半徑）
+    // 接著幾道粗的「摺痕」從命中點劈出去：直線段以銳角折來折去的黑色帶子，紅光只打在每一折的一側，
+    // 像空間本身被揉皺；旁邊散著幾片小摺片，有一兩道貼著目標繞過去。
+    // 形狀事先生成一組（BF_POOL／BF_SHARD），每次只做旋轉、縮放、彎曲。
+    // s：放大倍率（五轉的地爆天星用大黑閃）；r：目標的大小（繞身摺痕的半徑）
     blackFlash(x, y, dir, s, r) {
       s = s || 1;
       dir = dir || 1;
@@ -260,8 +317,8 @@
         list.splice(k, 1);
       }
       const busy = list.length >= 3;
-      const Rw = Math.max(12, r || 22 * s);
-      const f = { x, y, s, big, t: 0, life: 0.34, bolts: [], sparks: [], rw: Rw, dist: false, g0: 0, g1: 0 };
+      const Rw = Math.max(14, r || 22 * s) * 1.25;
+      const f = { x, y, s, big, t: 0, life: 0.36, bolts: [], sparks: [], rw: Rw, dist: false };
       const sq = Math.sqrt(s);
       // 空間扭曲有頻率限制：連續黑閃時只有間隔夠久的那一發會扭曲畫面
       if (big || this.bfClock - this.bfDistT > 0.12) {
@@ -276,64 +333,75 @@
         this.darkInv = inv;
         this.darkAmt = big ? 1 : 0.75;
       }
-      // 主要的一擊（group 0）＋稍晚的一小撮餘電（group 1）
-      const nRad = busy ? 3 : big ? 6 : 5;
-      const nWrap = busy ? 1 : 2;
-      const nLate = busy ? 1 : big ? 3 : 2;
-      const back = dir > 0 ? Math.PI : 0; // 攻擊者那一側
-      const add = (g, wrap) => {
-        const src = BF_POOL[(Math.random() * BF_POOL.length) | 0];
+      const fwd = dir > 0 ? 0 : Math.PI; // 打飛的方向
+      const back = fwd + Math.PI; // 攻擊者那一側
+      const reach = (Rw + 40) * 1.65 * Math.pow(s, 0.55);
+      const add = (g, kind) => {
+        const src = kind === 'shard' ? BF_SHARD[(Math.random() * BF_SHARD.length) | 0] : BF_POOL[(Math.random() * BF_POOL.length) | 0];
         const flip = Math.random() < 0.5 ? -1 : 1;
-        const lines = [];
-        if (wrap) {
-          // 繞著目標：沿著橢圓往前爬，路徑的抖動變成半徑的起伏
-          const a0 = back + U.rand(-1.3, 1.3);
-          const span = U.rand(1.1, 2.1) * (Math.random() < 0.5 ? -1 : 1);
-          const R = Rw * U.rand(0.85, 1.12);
-          for (const ln of src) {
-            const p = ln.p;
-            const o = new Float32Array(p.length);
-            for (let i = 0; i < p.length; i += 2) {
-              const u = p[i];
-              const v = p[i + 1] * flip;
-              const th = a0 + span * u;
-              const rho = R * (1 - 0.75 * Math.pow(Math.max(0, 1 - u * 1.6), 3)) + v * R * 0.75;
-              o[i] = x + Math.cos(th) * rho * 1.1;
-              o[i + 1] = y + Math.sin(th) * rho * 0.92;
-            }
-            lines.push({ p: o, n: ln.n, c2: ln.c2, c3: ln.c3, t0: ln.t0 });
-          }
+        const W = (kind === 'shard' ? U.rand(3.4, 4.6) : U.rand(6, 8.2)) * sq;
+        const ribbons = [];
+        let map;
+        if (kind === 'wrap') {
+          // 繞著目標：沿著橢圓往前折，頂點的上下擺動變成半徑的起伏
+          const a0 = back + U.rand(-1.2, 1.2);
+          const span = U.rand(1.2, 2.2) * (Math.random() < 0.5 ? -1 : 1);
+          const R = Rw * U.rand(0.95, 1.15);
+          map = (u, v) => {
+            const th = a0 + span * u;
+            const rho = R * (1 - 0.7 * Math.pow(Math.max(0, 1 - u * 1.6), 3)) + v * R * 0.7;
+            return [x + Math.cos(th) * rho * 1.1, y + Math.sin(th) * rho * 0.92];
+          };
         } else {
-          // 往外竄：偏向攻擊方向的反側（打飛的方向），但四面都有
-          const a = Math.random() < 0.7 ? (dir > 0 ? 0 : Math.PI) + U.rand(-1.5, 1.5) : U.rand(0, Math.PI * 2);
-          const L = U.rand(0.9, 1.7) * (Rw + 38) * Math.pow(s, 0.55);
+          let ox = x;
+          let oy = y;
+          let a;
+          let L;
+          if (kind === 'shard') {
+            // 小摺片：散在周圍，大致沿著切線方向
+            const pa = U.rand(0, Math.PI * 2);
+            const pd = Rw * U.rand(0.5, 1.3);
+            ox = x + Math.cos(pa) * pd;
+            oy = y + Math.sin(pa) * pd * 0.9;
+            a = pa + Math.PI / 2 + U.rand(-0.7, 0.7);
+            L = reach * U.rand(0.25, 0.4);
+          } else {
+            // 大摺痕：多半往打飛的方向竄，但四面都有
+            a = Math.random() < 0.65 ? fwd + U.rand(-1.4, 1.4) : U.rand(0, Math.PI * 2);
+            L = reach * U.rand(0.75, 1.1);
+          }
           const ca = Math.cos(a) * L;
           const sa = Math.sin(a) * L;
-          for (const ln of src) {
-            const p = ln.p;
-            const o = new Float32Array(p.length);
-            for (let i = 0; i < p.length; i += 2) {
-              const u = p[i];
-              const v = p[i + 1] * flip;
-              o[i] = x + u * ca - v * sa;
-              o[i + 1] = y + u * sa + v * ca;
-            }
-            lines.push({ p: o, n: ln.n, c2: ln.c2, c3: ln.c3, t0: ln.t0 });
-          }
+          map = (u, v) => [ox + u * ca - v * sa, oy + u * sa + v * ca];
         }
-        f.bolts.push({ g, lines });
+        for (const rb of src) {
+          const wv = new Float32Array(rb.v.length);
+          for (let i = 0; i < rb.v.length; i += 2) {
+            const q = map(rb.v[i], rb.v[i + 1] * flip);
+            wv[i] = q[0];
+            wv[i + 1] = q[1];
+          }
+          ribbons.push(bfBuild(wv, rb, W));
+        }
+        f.bolts.push({ g, ribbons });
       };
-      for (let i = 0; i < nRad; i++) add(0, false);
-      for (let i = 0; i < nWrap; i++) add(0, true);
-      for (let i = 0; i < nLate; i++) add(1, Math.random() < 0.5);
-      f.l0 = U.rand(0.13, 0.19) * (big ? 1.3 : 1);
-      f.d1 = U.rand(0.035, 0.06);
-      f.l1 = U.rand(0.1, 0.15) * (big ? 1.3 : 1);
+      // 主擊（group 0）：幾道大摺痕主導畫面，旁邊幾片小摺片；稍晚（group 1）再補一道小的
+      const nMain = busy ? 2 : 3;
+      const nWrap = busy ? 0 : 1;
+      const nShard = busy ? 1 : big ? 3 : 2;
+      for (let i = 0; i < nMain; i++) add(0, 'main');
+      for (let i = 0; i < nWrap; i++) add(0, 'wrap');
+      for (let i = 0; i < nShard; i++) add(0, 'shard');
+      add(1, busy || Math.random() < 0.5 ? 'shard' : 'main');
+      if (big) add(1, 'main');
+      f.l0 = U.rand(0.14, 0.2) * (big ? 1.25 : 1);
+      f.d1 = U.rand(0.04, 0.065);
+      f.l1 = U.rand(0.1, 0.14) * (big ? 1.25 : 1);
       // 少量黑紅火花（跟著這個黑閃一起畫，才會蓋在地爆天星的石球上面）
       const ns = busy ? 3 : Math.round(7 * Math.min(2.2, sq));
       for (let i = 0; i < ns; i++) {
         const a = U.rand(0, Math.PI * 2);
-        const v = U.rand(260, 560) * sq;
+        const v = U.rand(300, 640) * sq;
         f.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, red: i % 3 !== 0 });
       }
       f.slife = U.rand(0.2, 0.28);
@@ -680,7 +748,7 @@
         // 2. 命中點的暗紅暈（很快收掉）
         const gk = f.t / (f.big ? 0.2 : 0.14);
         if (gk < 1) {
-          const gr = (f.rw * 0.9 + 16) * (0.7 + 0.5 * gk);
+          const gr = (f.rw * 0.9 + 26) * (0.7 + 0.5 * gk);
           ctx.globalAlpha = (1 - gk) * (1 - gk);
           ctx.drawImage(BF_GLOW, f.x - gr, f.y - gr, gr * 2, gr * 2);
         }
@@ -688,7 +756,7 @@
         const rk = f.t / (f.big ? 0.3 : 0.22);
         if (rk < 1) {
           const e = 1 - (1 - rk) * (1 - rk);
-          const rr = 8 + (f.rw * 1.6 + 30 * s) * e;
+          const rr = 10 + (f.rw * 1.9 + 44 * s) * e;
           ctx.globalAlpha = 1 - rk;
           ctx.strokeStyle = 'rgba(12,0,5,0.5)';
           ctx.lineWidth = (3.2 * (1 - rk) + 0.6) * sq;
@@ -701,58 +769,78 @@
           ctx.ellipse(f.x, f.y, rr * 0.96, rr * 0.86, 0, 0, Math.PI * 2);
           ctx.stroke();
         }
-        // 4. 閃電：兩組（主擊、餘電），每組三段粗細 × 三層（暗紅外暈、紅邊、黑芯）
+        // 4. 摺痕：兩組（主擊、餘電）。每組把所有帶子拼成四條路徑：暗紅外暈（中線）、黑色帶子、受光的暗紅半面、受光側的紅邊
         for (let g = 0; g < 2; g++) {
           const age = g ? f.t - f.d1 : f.t;
           const life = g ? f.l1 : f.l0;
           if (age < 0 || age >= life) continue;
           const k = age / life;
-          const grow = Math.min(1, age / 0.028 + 0.25);
-          // 閃爍：前段幾乎全亮，之後隨機暗掉、又亮回來
-          let al = k < 0.3 ? 1 : 1 - (k - 0.3) / 0.7;
-          if (k > 0.15 && Math.random() < 0.28) al *= 0.25;
+          const grow = Math.min(1, age / 0.03 + 0.2);
+          // 閃爍：前段全亮，之後隨機暗掉、又亮回來
+          let al = k < 0.35 ? 1 : 1 - (k - 0.35) / 0.65;
+          if (k > 0.4 && Math.random() < 0.25) al *= 0.45;
           if (al <= 0.02) continue;
-          ctx.globalAlpha = al;
-          // 三段粗細各做一條路徑；先畫全部的外暈、再畫全部的紅邊、最後畫全部的黑芯（細段的紅邊才不會蓋住粗段的黑芯）
-          const paths = [null, null, null];
-          for (let band = 1; band <= 3; band++) {
-            const path = new Path2D();
-            let any = false;
-            for (const b of f.bolts) {
-              if (b.g !== g) continue;
-              for (const ln of b.lines) {
-                const cnt = band === 3 ? ln.c3 : band === 2 ? ln.c2 : ln.n;
-                const gl = Math.floor(ln.n * Math.max(0, Math.min(1, (grow - ln.t0) / Math.max(0.05, 1 - ln.t0))));
-                const c = Math.min(cnt, gl);
-                if (c < 2) continue;
-                const p = ln.p;
-                path.moveTo(p[0], p[1]);
-                for (let i = 1; i < c; i++) path.lineTo(p[i * 2], p[i * 2 + 1]);
-                any = true;
+          const pC = new Path2D();
+          const pB = new Path2D();
+          const pL = new Path2D();
+          const pE = new Path2D();
+          let any = false;
+          for (const b of f.bolts) {
+            if (b.g !== g) continue;
+            for (const rb of b.ribbons) {
+              const c = Math.ceil(rb.n * Math.max(0, Math.min(1, (grow - rb.t0) / Math.max(0.05, 1 - rb.t0))));
+              if (c < 1) continue;
+              any = true;
+              const v = rb.v;
+              pC.moveTo(v[0], v[1]);
+              for (let i = 1; i <= c; i++) pC.lineTo(v[i * 2], v[i * 2 + 1]);
+              const F = rb.fill;
+              const Lp = rb.lit;
+              const E = rb.edge;
+              for (let i = 0; i < c; i++) {
+                let o = i * 20;
+                pB.moveTo(F[o], F[o + 1]);
+                pB.lineTo(F[o + 2], F[o + 3]);
+                pB.lineTo(F[o + 4], F[o + 5]);
+                pB.lineTo(F[o + 6], F[o + 7]);
+                pB.closePath();
+                if (i > 0) {
+                  for (o += 8; o < i * 20 + 20; o += 6) {
+                    pB.moveTo(F[o], F[o + 1]);
+                    pB.lineTo(F[o + 2], F[o + 3]);
+                    pB.lineTo(F[o + 4], F[o + 5]);
+                    pB.closePath();
+                  }
+                }
+                o = i * 8;
+                pL.moveTo(Lp[o], Lp[o + 1]);
+                pL.lineTo(Lp[o + 2], Lp[o + 3]);
+                pL.lineTo(Lp[o + 4], Lp[o + 5]);
+                pL.lineTo(Lp[o + 6], Lp[o + 7]);
+                pL.closePath();
+                o = i * 4;
+                pE.moveTo(E[o], E[o + 1]);
+                pE.lineTo(E[o + 2], E[o + 3]);
               }
             }
-            if (any) paths[band - 1] = path;
           }
-          const bw = [0.2 * 3.2 * sq, 0.5 * 3.2 * sq, 3.4 * sq];
-          ctx.strokeStyle = 'rgba(160,0,24,0.16)';
-          for (let i = 0; i < 3; i++) {
-            if (!paths[i]) continue;
-            ctx.lineWidth = bw[i] * 1.3 + 2.6 * sq;
-            ctx.stroke(paths[i]);
-          }
-          for (let i = 0; i < 3; i++) {
-            if (!paths[i]) continue;
-            // 最細的尾巴紅邊淡一點，免得一片細紅絲蓋過黑芯
-            ctx.strokeStyle = i ? '#d41030' : 'rgba(212,16,48,0.55)';
-            ctx.lineWidth = bw[i] + (i ? 1.1 : 0.7);
-            ctx.stroke(paths[i]);
-          }
-          ctx.strokeStyle = '#050002';
-          for (let i = 0; i < 3; i++) {
-            if (!paths[i]) continue;
-            ctx.lineWidth = Math.max(0.55, bw[i]);
-            ctx.stroke(paths[i]);
-          }
+          if (!any) continue;
+          ctx.globalAlpha = al;
+          ctx.lineJoin = 'miter';
+          ctx.miterLimit = 6;
+          ctx.strokeStyle = 'rgba(150,0,22,0.15)';
+          ctx.lineWidth = 10 * sq;
+          ctx.stroke(pC);
+          ctx.fillStyle = '#040002';
+          ctx.fill(pB);
+          ctx.fillStyle = 'rgba(70,0,12,0.8)';
+          ctx.fill(pL);
+          ctx.strokeStyle = '#e0142e';
+          ctx.lineWidth = 1.3 * sq;
+          ctx.lineCap = 'butt';
+          ctx.stroke(pE);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
         }
         // 5. 黑紅火花：細短的線段，沿著速度方向拉長
         const sk = f.t / f.slife;
@@ -782,7 +870,7 @@
       const sc = Math.hypot(m.a, m.b);
       const dx = m.a * f.x + m.c * f.y + m.e;
       const dy = m.b * f.x + m.d * f.y + m.f;
-      const R = Math.min(260, (f.rw * 1.5 + 34 * Math.sqrt(f.s)) * sc) | 0;
+      const R = Math.min(320, (f.rw * 1.5 + 50 * Math.sqrt(f.s)) * sc) | 0;
       const x0 = Math.max(0, (dx - R) | 0);
       const y0 = Math.max(0, (dy - R) | 0);
       const x1 = Math.min(cv.width, (dx + R) | 0);
