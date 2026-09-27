@@ -20,7 +20,7 @@
   add('silencefox', { name: '九尾封印狐', lv: 46, art: 'silencefox', behavior: 'aggressive', abilities: ['foxfire'], speed: 80, w: 80, h: 66, sight: 400, hpMul: 1.05, mat: 'sealtalisman' });
   add('heartcedar', { name: '古松樹靈', lv: 48, art: 'heartcedar', behavior: 'passive', abilities: ['ranged', 'heart'], speed: 22, w: 100, h: 130, hpMul: 1.5, mat: 'lifecrystal',
     projectile: { kind: 'icicle', speed: 380, cd: 2.4, range: 460, count: 3 } });
-  add('shieldbear', { name: '狛犬', lv: 49, art: 'shieldbear', behavior: 'aggressive', abilities: ['shield'], speed: 55, w: 110, h: 100, sight: 380, hpMul: 1.45, atkMul: 1.1, mat: 'shieldshard' });
+  add('shieldbear', { name: '玄武', lv: 49, art: 'shieldbear', behavior: 'aggressive', abilities: ['shield'], speed: 55, w: 110, h: 100, sight: 380, hpMul: 1.45, atkMul: 1.1, mat: 'shieldshard' });
 
   // ── 終章　時空間神殿（Lv50–60）──
   add('hourowl', { name: '時之鳳凰', lv: 51, art: 'hourowl', behavior: 'passive', abilities: ['ranged', 'rewind', 'phoenixfan'], speed: 50, w: 80, h: 90, hpMul: 1.1, mat: 'timesand',
@@ -55,7 +55,7 @@
     dreamwool: { name: '雪女的冰簪', price: 66, desc: '雪女髮上掉下來的冰簪，握久了手會睏，像要在雪裡睡著。' },
     sealtalisman: { name: '九尾封符', price: 70, desc: '九尾封印狐尾巴上的封符，是一百年前的巫女寫的。' },
     lifecrystal: { name: '御神木之心', price: 76, desc: '古松樹靈心核裡的一小片紅水晶，還在一下一下地跳。' },
-    shieldshard: { name: '狛犬石盾片', price: 80, desc: '狛犬石盾上崩下來的一角，刻著半個神紋。' },
+    shieldshard: { name: '玄武甲片', price: 80, desc: '玄武背甲上剝落的一片，上面的星宿紋還在慢慢轉。' },
     timesand: { name: '鳳凰時羽', price: 86, desc: '時之鳳凰的尾羽，羽尖流著往上跑的沙。' },
     mirrorshard: { name: '麒麟鏡鱗', price: 88, desc: '鏡麒麟身上的一片鏡鱗，照出來的你是反過來的。' },
     clockwing: { name: '時停蝶翅粉', price: 92, desc: '時停蝶翅膀上的金粉，灑在手上，手就慢半拍。' },

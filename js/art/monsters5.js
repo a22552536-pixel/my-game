@@ -3104,6 +3104,26 @@
       c.lineTo(hx + 3, hy - 3);
       c.closePath();
     };
+    // 蒙眼布的兩條長帶尾（在頭髮後面隨風飄；施法時揚起捲動、死亡時垂落）
+    {
+      const kx = hx - 14;
+      const ky = hy + 0.6;
+      const lift = cast * 10;
+      const droop = dead ? 14 : 0;
+      [[0, 30, 4.2], [1.3, 25, 3.4]].forEach((q) => {
+        const w1 = Math.sin(t * 3.2 - q[0]) * 3 * wind;
+        const w2 = Math.sin(t * 3.2 - q[0] - 1.4) * 4 * wind;
+        const fn = cb(kx, ky, kx - q[1] * 0.35, ky + 4 + w1 - lift * 0.5 + droop * 0.4, kx - q[1] * 0.7, ky + 2 + w2 - lift + droop * 0.8, kx - q[1] - wind * 3, ky + 7 + w2 * 1.2 - lift * 1.2 + droop);
+        rimShape(ctx, (c) => taper(c, fn, (s2) => q[2] * (1 - s2 * 0.25), 12), q[0] ? P4.indS : P4.ind, P4.indD, P4.indL, { cel: 1, rim: 0.7, lw: 1.6 });
+        const e = fn(1);
+        ctx.strokeStyle = A.c(P4.teal);
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(e[0] + 1.5, e[1] - 2);
+        ctx.lineTo(e[0] - 1.5, e[1] + 2);
+        ctx.stroke();
+      });
+    }
     rimShape(ctx, backHair, YK.hair, YK.hairS, YK.hairL, { cel: 2.5, rim: 1.4, lw: 2.2, inner: () => {
       ctx.strokeStyle = A.c(YK.hairL);
       ctx.lineWidth = 0.9;
@@ -3307,7 +3327,8 @@
     // ── 頭（比例較小、優雅） ──
     ctx.save();
     ctx.translate(hx, hy + 8);
-    ctx.rotate(hw(0.03) + (walk ? -0.04 : 0) - puffK * 0.1);
+    ctx.rotate(hw(0.03) + (walk ? -0.04 : 0) - puffK * 0.1 - (hurt ? 0.22 : 0));
+    if (hurt) ctx.translate(-2.5, 0);
     ctx.scale(1.16, 1.16);
     ctx.translate(-hx, -hy - 8);
     A.shape(ctx, (c) => A.roundRect(c, hx - 3, hy + 6, 7, 9, 2), YK.skin, YK.skinS, { lw: 1.6, shadeY: hy + 11 });
@@ -3331,116 +3352,6 @@
       glowH(ctx, hx - 1.5, hy + 3, 3.5, '#b9c6ea', 0.45);
       glowH(ctx, hx + 4, hy - 3.5, 7, '#c8d2ee', 0.35);
     } });
-    const ex2 = hx + 7;
-    const ey2 = hy - 0.8;
-    // 人的眼睛：杏仁形的眼裂（上眼皮弧線高而彎、下眼皮較平；外眼角微微上揚、內眼角有淚阜的小凹），
-    //   圓形虹膜的上緣被半垂的上眼皮蓋住、兩側露出眼白；上眼線粗、外眼角幾根睫毛，下眼線淡。
-    //   3/4 側面：遠側的眼（靠近鼻樑那隻）較窄。施法時虹膜發淡青光、眼皮抬起，但形狀不變
-    const yEye = (x, y, w, far) => {
-      if (kind === 'x' || kind === 'hurt') {
-        A.eye(ctx, x, y, w * 0.55, w * 0.55, kind);
-        return;
-      }
-      const sx = far ? 0.78 : 1;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(sx, 1);
-      const inner = far ? -w : w; // 內眼角朝著鼻樑：近側眼（左）在右邊、遠側眼（右）在左邊
-      const outer = -inner;
-      const h = w * 0.62;
-      if (kind === 'closed') {
-        ctx.strokeStyle = A.c(YK.hair);
-        ctx.lineWidth = 1.3;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(inner, 0.2);
-        ctx.quadraticCurveTo(0, h * 0.9, outer, -0.4);
-        ctx.stroke();
-        ctx.restore();
-        return;
-      }
-      const lid = 1 - cast; // 1 = 半垂
-      const upH = h * (1.55 - lid * 0.45);
-      const eyeP = (c) => {
-        c.moveTo(inner, 0.25);
-        c.bezierCurveTo(inner * 0.6, -upH, outer * 0.35, -upH * 1.05, outer, -h * 0.35);
-        c.bezierCurveTo(outer * 0.55, h * 0.75, inner * 0.45, h * 0.8, inner, 0.25);
-        c.closePath();
-      };
-      if (cast > 0.2 && !dead) glowH(ctx, 0, 0, 6.5, P4.teal, 0.45 * cast);
-      ctx.fillStyle = A.c('#f7f9ff');
-      ctx.beginPath();
-      eyeP(ctx);
-      ctx.fill();
-      ctx.save();
-      ctx.beginPath();
-      eyeP(ctx);
-      ctx.clip();
-      // 虹膜（圓）＋瞳孔＋上半的亮點；上眼皮的影子
-      const ir = h * 1.05;
-      const ix = outer * 0.05;
-      const iy = h * 0.05;
-      ctx.fillStyle = A.c(cast > 0.3 ? '#7fd9cf' : '#5b77b4');
-      ctx.beginPath();
-      ctx.arc(ix, iy, ir, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = A.c(cast > 0.3 ? '#bff4ee' : '#8fa6d8');
-      ctx.beginPath();
-      ctx.arc(ix, iy + ir * 0.35, ir * 0.55, 0, PI);
-      ctx.fill();
-      ctx.fillStyle = A.c(cast > 0.3 ? '#244a54' : '#161a30');
-      ctx.beginPath();
-      ctx.arc(ix, iy, ir * 0.45, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(160,172,215,0.55)';
-      ctx.beginPath();
-      ctx.ellipse(0, -upH * 0.55, w * 1.2, h * 0.5, 0, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(ix - ir * 0.3, iy - ir * 0.25, ir * 0.22, 0, TAU);
-      ctx.fill();
-      ctx.restore();
-      // 內眼角的淚阜
-      ctx.fillStyle = A.c('#e7b9c4');
-      ctx.beginPath();
-      ctx.ellipse(inner * 0.9, 0.35, 0.45, 0.35, 0, 0, TAU);
-      ctx.fill();
-      // 上眼線（粗）與外眼角的睫毛
-      ctx.strokeStyle = A.c(YK.hair);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 1.35 / sx;
-      ctx.beginPath();
-      ctx.moveTo(inner * 0.95, 0.05);
-      ctx.bezierCurveTo(inner * 0.6, -upH - 0.2, outer * 0.35, -upH * 1.05 - 0.2, outer * 1.08, -h * 0.45);
-      ctx.stroke();
-      ctx.lineWidth = 0.65 / sx;
-      ctx.beginPath();
-      ctx.moveTo(outer * 1.05, -h * 0.42);
-      ctx.quadraticCurveTo(outer * 1.35, -h * 0.55, outer * 1.55, -h * 1.1);
-      ctx.moveTo(outer * 0.8, -h * 0.85);
-      ctx.quadraticCurveTo(outer * 1.05, -h * 1.2, outer * 1.15, -h * 1.6);
-      ctx.stroke();
-      // 下眼線（淡）
-      ctx.strokeStyle = A.c('#a2adcf');
-      ctx.lineWidth = 0.6 / sx;
-      ctx.beginPath();
-      ctx.moveTo(outer * 0.95, -h * 0.25);
-      ctx.bezierCurveTo(outer * 0.55, h * 0.78, inner * 0.45, h * 0.82, inner * 0.8, h * 0.35);
-      ctx.stroke();
-      // 細細的柳葉眉（微微拱起）
-      ctx.strokeStyle = A.c(YK.hairL);
-      ctx.lineWidth = 0.75 / sx;
-      ctx.beginPath();
-      ctx.moveTo(inner * 1.0, -h * 2.2);
-      ctx.quadraticCurveTo(0, -h * 3.0 - (cast > 0.3 ? 0.5 : 0), outer * 1.2, -h * 2.1);
-      ctx.stroke();
-      ctx.restore();
-    };
-    // 近側的眼在左（較寬）、遠側的眼靠近鼻樑（較窄）
-    yEye(hx + 0.5, ey2, 2.9, false);
-    yEye(hx + 7.6, ey2 - 0.3, 2.3, true);
     // 小巧的鼻（一筆淡影）
     ctx.strokeStyle = A.c('#a9b5da');
     ctx.lineWidth = 0.9;
@@ -3477,6 +3388,51 @@
       ctx.arc(hx, hy - 6, 13, PI * 1.15, PI * 1.55);
       ctx.stroke();
     } });
+    // ── 蒙眼布：深靛的絲，銀色雪花刺繡、淡青的滾邊；順著 3/4 側臉的弧度橫過雙眼，在腦後打結 ──
+    {
+      ctx.save();
+      ctx.translate(0, 3.6);
+      const slip = dead ? 3.5 : 0;
+      const bandP = (c) => {
+        c.moveTo(hx - 12, hy - 7 + slip * 0.5);
+        c.bezierCurveTo(hx - 5, hy - 9.5 + slip, hx + 7, hy - 8.5 + slip, hx + 13.6, hy - 5 + slip * 1.4);
+        c.lineTo(hx + 13.2, hy + 0.5 + slip * 1.4);
+        c.bezierCurveTo(hx + 7, hy - 2.5 + slip, hx - 5, hy - 3 + slip, hx - 12, hy - 0.5 + slip * 0.5);
+        c.closePath();
+      };
+      rimShape(ctx, bandP, P4.ind, P4.indS, P4.indL, { cel: 1.2, rim: 0.8, lw: 1.8, inner: () => {
+        // 布的皺褶
+        ctx.strokeStyle = A.c(P4.indS);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(hx - 8, hy - 6.5 + slip);
+        ctx.quadraticCurveTo(hx - 2, hy - 5.8 + slip, hx + 3, hy - 6.8 + slip);
+        ctx.moveTo(hx + 5, hy - 3.5 + slip);
+        ctx.quadraticCurveTo(hx + 9, hy - 4.5 + slip, hx + 12, hy - 2.5 + slip * 1.3);
+        ctx.stroke();
+        // 施法：眼睛的位置透出淡淡的青光
+        if (cast > 0.05 && !dead) {
+          glowH(ctx, hx + 1, hy - 4.8, 5.5, P4.teal, 0.75 * cast);
+          glowH(ctx, hx + 8.5, hy - 4.2, 4.5, P4.teal, 0.65 * cast);
+        }
+        // 銀色的雪花刺繡
+        snowflake(ctx, hx - 5.5, hy - 5.2 + slip * 0.8, 1.6, '#c9d2ea', 0.6);
+        snowflake(ctx, hx + 4.8, hy - 5.4 + slip, 1.5, '#c9d2ea', 0.6);
+        snowflake(ctx, hx + 11, hy - 2.8 + slip * 1.3, 1.1, '#c9d2ea', 0.5);
+      } });
+      // 淡青的滾邊（上下緣）
+      ctx.strokeStyle = A.c(P4.teal);
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(hx - 11.5, hy - 6.4 + slip * 0.5);
+      ctx.bezierCurveTo(hx - 5, hy - 8.8 + slip, hx + 7, hy - 7.8 + slip, hx + 13, hy - 4.5 + slip * 1.4);
+      ctx.moveTo(hx - 11.5, hy - 1.2 + slip * 0.5);
+      ctx.bezierCurveTo(hx - 5, hy - 3.6 + slip, hx + 7, hy - 3.1 + slip, hx + 12.7, hy - 0.1 + slip * 1.4);
+      ctx.stroke();
+      // 腦後的結
+      A.shape(ctx, (c) => c.ellipse(hx - 12.5, hy - 3.8 + slip * 0.5, 2.3, 2.8, 0.2, 0, TAU), P4.ind, P4.indS, { lw: 1.4, shadeY: hy - 3 });
+      ctx.restore();
+    }
     // ── 髮飾：冰晶的櫛（梳子）、兩支冰簪＋垂下的冰珠流蘇（隨風搖） ──
     A.shape(ctx, (c) => { c.moveTo(hx - 11, hy - 12); c.quadraticCurveTo(hx - 4, hy - 21, hx + 5, hy - 18); c.lineTo(hx + 4, hy - 15.5); c.quadraticCurveTo(hx - 4, hy - 18, hx - 9, hy - 10.5); c.closePath(); }, P4.tealL, P4.teal, { lw: 1.4, shadeY: hy - 15 });
     ctx.fillStyle = A.c(P4.gold);
@@ -4155,56 +4111,21 @@
     }
     ctx.restore();
   }
-  // ── 狛犬（shieldbear）：守護神社參道的石狛犬活了過來（阿形）。風化的淡色花崗岩（鑿痕、裂縫、斑點、槽裡的青苔）；
-  //    挺起的胸、厚實的前腳；幾乎正面朝向觀眾的臉：兩隻圓鼓鼓的金眼、捲眉、寬鼻、張開的朱色大嘴與獠牙、正中一支金角；
-  //    頸上一圈雕刻的雲卷石鬃（招牌特徵），
-  //    尾巴是一團火焰狀的捲毛。頸上繫著朱色的前掛（狛犬傳統的紅布）與金鈴。
-  //    fx.guard：低頭把厚重的石鬃轉到前方當盾；fx.bash：頂著石鬃往前衝；recover：抬頭喘氣、露出破綻 ──
-  const KM_STONE = ['#cfcbc1', '#95918a', '#f0eee6'];
-  const KM_DARK = ['#aaa69d', '#6e6a64'];
-  const KM_MOSS = '#7c9a84';
-  // 雕刻的渦卷刻線（石頭上的凹槽，槽底長著一點青苔）
-  function carvedCurl(ctx, x, y, r, dir, rot) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot || 0);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    const nseg = r < 4 ? 9 : 14;
-    for (let i = 0; i <= nseg; i++) {
-      const k = i / nseg;
-      const a = dir * k * TAU * 1.1 + PI;
-      const rr = r * (1 - k * 0.78);
-      const px = Math.cos(a) * rr;
-      const py = Math.sin(a) * rr;
-      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-    }
-    ctx.strokeStyle = A.c(KM_DARK[1]);
-    ctx.lineWidth = Math.max(1.3, r * 0.3);
-    ctx.stroke();
-    if (r < 3) {
-      ctx.restore();
-      return;
-    }
-    ctx.strokeStyle = A.c(KM_STONE[2]);
-    ctx.lineWidth = 0.8;
-    ctx.translate(-0.8, -0.8);
-    ctx.stroke();
-    ctx.restore();
-  }
-  // 一片火焰狀的捲毛（圓瓣、尖端捲起）；用在鬃毛邊緣、肘後、尾巴
-  function flameTuft(ctx, x, y, len, w, ang, dir, fill, shade, rim, lw) {
-    const ca = Math.cos(ang);
-    const sa = Math.sin(ang);
-    const fn = cb(x, y, x + ca * len * 0.4 - sa * w * 0.6 * dir, y + sa * len * 0.4 + ca * w * 0.6 * dir, x + ca * len * 0.85 + sa * w * 0.3 * dir, y + sa * len * 0.85 - ca * w * 0.3 * dir, x + ca * len, y + sa * len);
-    rimShape(ctx, (c) => taper(c, fn, (s) => w * Math.sin(Math.min(1, 0.2 + s) * PI) * (1 - s * 0.55), 12), fill, shade, rim, { cel: w * 0.14, rim: 1, lw: lw || 2 });
-    const e = fn(0.72);
-    carvedCurl(ctx, e[0], e[1], w * 0.3, dir, ang);
-  }
+  // ── 玄武（id 仍是 shieldbear）：鎮守北方的神獸。巨大古老的龜，高聳的背甲是深黑靛色，每片甲都用金線鑲出星宿的連線，
+  //    星點微微發光；甲頂積著雪與霜，甲緣是朱漆與金鋲，掛著小冰柱。柱子般的鱗腳沉重地走，龜頭有隆起的眉骨、沉靜的金眼、鳥喙般的嘴。
+  //    一條黑底淡青腹的冰蛇從甲下繞過甲上，蛇頭高高昂起，吐著信、淡青的豎瞳；兩顆頭各自擺動。
+  //    fx.guard：龜頭與腳縮進甲裡，甲上的星宿連線發光、罩上一層結界光；蛇緊緊盤在甲頂。
+  //    fx.bash：蛇從甲上猛然往前咬、龜往前頂；recover：龜探出頭、蛇縮回來喘著白霜 ──
+  const GB = { shell: '#1d2244', shellS: '#11142c', shellL: '#3c4784', skin: '#4a5578', skinS: '#2e3656', skinL: '#7f8cb4', snake: '#1b1f3a', snakeS: '#0f1226', belly: P4.teal };
+  // 星宿：每片甲裡一組星點（x, y 相對甲中心）與連線
+  const GB_STARS = [
+    [[-7, -3], [-2, -6], [3, -4], [6, 1]],
+    [[-5, 4], [-1, -2], [4, 0], [2, 5]],
+    [[-6, -2], [0, 2], [5, -3]],
+    [[-4, -5], [-3, 2], [3, 3], [6, -2]],
+    [[-5, 1], [0, -4], [5, 2]],
+  ];
   function shieldbear(ctx, m) {
-    scaledLines(ctx, 1.3, () => shieldbear2(ctx, m));
-  }
-  function shieldbear2(ctx, m) {
     const fx = m.fx || {};
     const t = m.t || 0;
     const ph = phase(m);
@@ -4212,346 +4133,327 @@
     const dead = !!m.dead;
     const walk = walking(m) && !dead;
     const kind = eyeKind(m);
-    const guard = fx.guard == null ? true : !!fx.guard;
+    const guardF = fx.guard == null ? true : !!fx.guard;
     const bash = clamp(num(fx.bash, 0), 0, 1);
     const wind = ph === 'wind';
-    const recover = ph === 'recover' || (!guard && !dead);
-    const charging = bash > 0.05 || ph === 'strike';
-    const guarding = !recover && (charging || wind || guard);
-    const S = KM_STONE;
-    const D = KM_DARK;
-    const u = walk ? t * 5.5 : 0;
-    const bob = walk ? Math.cos(u * 2) * 1.2 : Math.sin(t * 1.8) * 0.5;
-    const lunge = charging ? 1 : 0;
-    const by = -38 + bob + lunge * 3;
+    const recover = !dead && (ph === 'recover' || !guardF);
+    const striking = !dead && (bash > 0.05 || ph === 'strike');
+    // 縮進甲裡的程度：守備（沒在走、沒在攻擊）時縮起來，走路時半縮，攻擊時伸出
+    const tuck = dead ? 0.3 : striking || recover ? 0 : wind ? 0.8 : walk ? 0.25 : guardF ? 0.75 : 0;
+    const u = walk ? t * 3.4 : 0;
+    const bob = walk ? Math.abs(Math.sin(u)) * 1.4 : Math.sin(t * 1.2) * 0.5;
+    const sy = -bob + tuck * 5 + (dead ? 8 : 0);
+    const shove = striking ? 6 : 0;
     ctx.save();
-    if (hurt) ctx.rotate(-0.05);
-    ctx.translate(lunge * 6 - (wind ? 3 : 0), 0);
-    // ── 火焰狀的捲尾（三瓣、往上豎起，慢半拍擺動） ──
-    const tw = Math.sin(t * 2 - 0.8) * 0.1 + (walk ? Math.sin(u - 1) * 0.07 : 0);
-    ctx.save();
-    ctx.translate(-32, by - 8);
-    ctx.rotate(tw);
-    flameTuft(ctx, -2, 2, 30, 17, -PI * 0.82, -1, D[0], D[1], null, 2.2);
-    flameTuft(ctx, 0, 0, 36, 18, -PI * 0.62, 1, S[0], S[1], S[2], 2.3);
-    flameTuft(ctx, 2, -1, 26, 14, -PI * 0.46, -1, S[0], S[1], S[2], 2.1);
-    ctx.restore();
-    // ── 腳：厚實的獅腳，肘後一撮火焰捲毛；對角步態 ──
-    const leg = (front, near, ph2) => {
-      const g = gaitFoot(u + ph2, walk ? 6 : 0, 5);
-      const col = near ? S[0] : '#b3afa6';
-      const sh = near ? S[1] : D[1];
-      const rim = near ? S[2] : null;
-      if (front) {
-        const x0 = near ? 15 : 20;
-        const fxp = x0 + 3 + g[0] + lunge * 6;
-        const fyp = -g[1];
-        const top = [x0, by + 6];
-        const wr = [fxp - 1 + g[2] * 2, fyp - 8 + g[2]];
-        const el = ik(top[0], top[1], wr[0], wr[1], 15, 13, -1);
-        legMass(ctx, [x0, by + 4, 10.5, 13, -0.1], [top, el, wr, [fxp, fyp - 2]], [17, 12, 10, 9.5], col, sh, rim, { lw: 2.4 });
-        if (near) flameTuft(ctx, el[0] - 1, el[1] - 2, 15, 9, PI * 0.8, -1, S[0], S[1], S[2], 1.9);
-        pawFoot(ctx, fxp, fyp, 15, 8, col, sh, { rot: -g[2] * 0.5, claw: P4.goldL, lw: 2.1 });
-      } else {
-        const x0 = near ? -20 : -16;
-        const fxp = x0 + 1 + g[0] - lunge * 3;
-        const fyp = -g[1];
-        const top = [x0, by + 5];
-        const hock = [fxp - 8 + g[2] * 3, fyp - 11 + g[2]];
-        const knee = ik(top[0], top[1], hock[0], hock[1], 14, 12, 1);
-        legMass(ctx, [x0 - 1, by + 3, 12, 13, 0.3], [top, knee, hock, [fxp - 1, fyp - 2]], [17, 12, 9, 9], col, sh, rim, { lw: 2.4, inner: near ? () => carvedCurl(ctx, x0 - 2, by + 2, 6, 1, 0) : null });
-        if (near) flameTuft(ctx, hock[0] - 1, hock[1] - 2, 14, 8, PI * 0.85, -1, S[0], S[1], S[2], 1.9);
-        pawFoot(ctx, fxp, fyp, 15, 8, col, sh, { rot: -g[2] * 0.5, claw: P4.goldL, lw: 2.1 });
-      }
-    };
-    leg(false, false, 0);
-    leg(true, false, PI);
-    // ── 身體：胸口挺起、腰身收緊的獅身（花崗岩的斑點與苔） ──
-    const spine = cb(-24, by + 2, -10, by - 4, 6, by - 8, 18, by - 8);
-    const bodyP = (c) => taper(c, spine, (s) => 22 + s * 8, 16);
-    const hipP = (c) => c.ellipse(-20, by + 1, 13, 13, 0, 0, TAU);
-    const chestP = (c) => c.ellipse(17, by - 5, 15, 19, 0.2, 0, TAU);
-    blob(ctx, [bodyP, hipP, chestP], S[0], S[1], S[2], { cel: 4.5, rim: 2, lw: 2.7, inner: () => {
-      // 花崗岩的斑點
-      ctx.fillStyle = A.c(D[0]);
-      ctx.beginPath();
-      for (let i = 0; i < 16; i++) {
-        const x = -30 + hash(i * 3.3) * 58;
-        const y = by - 16 + hash(i * 7.1) * 30;
-        ctx.moveTo(x + 0.9, y);
-        ctx.arc(x, y, 0.7 + hash(i) * 0.6, 0, TAU);
-      }
-      ctx.fill();
-      // 刻出來的肋與腹線
-      ctx.strokeStyle = A.c(D[1]);
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(-8, by - 2);
-      ctx.quadraticCurveTo(-4, by + 8, -10, by + 14);
-      ctx.moveTo(-2, by - 4);
-      ctx.quadraticCurveTo(3, by + 6, -2, by + 13);
-      ctx.stroke();
-      carvedCurl(ctx, -21, by - 2, 6.5, -1, 0);
-      // 鑿痕（一排排細短的斜刻）與風化的裂縫
-      ctx.strokeStyle = A.c(D[0]);
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      [[-28, by + 6], [4, by + 8], [10, by - 10], [-12, by + 10]].forEach((p) => {
-        for (let i = 0; i < 4; i++) {
-          ctx.moveTo(p[0] + i * 1.8, p[1]);
-          ctx.lineTo(p[0] + i * 1.8 + 1.4, p[1] + 3);
-        }
-      });
-      ctx.stroke();
-      ctx.strokeStyle = A.c('#57534e');
-      ctx.lineWidth = 0.9;
-      ctx.beginPath();
-      ctx.moveTo(-4, by - 13);
-      ctx.lineTo(-2, by - 9);
-      ctx.lineTo(-5, by - 6);
-      ctx.lineTo(-3, by - 2);
-      ctx.moveTo(-2, by - 9);
-      ctx.lineTo(1, by - 8);
-      ctx.moveTo(-30, by - 4);
-      ctx.lineTo(-27, by - 1);
-      ctx.lineTo(-28, by + 3);
-      ctx.stroke();
-      // 背上與凹槽裡的青苔
-      ctx.fillStyle = A.c(KM_MOSS);
-      ctx.beginPath();
-      ctx.ellipse(-14, by - 12, 7, 2.2, -0.1, 0, TAU);
-      ctx.ellipse(-22, by + 12, 4, 1.6, 0.2, 0, TAU);
-      ctx.fill();
-    } });
-    leg(false, true, PI);
-    leg(true, true, 0);
-    // ── 頭：幾乎正面朝向觀眾的狛犬石像臉（兩隻圓鼓鼓的大眼），頸上一圈雕刻的雲卷石鬃當作盾 ──
-    //    fx.guard：低頭、雲卷領圈張大擋在前面；衝撞時頂著雲卷往前；收招時抬頭喘氣
-    const hx = 30 + lunge * 3;
-    const hy = by - 20 - bob * 0.5 + (recover ? -3 + Math.sin(t * 6) * 1 : 0) + (guarding ? 3 : 0);
-    const shine = dead ? 0 : charging ? 0.8 : wind ? 0.5 : guarding ? 0.15 : 0;
-    const collarK = guarding ? 1.12 + (charging ? 0.08 : 0) : 0.95;
-    if (shine > 0) glowH(ctx, hx, hy + 2, 38, P4.goldL, shine * 0.4);
-    // 雲卷領圈：一圈大大的雲形卷（每個都是深刻的渦卷，槽裡有苔）
-    const scrollLobe = (x, y, r, dir, rot) => {
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU);
-      ctx.fillStyle = A.c(S[0]);
-      ctx.fill();
-      ctx.lineWidth = 2.1;
-      ctx.strokeStyle = A.outline();
-      ctx.stroke();
-      ctx.fillStyle = A.c(S[1]);
-      ctx.beginPath();
-      ctx.arc(x, y, r - 1, -0.2, PI * 0.8);
-      ctx.arc(x - r * 0.22, y - r * 0.22, r * 0.95, PI * 0.8, -0.2, true);
-      ctx.fill();
-      ctx.fillStyle = A.c(KM_MOSS);
-      ctx.beginPath();
-      ctx.ellipse(x + r * 0.2, y + r * 0.55, r * 0.45, r * 0.16, 0, 0, TAU);
-      ctx.fill();
-      carvedCurl(ctx, x, y, r * 0.78, dir, rot);
-    };
-    const nL = 11;
-    const ring = [];
-    for (let i = 0; i < nL; i++) {
-      const a = -PI / 2 + (i / nL) * TAU + 0.15;
-      ring.push([hx - 1 + Math.cos(a) * 19 * collarK, hy + 3 + Math.sin(a) * 20 * collarK, (6.8 + (i % 2) * 1.2) * collarK, i % 2 ? 1 : -1, a]);
+    if (hurt) {
+      ctx.translate(Math.sin(t * 60) * 1.5, 0);
+      ctx.rotate(-0.04);
     }
-    // 後排（上半圈）先畫，下半圈蓋在臉下緣
-    ring.filter((q) => Math.sin(q[4]) < 0.2).forEach((q) => scrollLobe(q[0], q[1], q[2], q[3], q[4]));
-    ctx.save();
-    ctx.translate(hx, hy);
-    ctx.scale(1.22, 1.22);
-    ctx.translate(-hx, -hy);
-    // 螺髮：一顆顆雕成蝸牛殼般的圓卷（石頭的立體陰影＋螺旋刻槽＋槽底青苔）
-    const snail = (x, y, r, dir) => {
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU);
-      ctx.fillStyle = A.c(S[0]);
-      ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = A.outline();
-      ctx.stroke();
-      // 右下的立體陰影（月牙）
-      ctx.fillStyle = A.c(D[0]);
-      ctx.beginPath();
-      ctx.arc(x, y, r - 0.7, -0.2, PI * 0.8);
-      ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.9, PI * 0.8, -0.2, true);
-      ctx.fill();
-      carvedCurl(ctx, x, y, r * 0.8, dir, 0);
-      ctx.fillStyle = A.c(KM_MOSS);
-      ctx.beginPath();
-      ctx.arc(x + r * 0.45, y + r * 0.55, r * 0.22, 0, TAU);
-      ctx.fill();
-    };
-    // 臉周圍左右對稱、一排排緊密的螺髮（外排大、內排小），往下接到雲卷領圈
-    const rows = [[15.5, 4.8, 10, -PI * 1.02, 0.02], [11.8, 3.6, 9, -PI * 0.98, -0.02]];
-    rows.forEach((rw) => {
-      const [R, r, n, a0, a1] = rw;
-      for (let i = 0; i <= n; i++) {
-        const a = a0 + ((a1 - a0) * i) / n;
-        snail(hx - 1 + Math.cos(a) * R, hy + 1 + Math.sin(a) * R * 0.95, r, i % 2 ? 1 : -1);
-      }
-    });
-    // 兩頰垂下的螺髮（左右各兩排往下）
-    [[-1, hx - 14], [1, hx + 12]].forEach((e) => {
-      for (let j = 0; j < 3; j++) snail(e[1] + e[0] * (j % 2) * 1.5, hy + 4 + j * 5.2, 3.4, e[0]);
-    });
-    // 臉：寬而方的獅面（下顎方正）
-    const faceP = (c) => {
-      c.moveTo(hx - 11, hy - 6);
-      c.quadraticCurveTo(hx - 12, hy - 11, hx - 1, hy - 11);
-      c.quadraticCurveTo(hx + 10, hy - 11, hx + 9, hy - 6);
-      c.lineTo(hx + 10, hy + 7);
-      c.quadraticCurveTo(hx + 9, hy + 13, hx - 1, hy + 13);
-      c.quadraticCurveTo(hx - 11, hy + 13, hx - 12, hy + 7);
-      c.closePath();
-    };
-    rimShape(ctx, faceP, S[0], S[1], S[2], { cel: 2.4, rim: 1.4, lw: 2.4, inner: () => {
-      // 深陷的眼窩陰影
-      ctx.fillStyle = A.c(D[0]);
-      ctx.beginPath();
-      ctx.ellipse(hx - 5.5, hy - 3.2, 4.6, 3.6, 0.15, 0, TAU);
-      ctx.ellipse(hx + 3.6, hy - 3.2, 4.6, 3.6, -0.15, 0, TAU);
-      ctx.fill();
-      // 頰上的鑿痕
-      ctx.strokeStyle = A.c(D[0]);
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
+    ctx.translate(shove, 0);
+    // 腳邊的寒霧
+    if (!dead) {
       for (let i = 0; i < 4; i++) {
-        ctx.moveTo(hx - 10 + i * 1.5, hy + 1);
-        ctx.lineTo(hx - 9 + i * 1.5, hy + 3.6);
-        ctx.moveTo(hx + 5 + i * 1.5, hy + 1);
-        ctx.lineTo(hx + 6 + i * 1.5, hy + 3.6);
+        const q = (t * 0.5 + i / 4) % 1;
+        puff(ctx, -40 + i * 26 + q * 6, -2 - q * 4, 5 + q * 4, '#ffffff', (1 - q) * 0.5);
       }
-      ctx.stroke();
-    } });
-    // 眼睛：深陷、往前稍往下看的金眼，兩眼瞳孔同一個方向（專注）
-    const angry = charging || wind || kind === 'angry';
-    [[hx - 5.5, 1], [hx + 3.6, -1]].forEach((e) => {
-      const ex = e[0];
-      const ey = hy - 3;
-      if (kind === 'x' || kind === 'hurt' || kind === 'closed' || (recover && kind === 'normal')) {
-        ctx.strokeStyle = A.outline();
-        ctx.lineWidth = 1.4;
-        ctx.lineCap = 'round';
+    }
+    // ── 柱腳：粗壯的鱗腳、三根爪；緩慢沉重的對角步態 ──
+    const leg = (x, ph2, near, front) => {
+      const g = gaitFoot(u + ph2, walk ? 7 : 0, 4);
+      const len = 1 - tuck * 0.55;
+      const top = [x, -26 + sy];
+      const fxp = x + (front ? 4 : -2) + g[0];
+      const fyp = -g[1];
+      const foot = [fxp, fyp - 3 + (1 - len) * 12];
+      const knee = [x + (front ? 7 : -6) + g[0] * 0.5, top[1] + (foot[1] - top[1]) * 0.45];
+      const col = near ? GB.skin : '#3a4466';
+      const sh = near ? GB.skinS : '#232a44';
+      limb2(ctx, [top, knee, foot], [22, 17, 16], col, sh, near ? GB.skinL : null, { lw: 2.3, round: 0.95, inner: (fn) => {
+        // 疊起來的大鱗片（圓瓣，亮面在上）
+        ctx.fillStyle = A.c(near ? GB.skinL : '#4a5578');
+        ctx.strokeStyle = A.c(sh);
+        ctx.lineWidth = 0.9;
+        for (let r = 0; r < 3; r++) {
+          for (let k = -1; k <= 1; k += 2) {
+            const q = along(fn, 0.28 + r * 0.22, k * 3.4 + (r % 2) * 1.5);
+            ctx.beginPath();
+            ctx.ellipse(q[0], q[1], 3.2, 2.4, 0, PI * 1.05, TAU * 0.98);
+            ctx.quadraticCurveTo(q[0], q[1] + 2.6, q[0] - 3.1, q[1] - 0.3);
+            ctx.globalAlpha *= 0.45;
+            ctx.fill();
+            ctx.globalAlpha /= 0.45;
+            ctx.stroke();
+          }
+        }
+      } });
+      // 象腳般的圓掌＋三根爪
+      A.shape(ctx, (c) => { c.moveTo(foot[0] - 10, fyp); c.quadraticCurveTo(foot[0] - 10, foot[1] - 3, foot[0], foot[1] - 3.5); c.quadraticCurveTo(foot[0] + 10, foot[1] - 3, foot[0] + 10, fyp); c.closePath(); }, col, sh, { lw: 2.1, shadeY: fyp - 2 });
+      ctx.fillStyle = A.c('#e8e4d6');
+      ctx.beginPath();
+      [-5, 0.5, 6].forEach((dx) => {
+        ctx.moveTo(foot[0] + dx - 1.4, fyp - 1);
+        ctx.lineTo(foot[0] + dx + 2.8, fyp + 0.8);
+        ctx.lineTo(foot[0] + dx + 1.4, fyp - 2.6);
+      });
+      ctx.fill();
+    };
+    leg(-30, PI, false, false);
+    leg(26, 0, false, true);
+    // ── 冰蛇：尾巴從甲後下方出來，身體從甲後繞上來（後半段在甲後面） ──
+    const sw = Math.sin(t * 1.7) * 3;
+    const sway2 = Math.sin(t * 2.3 + 1) * 2;
+    const snakeBody = (fn, w0, w1) => {
+      const wf = (s) => w0 + (w1 - w0) * s;
+      rimShape(ctx, (c) => taper(c, fn, wf, 18), GB.snake, GB.snakeS, P4.teal, { cel: 1.6, rim: 1, lw: 2, inner: () => {
+        // 淡青的腹線與鱗點
+        ctx.strokeStyle = A.c(P4.teal);
+        ctx.lineWidth = 1.3;
         ctx.beginPath();
-        if (kind === 'x') {
-          ctx.moveTo(ex - 2, ey - 2);
-          ctx.lineTo(ex + 2, ey + 2);
-          ctx.moveTo(ex + 2, ey - 2);
-          ctx.lineTo(ex - 2, ey + 2);
-        } else {
-          ctx.moveTo(ex - 2.8, ey + 0.3);
-          ctx.quadraticCurveTo(ex, ey + 1.6, ex + 2.8, ey + 0.3);
+        for (let i = 0; i <= 12; i++) {
+          const q = along(fn, i / 12, wf(i / 12) * 0.3);
+          i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]);
         }
         ctx.stroke();
-        return;
-      }
-      if (shine > 0.3) glowH(ctx, ex, ey, 7, P4.gold, shine * 0.5);
-      const P = (c) => c.ellipse(ex, ey, 3.3, 2.5, 0, 0, TAU);
-      A.shape(ctx, P, P4.goldL, P4.gold, { lw: 1.4, cel: [0.8, 0.8] });
-      ctx.save();
-      ctx.beginPath();
-      P(ctx);
-      ctx.clip();
-      ctx.fillStyle = A.c('#231c1e');
-      ctx.beginPath();
-      ctx.arc(ex + 0.9, ey + 0.8, 1.55, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(ex + 0.3, ey + 0.1, 0.5, 0, TAU);
-      ctx.fill();
-      ctx.restore();
-      void e;
-    });
-    // 皺起的粗眉骨：中間往下壓成 V 字，上面刻著捲紋
-    const drop = angry ? 1.4 : 0.6;
-    const browP = (c) => {
-      c.moveTo(hx - 12, hy - 5.5);
-      c.quadraticCurveTo(hx - 8, hy - 11, hx - 3, hy - 7.5 + drop);
-      c.lineTo(hx - 1, hy - 5 + drop);
-      c.lineTo(hx + 1, hy - 7.5 + drop);
-      c.quadraticCurveTo(hx + 6, hy - 11, hx + 10, hy - 5.5);
-      c.quadraticCurveTo(hx + 6, hy - 7.2, hx + 1.5, hy - 4.8 + drop);
-      c.lineTo(hx - 1, hy - 3 + drop);
-      c.lineTo(hx - 3.5, hy - 4.8 + drop);
-      c.quadraticCurveTo(hx - 8, hy - 7.2, hx - 12, hy - 5.5);
+        ctx.fillStyle = A.c('#3a4a7a');
+        ctx.beginPath();
+        for (let i = 1; i < 10; i++) {
+          const q = along(fn, i / 10, -wf(i / 10) * 0.15);
+          ctx.moveTo(q[0] + 0.8, q[1]);
+          ctx.arc(q[0], q[1], 0.8, 0, TAU);
+        }
+        ctx.fill();
+      } });
+    };
+    // 尾巴＋後段（在甲後）
+    snakeBody(cb(-60 + sw * 0.3, -10 + sy, -52, -18 + sy, -46, -44 + sy, -30, -70 + sy), 2, 7);
+    // ── 背甲 ──
+    const shellP = (c) => {
+      c.moveTo(-50, -22 + sy);
+      c.bezierCurveTo(-50, -62 + sy, -22, -82 + sy, 0, -82 + sy);
+      c.bezierCurveTo(24, -82 + sy, 48, -62 + sy, 48, -22 + sy);
+      c.quadraticCurveTo(0, -14 + sy, -50, -22 + sy);
       c.closePath();
     };
-    rimShape(ctx, browP, S[0], S[1], S[2], { cel: 1.2, rim: 0.8, lw: 1.7 });
-    carvedCurl(ctx, hx - 9.5, hy - 7.4, 2, 1, 0);
-    carvedCurl(ctx, hx + 7.5, hy - 7.4, 2, -1, 0);
-    // 眉間的皺紋
-    ctx.strokeStyle = A.c(D[1]);
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(hx - 2, hy - 9.5);
-    ctx.lineTo(hx - 1.4, hy - 7);
-    ctx.moveTo(hx, hy - 9.5);
-    ctx.lineTo(hx - 0.6, hy - 7);
-    ctx.stroke();
-    // 寬扁的獅鼻、外張的鼻翼
-    A.shape(ctx, (c) => { c.moveTo(hx - 2.5, hy - 3); c.lineTo(hx + 0.5, hy - 3); c.lineTo(hx + 4.5, hy + 2); c.quadraticCurveTo(hx + 4, hy + 4.2, hx - 1, hy + 4.2); c.quadraticCurveTo(hx - 6, hy + 4.2, hx - 6.5, hy + 2); c.closePath(); }, S[0], S[1], { lw: 1.5, shadeY: hy + 2.5 });
-    ctx.fillStyle = A.c('#4e4a45');
-    ctx.beginPath();
-    ctx.ellipse(hx - 3.6, hy + 2.8, 1.2, 0.8, 0.3, 0, TAU);
-    ctx.ellipse(hx + 1.6, hy + 2.8, 1.2, 0.8, -0.3, 0, TAU);
-    ctx.fill();
-    carvedCurl(ctx, hx - 5.6, hy + 1.8, 1.3, -1, 0);
-    carvedCurl(ctx, hx + 3.6, hy + 1.8, 1.3, 1, 0);
-    // 方正張開的大嘴：上排方齒、四角獠牙，下顎方正、下巴一撮捲鬚
-    const mo = charging ? 1 : recover ? 0.75 : 0.55;
-    const my = hy + 5.5;
-    const mh = 3 + mo * 4;
-    A.shape(ctx, (c) => { c.moveTo(hx - 9, my); c.lineTo(hx + 7, my); c.lineTo(hx + 6.5, my + mh); c.lineTo(hx - 8.5, my + mh); c.closePath(); }, '#7a1e22', null, { lw: 1.8 });
-    ctx.fillStyle = A.c(P4.verm);
-    ctx.fillRect(hx - 6.5, my + mh * 0.55, 11, mh * 0.45);
-    ctx.fillStyle = A.c('#f4f1e6');
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) ctx.rect(hx - 6.2 + i * 2.4, my, 2, 1.8);
-    ctx.fill();
-    fang(ctx, hx - 8, my + 0.2, 3, false);
-    fang(ctx, hx + 6, my + 0.2, 3, false);
-    fang(ctx, hx - 7.5, my + mh, 2.6, true);
-    fang(ctx, hx + 5.5, my + mh, 2.6, true);
-    // 下顎（方正的石塊）＋捲鬚
-    A.shape(ctx, (c) => { c.moveTo(hx - 9.5, my + mh); c.lineTo(hx + 7.5, my + mh); c.lineTo(hx + 6.5, my + mh + 3.5); c.lineTo(hx - 8.5, my + mh + 3.5); c.closePath(); }, S[0], S[1], { lw: 1.8, shadeY: my + mh + 2 });
-    snail(hx - 5, my + mh + 5.5, 2.8, 1);
-    snail(hx - 1, my + mh + 6.5, 3, -1);
-    snail(hx + 3, my + mh + 5.5, 2.8, 1);
-    // 金色獨角（正中央）
-    const hn = cb(hx - 1, hy - 11, hx - 1.5, hy - 18, hx + 1, hy - 23, hx + 4, hy - 27);
-    rimShape(ctx, (c) => taper(c, hn, (s) => 6.5 * (1 - s * 0.85), 10), P4.gold, P4.goldS, P4.goldL, { cel: 1.4, rim: 0.9, lw: 1.8 });
+    // ── 龜頭（在甲前緣；縮進時往甲裡退） ──
+    const headOut = 1 - tuck;
+    const hbx = 40;
+    const hby = -30 + sy;
+    const hx = hbx + 2 + headOut * 20 + (striking ? 4 : 0) + (recover ? -4 : 0);
+    const hy = hby - 2 + (walk ? Math.sin(u * 2 + 0.8) * 1.2 : Math.sin(t * 1.2 + 0.6) * 0.8) + (dead ? 8 : 0);
+    limb2(ctx, [[hbx - 6, hby + 2], [(hbx + hx) / 2, hby - 3], [hx - 6, hy]], [16, 13, 12], GB.skin, GB.skinS, GB.skinL, { lw: 2.2, round: 0.8, inner: (fn) => {
+      ctx.strokeStyle = A.c(GB.skinS);
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const q = along(fn, 0.3 + i * 0.18, 0);
+        ctx.moveTo(q[0] - 1, q[1] - 5);
+        ctx.quadraticCurveTo(q[0] + 1.5, q[1], q[0] - 1, q[1] + 5);
+      }
+      ctx.stroke();
+    } });
+    // 頭：厚重的龜頭、隆起的眉骨、鳥喙般的嘴
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.scale(1.3, 1.3);
+    ctx.translate(-hx, -hy);
+    const headP = (c) => {
+      c.moveTo(hx - 9, hy - 3);
+      c.quadraticCurveTo(hx - 6, hy - 11, hx + 4, hy - 10);
+      c.quadraticCurveTo(hx + 12, hy - 9, hx + 15, hy - 3);
+      c.quadraticCurveTo(hx + 17, hy + 1, hx + 13, hy + 4);
+      c.quadraticCurveTo(hx + 4, hy + 8, hx - 8, hy + 5);
+      c.closePath();
+    };
+    rimShape(ctx, headP, GB.skin, GB.skinS, GB.skinL, { cel: 2.2, rim: 1.2, lw: 2.2, inner: () => {
+      // 頭頂的鱗片
+      ctx.strokeStyle = A.c(GB.skinS);
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(hx - 4, hy - 9);
+      ctx.lineTo(hx - 2, hy - 5);
+      ctx.lineTo(hx + 3, hy - 6);
+      ctx.moveTo(hx + 3, hy - 6);
+      ctx.lineTo(hx + 5, hy - 9.5);
+      ctx.stroke();
+    } });
+    // 鳥喙（上喙勾起、下喙；攻擊時張開）
+    const bo = striking ? 2.5 : recover ? 1.5 : 0;
+    A.shape(ctx, (c) => { c.moveTo(hx + 8, hy + 2 + bo); c.quadraticCurveTo(hx + 14, hy + 3 + bo, hx + 16, hy + 1); c.quadraticCurveTo(hx + 13, hy + 6 + bo, hx + 7, hy + 5 + bo); c.closePath(); }, '#5a4a3a', '#3a2e24', { lw: 1.5, shadeY: hy + 4 + bo });
+    A.shape(ctx, (c) => { c.moveTo(hx + 7, hy - 1); c.quadraticCurveTo(hx + 15, hy - 3, hx + 18, hy + 2.5); c.quadraticCurveTo(hx + 14, hy + 2, hx + 8, hy + 2.5); c.closePath(); }, '#6e5c48', '#4a3c30', { lw: 1.6, shadeY: hy + 1 });
+    // 隆起的眉骨＋沉靜的金眼
+    const eyeK = recover && kind === 'normal' ? 'closed' : kind;
+    almondEye(ctx, hx + 5, hy - 3.5, 2.6, 1.6, P4.gold, eyeK === 'angry' ? 'angry' : eyeK, { white: P4.goldL, lw: 1.6, irisK: 1.1 });
+    A.shape(ctx, (c) => { c.moveTo(hx - 1, hy - 5.5); c.quadraticCurveTo(hx + 5, hy - 10, hx + 10, hy - 6); c.quadraticCurveTo(hx + 5, hy - 7.5, hx - 1, hy - 5.5); c.closePath(); }, GB.skinL, GB.skin, { lw: 1.4, shadeY: hy - 6.5 });
     ctx.restore();
-    // 前排（下半圈）雲卷蓋住臉的下緣與胸口
-    ring.filter((q) => Math.sin(q[4]) >= 0.2).forEach((q) => scrollLobe(q[0], q[1] + 2, q[2], q[3], q[4]));
-    // 朱色的前掛（紅布）＋金鈴，掛在領圈下
-    const bibSw = Math.sin(t * 2.4 - 0.8) * 1.2 + (walk ? Math.sin(u - 0.8) * 1.5 : 0);
-    // 朱色前掛：小小一片，掛在領圈下緣的胸口（不蓋住雲卷）
-    const by0 = hy + 3 + 20 * collarK + 4;
-    const bibP = (c) => { c.moveTo(hx - 6, by0); c.quadraticCurveTo(hx - 1, by0 + 2, hx + 4, by0); c.lineTo(hx + 1.5 + bibSw, by0 + 9); c.quadraticCurveTo(hx - 1 + bibSw, by0 + 10.5, hx - 3.5 + bibSw * 0.6, by0 + 8); c.closePath(); };
-    rimShape(ctx, bibP, P4.verm, P4.vermS, P4.vermL, { cel: 1.5, rim: 0.8, lw: 1.8 });
-    A.shape(ctx, (c) => c.arc(hx - 1 + bibSw * 0.3, by0 + 3.5, 2, 0, TAU), P4.gold, P4.goldS, { lw: 1.1, cel: [0.6, 0.6] });
-    // 衝撞時的氣勁與腳下揚起的雪
-    if (charging && !dead) {
+    // ── 背甲本體（蓋住腳與頸的根部） ──
+    const glowK = dead ? 0 : Math.min(1, tuck * 1.2 + (wind ? 0.4 : 0));
+    rimShape(ctx, shellP, GB.shell, GB.shellS, GB.shellL, { cel: 5, rim: 2, lw: 2.8, inner: () => {
+      // 甲片：兩圈沿著甲弧的分界＋放射狀的分界，全部鑲金線
+      ctx.strokeStyle = A.c(glowK > 0.3 ? P4.goldL : P4.gold);
+      ctx.lineWidth = 1.4;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-40, -30 + sy);
+      ctx.bezierCurveTo(-38, -58 + sy, -18, -70 + sy, 0, -70 + sy);
+      ctx.bezierCurveTo(20, -70 + sy, 38, -58 + sy, 38, -30 + sy);
+      ctx.moveTo(-26, -44 + sy);
+      ctx.bezierCurveTo(-22, -58 + sy, -10, -62 + sy, 0, -62 + sy);
+      ctx.bezierCurveTo(12, -62 + sy, 22, -56 + sy, 24, -44 + sy);
+      [[-40, -30, -26, -44], [-24, -62, -14, -51], [0, -70, 0, -62], [24, -62, 14, -52], [38, -30, 24, -44], [-26, -44, -30, -22], [0, -62, 0, -38], [24, -44, 28, -20], [-26, -44, 0, -38], [0, -38, 24, -44], [-30, -22, -14, -18], [28, -20, 14, -17]].forEach((q) => {
+        ctx.moveTo(q[0], q[1] + sy);
+        ctx.lineTo(q[2], q[3] + sy);
+      });
+      ctx.stroke();
+      // 星宿：每片甲裡一組金線連起的星點（守備時發亮）
+      const cells = [[-14, -30], [12, -30], [-33, -40], [30, -40], [-12, -58], [12, -58], [-26, -58]];
+      if (glowK > 0) glowH(ctx, 0, -46 + sy, 52, P4.goldL, glowK * 0.25);
+      ctx.strokeStyle = A.c(P4.goldS);
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      cells.forEach((c0, i) => {
+        const st = GB_STARS[i % GB_STARS.length];
+        st.forEach((p, j) => (j ? ctx.lineTo(c0[0] + p[0], c0[1] + p[1] + sy) : ctx.moveTo(c0[0] + p[0], c0[1] + p[1] + sy)));
+      });
+      ctx.stroke();
+      cells.forEach((c0, i) => {
+        GB_STARS[i % GB_STARS.length].forEach((p, j) => {
+          const tw = 0.55 + 0.45 * Math.sin(t * 3 + i * 1.7 + j * 2.1);
+          ctx.fillStyle = A.c(j === 0 ? '#ffffff' : P4.tealL);
+          ctx.globalAlpha *= 0.5 + tw * 0.5 + glowK * 0.3;
+          ctx.beginPath();
+          ctx.arc(c0[0] + p[0], c0[1] + p[1] + sy, j === 0 ? 1.3 : 0.9, 0, TAU);
+          ctx.fill();
+          ctx.globalAlpha /= 0.5 + tw * 0.5 + glowK * 0.3;
+        });
+      });
+      // 甲頂厚厚的積雪（下緣垂成一團團）與霜
+      ctx.fillStyle = A.c('#ffffff');
+      ctx.beginPath();
+      ctx.moveTo(-40, -50 + sy);
+      ctx.bezierCurveTo(-34, -90 + sy, 30, -92 + sy, 40, -52 + sy);
+      [[34, -56], [28, -52], [20, -58], [12, -54], [4, -59], [-4, -55], [-12, -60], [-20, -55], [-27, -58], [-34, -52]].forEach((p, i) => {
+        if (i % 2) ctx.quadraticCurveTo(p[0] + 3, p[1] + 6 + sy, p[0], p[1] + sy);
+        else ctx.quadraticCurveTo(p[0] + 3, p[1] - 2 + sy, p[0], p[1] + sy);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = A.c(P4.snowS);
+      ctx.beginPath();
+      ctx.moveTo(-30, -56 + sy);
+      ctx.quadraticCurveTo(0, -62 + sy, 32, -56 + sy);
+      ctx.quadraticCurveTo(0, -59 + sy, -30, -56 + sy);
+      ctx.fill();
+    } });
+    // 甲緣：朱漆的邊、金鋲、垂下的小冰柱
+    const rimP = (c) => {
+      c.moveTo(-52, -24 + sy);
+      c.quadraticCurveTo(0, -14 + sy, 50, -24 + sy);
+      c.lineTo(49, -18 + sy);
+      c.quadraticCurveTo(0, -8 + sy, -51, -18 + sy);
+      c.closePath();
+    };
+    rimShape(ctx, rimP, P4.verm, P4.vermS, P4.vermL, { cel: 1.4, rim: 0.9, lw: 2 });
+    [-40, -24, -8, 8, 24, 40].forEach((x) => goldStud(ctx, x, -18.5 + sy + Math.abs(x) * 0.06, 1.6));
+    [[-34, 5], [-16, 7], [0, 5], [16, 6], [32, 5]].forEach((q) => {
+      const y0 = -12.6 + sy + Math.abs(q[0]) * 0.07;
+      A.shape(ctx, (c) => poly(c, [[q[0] - 1.6, y0], [q[0] + 1.6, y0], [q[0] + 0.2, y0 + q[1]]]), P4.tealL, P4.teal, { lw: 1.1, shadeY: y0 + q[1] * 0.4 });
+    });
+    // 守備時罩在甲上的結界光
+    if (glowK > 0.3) {
       ctx.save();
-      ctx.globalAlpha *= 0.8;
-      ctx.strokeStyle = A.c(P4.goldL);
-      ctx.lineWidth = 2.2;
+      ctx.globalAlpha *= (glowK - 0.3) * 0.9;
+      ctx.strokeStyle = A.c(P4.tealL);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(-1, -40 + sy, 58, 48, 0, PI * 1.02, TAU * 0.99);
+      ctx.stroke();
+      ctx.globalAlpha *= 0.35;
+      ctx.fillStyle = A.c(P4.teal);
+      ctx.fill();
+      ctx.restore();
+    }
+    // 近側的兩隻腳（甲前面）
+    leg(-20, 0, true, false);
+    leg(22, PI, true, true);
+    // ── 冰蛇的前段：從甲後繞過甲頂往前，脖子昂起；蛇頭 ──
+    let snx;
+    let sny;
+    if (dead) {
+      snx = 44;
+      sny = -26 + sy;
+    } else if (striking) {
+      snx = 78 + bash * 6;
+      sny = -54 + sy;
+    } else if (tuck > 0.6) {
+      snx = 10 + sway2 * 0.4;
+      sny = -90 + sy;
+    } else if (recover) {
+      snx = 6 + sway2;
+      sny = -86 + sy;
+    } else {
+      snx = 16 + sw;
+      sny = -104 + sy + sway2 * 0.6;
+    }
+    const neck = dead
+      ? cb(-30, -70 + sy, 0, -86 + sy, 30, -74 + sy, snx - 3, sny - 1)
+      : tuck > 0.6
+        ? cb(-30, -70 + sy, -6, -96 + sy, 22, -90 + sy, snx - 5, sny + 2)
+        : cb(-30, -70 + sy, 0, -94 + sy, snx - 22 + sw * 0.5, sny + 26, snx - 6, sny + 2);
+    snakeBody(neck, 7, 5.2);
+    // 蛇頭：扁長的三角頭、淡青豎瞳、朱色的信
+    ctx.save();
+    ctx.translate(snx, sny);
+    const dirA = striking ? 0.15 : dead ? 0.6 : -0.1 + Math.sin(t * 2 + 0.5) * 0.08;
+    ctx.rotate(dirA);
+    const jaw = striking ? 4 : recover ? 2 : 0;
+    if (jaw) A.shape(ctx, (c) => { c.moveTo(-4, 2); c.quadraticCurveTo(6, 3 + jaw, 11, 2 + jaw * 1.2); c.quadraticCurveTo(4, 5 + jaw, -4, 4); c.closePath(); }, GB.snake, GB.snakeS, { lw: 1.6, shadeY: 3 });
+    const shP = (c) => { c.moveTo(-6, 3); c.quadraticCurveTo(-7, -5, 0, -5); c.quadraticCurveTo(8, -5, 12, 0.5); c.quadraticCurveTo(10, 3, 4, 3.4); c.closePath(); };
+    rimShape(ctx, shP, GB.snake, GB.snakeS, P4.teal, { cel: 1.2, rim: 0.9, lw: 1.9, inner: () => {
+      ctx.fillStyle = A.c(P4.teal);
+      ctx.beginPath();
+      ctx.moveTo(-5, 2.8);
+      ctx.quadraticCurveTo(4, 1.5, 11, 1.2);
+      ctx.quadraticCurveTo(5, 3.5, -5, 3.4);
+      ctx.fill();
+    } });
+    if (jaw) {
+      fang(ctx, 8, 1.8, 1.6, false);
+    }
+    // 豎瞳的眼
+    if (kind === 'x' || dead) A.eye(ctx, 3, -1.5, 1.5, 1.5, 'x');
+    else {
+      if (!dead) glowH(ctx, 3, -1.5, 5, P4.teal, 0.5);
+      ctx.fillStyle = A.c(P4.tealL);
+      ctx.beginPath();
+      ctx.ellipse(3, -1.6, 2, 1.4, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = A.c('#0e1c22');
+      ctx.beginPath();
+      ctx.ellipse(3.3, -1.6, 0.45, 1.3, 0, 0, TAU);
+      ctx.fill();
+    }
+    // 吐信（一閃一閃）
+    if (!dead && (Math.sin(t * 5) > 0.3 || striking)) {
+      const L = 4 + Math.sin(t * 30) * 1.2;
+      ctx.strokeStyle = A.c(P4.verm);
+      ctx.lineWidth = 0.9;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.arc(hx + 4, hy + 10, 26, -1.1, 1.1);
+      ctx.moveTo(11, 1.2 + jaw * 0.5);
+      ctx.lineTo(11 + L, 1.5 + jaw * 0.5);
+      ctx.lineTo(13 + L, 0.2 + jaw * 0.5);
+      ctx.moveTo(11 + L, 1.5 + jaw * 0.5);
+      ctx.lineTo(13 + L, 2.8 + jaw * 0.5);
       ctx.stroke();
-      ctx.restore();
-      snowDust(ctx, -22, 0, t, 1.4, -1);
     }
-    if (recover && !dead) {
-      const q = (t * 1.5) % 1;
-      puff(ctx, hx + 26 + q * 8, hy + 6 - q * 6, 2 + q * 3, '#ffffff', (1 - q) * 0.7);
+    ctx.restore();
+    // 收招時蛇喘著白霜
+    if (recover) {
+      const q = (t * 1.3) % 1;
+      puff(ctx, snx + 14 + q * 8, sny - q * 5, 1.5 + q * 3, '#ffffff', (1 - q) * 0.75);
     }
+    // 衝撞：往前咬的速度線
+    if (striking) speedLines(ctx, snx - 20, sny, 14, 3, 14, t, 'rgba(216,247,241,0.8)');
     ctx.restore();
   }
   // ═════════════ 投射物 ═════════════
@@ -5194,32 +5096,42 @@
       shide(ctx, 5, 1, 2, -0.1);
       sparkle(ctx, 11, -11, 3.5, '#ffffff');
     },
-    // 狛犬石盾片：一片花崗岩的盾片，刻著半個金色的巴紋，帶著青苔
+    // 玄武甲片：一片黑靛色的龜甲碎片，金線連著幾顆發光的星（星宿），邊緣一抹朱漆
     shieldshard(ctx) {
-      const P = (c) => poly(c, [[-13, 11], [-9, -12], [4, -14], [13, 4], [4, 13]]);
-      glowH(ctx, 2, 0, 17, '#ffd86a', 0.35);
-      rimShape(ctx, P, '#b4afa4', '#77726a', '#ebe6da', { cel: 3, rim: 1.4, lw: 2.4, inner: () => {
-        A.shape(ctx, (c) => c.arc(8, 8, 15, 0, TAU), '#c4bfb3', null, { lw: 1.6 });
-        tomoe(ctx, 8, 8, 9, 0.3, '#ffd24a');
-        ctx.fillStyle = A.c('#8a9a5a');
+      const P = (c) => poly(c, [[-13, 9], [-10, -10], [2, -14], [13, -4], [11, 9], [0, 13]]);
+      glowH(ctx, 0, 0, 18, P4.goldL, 0.3);
+      rimShape(ctx, P, '#1d2244', '#11142c', '#3c4784', { cel: 3, rim: 1.4, lw: 2.4, inner: () => {
+        ctx.strokeStyle = A.c(P4.gold);
+        ctx.lineWidth = 1.3;
         ctx.beginPath();
-        ctx.ellipse(-7, -6, 3.5, 2.2, 0.4, 0, TAU);
-        ctx.fill();
-        ctx.fillStyle = A.c('#9a958b');
-        [[-4, 4], [-9, 2], [0, -8]].forEach((q) => {
+        ctx.moveTo(-13, 3);
+        ctx.lineTo(-2, -2);
+        ctx.lineTo(11, 2);
+        ctx.moveTo(-2, -2);
+        ctx.lineTo(1, -14);
+        ctx.stroke();
+        ctx.strokeStyle = A.c(P4.goldS);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        [[-8, -5], [-4, -8], [3, -7], [6, -3]].forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+        [[-7, 7], [-3, 5], [2, 8]].forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+        ctx.stroke();
+        ctx.fillStyle = A.c(P4.tealL);
+        [[-8, -5], [-4, -8], [3, -7], [6, -3], [-7, 7], [-3, 5], [2, 8]].forEach((p, i) => {
           ctx.beginPath();
-          ctx.arc(q[0], q[1], 1, 0, TAU);
+          ctx.arc(p[0], p[1], i === 0 || i === 4 ? 1.3 : 0.9, 0, TAU);
           ctx.fill();
         });
+        ctx.fillStyle = A.c(P4.verm);
+        ctx.beginPath();
+        ctx.moveTo(-13, 9);
+        ctx.lineTo(0, 13);
+        ctx.lineTo(0, 10.5);
+        ctx.lineTo(-12.4, 6.6);
+        ctx.closePath();
+        ctx.fill();
       } });
-      ctx.strokeStyle = A.outline();
-      ctx.lineWidth = 1.1;
-      ctx.beginPath();
-      ctx.moveTo(-9, -12);
-      ctx.lineTo(-6, -4);
-      ctx.lineTo(-9, 2);
-      ctx.stroke();
-      sparkle(ctx, 10, -11, 3.5, '#fff6c8');
+      sparkle(ctx, 10, -11, 3.5, '#ffffff');
     },
   };
 
