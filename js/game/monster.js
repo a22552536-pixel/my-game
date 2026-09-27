@@ -26,7 +26,7 @@
     }
     const V = this.variant ? b.variants[this.variant] : null;
     this.V = V;
-    this.scale = this.elite ? b.eliteScale : V ? V.scale || 1 : 1;
+    this.scale = (d.sizeMul || 1) * (this.elite ? b.eliteScale : V ? V.scale || 1 : 1);
     this.w = d.w;
     this.h = d.h;
     this.halfW = (d.w * this.scale) / 2;

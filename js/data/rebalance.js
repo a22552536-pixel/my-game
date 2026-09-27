@@ -44,6 +44,26 @@
   // 第一章 Boss：使用者 Lv11 還打不到半血就倒 → 招式不變，傷害再低一些
   if (D.monsters.queenShroom) D.monsters.queenShroom.atk = Math.round(D.monsters.queenShroom.atk * 0.7);
 
+  // ── 越後面的章節，一般怪越大（整體縮放，碰撞框與血條跟著變）──
+  const sizeFor = (lv) => (lv <= 10 ? 1 : lv <= 20 ? 1.1 : lv <= 30 ? 1.2 : lv <= 40 ? 1.32 : 1.45);
+  for (const id in D.monsters) {
+    const d = D.monsters[id];
+    if (!d.lv || d.boss || d.fieldBoss) continue;
+    d.sizeMul = sizeFor(d.lv);
+  }
+  // ── 越後面的章節，地圖上的怪越多（緩緩加密）──
+  const densityFor = { 1: 1, 2: 1.15, 3: 1.3, 4: 1.45, 5: 1.6 };
+  // 以第一章同位置的地圖（1-2、1-3、1-4）為基準，總數乘上倍率，多出來的平均分給各組
+  const total = (m) => (m.mobs || []).reduce((t, g) => t + g.n, 0);
+  for (const mid in D.maps) {
+    const map = D.maps[mid];
+    const k = densityFor[map.region] || 1;
+    const base = D.maps['1-' + mid.split('-')[1]];
+    if (k === 1 || !base || map.type === 'boss' || map.type === 'camp' || !(map.mobs || []).length) continue;
+    const target = Math.round(total(base) * k);
+    for (let i = 0; total(map) < target; i = (i + 1) % map.mobs.length) map.mobs[i].n++;
+  }
+
   // ── 野外魔王要比章節 Boss 弱很多：血量約該章 Boss 的 30%、攻擊跟一般怪同級 ──
   for (const mid in D.fieldBosses || {}) {
     const fb = D.monsters[D.fieldBosses[mid]];

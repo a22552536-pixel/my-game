@@ -159,7 +159,7 @@
         for (const s of [-1, 1]) {
           const c = new G.Monster(m.id, m.plat, m.x + s * 18, { noVariant: true });
           c.isChild = true;
-          c.scale = 0.6;
+          c.scale = 0.6 * (m.def.sizeMul || 1);
           c.halfW = (c.w * c.scale) / 2;
           c.maxHp = c.hp = Math.max(1, Math.round(m.maxHp * 0.25));
           c.exp = Math.round(m.exp * 0.25);
