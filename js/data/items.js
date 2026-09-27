@@ -150,14 +150,14 @@ G.data.items = {
   // 材料：怪物掉的小東西。收在背包的「材料」欄，可以賣錢、交任務，或在貓頭鷹的小舖換東西。
   materials: {
     dew: { name: '露珠', price: 3, desc: '露珠蝸殼上滾下來的水珠，冰冰涼涼的。' },
-    spore: { name: '孢子粉', price: 4, desc: '小傘菇和斑點菇身上抖下來的粉，聞起來像麵包。' },
+    spore: { name: '孢子粉', price: 4, desc: '小傘菇身上抖下來的粉，聞起來像麵包。' },
     seedshell: { name: '種子殼', price: 5, desc: '種子精換下來的殼，圓圓硬硬的。' },
-    moss: { name: '柔軟青苔', price: 7, desc: '苔殼蝸背上的青苔，摸起來像地毯。' },
-    cap: { name: '斑點菇傘', price: 8, desc: '斑點菇脫落的傘蓋碎片，紅底白點。' },
-    vine: { name: '嫩芽藤蔓', price: 9, desc: '嫩芽精的藤鞭，還會自己捲起來。' },
-    bark: { name: '古木殼片', price: 12, desc: '古木蝸殼上剝落的樹皮，很結實。' },
-    wick: { name: '發光燈芯', price: 13, desc: '提燈菇的燈芯，拔下來還會亮很久。' },
-    petal: { name: '花冠花瓣', price: 14, desc: '花冠精的花瓣，香味好幾天都不會散。' },
+    moss: { name: '橡實鼠絨毛', price: 7, desc: '橡實鼠尾巴上的絨毛，軟得像雲。' },
+    cap: { name: '野豬鬃', price: 8, desc: '小野豬背上的硬鬃，拿來刷鞋子剛剛好。' },
+    vine: { name: '藤尾', price: 9, desc: '藤尾蜥的尾巴藤蔓，還會自己捲起來。' },
+    bark: { name: '樹皮甲片', price: 12, desc: '樹皮龜殼上剝落的樹皮，很結實。' },
+    wick: { name: '螢光囊', price: 13, desc: '提燈螢的發光囊，拔下來還會亮很久。' },
+    petal: { name: '蝶翅花瓣', price: 14, desc: '花瓣蝶翅膀上的花瓣，香味好幾天都不會散。' },
     queencap: { name: '女王的孢子冠', price: 150, desc: '菇菇女王頭上掉下來的一小片冠，閃著粉紅色的光。' },
     // 第二章
     sandgrain: { name: '沙粒', price: 14, desc: '沙粒蟹殼縫裡的細沙，在陽光下亮晶晶的。' },

@@ -119,7 +119,7 @@
       return dmg;
     }
     if (G.mobAbilHooks) G.mobAbilHooks.onHurt(this, dmg, dir);
-    // 古木蝸：被打有機率縮進殼裡
+    // 樹皮龜：被打有機率縮進殼裡
     if (this.abil.shell && this.shellT <= 0 && Math.random() < 0.35) {
       this.shellT = 1.6;
       this.vx = 0;
@@ -136,7 +136,7 @@
       if (!this.onGround) this.vy = Math.min(this.vy, -80);
     }
     this.dir = -dir;
-    // 斑點菇：被打之後衝撞
+    // 小野豬：被打之後衝撞
     if (this.abil.charge && this.chargeT <= 0 && Math.random() < 0.5) {
       this.chargeT = 1.1;
       this.angry = true;
