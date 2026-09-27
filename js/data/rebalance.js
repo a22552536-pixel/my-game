@@ -52,7 +52,7 @@
     d.sizeMul = sizeFor(d.lv);
   }
   // 本來就是大型生物的，再個別放大
-  const bigBody = { dreamsheep: 1.1, pouchroo: 1.3, drumyak: 1.2, heartcedar: 1.15, mirrordeer: 1.15, shieldbear: 1.1 };
+  const bigBody = { avalanchehare: 1.22, crystalowl: 1.18, musicturtle: 1.3, dreamsheep: 1.1, pouchroo: 1.3, drumyak: 1.2, heartcedar: 1.15, mirrordeer: 1.15, shieldbear: 1.1 };
   for (const id in bigBody) if (D.monsters[id]) D.monsters[id].sizeMul = (D.monsters[id].sizeMul || 1) * bigBody[id];
   // ── 越後面的章節，地圖上的怪越多（緩緩加密）──
   const densityFor = { 1: 1, 2: 1.15, 3: 1.3, 4: 1.45, 5: 1.6 };
