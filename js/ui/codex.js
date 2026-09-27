@@ -34,7 +34,8 @@
         'matchlizard', 'angerrock', 'magnetdillo', 'candlesnake', 'weightbeetle', 'bellowsbat', 'potgoat', 'moodchameleon', 'mapvulture',
         'echoferret', 'crystalowl', 'avalanchehare', 'drumyak', 'shadowwolf', 'dreamsheep', 'silencefox', 'heartcedar', 'shieldbear',
         'hourowl', 'mirrordeer', 'stopmoth', 'ouroboros', 'clocksnail', 'pouchroo', 'gravjelly', 'parallelfox', 'constellfish',
-        'queenShroom', 'hermitCrab', 'lavaTortoise', 'frostSpirit', 'timeItself'].filter((id) => G.data.monsters[id]);
+        'queenShroom', 'hermitCrab', 'lavaTortoise', 'frostSpirit', 'timeItself',
+        'fb_shroom', 'fb_kraken', 'fb_balrog', 'fb_zakum', 'fb_voiddragon'].filter((id) => G.data.monsters[id]);
       return {
         forms: forms.filter((id) => d.forms[id]).length,
         formsAll: forms.length,

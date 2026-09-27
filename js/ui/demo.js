@@ -180,7 +180,7 @@
 
   // ───────── 圖鑑：一張圖畫出所有形態與怪物 ─────────
   const GW = 1800;
-  const GH = 2700;
+  const GH = 3240;
 
   function fakeMonster(art, stage, t) {
     return {
@@ -342,6 +342,34 @@
         G.hud.text(ctx, hid('mobs', id) ? '？？？' : d.name, x + 360, 1560 + oy, 26, '#8a2020', 'left', false);
         G.hud.text(ctx, ch === 5 ? '終章 Boss' : '第' + '一二三四'[ch - 1] + '章 Boss', x + 360, 1596 + oy, 16, '#8a735c', 'left', false);
         G.hud.text(ctx, 'Lv.' + d.lv, x + 360, 1620 + oy, 16, '#8a735c', 'left', false);
+      });
+
+      // 野外魔王（js/data/fieldboss.js）：新美術還沒到時用備援外觀放大
+      const FY = BY + 538;
+      title('野外魔王', FY);
+      ['fb_shroom', 'fb_kraken', 'fb_balrog', 'fb_zakum', 'fb_voiddragon'].filter((id) => M[id]).forEach((id, i) => {
+        const d = M[id];
+        const x = 40 + (i % 3) * 580;
+        const cy = FY + 38 + Math.floor(i / 3) * 250;
+        card(x, cy, 560, 220, '#b070d0');
+        const m = fakeMonster(d.art, d.fallback ? d.fallback[1] : 0, t);
+        const s = G.fieldBoss ? G.fieldBoss.fallbackScale(d) : 1;
+        m.def.fallback = d.fallback;
+        m.scale = s;
+        m.w = d.w / s;
+        m.h = d.h / s;
+        m.isBoss = true;
+        const bs = Math.min(0.72, 165 / Math.max(d.h, 1));
+        sil(hid('mobs', id), x, cy - 30, 360, 250, (c) => {
+          c.save();
+          c.translate(x + 160, cy + 200);
+          c.scale(bs, bs);
+          A.drawMonster(c, m);
+          c.restore();
+        });
+        G.hud.text(ctx, hid('mobs', id) ? '？？？' : d.name, x + 360, cy + 90, 26, '#6a2a8a', 'left', false);
+        G.hud.text(ctx, '野外魔王 · ' + d.map, x + 360, cy + 126, 16, '#8a735c', 'left', false);
+        G.hud.text(ctx, 'Lv.' + d.lv, x + 360, cy + 150, 16, '#8a735c', 'left', false);
       });
       ctx.restore();
     },
