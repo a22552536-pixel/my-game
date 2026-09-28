@@ -34,6 +34,7 @@
       { id: 'whitedeer', x: 1380, p: 0, flag: 'frostSpiritDefeated' },
       { id: 'fawn', x: 1450, p: 0, flag: 'frostSpiritDefeated' },
       { id: 'squirrel', x: 1560, p: 0 },
+      { id: 'crane', x: 1670, p: 0 }, // 千手冰像、心的藥的委託
     ],
     camp: { x1: 800, x2: 1700 },
     signs: [
@@ -105,7 +106,7 @@
       { id: 'l', x: 70, p: 0, to: '4-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '4-B', target: 'l' },
     ],
-    npcs: [{ id: 'crane', x: 3420, p: 0 }],
+    npcs: [],
     signs: [{ x: 3620, p: 0, text: '霜靈祭壇　鐘聲響起時，請低頭。' }],
     mobs: [
       { m: 'dreamsheep', p: 0, n: 2, x1: 400, x2: 1800 },

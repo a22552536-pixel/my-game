@@ -31,6 +31,7 @@ G.data.maps = {
       { id: 'hedgekid', x: 1310, p: 0 },
       { id: 'squirrel', x: 1450, p: 0 },
       { id: 'mushgirl', x: 1775, p: 0 },
+      { id: 'mole', x: 1610, p: 0 }, // 苔冠鱷王的委託
     ],
     camp: { x1: 800, x2: 1700 },
     signs: [
@@ -175,8 +176,8 @@ G.data.maps = {
       { id: 'l', x: 70, p: 0, to: '1-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '1-B', target: 'l' },
     ],
-    // 鼴鼠（苔冠鱷王的委託）放在入口附近：先遇到牠、接了委託，才往右邊遇到鱷魚
-    npcs: [{ id: 'mole', x: 250, p: 0 }],
+    // 野外魔王的委託 NPC 都在該章營地（先接委託，才會遇到魔王）
+    npcs: [],
     signs: [{ x: 3620, p: 0, text: '女王菇的殿堂　閒雜菇等，請勿進入。' }],
     mobs: [
       { m: 'woodsnail', p: 0, n: 2, x1: 400, x2: 1800 },
@@ -245,6 +246,7 @@ G.data.maps = {
       { id: 'otter', x: 1260, p: 0 },
       { id: 'pufferkid', x: 1360, p: 0 },
       { id: 'squirrel', x: 1520, p: 0 },
+      { id: 'pelican', x: 1640, p: 0 }, // 沉船海魔的委託
     ],
     camp: { x1: 800, x2: 1700 },
     signs: [
@@ -384,7 +386,7 @@ G.data.maps = {
       { id: 'l', x: 70, p: 0, to: '2-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '2-B', target: 'l' },
     ],
-    npcs: [{ id: 'pelican', x: 3420, p: 0 }],
+    npcs: [],
     signs: [{ x: 3620, p: 0, text: '寄居蟹的巢灣　內有臭屁老蟹，請小心。' }],
     mobs: [
       { m: 'coralcrab', p: 0, n: 2, x1: 400, x2: 1800 },
@@ -452,6 +454,7 @@ G.data.maps = {
       { id: 'redpanda', x: 1260, p: 0 },
       { id: 'meerkat', x: 1360, p: 0 },
       { id: 'squirrel', x: 1520, p: 0 },
+      { id: 'armadillo', x: 1640, p: 0 }, // 熔岩河的炎魔的委託
     ],
     camp: { x1: 800, x2: 1700 },
     signs: [
@@ -594,7 +597,7 @@ G.data.maps = {
       { id: 'l', x: 70, p: 0, to: '3-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '3-B', target: 'l' },
     ],
-    npcs: [{ id: 'armadillo', x: 3420, p: 0 }],
+    npcs: [],
     signs: [{ x: 3620, p: 0, text: '甲龜的火山巢　地在發燙，請穿厚一點的鞋。' }],
     mobs: [
       { m: 'rockling', p: 0, n: 2, x1: 400, x2: 1800 },
