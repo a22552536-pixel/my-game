@@ -1,6 +1,6 @@
 // 冒險中的提醒（教學做完、離開營地之後）：
 //   HP／MP 快用完 → 提醒喝藥水（藥水用完就提醒回營地買）
-//   有沒用掉的技能點 → 提醒打開「技能」；撿到比身上好的裝備 → 提醒打開「裝備」
+//   有沒用掉的技能點 → 提醒打開「技能」
 // 提醒用畫面上方的提示訊息，同時讓左上角對應的圖示發光一陣子（js/ui/hudicons.js 讀 G.remind.glowing）。
 (function () {
   'use strict';
@@ -118,16 +118,7 @@
           }
         }
       }
-
-      // ── 撿到比身上好的裝備 ──
-      for (const it of P.bag) {
-        if (!it || this.seen[it.uid]) continue;
-        this.seen[it.uid] = true;
-        if (it.isNew && G.ui.isBest && G.ui.isBest(it)) {
-          this.say('「' + it.name + '」比身上的好！打開左上角「裝備」換上', '#9dffa0', 'inventory');
-          break; // 一次只講一件
-        }
-      }
+      // 更好的裝備不在地圖上提醒：只在背包裡用 ▲ 標出每個部位最好的一件（js/ui/windows.js isBest）
     },
   };
 })();
