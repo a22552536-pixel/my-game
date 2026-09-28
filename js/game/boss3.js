@@ -1063,9 +1063,10 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { toll: 22, spikes: 22, rain: 18, charge: 16, stomp: 14, summon: adds < 2 ? 8 : 0 }
-        : { toll: 18, spikes: 18, rain: 12, charge: 15, stomp: 12, blizzard: 16, summon: adds < 2 ? 7 : 0 };
-      pick = this.pick(table, { blizzard: 20, summon: 18, rain: 6, charge: 6 });
+        ? { toll: 18, spikes: 18, rain: 14, charge: 12, stomp: 10, blizzard: 55, summon: adds < 2 ? 8 : 0 }
+        : { toll: 14, spikes: 14, rain: 10, charge: 12, stomp: 10, blizzard: 65, summon: adds < 2 ? 7 : 0 };
+      // 暴風雪（冰封吹飛）是霜靈的招牌：第一階段就會用，而且很常用（兩次之間至少隔 6 秒，第二階段 4 秒）
+      pick = this.pick(table, { blizzard: this.phase === 1 ? 6 : 4, summon: 18, rain: 6, charge: 6 });
     } else this.pickT[pick] = this.fightT;
     // 召喚野外魔王：整場只有一次，血量第一次掉到 65% 以下時（被強制的招式優先）
     if (!this.sumUsed && this.hp <= this.maxHp * SUM_FROST_AT && pick !== 'blizzard') {
