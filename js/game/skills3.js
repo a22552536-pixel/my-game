@@ -92,9 +92,9 @@
             p.vy = 0;
             p.plat = 0;
           }
-        } else if (p.plat === 0 && !p.vy) {
-          // 起伏的地面：貼著地表滾上滾下
-          const gy = G.physics.groundY(map, p.x);
+        } else if (pl && !p.vy) {
+          // 起伏的地形：貼著表面滾上滾下
+          const gy = G.physics.surfaceY(map, p.plat, p.x);
           if (Math.abs(p.y + p.r - gy) < 60) p.y = gy - p.r;
         }
         if (Math.random() < 0.5) G.fx.dust(p.x - p.dir * p.r * 0.6, p.y + p.r, p.dir, 1);

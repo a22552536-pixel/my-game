@@ -87,7 +87,7 @@
     return this.stackN;
   };
 
-  Monster.prototype.bounds = function () {
+  Monster.prototype.bounds = function (noSpan) {
     const map = G.world.map;
     const p = map.platforms[this.plat];
     const hw = this.halfW;
@@ -98,6 +98,13 @@
     if (g && g.p === this.plat) {
       if (g.x1 != null) lo = Math.max(lo, g.x1);
       if (g.x2 != null) hi = Math.min(hi, g.x2);
+    }
+    // 起伏的地形：太陡的坡（坑壁、岩壁）走不過去，只在腳下這一段不陡的地方活動（野外魔王不受限）
+    if (this.onGround && !this.def.fieldBoss && !noSpan) {
+      const s = G.physics.walkSpan(map, this.plat, this.x);
+      lo = Math.max(lo, Math.min(s[0], this.x));
+      hi = Math.min(hi, Math.max(s[1], this.x));
+      if (hi < lo) hi = lo;
     }
     return [lo, hi];
   };
@@ -157,7 +164,8 @@
   };
 
   Monster.prototype.sameLevelAs = function (P) {
-    return Math.abs(P.y - this.y) < 50 && P.climbing < 0;
+    // 起伏的地形：站在同一塊平台上就算同一層（山坡上高低差可能超過 50）
+    return P.climbing < 0 && (Math.abs(P.y - this.y) < 50 || (P.onGround && this.onGround && P.plat === this.plat && Math.abs(P.y - this.y) < 130));
   };
 
   Monster.prototype.update = function (dt) {
@@ -228,7 +236,13 @@
     // 新怪物的能力：回傳 true 時這一幀由能力自己控制移動
     const custom = this.hurtT <= 0 && G.mobAbilHooks ? G.mobAbilHooks.update(this, dt, P, aggro) : false;
 
-    if (custom) {
+    if (this.hopOut > 0) {
+      // 正在跳出小坑：保持水平速度，落地就結束
+      this.hopOut -= dt;
+      if (this.onGround) this.hopOut = 0;
+      // 先往上跳，高過坑緣才往外飄（不然會撞在坑壁上）
+      else this.vx = this.y < this.hopLip - 6 ? this.hopDir * 240 : 0;
+    } else if (custom) {
       // 能力自己控制
     } else if (this.shellT > 0) {
       this.shellT -= dt;
@@ -300,12 +314,13 @@
     }
     const wasAir = !this.onGround;
     const plat = this.plat;
-    G.physics.step(this, dt, G.world.map);
+    this.pitHop(dt);
+    G.physics.step(this, dt, G.world.map, this.def.fieldBoss ? { steepOK: true } : null);
     // 萬一被擊飛到別的平台，就把那個平台當成新家
     if (!this.onGround && this.y > G.world.map.platforms[plat][2] + 400) this.plat = 0;
     if (wasAir && this.onGround) this.landT = 0.15;
     this.x = U.clamp(this.x, this.bounds()[0], this.bounds()[1]);
-    if (this.onGround && this.plat === 0) this.y = G.physics.groundY(G.world.map, this.x); // 起伏的地面：夾回範圍後貼回地表
+    if (this.onGround) this.y = G.physics.surfaceY(G.world.map, this.plat, this.x); // 起伏的地形：夾回範圍後貼回表面
 
     // 碰撞傷害
     if (P.alive() && this.touchCd <= 0 && U.overlap(this.hitbox(), P.hitbox())) {
@@ -315,6 +330,45 @@
       }
     }
     return false;
+  };
+
+  // 被打進陡壁圍起來的小坑（腳下能走的那一段很短、兩頭都是陡壁）：過一下就往比較近的坑緣跳出去
+  Monster.prototype.pitHop = function (dt) {
+    const map = G.world.map;
+    if (!this.onGround || this.def.fieldBoss || this.sucked || this.hurtT > 0 || !G.physics.terrains(map)) {
+      this.pitT = 0;
+      return;
+    }
+    const p = map.platforms[this.plat];
+    const s = G.physics.walkSpan(map, this.plat, this.x);
+    const trapped = s[1] - s[0] < 320 && s[0] > p[0] + 1 && s[1] < p[1] - 1;
+    if (!trapped) {
+      this.pitT = 0;
+      return;
+    }
+    this.pitT = (this.pitT || 0) + dt;
+    if (this.pitT < 0.6) return;
+    this.pitT = 0;
+    // 坑緣：從這一段的盡頭往外找到坡度變緩的地方；往活動範圍（出生群組的範圍）裡的那一邊跳
+    const rim = (d) => {
+      let x = d < 0 ? s[0] : s[1];
+      for (let k = 0; k < 60 && Math.abs(G.physics.surfSlope(map, this.plat, x)) > 0.5; k++) x += d * 4;
+      return x;
+    };
+    const [lo, hi] = this.bounds(true);
+    const xl = rim(-1);
+    const xr = rim(1);
+    let d = this.x - s[0] < s[1] - this.x ? -1 : 1;
+    if (d < 0 && xl < lo) d = 1;
+    else if (d > 0 && xr > hi) d = -1;
+    const x = d < 0 ? xl : xr;
+    this.hopLip = G.physics.surfaceY(map, this.plat, x);
+    this.hopDir = d;
+    this.dir = d;
+    this.vy = -780;
+    this.vx = 0;
+    this.onGround = false;
+    this.hopOut = 1.4; // 跳出去的這段時間不被「不離開平台」夾住
   };
 
   Monster.prototype.startAttack = function (kind) {

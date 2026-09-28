@@ -8827,7 +8827,7 @@
     const clear = (i, x) => {
       const y = G.physics.surfaceY(map, i, x);
       // 起伏的地面：寶箱只放在平緩的地方
-      if (i === 0 && Math.abs(G.physics.groundSlope(map, x)) > 0.1) return false;
+      if (Math.abs(G.physics.surfSlope(map, i, x)) > 0.1 || Math.abs(G.physics.surfSlope(map, i, x - 30)) > 0.2 || Math.abs(G.physics.surfSlope(map, i, x + 30)) > 0.2) return false;
       if (near(map.portals, i, x, 160) || near(map.npcs, i, x, 150) || near(map.signs, i, x, 120) || near(map.springs, i, x, 100)) return false;
       // 真寶箱：不管在哪一層，水平 220 以內都不放（免得上下疊在一起、讓人以為能開）
       if ((map.chests || []).some((c) => Math.abs(c.x - x) < 220)) return false;
@@ -9552,6 +9552,163 @@
     let pcAge = '';
     let pcTiles = new Map();
     let pcFrame = 0;
+    // ── 起伏地形的補畫（畫在平的座標系裡，之後跟著整塊一起折彎；土地變老的調色一樣會套上） ──
+    // 坑的內壁（後壁）、陡坡露出的岩面、潮池的水
+    const CUT = {
+      1: { back: ['#3a2a1c', '#1c130c'], face: '#5b4231', faceDk: '#3a2a1d', line: 'rgba(24,14,8,0.35)', rim: 'rgba(186,226,128,0.7)', lipHi: 'rgba(255,240,200,0.28)' },
+      2: { back: ['#36404c', '#171e27'], face: '#5d6772', faceDk: '#3c4550', line: 'rgba(12,18,26,0.35)', rim: 'rgba(214,232,242,0.75)', lipHi: 'rgba(255,255,255,0.3)' },
+      3: { back: ['#5a2c1c', '#2a130b'], face: '#94533a', faceDk: '#633422', line: 'rgba(40,14,6,0.35)', rim: 'rgba(255,190,130,0.7)', lipHi: 'rgba(255,220,180,0.3)' },
+      4: { back: ['#6c7f9c', '#39475f'], face: '#b3c6dc', faceDk: '#8198b4', line: 'rgba(60,80,110,0.3)', rim: 'rgba(255,255,255,0.9)', lipHi: 'rgba(255,255,255,0.5)' },
+      5: { back: ['#4e4868', '#26223a'], face: '#cfc8de', faceDk: '#9a90b6', line: 'rgba(70,60,100,0.3)', rim: 'rgba(255,242,214,0.85)', lipHi: 'rgba(255,250,235,0.45)' },
+    };
+    const cutPal = (map) => CUT[map.region] || CUT[1];
+    const hsh = (x) => {
+      const v = Math.sin(x * 12.9898) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    // 坑的後壁：兩個坑緣連起來的那條線以下、坑底以上，是看得到的另一側坑壁（深色土／岩、層理、坑緣亮邊）
+    function drawPitBacks(g, map, i, tx0, tw) {
+      const pits = map._pits;
+      if (i !== 0 || !pits) return;
+      const PH = G.physics;
+      const p0 = map.platforms[0];
+      const C = cutPal(map);
+      for (const q of pits) {
+        const a = q[0];
+        const b = q[1];
+        if (b < tx0 - 10 || a > tx0 + tw + 10) continue;
+        const ya = PH.groundY(map, a);
+        const yb = PH.groundY(map, b);
+        const rough = map.region === 5 ? 0 : map.region === 4 ? 0.6 : 1.2;
+        const lip = (x) => ya + ((yb - ya) * (x - a)) / (b - a) + (Math.sin(x * 0.09 + a) + Math.sin(x * 0.23 + 1)) * rough;
+        const dy = (x) => PH.groundDy(map, x);
+        let deep = 0;
+        for (let x = a; x <= b; x += 4) deep = Math.max(deep, PH.groundY(map, x) - lip(x));
+        if (deep < 12) continue;
+        const top = Math.min(ya, yb);
+        g.save();
+        g.beginPath();
+        for (let x = a; x <= b; x += 3) g.lineTo(x, lip(x) - dy(x));
+        g.lineTo(b, p0[2] + 8);
+        g.lineTo(a, p0[2] + 8);
+        g.closePath();
+        g.clip();
+        // 底色：越深越暗（每一直條一道漸層）
+        for (let x = a; x <= b; x += 3) {
+          const y0 = lip(x) - dy(x);
+          const gr = g.createLinearGradient(0, y0, 0, y0 + deep + 10);
+          gr.addColorStop(0, C.back[0]);
+          gr.addColorStop(1, C.back[1]);
+          g.fillStyle = gr;
+          g.fillRect(x, y0 - 1, 3, deep + 20);
+        }
+        // 層理：世界座標裡水平的幾道線
+        g.strokeStyle = C.line;
+        g.lineWidth = 1.4;
+        for (let k = 1; k * 11 < deep; k++) {
+          g.beginPath();
+          const yy = top + k * 11 + (hsh(k + a) - 0.5) * 4;
+          for (let x = a; x <= b; x += 6) g.lineTo(x, yy + Math.sin(x * 0.045 + k) * 1.6 - dy(x));
+          g.stroke();
+        }
+        // 坑緣下方的陰影（上面的土擋住的光）
+        for (let x = a; x <= b; x += 3) {
+          const y0 = lip(x) - dy(x);
+          const gr = g.createLinearGradient(0, y0, 0, y0 + 16);
+          gr.addColorStop(0, 'rgba(0,0,0,0.45)');
+          gr.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = gr;
+          g.fillRect(x, y0, 3, 16);
+        }
+        g.restore();
+        // 坑緣的亮邊
+        g.strokeStyle = C.rim;
+        g.lineWidth = 1.6;
+        g.beginPath();
+        for (let x = a; x <= b; x += 3) g.lineTo(x, lip(x) - dy(x) - 0.5);
+        g.stroke();
+      }
+    }
+    // 陡坡露出的土／岩面：坡越陡，表面底下那一條草皮越被換成岩面（加幾道斷層）
+    function drawSteepFaces(g, map, i, tx0, tw) {
+      if (i !== 0) return;
+      const PH = G.physics;
+      const y = map.platforms[0][2];
+      const C = cutPal(map);
+      const x0 = Math.floor(tx0 / 2) * 2;
+      for (let x = x0; x <= tx0 + tw; x += 2) {
+        const s = Math.abs(PH.surfSlope(map, 0, x));
+        if (s < 0.72) continue;
+        const k = Math.min(1, (s - 0.72) / 0.6);
+        const d = 16 + 18 * k;
+        g.globalAlpha = 0.35 + 0.6 * k;
+        const gr = g.createLinearGradient(0, y - 3, 0, y + d);
+        gr.addColorStop(0, C.face);
+        gr.addColorStop(1, C.faceDk);
+        g.fillStyle = gr;
+        g.fillRect(x, y - 3, 2, d + 3);
+        if (hsh(x * 0.21) < 0.25 * k) {
+          g.fillStyle = C.line;
+          g.fillRect(x, y + 3 + hsh(x) * d * 0.7, 2, 1.4);
+        }
+      }
+      g.globalAlpha = 1;
+      // 陡坡頂端（凸起的坑緣、崖邊）一道亮邊
+      g.fillStyle = C.lipHi;
+      for (let x = x0; x <= tx0 + tw; x += 2) {
+        const s0 = Math.abs(PH.surfSlope(map, 0, x));
+        if (s0 > 0.6 && (Math.abs(PH.surfSlope(map, 0, x + 10)) < 0.3 || Math.abs(PH.surfSlope(map, 0, x - 10)) < 0.3)) g.fillRect(x, y - 3, 2.2, 2);
+      }
+    }
+    // 潮池：坑底積水（水面比兩邊坑緣低一點）
+    function drawPools(g, map, i, tx0, tw) {
+      const pools = map._pools;
+      if (i !== 0 || !pools) return;
+      const PH = G.physics;
+      for (const q of pools) {
+        const a = q[0];
+        const b = q[1];
+        if (b < tx0 - 10 || a > tx0 + tw + 10) continue;
+        const level = Math.max(PH.groundY(map, a), PH.groundY(map, b)) + 18;
+        let bottom = -1e9;
+        for (let x = a; x <= b; x += 4) bottom = Math.max(bottom, PH.groundY(map, x));
+        if (bottom - level < 8) continue;
+        // 水體：平的座標裡是一塊上緣彎曲的多邊形（折彎後水面是水平的）
+        const y0 = map.platforms[0][2];
+        const wet = [];
+        for (let x = a; x <= b; x += 2) if (PH.groundY(map, x) > level) wet.push(x);
+        if (!wet.length) continue;
+        const xa = wet[0] - 2, xb = wet[wet.length - 1] + 2;
+        let minT = 1e9;
+        g.beginPath();
+        for (let x = xa; x <= xb; x += 2) {
+          const t = level - PH.groundDy(map, x);
+          minT = Math.min(minT, t);
+          g.lineTo(x, t);
+        }
+        g.lineTo(xb, y0 + 3);
+        g.lineTo(xa, y0 + 3);
+        g.closePath();
+        const gr = g.createLinearGradient(0, minT, 0, y0 + 3);
+        gr.addColorStop(0, 'rgba(120,196,214,0.6)');
+        gr.addColorStop(1, 'rgba(34,86,112,0.82)');
+        g.fillStyle = gr;
+        g.fill();
+        // 水面亮線、細碎反光
+        g.strokeStyle = 'rgba(230,250,255,0.85)';
+        g.lineWidth = 1.6;
+        g.beginPath();
+        for (let x = xa; x <= xb; x += 2) g.lineTo(x, level - PH.groundDy(map, x) - 0.2);
+        g.stroke();
+        g.fillStyle = 'rgba(240,252,255,0.45)';
+        for (let x = xa + 6; x < xb - 6; x += 2) {
+          if (hsh(x * 0.13) > 0.1) continue;
+          const sy = PH.groundY(map, x);
+          if (sy - level < 10) continue;
+          g.fillRect(x, level - PH.groundDy(map, x) + 4 + hsh(x) * (sy - level) * 0.5, 7, 1);
+        }
+      }
+    }
     function buildTile(map, i, tx0, tw, top, h, sc, warp) {
       const c = document.createElement('canvas');
       c.width = Math.ceil(tw * sc);
@@ -9564,6 +9721,7 @@
       proxy.platforms = map.platforms.map((q, k) => (k === i ? q : [-1e9, -1e9 + 1, -1e9]));
       // 地形先照平的畫（起伏在下面整塊折彎）
       proxy._gp = null;
+      proxy._gps = null;
       proxy._gpDone = proxy.platforms;
       // 土地變老：平台上的小花、小菇少掉大半，整塊地形在這裡調色一次
       const age = ageProfile(map);
@@ -9580,21 +9738,26 @@
         activeAge = age;
       }
       try {
+        if (warp) drawPitBacks(g, map, i, tx0, tw);
         livePlat(g, proxy, { x: tx0, y: map.platforms[i][2] - 100 });
+        if (warp) {
+          drawSteepFaces(g, map, i, tx0, tw);
+          drawPools(g, map, i, tx0, tw);
+        }
       } finally {
         A.mode = saveMode;
         activeAge = prevAge;
       }
       terrMap = map;
       if (!warp) return c;
-      // 起伏的地面：把畫好的平地切成 2px 寬的直條，每條依地表起伏上下移（土層、草皮、草叢、樹根全部一起跟著彎）
+      // 起伏的地形：把畫好的平地切成 2px 寬的直條，每條依表面起伏上下移（土層、草皮、草叢、樹根、浮空平台的底面全部一起跟著彎）
       const c2 = document.createElement('canvas');
       c2.width = c.width;
       c2.height = Math.ceil((h + warp.hi - warp.lo) * sc);
       const g2 = c2.getContext('2d');
       for (let u = 0; u < c.width; u += 2) {
         const w = Math.min(2, c.width - u);
-        const off = (G.physics.groundDy(map, tx0 + (u + w / 2) / sc) - warp.lo) * sc;
+        const off = (G.physics.surfDy(map, i, tx0 + (u + w / 2) / sc) - warp.lo) * sc;
         g2.drawImage(c, u, 0, w, c.height, u, off, w, c.height);
       }
       return c2;
@@ -9616,13 +9779,16 @@
       const x1 = cam.x + G.W + 50;
       map.platforms.forEach((p, i) => {
         if (p[1] < x0 || p[0] > x1) return;
-        if (p[2] < cam.y - 40 || p[2] > cam.y + G.H + 60) return;
+        if (p[2] < cam.y - 120 || p[2] > cam.y + G.H + 140) return;
         const isGround = i === 0;
-        const top = p[2] - PAD_UP;
-        const h = isGround ? Math.min(900, map.h + 80 - top) : PAD_UP + PAD_DN;
-        // 起伏的地面：快取塊往上、往下各多留起伏的高度
-        const gr = isGround ? G.physics.groundRange(map) : null;
-        const warp = gr && (gr.lo || gr.hi) ? gr : null;
+        const top0 = p[2] - PAD_UP;
+        const h0 = isGround ? Math.min(900, map.h + 80 - top0) : PAD_UP + PAD_DN;
+        // 起伏的地形：快取塊往上、往下各多留起伏的高度（地面的坑：平的座標裡還要往上多留坑深，畫坑的後壁）
+        const gr = G.physics.surfRange(map, i);
+        const warp = gr.lo || gr.hi ? gr : null;
+        const up = warp && isGround ? Math.max(0, warp.hi) : 0;
+        const top = top0 - up;
+        const h = h0 + up;
         const dTop = warp ? top + warp.lo : top;
         const dH = warp ? h + warp.hi - warp.lo : h;
         const L = p[0] - 14;

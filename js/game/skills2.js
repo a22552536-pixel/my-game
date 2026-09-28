@@ -64,7 +64,7 @@
         a.done = true;
         const cam = G.cam;
         const list = G.combat.targets()
-          .filter((m) => (S.same ? Math.abs(m.y - P.y) < 36 : m.x > cam.x - 40 && m.x < cam.x + G.W + 40 && m.y > cam.y && m.y < cam.y + G.H + 40))
+          .filter((m) => (S.same ? Math.abs(m.y - P.y) < 36 || (m.onGround && P.onGround && m.plat === P.plat && Math.abs(m.y - P.y) < 130) : m.x > cam.x - 40 && m.x < cam.x + G.W + 40 && m.y > cam.y && m.y < cam.y + G.H + 40))
           .sort((p, q) => Math.abs(p.x - P.x) - Math.abs(q.x - P.x))
           .slice(0, S.targets);
         // 震波：沿著地面往兩邊傳

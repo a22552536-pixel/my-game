@@ -887,7 +887,7 @@
             ctx.save();
             ctx.globalAlpha = ga;
             // 起伏的地面：裂縫圖切成直條貼著地表
-            if (u.surf && u.surf.ground && G.physics.drawOnGround) G.physics.drawOnGround(ctx, G.world.map, f.ground, sx, 0, ex - sx, f.depth, f.gx + sx, f.gy, u.ox);
+            if (u.surf && G.physics.drawOnGround) G.physics.drawOnGround(ctx, G.world.map, f.ground, sx, 0, ex - sx, f.depth, f.gx + sx, f.gy, u.ox, u.surf.i);
             else ctx.drawImage(f.ground, sx, 0, ex - sx, f.depth, f.gx + sx, f.gy, ex - sx, f.depth);
             ctx.restore();
           }
@@ -1259,21 +1259,24 @@
 
   const QK = [];
   // 某個 x 上、跟 y0 同一層的平台表面（沒有平台 → null）
-  let qGround = false; // 這一次震地是不是從（起伏的）地面發出的：是的話整條地裂都貼著地表
+  let qPlat = -1; // 這一次震地是從哪一塊平台發出的：整條地裂都貼著那塊平台（起伏的）表面
   function surfY(x, y0) {
     const map = G.world && G.world.map;
     if (!map || !G.physics) return null;
-    if (qGround) {
-      const p0 = map.platforms[0];
-      if (x < p0[0] || x > p0[1]) return null;
-      const q = [p0[0], p0[1], G.physics.groundY(map, x)];
-      q.gnd = true;
+    const pq = qPlat >= 0 && map.platforms[qPlat];
+    if (pq && x >= pq[0] && x <= pq[1]) {
+      const q = [pq[0], pq[1], G.physics.surfaceY(map, qPlat, x)];
+      q.gnd = qPlat === 0;
       return q;
     }
     const i = G.physics.platformBelow(map, x, y0 - 40);
     if (i < 0) return null;
     const p = map.platforms[i];
-    return Math.abs(p[2] - y0) < 40 ? p : null;
+    const sy = G.physics.surfaceY(map, i, x);
+    if (Math.abs(sy - y0) >= 40) return null;
+    const q = [p[0], p[1], sy];
+    q.gnd = i === 0;
+    return q;
   }
   function dust(x, gy, n, big) {
     const L = G.lowFx;
@@ -1297,7 +1300,7 @@
     const L = G.lowFx;
     const e = { t: 0, x: o.x, gy: o.y, rocks: [], cracks: [], reach: o.reach, speed: o.speed || 1100 };
     const gmap = G.world && G.world.map;
-    qGround = !!(gmap && G.physics && G.physics.groundY && Math.abs(o.y - G.physics.groundY(gmap, o.x)) < 3);
+    qPlat = gmap && G.physics && G.physics.platformAt ? G.physics.platformAt(gmap, o.x, o.y, 3) : -1;
     const tg = o.targets || [];
     // 打中怪的大岩刺：出現時間跟傷害時間一樣（距離 ÷ 震波速度），提早一點點讓尖端剛好頂到
     tg.forEach((m) => {

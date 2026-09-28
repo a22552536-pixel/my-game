@@ -262,6 +262,12 @@
       if (this.action && this.action.type === 'dash') return;
       if (this.onGround) {
         let target = inputX * speed;
+        // 起伏的地形：上坡稍微慢、下坡稍微快（很輕微）
+        if (inputX) {
+          const s = G.physics.surfSlope(G.world.map, this.plat, this.x) * inputX;
+          if (s > 0.05) target *= 1 + 0.1 * Math.min(1, s);
+          else if (s < -0.05) target *= 1 - 0.14 * Math.min(1, -s);
+        }
         if (this.action || Dn) target = 0; // 地面攻擊或蹲下時不移動
         const acc = b.groundAccel * dt;
         if (this.vx < target) this.vx = Math.min(target, this.vx + acc);

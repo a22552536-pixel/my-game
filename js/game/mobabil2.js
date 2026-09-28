@@ -166,7 +166,7 @@
   }
   // 聖甲蟲的太陽輪：貼著平台滾，滾出平台就熄掉，一路留下焦痕
   function wheelTick(p, d) {
-    if (p.gnd) p.base = G.physics.groundY(G.world.map, p.x); // 起伏的地面：貼著地表滾
+    if (p.gnd) p.base = G.physics.surfaceY(G.world.map, p.gp, p.x); // 起伏的地形：貼著表面滾
     p.y = p.base - p.r;
     p.spin += (p.vx / p.r) * d;
     if (p.x < p.lo || p.x > p.hi) p.life = Math.min(p.life, p.t + 0.05);
@@ -276,13 +276,15 @@
           if (m.kkT <= 0.15 && !m.kkDone) {
             m.kkDone = true;
             const base = m.y;
-            const gnd = m.plat === 0 && m.onGround;
+            const gnd = m.onGround;
+            const gpl = m.plat;
             G.audio.play('swing');
             G.world.projectiles.push({
               kind: 'snowball', x: m.x + m.dir * 30, y: base - 14, vx: m.dir * 250, vy: 0, r: 14, dmg: Math.round(m.atk * 1.2), life: 2.8, t: 0, seed: Math.random() * 6, owner: 'monster',
               onTick(p, d) {
                 p.r = Math.min(42, p.r + 12 * d);
-                p.y = (gnd ? G.physics.groundY(G.world.map, p.x) : base) - p.r;
+                const pf = G.world.map.platforms[gpl];
+                p.y = (gnd && pf && p.x >= pf[0] && p.x <= pf[1] ? G.physics.surfaceY(G.world.map, gpl, p.x) : base) - p.r;
               },
             });
           }
@@ -930,7 +932,7 @@
       fire(m, P, st) {
         const [lo, hi] = m.bounds();
         const hw = m.halfW || 0;
-        shot({ kind: 'sunwheel', x: m.x + m.dir * 40, y: m.y - 26, base: m.y, gnd: m.plat === 0 && m.onGround, vx: m.dir * 270, vy: 0, r: 26, dmg: Math.round(m.atk * 1.3), life: 2.2, fade: 0.25, spin: 0, lo: lo - hw, hi: hi + hw, lastMark: m.x, onTick: wheelTick });
+        shot({ kind: 'sunwheel', x: m.x + m.dir * 40, y: m.y - 26, base: m.y, gnd: m.onGround, gp: m.plat, vx: m.dir * 270, vy: 0, r: 26, dmg: Math.round(m.atk * 1.3), life: 2.2, fade: 0.25, spin: 0, lo: lo - hw, hi: hi + hw, lastMark: m.x, onTick: wheelTick });
         m.discT = 2.2;
         m.fx.discOut = true;
         G.audio.play('fire');

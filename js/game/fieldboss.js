@@ -39,13 +39,21 @@
   const warnLine = (x1, y1, x2, y2, w, life) => zone({ kind: 'fb_warnline', x: (x1 + x2) / 2, y: Math.max(y1, y2), x1, y1, x2, y2, w, r: Math.abs(x2 - x1) / 2 + w, life });
   // 野外魔王的台詞放在血條下方的專用欄位（js/ui/hud.js bossLine）；章節 Boss 召喚出來的分身才畫在頭上
   const say = (m, text, color) => (m.illusion ? G.fx.text(m.x, topY(m) - 26, text, color || '#ffb0d8', 20, 1.1) : G.hud.bossLine(text, color || '#ffb0d8'));
-  const groundUnder = (P, m) => (P.onGround && P.climbing < 0 ? P.y : m.y);
-  // 起伏的地面：gy 是地面那一層（不是浮空平台）時，換成 x 那裡的地表高度（浮空平台離地至少 84px，地面起伏不到 76px）
-  const gAt = (gy, x) => {
+  // 腳下那一層：記住是哪一個平台（起伏的地形：gAt 換成 x 那裡的表面高度）
+  let refPlat = 0;
+  const groundUnder = (P, m) => {
+    const onP = P.onGround && P.climbing < 0;
+    refPlat = onP ? P.plat : m.plat;
+    return onP ? P.y : m.y;
+  };
+  // 起伏的地形：同一層平台、x 那裡的表面高度（x 不在那個平台上就照舊）
+  const gAt = (gy, x, pl) => {
     const map = G.world.map;
-    if (!G.physics.terrain(map)) return gy;
-    const g = G.physics.groundY(map, x);
-    return Math.abs(gy - g) < 76 ? g : gy;
+    if (!G.physics.terrains(map)) return gy;
+    const i = pl == null ? refPlat : pl;
+    const p = map.platforms[i];
+    if (!p || x < p[0] || x > p[1]) return gy;
+    return G.physics.surfaceY(map, i, x);
   };
   // 打到玩家：原始傷害封頂在最大 HP 的 34%（防禦、包圍減傷照常）
   const hurtP = (m, k, fromX, touch) => {
@@ -152,7 +160,7 @@
         const dir = m.dir;
         const r = m.fx.rage ? 210 : 170;
         const cx = m.x + dir * (m.halfW + r * 0.85);
-        const gy = gAt(m.y, cx);
+        const gy = gAt(m.y, cx, m.plat);
         warn(cx, gy, r, 1.05);
         G.audio.play('bossWarn');
         let fired = false;
@@ -1223,8 +1231,13 @@
       const hi = Math.min(p[1] - 320, map.w - 320);
       const ok = [];
       let best = lo;
+      // 起伏的地形：不要生在坑裡、陡坡上
+      const rough = (x) => {
+        for (let d = -180; d <= 180; d += 20) if (Math.abs(G.physics.surfSlope(map, 0, x + d)) > 0.6) return true;
+        return false;
+      };
       for (let x = lo; x <= hi; x += 40) {
-        if (Math.abs(x - P.x) >= 500) ok.push(x);
+        if (Math.abs(x - P.x) >= 500 && !rough(x)) ok.push(x);
         if (Math.abs(x - P.x) > Math.abs(best - P.x)) best = x;
       }
       return ok.length ? U.pick(ok) : best;

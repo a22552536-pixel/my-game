@@ -123,12 +123,24 @@
       const p = map.platforms[g.p];
       const x1 = Math.max(p[0] + 40, g.x1 != null ? g.x1 : -Infinity);
       const x2 = Math.min(p[1] - 40, g.x2 != null ? g.x2 : Infinity);
-      let x = U.rand(x1, Math.max(x1 + 1, x2));
+      // 起伏的地形：不要生在陡坡上、陡壁圍起來的小坑裡
+      const PH = G.physics;
+      const badX = (xx) => {
+        if (Math.abs(PH.surfSlope(map, g.p, xx)) > 0.8) return true;
+        const s = PH.walkSpan(map, g.p, xx);
+        return s[1] - s[0] < 320 && s[0] > p[0] + 1 && s[1] < p[1] - 1;
+      };
+      const pick = () => {
+        let xx = U.rand(x1, Math.max(x1 + 1, x2));
+        for (let k = 0; k < 12 && badX(xx); k++) xx = U.rand(x1, Math.max(x1 + 1, x2));
+        return xx;
+      };
+      let x = pick();
       // 重生避讓：不要生在玩家旁邊（清完一圈又冒一圈，是被圍毆的主因）
       if (avoid) {
         const P = G.player;
         const close = (xx) => Math.abs(xx - P.x) < 350 && Math.abs(P.y - SY(map, g.p, xx)) < 160;
-        for (let k = 0; k < 8 && close(x); k++) x = U.rand(x1, Math.max(x1 + 1, x2));
+        for (let k = 0; k < 8 && close(x); k++) x = pick();
         if (close(x)) return null;
       }
       const m = new G.Monster(g.m, g.p, x, { spawn: { group: gi } });
@@ -328,6 +340,15 @@
       this.updateProjectiles(dt);
       this.updateZones(dt);
       if (G.mobAbil) G.mobAbil.tick(dt);
+      // 起伏的地形：被風、吸力、擊退推著走的玩家站在地上時貼回表面（推出平台就掉下去）
+      {
+        const P = G.player;
+        const pl = P.onGround && P.climbing < 0 && this.map.platforms[P.plat];
+        if (pl) {
+          if (P.x < pl[0] || P.x > pl[1]) P.onGround = false;
+          else P.y = G.physics.surfaceY(this.map, P.plat, P.x);
+        }
+      }
 
       for (let i = this.respawns.length - 1; i >= 0; i--) {
         const r = this.respawns[i];
@@ -546,7 +567,8 @@
       const P = G.player;
       return {
         x: U.clamp(P.x - G.W / 2, 0, Math.max(0, this.map.w - G.W)),
-        y: U.clamp(P.y - G.H * 0.6, 0, Math.max(0, this.map.h - G.H) + 60),
+        // 起伏的地面：走近深坑時鏡頭往下多看一點（坑底不會被下方的 HUD 蓋住）
+        y: U.clamp(P.y - G.H * 0.6, 0, Math.max(0, this.map.h - G.H) + 60 + G.physics.groundDipNear(this.map, P.x, 260)),
       };
     },
     snapCamera() {
