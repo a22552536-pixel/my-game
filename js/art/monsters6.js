@@ -4005,7 +4005,9 @@
     ctx.arc(cx + 10, cy + 9, 1.8, 0, TAU);
     ctx.fill();
     // 眼皮：眨眼、受傷瞇眼、死亡閉上
-    const lid = kind === 'closed' || kind === 'x' ? 1 : kind === 'hurt' ? 0.55 : kind === 'angry' || pull ? 0.18 : 0.08;
+    let lid = kind === 'closed' || kind === 'x' ? 1 : kind === 'hurt' ? 0.55 : kind === 'angry' || pull ? 0.18 : 0.08;
+    // 眨眼節奏由 js/game/mobmotion5.js 控制（fx.lid：每 3–5 秒慢慢閉上一次）；fx.wide＝重力崩塌時眼睛睜到最大
+    if (fx.lid != null && kind !== 'x' && kind !== 'hurt') lid = fx.wide ? 0 : Math.max(0.08, fx.lid);
     if (lid > 0) {
       ctx.fillStyle = A.c(EY.rock);
       ctx.beginPath();
