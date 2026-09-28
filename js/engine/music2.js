@@ -1,4 +1,4 @@
-// 背景音樂 第二批：第一章森林、第二章海岸重寫；第四章雪原與霜鈴村、第五章神殿與神殿前庭；
+// 背景音樂 第二批：標題、第一～三章營地（第二次重寫）、第一章森林、第二章海岸重寫；第四章雪原與霜鈴村、第五章神殿與神殿前庭；
 // 每個章節 Boss 各一首（時間有兩個階段）、野外魔王、結局「時鐘重新開始轉」的動機。
 // 記譜與引擎見 music.js 開頭；規格見 DESIGN.md §17。旋律全部原創。
 // 小節長度 barLen：16 = 4/4、12 = 3/4 或 6/8、14 = 7/8、20 = 5/4（以十六分音符為單位）。
@@ -10,10 +10,22 @@
   const dots = (n) => '.'.repeat(n);
 
   Object.assign(M.KITS, {
+    // 標題：開頭只有時鐘，A～B 很輕的滴答與定音鼓，C 段整個打開
+    titleTick: { K: 'x...o...o...', N: 'x' + dots(23) },
+    titleSoft: { K: 'o...-...-...', m: 'x' + dots(23) },
+    titleBig: { m: 'x.......x...', k: 'x' + dots(11), s: '........o.o.', K: 'o...o...o...' },
+    // 苔光營地（6/8）：沙鈴、木魚、很輕的框鼓
+    fcampA: { S: 'o.-.-.o.-.-.', D: 'o.....-.....', w: '......o.....' },
+    fcampB: { S: 'x.o.o.x.o.o.', D: 'x.....o.....', w: '...o.....o..', t: '......-.....' },
+    // 燈塔岬：浪聲、很遠的低鼓
+    harborSea: { W: 'x' + dots(63), D: 'o' + dots(31) },
+    // 溫泉谷：太鼓的心跳（咚—咚）、蒸氣般的沙鈴
+    spaHeart: { T: 'o.....-.........', S: '-.......-.......' },
+    spaHeat: { T: 'x.....o.......-.', J: '....-.......-...', S: '-...-...-...-...' },
     // 第一章 魔法森林：木魚、三角鐵、很輕的沙鈴；戰鬥層才有大鼓小鼓
     mforIn: { n: 'x' + dots(31), w: '..o.....o..o....' },
-    mforA: { w: '..o.....o..o....', S: '-.o.-.o.-.o.-.o.', n: 'x' + dots(31), k: 'o.........o.....' },
-    mforB: { k: 'x.....x...x.....', b: '....x.......x...', S: 'x-o-x-o-x-o-x-o-', w: '..o.......o.....' },
+    mforA: { D: 'o..-..o.........', w: 'o..o..o...o..o..', n: 'x' + dots(31), S: '-.o.-.o.-.o.-.o.' },
+    mforB: { D: 'x..o..x...o..o..', w: 'x..x..x...x...x.', S: 'x-o-x-o-x-o-x-o-', b: '....o.......o...' },
     mforCombat: { k: 'x.....x.x.....x.', s: '....x.......x...', t: '..x...x...x...x.', L: '..............x.' },
     // 第二章 暗藍的海岸（6/8）：浪湧、低沉的踏地聲
     stormIn: { W: 'x' + dots(23) },
@@ -71,10 +83,201 @@
   });
 
   M.addSongs({
+    // ═══ 標題（第二批重寫）：莊嚴、帶一點惆悵。降 A 大調 3/4、80 BPM。
+    // 開頭音樂盒吹出「葉子／時鐘」動機（音級 5-1-7-1-3-2；神殿主題 a1 開頭、時間的前奏都是同一個動機），
+    // 大提琴唱 A、長笛與鋼琴 A'、小提琴 B，C 段整個升一個全音由銅管與合唱撐起來，最後落回降 A。
+    title: {
+      bpm: 80, verb: 0.55, gain: 0.9,
+      barLen: 12,
+      form: 'in:4 A:8 A2:8 B:8 C:8 T:2',
+      P: {
+        in: 'r/12 | C6/4 F6/6 Eb6/2 | F6/4 Ab6/6 G6/2 | G6/12',
+        ta1: 'Eb5/4 Ab5/6 G5/2 | Ab5/4 C6/6 Bb5/2 | Ab5/8 F5/4 | F5/6 Ab5/2 C6/4',
+        ta2: 'Eb6/8 C6/4 | Db6/6 C6/2 Bb5/4 | Ab5/8 Bb5/4 | G5/12',
+        ta3: 'F6/6 Eb6/2 Db6/4 | Eb6/8 G5/4 | Ab5/6 F5/2 C6/4 | Bb5/6 G5/6',
+        tb: 'F5/4 Ab5/4 C6/4 | Bb5/8 G5/4 | G5/4 Bb5/4 Eb6/4 | C6/8 Ab5/4 | Db6/6 C6/2 Bb5/4 | Bb5/8 G5/4 | G5/6 Ab5/6 | F5/6 G5/6',
+        t: 'C6/4 Ab5/4 F5/4 | Eb5/6 G5/6',
+      },
+      chords:
+        'Fm7 Fm7 Dbmaj7 Eb ' +
+        'Ab Ab/C Fm7 Dbmaj7 Ab/C Bbm7 Eb7sus4 Eb7 ' +
+        'Ab Ab/C Fm7 Dbmaj7 Bbm7 Cm7 Dbmaj7 Eb7sus4:Eb7 ' +
+        'Dbmaj7 Eb/Db Cm7 Fm7 Bbm7 Eb Cm7:Fm7 Bbm7:Eb7 ' +
+        'Bb Bb/D Gm7 Ebmaj7 Bb/D Cm7 F7sus4 F7 ' +
+        'Dbmaj7 Eb7sus4:Eb7',
+      voices: [
+        { inst: 'musicbox', m: '@in', at: 'in', role: 'orn' },
+        { inst: 'cello', m: '@ta1 @ta2', at: 'A', oct: -12, vol: 1.15 },
+        { inst: 'flute', m: '@ta1 @ta3', at: 'A2' },
+        { inst: 'piano', m: '@ta1 @ta3', at: 'A2', oct: -12, vol: 0.5, role: 'counter', pan: -0.2 },
+        { inst: 'violin', m: '@tb', at: 'B' },
+        { inst: 'brass', m: '@ta1^2 @ta2^2', at: 'C' },
+        { inst: 'horn', m: '@ta1^2 @ta2^2', at: 'C', oct: -12, vol: 0.6, role: 'counter', pan: -0.25 },
+        { inst: 'cello', m: '@t', at: 'T', oct: -12, vol: 1.1 },
+      ],
+      parts: [
+        { role: 'pad', inst: 'frost', in: 'in', center: 64, n: 4, vol: 0.9 },
+        { role: 'pad', inst: 'strings', in: 'A A2 B T', center: 60, n: 3, vol: 0.75 },
+        { role: 'pad', inst: 'choir', in: 'B C', center: 62, n: 3, vol: 0.7 },
+        { role: 'arp', inst: 'harp', in: 'A A2 B C T', rate: 2, seq: [0, 2, 4, 5, 4, 2], lo: 56, vol: 0.8 },
+        { role: 'comp', inst: 'piano', in: 'B', pat: '....x...x...', center: 62, n: 3, vol: 0.5 },
+        { role: 'arp', inst: 'celesta', in: 'A', rate: 4, seq: [4, 3, 2], lo: 76, pat: 'x...........', vol: 0.4 },
+        { role: 'bass', inst: 'lowbow', in: 'A A2 B T', pat: 'R' + dots(11) },
+        { role: 'bass', inst: 'upright', in: 'C', pat: 'R.......5...' },
+        { role: 'drums', kit: 'titleTick', in: 'in' },
+        { role: 'drums', kit: 'titleSoft', in: 'A A2 B T' },
+        { role: 'drums', kit: 'titleBig', in: 'C', fill: 'tom', crash: 'C' },
+        { role: 'answer', inst: 'celesta', in: 'A2', c: 81 },
+        { role: 'guide', inst: 'horn', in: 'B', lo: 55, hi: 67 },
+        { role: 'gliss', inst: 'harp', lo: 64 },
+      ],
+      vary: [{}, { swap: { cello: 'horn', flute: 'violin', violin: 'flute' } }, { swap: { brass: 'horn', horn: 'cello', harp: 'guitar' }, mute: ['drums@A'] }],
+      aged: false,
+    },
+
+    // ═══ 第一章營地 苔光營地（第二批重寫）：溫暖、舒服的魔法森林民謠。F 大調 6/8、100 BPM；
+    // 直笛主奏、吉他分解和弦像撥弦、輕的馬林巴、沙鈴與木魚；B 段陶笛接手。
+    town: {
+      bpm: 100, verb: 0.38, gain: 1.25,
+      barLen: 12,
+      form: 'in:2 A:8 A2:8 B:8 A3:8 T:2',
+      P: {
+        in: 'A5/2 C6/2 F6/2 E6/4 C6/2 | G5/2 C6/2 E6/2 G6/6',
+        m1: 'C5/2 F5/2 A5/2 G5/4 F5/2 | E5/4 G5/2 C6/6 | A5/4 F5/2 D5/2 E5/2 F5/2 | D5/6 r/2 F5/2 A5/2',
+        m2: 'C6/4 A5/2 F5/4 A5/2 | Bb5/4 G5/2 D5/6 | F5/2 G5/2 Bb5/2 C6/4 Bb5/2 | G5/6 E5/6',
+        m3: 'D6/4 Bb5/2 G5/4 F5/2 | E5/4 G5/2 C6/6 | D5/2 F5/2 A5/2 G5/4 E5/2 | F5/12',
+        mb: 'A5/4 D6/2 C6/4 A5/2 | G5/4 E5/2 C5/6 | D5/2 F5/2 A5/2 D6/4 C6/2 | C6/6 A5/6 | Bb5/4 D6/2 F6/4 D6/2 | E6/4 C6/2 A5/6 | D6/2 C6/2 Bb5/2 A5/4 F5/2 | G5/6 E5/6',
+        t: 'Bb5/4 G5/2 D5/6 | E5/6 C5/6',
+      },
+      chords:
+        'Fmaj7 C/E ' +
+        'F C/E Dm7 Bbmaj7 F/A Gm7 C7sus4 C7 ' +
+        'F C/E Dm7 Bbmaj7 Gm7 Am7 Bbmaj7:C7 F ' +
+        'Dm7 Am7 Bbmaj7 F/A Gm7 Am7 Bbmaj7 C7sus4:C7 ' +
+        'F C/E Dm7 Bbmaj7 Gm7 Am7 Bbmaj7:C7 F ' +
+        'Gm7 C7',
+      voices: [
+        { inst: 'marimba', m: '@in', at: 'in', role: 'orn' },
+        { inst: 'recorder', m: '@m1 @m2', at: 'A' },
+        { inst: 'recorder', m: '@m1 @m3', at: 'A2' },
+        { inst: 'ocarina', m: '@mb', at: 'B' },
+        { inst: 'recorder', m: '@m1 @m3', at: 'A3' },
+        { inst: 'glock', m: '@m1 @m3', at: 'A3', vol: 0.3, role: 'orn', pan: 0.3 },
+        { inst: 'recorder', m: '@t', at: 'T' },
+      ],
+      parts: [
+        { role: 'pad', inst: 'warm', in: 'in A A2', center: 60, n: 3, vol: 0.85 },
+        { role: 'pad', inst: 'strings', in: 'B A3 T', center: 62, n: 3, vol: 0.6 },
+        { role: 'arp', inst: 'guitar', rate: 2, seq: [0, 2, 1, 2, 3, 2], lo: 53, vol: 0.75 },
+        { role: 'arp', inst: 'marimba', in: 'A2 B', rate: 2, seq: [4, 2, 3, 1, 2, 0], lo: 64, vol: 0.5 },
+        { role: 'bass', inst: 'upright', pat: 'R.....5.....' },
+        { role: 'drums', kit: 'fcampA', in: 'in A' },
+        { role: 'drums', kit: 'fcampB', in: 'A2 B A3 T', fill: 'wood', crash: 'n' },
+        { role: 'answer', inst: 'glock', in: 'A', c: 81 },
+        { role: 'answer', inst: 'recorder', in: 'B', c: 79, vol: 0.7 },
+        { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.6 },
+        { role: 'gliss', inst: 'harp', lo: 65 },
+      ],
+      vary: [{}, { swap: { recorder: 'ocarina', ocarina: 'recorder' }, mute: ['drums@A'] }, { swap: { guitar: 'harp', ocarina: 'flute' } }],
+      aged: { lp: 2400 },
+    },
+
+    // ═══ 第二章營地 燈塔岬（第二批重寫）：憂鬱的暗藍港口，燈塔熄了。B 小調 4/4、76 BPM 的慢歌；
+    // 六角手風琴與大提琴對唱、低音弦樂、遠處的浮標鐘（不規則地響）、浪聲；B 段小提琴。
+    harbor: {
+      bpm: 76, verb: 0.5, gain: 0.95,
+      form: 'in:2 A:8 A2:8 B:8 A3:8 T:2',
+      P: {
+        buoy: 'F#4/16 | r/16 | r/8 F#4/8 | r/16 | r/16 | F#4/16 | r/16 | r/4 F#4/12',
+        h1: 'F#5/6 E5/2 D5/4 B4/4 | D5/6 E5/2 G5/8 | F#5/6 A5/2 F#5/4 D5/4 | E5/12 C#5/4',
+        h2: 'D5/4 F#5/4 B5/6 A5/2 | G5/6 F#5/2 E5/8 | B4/4 C#5/4 F#5/8 | C#5/8 A#4/8',
+        h3: 'B5/6 A5/2 G5/4 D5/4 | A5/6 F#5/2 D5/8 | G5/6 F#5/2 E5/4 D5/4 | C#5/8 E5/4 A#4/4',
+        hb: 'B5/6 A5/2 G5/4 E5/4 | C#6/6 B5/2 A5/8 | F#5/4 A5/4 D6/4 C#6/4 | B5/12 D6/4 | E6/6 D6/2 B5/4 G5/4 | A5/6 C#6/2 E6/8 | F#6/8 E6/4 C#6/4 | C#6/8 A#5/8',
+        t: 'G5/8 F#5/4 E5/4 | C#5/8 A#4/8',
+      },
+      chords:
+        'Bm Bm ' +
+        'Bm G D A/C# Bm Em7 F#sus4 F# ' +
+        'Bm G D A/C# G D/F# Em7 F#7 ' +
+        'Em7 A D G Em7 A F#7sus4 F# ' +
+        'Bm G D A/C# G D/F# Em7 F#7 ' +
+        'Em7 F#sus4:F#',
+      voices: [
+        { inst: 'bell', m: 'F#4/16 | r/16', at: 'in', role: 'orn', vol: 0.35, pan: -0.6 },
+        { inst: 'bell', m: '@buoy', at: 'A', role: 'orn', vol: 0.3, pan: -0.6 },
+        { inst: 'bell', m: '@buoy', at: 'A2', role: 'orn', vol: 0.3, pan: -0.6 },
+        { inst: 'bell', m: '@buoy', at: 'B', role: 'orn', vol: 0.3, pan: -0.6 },
+        { inst: 'bell', m: '@buoy', at: 'A3', role: 'orn', vol: 0.3, pan: -0.6 },
+        { inst: 'reed', m: '@h1 @h2', at: 'A' },
+        { inst: 'cello', m: '@h1 @h3', at: 'A2', oct: -12, vol: 1.1 },
+        { inst: 'reed', m: '@h1 @h3', at: 'A2', vol: 0.4, role: 'counter', pan: 0.25 },
+        { inst: 'violin', m: '@hb', at: 'B' },
+        { inst: 'reed', m: '@h1 @h3', at: 'A3' },
+        { inst: 'cello', m: '@h1 @h3', at: 'A3', oct: -12, vol: 0.5, role: 'counter', pan: -0.25 },
+        { inst: 'reed', m: '@t', at: 'T' },
+      ],
+      parts: [
+        { role: 'pad', inst: 'lowstr', center: 50, n: 3, vol: 0.9 },
+        { role: 'pad', inst: 'ooh', in: 'B A3', center: 60, n: 3, vol: 0.5 },
+        { role: 'arp', inst: 'guitar', in: 'A2 B A3', rate: 2, seq: [0, 2, 4, 2, 1, 3, 4, 2], lo: 50, vol: 0.55 },
+        { role: 'bass', inst: 'lowbow', pat: 'R.......5.......' },
+        { role: 'drums', kit: 'harborSea' },
+        { role: 'answer', inst: 'clarinet', in: 'A', c: 67, vol: 0.7 },
+        { role: 'guide', inst: 'strlead', in: 'B', lo: 57, hi: 69 },
+      ],
+      vary: [{}, { swap: { reed: 'accordion', violin: 'cello' }, up: {} }],
+      aged: { lp: 2000 },
+    },
+
+    // ═══ 第三章營地 溫泉谷（第二批重寫）：溫暖、有蒸氣、放鬆，但帶著峽谷的熱。G 大調五聲、72 BPM；
+    // 尺八主奏、古箏不規則地撥、頌缽、很輕的太鼓心跳（咚—咚）；B 段移到 E 小調，更熱一點。
+    spa: {
+      bpm: 72, verb: 0.55, gain: 0.9,
+      form: 'in:2 A:8 A2:8 B:8 A3:8 T:2',
+      P: {
+        in: 'G5/2 A5/2 B5/2 D6/2 E6/4 D6/4 | B5/2 A5/2 G5/2 E5/2 D5/8',
+        s1: 'D5/8 E5/4 G5/4 | E5/6 D5/2 B4/8 | G5/8 A5/4 G5/4 | A5/12 r/4',
+        s2: 'B5/6 A5/2 G5/4 E5/4 | D5/8 F#5/4 A5/4 | G5/6 E5/2 D5/8 | D5/8 F#5/8',
+        s3: 'G5/6 E5/2 D5/4 B4/4 | C5/6 E5/2 A5/8 | G5/8 E5/4 D5/4 | D5/16',
+        sb: 'B5/6 D6/2 E6/8 | C6/6 A5/2 G5/8 | B5/4 D6/4 E6/4 G6/4 | E6/12 r/4 | E6/6 D6/2 B5/8 | D6/6 B5/2 A5/8 | G5/6 E5/2 C6/8 | A5/8 F#5/8',
+        t: 'C6/8 A5/8 | A5/16',
+      },
+      chords:
+        'Gadd9 Gadd9 ' +
+        'Gadd9 Em7 Cadd9 Dsus4 Gadd9 Bm7 Cadd9 Dsus4:D ' +
+        'Gadd9 Em7 Cadd9 Dsus4 Em7 Am7 Cadd9 Dsus4 ' +
+        'Em7 Am7 Em7 Am7 Cmaj7 Bm7 Am7 Dsus4:D ' +
+        'Gadd9 Em7 Cadd9 Dsus4 Gadd9 Bm7 Cadd9 Dsus4:D ' +
+        'Am7 Dsus4',
+      voices: [
+        { inst: 'koto', m: '@in', at: 'in', role: 'orn' },
+        { inst: 'shaku', m: '@s1 @s2', at: 'A' },
+        { inst: 'shaku', m: '@s1 @s3', at: 'A2' },
+        { inst: 'koto', m: '@s1 @s3', at: 'A2', vol: 0.45, role: 'counter', pan: 0.3 },
+        { inst: 'shaku', m: '@sb', at: 'B', oct: -12, vol: 1.2 },
+        { inst: 'koto', m: '@sb', at: 'B', vol: 0.5, role: 'counter', pan: 0.3 },
+        { inst: 'shaku', m: '@s1 @s2', at: 'A3' },
+        { inst: 'shaku', m: '@t', at: 'T' },
+      ],
+      parts: [
+        { role: 'pad', inst: 'warm', in: 'in A A2 A3 T', center: 59, n: 3, vol: 0.85 },
+        { role: 'pad', inst: 'ooh', in: 'B', center: 57, n: 3, vol: 0.6 },
+        { role: 'arp', inst: 'koto', rate: 2, seq: [4, 2, 0, 1, 3, 2, 1, 0], lo: 55, pat: 'x.x...x.x.x...x.', vol: 0.8 },
+        { role: 'arp', inst: 'bowl', in: 'A2 A3', rate: 16, seq: [0], lo: 48, vol: 0.5 },
+        { role: 'bass', inst: 'lowbow', pat: 'R' + dots(15) },
+        { role: 'drums', kit: 'spaHeart', in: 'in A A2 A3 T' },
+        { role: 'drums', kit: 'spaHeat', in: 'B' },
+        { role: 'answer', inst: 'koto', in: 'A', c: 74 },
+        { role: 'gliss', inst: 'koto', lo: 62 },
+      ],
+      vary: [{}, { swap: { shaku: 'bamboo' }, mute: ['drums@A'] }],
+      aged: { lp: 2200 },
+    },
+
     // ═══ 第一章狩獵場 苔光森林：茂密的魔法森林。E 多利安、maj9 與 sus4、豎琴一直流動、鋼片琴閃光；
     // 神祕但仍然歡迎你。100 BPM 輕微十六分搖擺。C 段是「深林」：低音單簧管、合唱「嗚」。
     forest: {
-      bpm: 100, swing16: 0.1, verb: 0.4, gain: 1.15,
+      bpm: 100, swing16: 0.1, verb: 0.4, gain: 1.45,
       form: 'in:2 A:8 A2:8 B:8 C:8 A3:8 T:2',
       P: {
         in: 'B6/2 G6/2 E6/2 B5/2 F#6/4 E6/4 | D6/2 B5/2 G5/2 E5/2 D6/8',
@@ -96,15 +299,15 @@
         'Am9 Bsus4:B7',
       voices: [
         { inst: 'celesta', m: '@in', at: 'in', role: 'orn', vol: 0.9 },
-        { inst: 'flute', m: '@g1 @g2', at: 'A' },
+        { inst: 'pan', m: '@g1 @g2', at: 'A' },
         { inst: 'celesta', m: '@g1', at: 'A', vol: 0.45, role: 'orn', pan: 0.3 },
-        { inst: 'ocarina', m: '@g1 @g3', at: 'A2' },
-        { inst: 'violin', m: '@gb1 @gb2', at: 'B' },
-        { inst: 'flute', m: '@gb2', at: 'B+4', oct: -12, vol: 0.4, role: 'counter', pan: 0.25 },
+        { inst: 'pan', m: '@g1 @g3', at: 'A2' },
+        { inst: 'cello', m: '@gb1 @gb2', at: 'B', oct: -12, vol: 1.15 },
+        { inst: 'violin', m: '@gb2', at: 'B+4', vol: 0.35, role: 'counter', pan: 0.25 },
         { inst: 'clarinet', m: '@gc', at: 'C', vol: 1.2 },
-        { inst: 'flute', m: '@g1 @g2', at: 'A3' },
+        { inst: 'pan', m: '@g1 @g2', at: 'A3' },
         { inst: 'musicbox', m: '@g1 @g2', at: 'A3', oct: 12, vol: 0.3, role: 'orn', pan: 0.3 },
-        { inst: 'flute', m: '@t', at: 'T' },
+        { inst: 'pan', m: '@t', at: 'T' },
       ],
       parts: [
         { role: 'pad', inst: 'warm', in: 'in A', center: 60, n: 4, vol: 0.9 },
@@ -123,12 +326,12 @@
         { role: 'drums', kit: 'mforCombat', in: 'A A2 B C A3 T', layer: 'combat', vol: 0.85 },
         { role: 'arp', inst: 'pluck', in: 'A A2 B C A3 T', rate: 1, seq: [0, 0, 2, 0, 1, 0, 2, 4], lo: 52, pat: 'x.x.x.xxx.x.x.xx', vol: 0.55, layer: 'combat' },
         { role: 'answer', inst: 'glock', in: 'A', c: 81 },
-        { role: 'answer', inst: 'flute', in: 'B', c: 76 },
+        { role: 'answer', inst: 'pan', in: 'B', c: 76 },
         { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.7 },
         { role: 'guide', inst: 'horn', in: 'B C', lo: 55, hi: 67, move: true, vol: 0.8 },
         { role: 'gliss', inst: 'harp', lo: 67 },
       ],
-      vary: [{}, { swap: { flute: 'ocarina', ocarina: 'flute', clarinet: 'horn' }, mute: ['drums@A'] }],
+      vary: [{}, { swap: { pan: 'recorder', cello: 'violin', clarinet: 'horn' }, mute: ['drums@A'] }],
       aged: { lp: 2200 },
     },
 
@@ -608,6 +811,7 @@
         k3: 'Bb5/6 C6/2 D6/8 | Eb6/6 D6/2 C6/8 | Ab5/6 F5/2 D5/8 | B4/8 D5/4 F5/4',
         kb: 'Eb6/8 C6/4 Ab5/4 | D6/8 Bb5/4 F5/4 | D6/6 Eb6/2 F6/8 | G6/12 Eb6/4 | Ab6/6 G6/2 F6/4 C6/4 | D6/6 C6/2 Bb5/8 | Bb5/6 D6/2 G6/8 | F6/8 D6/4 B5/4',
         kc: 'C5/16 | G4/16 | Db5/16 | Ab4/16 | C5/16 | Eb5/16 | F5/16 | D5/16',
+        mo: 'G4/4 C5/4 Bb4/8 | C5/4 Eb5/4 D5/8',
         t: 'C6/8 Eb6/8 | D6/8 B5/8',
       },
       chords:
@@ -619,6 +823,7 @@
         'Cm Ab/C Fm/C G/B Cm Ab Fm G7sus4:G7 ' +
         'Ab G7',
       voices: [
+        { inst: 'bell', m: '@mo', at: 'in', role: 'orn', vol: 0.9 },
         { inst: 'brass', m: '@k1 @k2', at: 'A' },
         { inst: 'horn', m: '@k1 @k3', at: 'A2', vol: 1.2 },
         { inst: 'violin', m: '@k1 @k3', at: 'A2', oct: 12, vol: 0.5, role: 'counter', pan: 0.25 },
@@ -660,6 +865,7 @@
         xl: 'C5/14 | Eb5/14 | F5/14 | D5/14 | G5/14 | Ab5/14 | C6/14 | B5/14',
         xb: 'Eb6/4 r/2 C6/2 Ab5/6 | D6/4 r/2 Bb5/2 F5/6 | D6/2 Eb6/2 F6/4 r/6 | G6/10 Eb6/4 | Ab6/2 G6/2 F6/2 C6/2 r/6 | D6/2 C6/2 Bb5/4 r/6 | Bb5/2 D6/2 G6/10 | F6/4 D6/4 B5/6',
         xc: 'C5/14 | Db5/14 | Eb5/14 | F5/14 | Eb5/14 | D5/14 | C5/14 | B4/14',
+        mo: 'G5/2 C6/2 Bb5/3 r/7 | C6/2 Eb6/2 D6/3 r/7',
         t: 'C6/4 Eb6/4 Ab6/6 | G6/4 F6/4 D6/6',
       },
       chords:
@@ -670,6 +876,7 @@
         'Cm Ab/C Fm/C G/B Cm Ab Fm G7 ' +
         'Ab G7',
       voices: [
+        { inst: 'crystal', m: '@mo', at: 'in', role: 'orn', vol: 1.2 },
         { inst: 'crystal', m: '@x1 @x2', at: 'A', vol: 1.3 },
         { inst: 'violin', m: '@xl', at: 'A', vol: 0.7, role: 'counter', pan: -0.2 },
         { inst: 'brass', m: '@xb', at: 'B' },

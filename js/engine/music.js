@@ -15,185 +15,8 @@
 
   // ─────────────────────────── 曲目 ───────────────────────────
   const SONGS = {
-    // 標題：希望、開闊。D 大調 → B 段升到 E 大調，法國號接手主旋律、小提琴高八度疊奏
-    title: {
-      bpm: 100, verb: 0.42, gain: 1.1,
-      form: 'in:2 A:8 A2:8 B:8 T:2',
-      P: {
-        in: 'A5/2 D6/2 F#6/2 A6/2 C#7/4 A6/4 | G6/2 E6/2 B5/2 D6/2 C#6/4 E6/4',
-        a1: 'F#5/4 A5/4 D6/6 C#6/2 | C#6/6 B5/2 A5/4 E5/4 | F#5/4 B5/4 D6/4 C#6/2 B5/2 | A5/10 F#5/2 G#5/2 A5/2',
-        a2: 'B5/6 A5/2 G5/4 D6/4 | D6/6 E6/2 F#6/4 A5/4 | G5/4 B5/4 E6/4 D6/2 B5/2 | D6/6 C#6/2 r/4 A5/4',
-        a3: 'B5/6 A5/2 G5/4 D6/4 | F#6/6 E6/2 C6/4 A5/4 | B5/4 D6/4 E6/4 C#6/4 | A5/6 G#5/2 D#6/4 F#6/4',
-        b1: 'E5/8 C#5/2 E5/2 A5/4 | F#5/6 D#5/2 B4/4 F#5/4 | G#5/6 F#5/2 D#5/4 B5/4 | G#5/12 E5/2 F#5/2',
-        b2: 'A5/6 G#5/2 F#5/4 C#6/4 | B5/6 A5/2 F#5/4 D#5/4 | E5/4 G#5/4 B5/4 C#6/4 | A5/6 G#5/2 F#5/4 D#5/4',
-        t: 'E5/4 G5/4 B5/4 D6/4 | C#6/8 r/8',
-      },
-      chords:
-        'Dmaj7 Em7:A7 ' +
-        'Dmaj7 A/C# Bm7 F#m7 Gmaj7 D/F# Em7 A7sus4:A7 ' +
-        'Dmaj7 A/C# Bm7 D7 Gmaj7 D7 Gmaj7:A7 F#m7:B7 ' +
-        'Amaj7 B G#m7 C#m7 F#m7 B7 Emaj7:C#m7 F#m7:B7 ' +
-        'Em7 A7',
-      voices: [
-        { inst: 'musicbox', m: '@in', at: 'in', role: 'orn', vol: 0.9 },
-        { inst: 'flute', m: '@a1 @a2', at: 'A' },
-        { inst: 'violin', m: '@a1 @a3', at: 'A2' },
-        { inst: 'glock', m: '@a3', at: 'A2+4', oct: 12, vol: 0.55, role: 'orn', pan: 0.3 },
-        { inst: 'horn', m: '@b1 @b2', at: 'B', vol: 1.1 },
-        { inst: 'violin', m: '@b1 @b2', at: 'B', oct: 12, vol: 0.5, role: 'counter', pan: -0.2 },
-        { inst: 'flute', m: '@t', at: 'T' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'strings', in: 'A A2 B T', center: 62 },
-        { role: 'pad', inst: 'choir', in: 'B', center: 67, n: 3, vol: 0.8 },
-        { role: 'arp', inst: 'harp', in: 'in A A2 T', rate: 2, seq: [0, 2, 4, 3, 5, 4, 2, 3], lo: 55 },
-        { role: 'arp', inst: 'harp', in: 'B', rate: 1, seq: [0, 2, 4, 6, 7, 6, 4, 2], lo: 55, vol: 0.8 },
-        { role: 'comp', inst: 'pizz', in: 'A2 B', pat: 'x..x..x.x..x..x.', center: 60, n: 3, vol: 0.8 },
-        { role: 'bass', inst: 'upright', in: 'A', pat: 'R.......5.....A.' },
-        { role: 'bass', inst: 'upright', in: 'A2 B T', pat: 'R..5..R.R...5.A.' },
-        { role: 'drums', kit: 'titleA', in: 'in A', fill: 'brush' },
-        { role: 'drums', kit: 'titleA2', in: 'A2', fill: 'tom', crash: 'C' },
-        { role: 'drums', kit: 'titleB', in: 'B T', fill: 'tom', fillLen: 8, crash: 'C' },
-        { role: 'answer', inst: 'glock', in: 'A', c: 81 },
-        { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.8 },
-        { role: 'guide', inst: 'strlead', in: 'B', lo: 60, hi: 72, move: true },
-        { role: 'gliss', inst: 'harp', lo: 67 },
-      ],
-    },
-
-    // 第一章營地：溫暖的森林小村（亨內西斯式的田園感）。C 大調搖擺八分、烏克麗麗刷弦、B 段轉到 F 大調
-    town: {
-      bpm: 112, swing: 0.55, verb: 0.32, gain: 1.15,
-      form: 'in:2 A:8 A2:8 B:8 T:2',
-      P: {
-        in: 'G5/2 C6/2 E6/2 G6/2 E6/4 C6/4 | D6/2 F6/2 A6/4 G6/4 B5/4',
-        a1: 'E5/4 G5/2 E5/2 C5/4 D5/2 E5/2 | G5/6 E5/2 D5/4 B4/4 | A5/4 C6/2 A5/2 G5/2 A5/2 F5/4 | G5/8 F5/2 E5/2 D5/4',
-        a2: 'E5/4 G5/2 E5/2 C6/4 B5/2 C6/2 | D6/6 C#6/2 A5/4 E5/4 | F5/4 A5/2 C6/2 B5/2 A5/2 F5/4 | C5/6 D5/2 B4/4 r/4',
-        a3: 'C6/4 E6/2 C6/2 A5/4 G5/2 A5/2 | F#5/6 A5/2 C6/4 A5/4 | F5/2 E5/2 D5/2 F5/2 B5/4 D6/4 | C6/8 Bb5/4 G5/4',
-        b1: 'D6/6 C6/2 Bb5/2 A5/2 F5/4 | G5/6 A5/2 Bb5/2 C6/2 E6/4 | E6/6 D6/2 C6/2 A5/2 E5/4 | F5/8 A5/4 D6/4',
-        b2: 'D6/4 Bb5/2 D6/2 F6/4 E6/2 D6/2 | E6/6 D6/2 C6/2 Bb5/2 G5/4 | A5/4 C6/4 F6/4 E6/2 D6/2 | D6/6 Bb5/2 C#6/4 E6/4',
-        t: 'F5/4 E5/2 D5/2 C5/4 A4/4 | B4/8 r/8',
-      },
-      chords:
-        'Cmaj7 Dm7:G7 ' +
-        'C Em7 Fmaj7 G7 C A7 Dm7 G7sus4:G7 ' +
-        'C Em7 Fmaj7 E7 Am7 D7 Dm7:G7 C:C7 ' +
-        'Bbmaj7 C Am7 Dm7 Gm7 C7 Fmaj7:Dm7 Gm7:A7 ' +
-        'Dm7 G7',
-      voices: [
-        { inst: 'marimba', m: '@in', at: 'in', role: 'orn' },
-        { inst: 'ocarina', m: '@a1 @a2', at: 'A' },
-        { inst: 'accordion', m: '@a1 @a3', at: 'A2' },
-        { inst: 'violin', m: '@b1 @b2', at: 'B' },
-        { inst: 'glock', m: '@b2', at: 'B+4', oct: 12, vol: 0.5, role: 'orn', pan: 0.3 },
-        { inst: 'ocarina', m: '@t', at: 'T' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'warm', in: 'A', center: 60, vol: 0.9 },
-        { role: 'pad', inst: 'strings', in: 'A2 B T', center: 62 },
-        { role: 'comp', inst: 'uke', pat: 'x.o.x.oox.o.x.o.', center: 64, n: 4, strum: 0.012 },
-        { role: 'arp', inst: 'marimba', in: 'A2 B', rate: 2, seq: [0, 2, 1, 3, 2, 4, 3, 1], lo: 60, vol: 0.8 },
-        { role: 'bass', inst: 'upright', in: 'in A', pat: 'R.......5.....A.' },
-        { role: 'bass', inst: 'upright', in: 'A2 B T', pat: 'R...3...5...A...' },
-        { role: 'drums', kit: 'townA', in: 'in A', fill: 'brush' },
-        { role: 'drums', kit: 'townB', in: 'A2 B T', fill: 'brush', crash: 'n' },
-        { role: 'answer', inst: 'glock', in: 'A', c: 79 },
-        { role: 'answer', inst: 'flute', in: 'B', c: 74 },
-        { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.8 },
-        { role: 'guide', inst: 'horn', in: 'B', lo: 57, hi: 67, vol: 0.8 },
-        { role: 'gliss', inst: 'harp', lo: 67 },
-      ],
-    },
-
+    // 標題 title、營地 town／harbor／spa 在第二批重寫，放在 music2.js
     // 第一章狩獵場 forest、第二章狩獵場 sea：重寫後在 music2.js
-
-    // 第二章營地 燈塔岬：溫暖懷舊的港口（維多利亞港式）。降 B 大調搖擺、手風琴＋木吉他、B 段轉 C 大調弦樂接手
-    harbor: {
-      bpm: 104, swing: 0.6, verb: 0.38, gain: 1.35,
-      form: 'in:2 A:8 A2:8 B:8 T:2',
-      P: {
-        in: 'D6/2 F6/2 A6/2 F6/2 D6/4 Bb5/4 | Eb6/2 G6/2 C6/4 A5/2 C6/2 Eb6/4',
-        a1: 'F5/4 D5/2 F5/2 Bb5/4 A5/4 | G5/6 F5/2 D5/4 Bb4/4 | Eb5/4 G5/2 Bb5/2 A5/2 G5/2 Eb5/4 | F5/8 Eb5/2 D5/2 C5/4',
-        a2: 'D5/4 F5/2 A5/2 C6/4 A5/4 | B5/6 A5/2 G5/4 D5/4 | Eb5/4 G5/2 Bb5/2 D6/4 C6/2 Bb5/2 | Bb5/6 A5/2 r/4 F5/4',
-        a3: 'A5/4 F5/4 B5/4 D6/4 | Eb6/6 D6/2 C6/4 A5/4 | G5/4 Bb5/2 D6/2 G6/8 | F6/6 E6/2 D6/4 B5/4',
-        b1: 'A5/6 C6/2 E6/4 D6/2 C6/2 | B5/6 A5/2 G5/4 D5/4 | E5/4 G5/2 B5/2 D6/4 B5/4 | C6/12 B5/2 A5/2',
-        b2: 'F5/4 A5/2 D6/2 F6/4 E6/2 D6/2 | D6/6 B5/2 G5/4 F5/4 | G5/2 B5/2 E6/4 C#6/4 E6/4 | F6/6 E6/2 D6/4 B5/4',
-        t: 'Eb5/4 G5/4 Bb5/4 C6/4 | A5/8 r/8',
-      },
-      chords:
-        'Bbmaj7 Cm7:F7 ' +
-        'Bbmaj7 Gm7 Cm7 F7 Dm7 G7 Cm7 F7sus4:F7 ' +
-        'Bbmaj7 Gm7 Cm7 F7 Dm7:G7 Cm7:F7 Ebmaj7 Dm7:G7 ' +
-        'Fmaj7 G Em7 Am7 Dm7 G7 Em7:A7 Dm7:G7 ' +
-        'Cm7 F7',
-      voices: [
-        { inst: 'guitar', m: '@in', at: 'in', role: 'orn' },
-        { inst: 'accordion', m: '@a1 @a2', at: 'A' },
-        { inst: 'accordion', m: '@a1 @a3', at: 'A2' },
-        { inst: 'violin', m: '@b1 @b2', at: 'B' },
-        { inst: 'accordion', m: '@t', at: 'T' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'organ', in: 'A', center: 60, vol: 0.8 },
-        { role: 'pad', inst: 'strings', in: 'A2 B T', center: 62 },
-        { role: 'comp', inst: 'guitar', pat: 'x.o.x.o.x.o.xoo.', center: 60, n: 4, strum: 0.014 },
-        { role: 'comp', inst: 'ep', in: 'A2 B', pat: '......x.......x.', center: 66, n: 3, vol: 0.6, pan: 0.35 },
-        { role: 'arp', inst: 'glock', in: 'B', rate: 4, seq: [4, 3, 5, 2], lo: 72, pat: '....x.......x...', vol: 0.5 },
-        { role: 'bass', inst: 'upright', in: 'in A', pat: 'R.......5.....A.' },
-        { role: 'bass', inst: 'upright', in: 'A2 B T', pat: 'R...5...8...A...' },
-        { role: 'drums', kit: 'harborA', in: 'in A', fill: 'brush' },
-        { role: 'drums', kit: 'harborB', in: 'A2 B T', fill: 'brush', crash: 'n' },
-        { role: 'answer', inst: 'clarinet', in: 'A', c: 70 },
-        { role: 'answer', inst: 'accordion', in: 'B', c: 72, vol: 0.8 },
-        { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.75 },
-        { role: 'guide', inst: 'horn', in: 'B', lo: 55, hi: 66, vol: 0.8 },
-        { role: 'gliss', inst: 'harp', lo: 65 },
-      ],
-    },
-
-    // 第三章營地 溫泉谷：悠閒的溫泉鄉，帶一點東方五聲音階。D 大調 96 BPM、竹笛、古箏分解、B 段轉 E 大調二胡接手
-    spa: {
-      bpm: 96, swing16: 0.15, verb: 0.45, gain: 1.05,
-      form: 'in:2 A:8 A2:8 B:8 T:2',
-      P: {
-        in: 'A5/2 B5/2 D6/2 E6/2 F#6/4 E6/4 | D6/2 B5/2 A5/2 E5/2 D5/8',
-        a1: 'A5/6 B5/2 A5/4 F#5/2 E5/2 | D5/6 E5/2 F#5/8 | B5/4 A5/2 B5/2 D6/4 E6/4 | D6/8 B5/2 A5/2 r/4',
-        a2: 'F#6/6 E6/2 D6/4 B5/4 | A5/6 B5/2 A5/2 F#5/2 E5/4 | F#5/4 E5/2 D5/2 B4/4 D5/4 | E5/12 r/4',
-        a3: 'D6/6 B5/2 A5/4 F#5/4 | E5/6 F#5/2 A5/4 C#6/4 | B5/6 A5/2 F#5/4 E5/4 | A5/4 C#6/4 D#6/4 F#6/4',
-        b1: 'E6/6 C#6/2 B5/4 G#5/4 | B5/6 G#5/2 F#5/4 E5/4 | F#5/4 G#5/2 B5/2 C#6/8 | E6/6 F#6/2 D#6/8',
-        b2: 'C#6/4 B5/2 C#6/2 E6/4 G#6/4 | F#6/6 E6/2 D#6/4 B5/4 | C#6/4 E6/4 A5/4 C#6/4 | B5/8 A5/4 F#5/4',
-        t: 'G5/4 F#5/4 E5/4 B4/4 | E5/8 r/8',
-      },
-      chords:
-        'Dmaj9 A7sus4 ' +
-        'Dmaj9 Bm7 Gmaj7 A7sus4 Dmaj9 F#m7 Em9 A7sus4:A7 ' +
-        'Dmaj9 Bm7 Gmaj7 A7sus4 Gmaj7 F#m7 Em9 F#m7:B7 ' +
-        'Amaj9 E/G# F#m7 Bsus4:B Amaj9 G#m7 C#m7:F#m7 Bsus4:B ' +
-        'Em9 A7sus4:A7',
-      voices: [
-        { inst: 'koto', m: '@in', at: 'in', role: 'orn' },
-        { inst: 'bamboo', m: '@a1 @a2', at: 'A' },
-        { inst: 'bamboo', m: '@a1 @a3', at: 'A2' },
-        { inst: 'koto', m: '@a1 @a3', at: 'A2', vol: 0.5, role: 'counter', pan: 0.3 },
-        { inst: 'erhu', m: '@b1 @b2', at: 'B' },
-        { inst: 'bamboo', m: '@t', at: 'T' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'warm', in: 'in A', center: 60, vol: 0.9 },
-        { role: 'pad', inst: 'strings', in: 'A2 B T', center: 62 },
-        { role: 'comp', inst: 'ep', pat: 'x.....x...x.....', center: 62, n: 4, vol: 0.8, strum: 0.01 },
-        { role: 'arp', inst: 'koto', rate: 2, seq: [0, 1, 2, 4, 3, 2, 4, 5], lo: 62, vol: 0.8 },
-        { role: 'arp', inst: 'musicbox', in: 'B', rate: 2, seq: [5, 4, 6, 3], lo: 74, pat: '..x.......x.....', vol: 0.6 },
-        { role: 'bass', inst: 'upright', in: 'in A', pat: 'R.......5...8...' },
-        { role: 'bass', inst: 'upright', in: 'A2 B T', pat: 'R.....5.R...5.A.' },
-        { role: 'drums', kit: 'spaA', in: 'in A', fill: 'wood' },
-        { role: 'drums', kit: 'spaB', in: 'A2 B T', fill: 'wood', crash: 'n' },
-        { role: 'answer', inst: 'koto', in: 'A', c: 76 },
-        { role: 'answer', inst: 'bamboo', in: 'B', c: 76, vol: 0.8 },
-        { role: 'guide', inst: 'strlead', in: 'B', lo: 60, hi: 71 },
-        { role: 'gliss', inst: 'koto', lo: 62 },
-      ],
-    },
 
     // 第三章狩獵場 赤岩峽谷：勇士村式的部落鼓。A 小調（多利安 F#）、太鼓與締太鼓、三味線式撥弦 riff、銅管重音、B 段轉 B 小調小號接手。
     // C 段是太鼓合奏＋低音法國號的吟唱（主旋律休息），A3 回到主題、竹笛與小號八度齊奏；第二輪換二胡主奏、A 段拿掉鼓
@@ -296,10 +119,6 @@
   };
 
   // 第二輪循環的變奏（換主奏樂器、A 段拿掉鼓），讓一首曲子兩輪之後才一模一樣地重複
-  SONGS.title.vary = [{}, { swap: { flute: 'ocarina' } }, { swap: { horn: 'cello', violin: 'flute' }, mute: ['drums@A'] }];
-  SONGS.town.vary = [{}, { swap: { ocarina: 'flute', accordion: 'clarinet' }, mute: ['drums@A'] }, { swap: { violin: 'accordion', ocarina: 'marimba' } }];
-  SONGS.harbor.vary = [{}, { swap: { accordion: 'violin', violin: 'accordion' }, mute: ['drums@A'] }, { swap: { accordion: 'reed', violin: 'cello' } }];
-  SONGS.spa.vary = [{}, { swap: { bamboo: 'erhu', erhu: 'bamboo' }, mute: ['drums@A'] }, { swap: { bamboo: 'ocarina', koto: 'harp' } }];
   SONGS.boss.vary = [{}, { swap: { brass: 'horn', violin: 'strlead' } }];
 
   // 新曲子（第一、二章重寫、第四、五章、各章 Boss、野外魔王、結局的重新開始）在 music2.js，用 G.music.addSongs 加進來
@@ -314,20 +133,6 @@
   // k 大鼓 s 小鼓 b 刷子 c 拍手 h 閉合鈸 o 開放鈸 S 沙鈴 t 鈴鼓 r 邊擊 w 木魚 n 三角鐵 q/Q 康加高/低
   // T 太鼓 J 締太鼓 m 定音鼓 L/M/H 低/中/高筒鼓 C 碎音鈸
   const KITS = {
-    fieldIn: { S: 'x-o-x-o-x-o-x-o-', k: 'x.......x.......' },
-    forestA: { k: 'x.....x...x.....', s: '....x.......x...', S: 'x-o-x-o-x-o-x-o-', h: '..o...o...o...o.' },
-    forestB: { k: 'x.....x.x.....x.', s: '....x.......x..-', S: 'x-o-x-o-x-o-x-o-', t: '..x...x...x...x.', o: '..............o.' },
-    titleA: { S: 'x.o.x.o.x.o.x.o.', k: 'x.........x.....' },
-    titleA2: { k: 'x.........x.....', b: '....x.......x...', S: 'x-o-x-o-x-o-x-o-' },
-    titleB: { k: 'x.....x...x.....', s: '....x.......x...', S: 'x-o-x-o-x-o-x-o-', m: 'x.......................x.x.....', t: '..o...o...o...o.' },
-    townA: { k: 'x.......x.......', b: '....x.......x...', S: 'x.o.x.o.x.o.x.o.', r: '......o.......o.' },
-    townB: { k: 'x.....x.x.......', b: '....x.......x...', S: 'x.o.x.o.x.o.x.o.', t: '....x.......x...' },
-    harborA: { k: 'x.......x.......', b: '....x.......x...', S: 'x.o.x.o.x.o.x.o.', n: 'o...............................' },
-    harborB: { k: 'x.....x.x.......', b: '....x.......x...', S: 'x.o.x.o.x.o.x.o.', t: '..o...o...o...o.' },
-    seaA: { k: 'x.....x.x.....x.', r: '...x..x....x..x.', S: 'x-o-x-o-x-o-x-o-', q: '..x...x...x..x.x', Q: 'x.......x..x....' },
-    seaB: { k: 'x.....x.x.....x.', c: '....x.......x...', S: 'x-o-x-o-x-o-x-o-', q: '..x...x...x..x.x', Q: 'x.......x..x....', t: 'o.x.o.x.o.x.o.x.' },
-    spaA: { k: 'x.........x.....', w: '..o.....o.....o.', S: 'x.o.x.o.x.o.x.o.', n: 'o...............................' },
-    spaB: { k: 'x.....x...x.....', J: '....o.......o...', S: 'x-o-x-o-x-o-x-o-', w: '..o.....o..o..o.' },
     canyonIn: { T: 'X.......x.......', J: '..x.x.x...x.x.xx' },
     canyonA: { T: 'X.....x.x.......', J: '..o.x...o.x.o.xo', k: 'x.......x.......', r: '....x.......x...', L: '..........o.....' },
     canyonB: { T: 'X.....x.x...x...', J: 'x.ox-.x.x.ox-.x.', k: 'x.....x.x.......', c: '....x.......x...', L: '......o.......o.' },
@@ -1537,6 +1342,49 @@
       M.voice(d, 'sine', f, t, dur * 0.85, 0.13 * k, { a: 0.004, r: 0.04 });
     },
 
+    // ── 第二批：標題、營地、森林的新音色 ──
+    // 鋼琴：三角波＋濾波器從亮到暗、高次泛音很快消失、一點擊弦聲
+    piano(d, f, t, dur, k) {
+      k = k || 1;
+      const dec = Math.min(2.6, Math.max(0.9, dur + 0.7));
+      M.voice(d, 'triangle', f, t, 0, 0.09 * k, { a: 0.002, decay: dec, lp: Math.min(9000, f * 7), lpTo: f * 1.8, lpT: 0.45 });
+      M.voice(d, 'sine', f * 2, t, 0, 0.028 * k, { a: 0.002, decay: dec * 0.45 });
+      M.voice(d, 'sine', f * 3.01, t, 0, 0.009 * k, { a: 0.002, decay: 0.22 });
+      M.noise(d, t, 0.02, 0.012 * k, Math.min(8000, f * 6), 'bandpass', 2);
+    },
+    // 直笛：乾淨、幾乎沒有抖音，起音有一點「啾」的氣聲（森林營地）
+    recorder(d, f, t, dur, k) {
+      k = k || 1;
+      const o = M.voice(d, 'sine', f, t, dur * 0.88, 0.12 * k, { a: 0.015, r: 0.07 });
+      vibrato(o, f, t, dur, 0.0025, 5);
+      M.voice(d, 'triangle', f * 2, t, dur * 0.88, 0.012 * k, { a: 0.02, r: 0.06 });
+      M.voice(d, 'sine', f * 3, t, dur * 0.88, 0.006 * k, { a: 0.02, r: 0.06 });
+      M.noise(d, t, 0.035, 0.03 * k, Math.min(f * 3, 9000), 'bandpass', 3);
+    },
+    // 尺八：氣聲很多、慢而深的抖音，句尾音高往下落（溫泉谷）
+    shaku(d, f, t, dur, k) {
+      k = k || 1;
+      const o = M.voice(d, 'sine', f, t, dur * 0.95, 0.12 * k, { a: 0.06, r: 0.2 });
+      scoop(o, f, t, 0.96, 0.12);
+      vibrato(o, f, t, dur, 0.013, 4.4);
+      if (dur > 0.5) {
+        o.frequency.setValueAtTime(f, t + dur * 0.8);
+        o.frequency.exponentialRampToValueAtTime(f * 0.975, t + dur * 0.95);
+      }
+      M.voice(d, 'triangle', f, t, dur * 0.95, 0.03 * k, { a: 0.07, r: 0.2, lp: 1600 });
+      M.noise(d, t, Math.min(dur, 1.4), 0.05 * k, Math.min(f * 1.5, 8000), 'bandpass', 1.2);
+      M.noise(d, t, 0.09, 0.05 * k, Math.min(f * 3, 9000), 'bandpass', 2);
+    },
+    // 排笛：兩支微走音的正弦（合奏感）、明顯的氣聲起音，慢抖音（魔法森林）
+    pan(d, f, t, dur, k) {
+      k = k || 1;
+      const o1 = M.voice(d, 'sine', f, t, dur * 0.9, 0.08 * k, { a: 0.025, r: 0.16, detune: -4, pan: -0.12 });
+      const o2 = M.voice(d, 'sine', f, t, dur * 0.9, 0.07 * k, { a: 0.03, r: 0.16, detune: 5, pan: 0.12 });
+      vibrato(o1, f, t, dur, 0.006, 4.2);
+      vibrato(o2, f, t, dur, 0.005, 3.8);
+      M.voice(d, 'sine', f * 2, t, dur * 0.9, 0.01 * k, { a: 0.04, r: 0.12 });
+      M.noise(d, t, 0.12, 0.05 * k, Math.min(f * 1.6, 9000), 'bandpass', 1.6);
+    },
     // ── 第四、五章與 Boss 用的新音色 ──
     // 管鐘：FM 不和諧泛音、長餘韻（雪原、霜靈、時間）
     bell(d, f, t, dur, k) {
