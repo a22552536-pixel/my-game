@@ -23,10 +23,12 @@
   // 觸控模式（手機）：tText / tSub / tKeys 換成觸控的說法（每行 20 字以內），tKeys 是畫在面板上的按鈕小標籤
   const TOUR_T = { keys: '「鍵盤」接鍵盤時的按鍵設定' };
   const roarBtn = () => '技能' + (slotOf('roar') + 1);
+  const pounceBtn = () => '技能' + (slotOf('pounce') + 1);
   const STEPS = [
     { id: 'move', keys: () => ['left', 'right'], text: '左右走路', tKeys: () => ['搖桿'], tText: '按住左半邊，左右推動走路', tSub: '手指按哪裡，搖桿就出現在哪裡' },
     { id: 'jump', keys: () => ['jump'], text: '跳躍', tKeys: () => ['跳躍'], tText: '點右下的大顆跳躍鈕' },
     { id: 'attack', keys: () => ['attack'], text: '攻擊露珠蝸', tKeys: () => ['攻擊'], tText: '點右下角的攻擊鈕打露珠蝸', tSub: '按住攻擊鈕會一直攻擊' },
+    { id: 'pounce', keys: () => [slotKey('pounce')], text: '用「飛撲」撲向露珠蝸', sub: '往前衝過去，一路上的怪物都會被撞到（會用掉一點 MP）', tKeys: () => [pounceBtn()], tText: '點發光的技能鈕，飛撲露珠蝸', tSub: '往前衝，路上的怪都會被撞到' },
     { id: 'climb', keys: () => ['up'], text: '跳上平台，站到發光的藤蔓前往上爬', tKeys: () => ['搖桿 ↑'], tText: '跳上平台，到藤蔓前往上推', tSub: '站在發光的藤蔓前，搖桿往上推' },
     { id: 'drop', keys: () => ['down', 'jump'], text: '按住 ↓ 再按跳躍，從平台往下跳', sub: '要站在平台上才能往下跳（在地面上的話，先爬藤蔓上去）', tKeys: () => ['搖桿 ↓', '跳躍'], tText: '搖桿往下推，再點跳躍鈕', tSub: '站在平台上才能往下跳' },
     { id: 'infoHp', info: true, keys: () => ['jump'], text: '紅色的是 HP（生命）', sub: '被怪物打到會減少，歸零就會倒下（倒下沒有懲罰，會在營地醒來）', tSub: '被打會減少，歸零會在營地醒來' },
@@ -95,6 +97,8 @@
       const P = G.player;
       this.stepT = 0;
       this.tourI = 0;
+      // 飛撲要 MP：MP 不夠就補滿，確定放得出來
+      if (s.id === 'pounce' && P.mp < P.maxMp) P.mp = P.maxMp;
       if (s.id === 'mpPot') {
         P.mp = Math.max(1, Math.round(P.maxMp * 0.25));
         P.potions.mp = Math.max(1, P.potions.mp || 0);
@@ -176,6 +180,9 @@
           break;
         case 'attack':
           if (I.wasPressed('attack')) this.on('attack');
+          break;
+        case 'pounce':
+          if (!G.ui.blocking() && I.wasPressed(slotKey('pounce'))) this.on('pounce');
           break;
         case 'climb':
           if (P.climbing >= 0) this.on('climb');
@@ -318,7 +325,8 @@
         case 'move':
         case 'jump':
           return [];
-        case 'attack': {
+        case 'attack':
+        case 'pounce': {
           let best = null;
           for (const m of G.world.monsters) {
             if (m.dead) continue;
@@ -401,6 +409,9 @@
           break;
         case 'attack':
           btn('attack', true);
+          break;
+        case 'pounce':
+          btn('skill' + (slotOf('pounce') + 1), true);
           break;
         case 'drop':
           btn('joy', false);
