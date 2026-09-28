@@ -4,6 +4,7 @@
   'use strict';
   const D = G.data;
   const M = D.maps;
+  const qs = (id) => G.quests && G.quests.state[id]; // 依委託進度決定 NPC 在不在（world.js 的 when）
   const clone = (id, rope) => ({
     w: M[id].w,
     h: M[id].h,
@@ -148,7 +149,8 @@
     npcs: [
       { id: 'tortoisesage', x: 860, p: 0 },
       { id: 'sphinxcat', x: 1060, p: 0 },
-      { id: 'greymane', x: 1260, p: 0, noFlag: 'timeItselfDefeated' },
+      // 灰鬃：一到終章就在營地等你（q78）；帶路的時候先走到前面（5-2、5-3），五轉之後回到營地
+      { id: 'greymane', x: 1260, p: 0, noFlag: 'timeItselfDefeated', when: () => !qs('q78') || !!G.world.flags.apexBlessing },
       { id: 'squirrel', x: 1520, p: 0 },
     ],
     camp: { x1: 800, x2: 1700 },
@@ -170,6 +172,8 @@
       { id: 'l', x: 70, p: 0, to: '5-1', target: 'r' },
       { id: 'r', x: 3330, p: 0, to: '5-3', target: 'l' },
     ],
+    // 灰鬃在迴廊入口等你（q78 回報、接 q79）
+    npcs: [{ id: 'greymane', x: 420, p: 0, noFlag: 'apexBlessing', when: () => ['active', 'ready'].indexOf(qs('q78')) >= 0 || (qs('q78') === 'done' && !qs('q79')) }],
     signs: [{ x: 230, p: 0, text: '回憶迴廊　鏡子裡的東西，打一下就碎。' }],
     mobs: [
       { m: 'hourowl', p: 0, n: 2, x1: 300, x2: 1400 },
@@ -196,7 +200,11 @@
       { id: '5-3a', x: 430, p: 6 },
       { id: '5-3b', x: 2820, p: 7 },
     ],
-    npcs: [{ id: 'cloudmane', x: 1180, p: 0 }],
+    // 灰鬃站在雲鬃旁邊（q79 回報），雲鬃把力量傳給你之後，他先回營地
+    npcs: [
+      { id: 'greymane', x: 900, p: 0, noFlag: 'apexBlessing', when: () => !!qs('q79') },
+      { id: 'cloudmane', x: 1180, p: 0 },
+    ],
     signs: [{ x: 230, p: 0, text: '倒轉庭園　花往上掉，沙往上流，只有心往下沉。' }],
     elites: [{ m: 'pouchroo', p: 4, x: 1050 }],
     mobs: [

@@ -52,7 +52,7 @@
       if (G.mobAbil) G.mobAbil.reset();
       G.music.forMap(map);
 
-      this.npcs = (map.npcs || []).filter((n) => (!n.flag || this.flags[n.flag]) && (!n.noFlag || !this.flags[n.noFlag])).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: SY(map, n.p, n.x) }));
+      this.npcs = (map.npcs || []).filter((n) => (!n.flag || this.flags[n.flag]) && (!n.noFlag || !this.flags[n.noFlag]) && (!n.when || n.when())).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: SY(map, n.p, n.x) }));
       // 寶箱：地圖上擺的那幾個（js/art/background.js placeChests）都能打開；舊的「隱藏寶箱」拿掉了
       this.chests = (map._chests || []).map((c, i) => {
         const id = mapId + ':chest' + i;

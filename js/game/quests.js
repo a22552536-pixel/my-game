@@ -20,11 +20,21 @@
       if (this.state[id]) return false;
       if (G.player.level < (q.req.lv || 1)) return false;
       if (q.req.quest && this.state[q.req.quest] !== 'done') return false;
+      // quests：好幾個前置委託都要完成；seal：這一章的封印（營地委託）全部解開才能接（終章的 Boss 委託）
+      if (q.req.quests && q.req.quests.some((qid) => this.state[qid] !== 'done')) return false;
+      if (q.req.seal && !this.sealOpen(q.req.seal)) return false;
       return true;
+    },
+
+    // 這一章的封印（不含主線的委託）是不是全部解開了
+    sealOpen(region) {
+      const pr = this.chapterProgress(region);
+      return pr.done >= pr.total;
     },
 
     // 任務屬於哪一章：看發任務的 NPC 最早出現在哪張地圖
     chapterOf(id) {
+      if (this.def(id).chapter) return this.def(id).chapter; // 跨章的 NPC（灰鬃）直接指定
       const npc = this.def(id).npc;
       for (const mid of G.data.mapOrder) {
         const m = G.data.maps[mid];

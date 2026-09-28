@@ -178,76 +178,108 @@
       },
     },
 
-    // 終章　時空間神殿
-    q70: {
-      name: '掃不完的前庭', npc: 'tortoisesage', req: { lv: 50 }, type: 'kill', target: 'hourowl', count: 12,
-      reward: { exp: 4800, gold: 1500 },
+    // 終章　時空間神殿（節奏 v1.5，使用者定案）
+    //   前半：灰鬃一路帶你去倒轉庭園找雲鬃（q78 → q79）→ 雲鬃的三個委託（q74、q80、q75）→ 雲鬃的傳承，五轉（約 Lv45）。
+    //   後半：回神殿前庭。營地的委託是解開時之王座的五道封印（q70 → q71 → q72 → q73 → q76），全部解開才能接 Boss 委託 q77。
+    //   打怪的順序由簡單到難：時之鳳凰 → 鏡麒麟 → 時停蝶（雲鬃）｜銜尾蛇 → 時之聖甲蟲 → 虛空鯨 → 雙生天馬 → 星蝕魔龍（營地）。
+    //   灰鬃、雲鬃的委託是主線（main）：不算在「本章委託／封印」裡。需求等級、經驗在 rebalance.js 最後的「終章節奏」重新指定。
+    q78: {
+      name: '上一隻獅子', npc: 'greymane', req: { lv: 50 }, type: 'visit', target: '5-2', count: 1, main: true,
+      reward: { gold: 300 }, // 經驗在 rebalance.js 的「終章節奏」才給（灰鬃第一次出現在第三章，這裡給會算進第三章的委託經驗分配）
       lines: {
-        offer: '時之鳳凰落過的地方，石板都燒裂了。\n神殿又沉了一點，經不起再裂。\n幫老頭子趕走 12 隻吧。',
-        progress: '牠血少時會重生一次。再打一次就好。',
-        done: '乾淨了。這前庭，我掃了一千年。',
+        offer: '庭園裡，有上一隻獅子的影子。\n他叫雲鬃。我的村子，就是他收乾的。\n跟我走。先穿過右邊的回憶迴廊。',
+        progress: '往右走，穿過傳送門就是迴廊。',
+        done: '走快點。庭園在迴廊的另一頭。',
       },
     },
-    q71: {
-      name: '迴廊的鏡子', npc: 'sphinxcat', req: { lv: 51 }, type: 'collect', item: 'mirrorshard', count: 8,
-      reward: { exp: 5200, equip: { base: 'claw9', rarity: 'rare' } },
+    q79: {
+      name: '倒著走的庭園', npc: 'greymane', req: { lv: 50, quest: 'q78' }, type: 'visit', target: '5-3', count: 1, main: true,
+      reward: { gold: 300 }, // 經驗在 rebalance.js 的「終章節奏」才給（灰鬃第一次出現在第三章，這裡給會算進第三章的委託經驗分配）
       lines: {
-        offer: '回憶迴廊的燈，靠鏡子一面面傳光。\n鏡子裂了，我進貨的路一片黑。\n鏡麒麟的鏡鱗能補。拿 8 片來。',
-        progress: '分不出真假，就兩隻都打。',
-        done: '迴廊又亮了。爪套給你。',
-      },
-    },
-    q72: {
-      name: '停住的午後', npc: 'tortoisesage', req: { lv: 52 }, type: 'kill', target: 'stopmoth', count: 12,
-      reward: { exp: 5500, equip: { base: 'mane9', rarity: 'rare' } },
-      lines: {
-        offer: '時停蝶飛過的地方，水也停住不流。\n樹要喝的水，從迴廊那邊引過來。\n水渠停了三天了。幫我打 12 隻。',
-        progress: '地上金色的圓是牠的領域，別進去。',
-        done: '水又開始流了。',
-      },
-    },
-    q73: {
-      name: '最後一題', npc: 'sphinxcat', req: { lv: 53 }, type: 'kill', target: 'clocksnail', count: 8,
-      reward: { exp: 5800, gold: 1800 },
-      lines: {
-        offer: '聖甲蟲把走廊的時間弄得忽快忽慢。\n我的貨，有的放一夜就爛了。\n去打 8 隻，不然這家店開不下去。',
-        progress: '牠放出金色光圈後，先打牠。',
-        done: '貨放得住了。金葉你收著。',
+        offer: '庭園的時間倒著走，那裡是一百年前。\n他還沒下山，還不知道自己收了什麼。\n去問他，你的力量是誰的。往右走。',
+        progress: '迴廊盡頭的傳送門，通到庭園。',
+        done: '就是他。我不跟他說話。',
       },
     },
     q74: {
-      name: '繞一圈又回來', npc: 'cloudmane', req: { lv: 54 }, type: 'kill', target: 'ouroboros', count: 12,
-      reward: { exp: 6200, equip: { base: 'charm9', rarity: 'rare' } },
+      name: '下山前的路', npc: 'cloudmane', req: { lv: 50, quest: 'q79' }, type: 'kill', target: 'hourowl', count: 12, main: true,
+      reward: { exp: 6200, gold: 1500 },
       lines: {
-        offer: '明天，我就要下山了。\n銜尾蛇盤在下去的路上，繞不過去。\n幫我打倒 12 隻吧。',
-        progress: '牠變成車輪時很硬。等牠停下來。',
-        done: '……一百年後，又是你。',
+        offer: '明天，我就要下山了。\n時之鳳凰在迴廊亂飛，石板都燒裂了。\n幫我趕走 12 隻，我才走得下去。',
+        progress: '牠血少時會重生一次。再打一次就好。',
+        done: '路乾淨了。……你長得跟我好像。',
+      },
+    },
+    q80: {
+      name: '地上的樣子', npc: 'cloudmane', req: { lv: 50, quest: 'q79' }, type: 'collect', item: 'mirrorshard', count: 8, main: true,
+      reward: { exp: 6600, equip: { base: 'claw9', rarity: 'rare' } },
+      lines: {
+        offer: '五片葉子，都是我從地上收回來的。\n走以前，我想先看一眼地上的樣子。\n麒麟鏡鱗照得很遠。去迴廊拿 8 片。',
+        progress: '分不出真假，就兩隻都打。',
+        done: '……原來，是這個樣子。',
       },
     },
     q75: {
-      name: '通往哪裡的門', npc: 'cloudmane', req: { lv: 55 }, type: 'collect', item: 'riftcloth', count: 6,
-      reward: { exp: 6600, equip: { base: 'claw10', rarity: 'rare' } },
+      name: '停住的午後', npc: 'cloudmane', req: { lv: 50, quest: 'q74', quests: ['q74', 'q80'] }, type: 'kill', target: 'stopmoth', count: 12, main: true,
+      reward: { exp: 7000, equip: { base: 'charm9', rarity: 'rare' } },
       lines: {
-        offer: '五片葉子，都是我從地上收回來的。\n可是我從沒看過，那裡長什麼樣子。\n虛空鯨鬚能摸到很遠的地方。拿 6 根。',
+        offer: '時停蝶一飛，這座庭園就停住不動。\n停住了，我就走不了，力量也交不出去。\n幫我打 12 隻時停蝶。我把力量給你。',
+        progress: '地上金色的圓是牠的領域，別進去。',
+        done: '拿去吧。這份力量，你知道是誰的嗎？',
+      },
+    },
+    // ── 後半：時之王座的五道封印（營地）──
+    q70: {
+      name: '第一道封印', npc: 'tortoisesage', req: { lv: 54, quest: 'q75' }, type: 'kill', target: 'ouroboros', count: 12,
+      reward: { exp: 4800, gold: 1500 },
+      lines: {
+        offer: '時間醒了，把王座的門封了五道。\n第一道，是繞著門的銜尾蛇守著。\n心葉在門後面。幫我打倒 12 隻。',
+        progress: '牠變成車輪時很硬。等牠停下來。',
+        done: '第一道封印鬆了。還有四道。',
+      },
+    },
+    q71: {
+      name: '太陽鎖', npc: 'sphinxcat', req: { lv: 55, quest: 'q75' }, type: 'collect', item: 'brassgear', count: 6,
+      reward: { exp: 5200, equip: { base: 'mane9', rarity: 'rare' } },
+      lines: {
+        offer: '第二道封印是太陽鎖，要太陽石才轉得開。\n門不開，天上的貨一件也送不上去。\n聖甲蟲身上有太陽石。帶 6 塊回來。',
+        progress: '牠放出金色光圈後，先打牠。',
+        done: '鎖轉開了。還剩三道。',
+      },
+    },
+    q72: {
+      name: '門縫裡的封印', npc: 'tortoisesage', req: { lv: 56, quest: 'q75' }, type: 'collect', item: 'riftcloth', count: 6,
+      reward: { exp: 5500, equip: { base: 'claw10', rarity: 'rare' } },
+      lines: {
+        offer: '第三道封印，藏在門後面的裂縫裡。\n老頭子的手伸不進去，要摸得很遠才行。\n虛空鯨鬚能穿過裂縫。去庭園拿 6 根。',
         progress: '牠潛進裂縫，會從你背後游出來。',
-        done: '原來，是這個樣子。',
+        done: '摸到了。第三道也解開了。',
+      },
+    },
+    q73: {
+      name: '哪一個是真的', npc: 'sphinxcat', req: { lv: 57, quest: 'q75' }, type: 'kill', target: 'parallelfox', count: 12,
+      reward: { exp: 5800, gold: 1800 },
+      lines: {
+        offer: '第四道封印有兩個鎖孔，一真一假。\n開錯一個，門就再鎖上一百年。\n雙生天馬守著它們。去階梯打倒 12 隻。',
+        progress: '打碎假的，真的就會現形。',
+        done: '你分得出真假了。第四道也開了。',
       },
     },
     // q76（實際台詞由 rebalance.js 的 FBQ 覆蓋成野外魔王委託，這裡保持一致）
     q76: {
-      name: '哪一個是真的', npc: 'sphinxcat', req: { lv: 56 }, type: 'kill', target: 'parallelfox', count: 12,
-      reward: { exp: 7000, equip: { base: 'mane10', rarity: 'rare' } },
+      name: '吞星的龍', npc: 'sphinxcat', req: { lv: 58, quest: 'q75' }, type: 'kill', target: 'fb_voiddragon', count: 1,
+      reward: { exp: 5800, equip: { base: 'mane10', rarity: 'rare' } },
       lines: {
-        offer: '星之階梯，晚上靠星星照路。\n星蝕魔龍把星星一顆顆吞了，路黑了。\n已經有人踩空，掉下雲海。去打倒牠。',
-        progress: '打碎假的，真的就會現形。',
-        done: '你分得出真假了。',
+        offer: '最後一道封印，是天上的星星排成的。\n星蝕魔龍把星星吞了，封印解不開。\n去星之階梯，把那條龍打倒。',
+        progress: '別硬撐黑洞球，先跑開。',
+        done: '五道封印都開了。王座的門打開了。',
       },
     },
     q77: {
-      name: '時間的帳', npc: 'tortoisesage', req: { lv: 56 }, type: 'boss', target: 'timeItself', count: 1, main: true,
+      name: '時間的帳', npc: 'tortoisesage', req: { lv: 56, seal: 5 }, type: 'boss', target: 'timeItself', count: 1, main: true,
       reward: { exp: 14000, gold: 5000 },
       lines: {
-        offer: '時間醒了，擋在樹的前面。\n心葉在它身上。不拿回來，樹撐不過今年。\n灰鬃也在那裡。去吧，孩子。',
+        offer: '封印開了。時間醒著，擋在樹前面。\n心葉在它身上。不拿回來，樹撐不過今年。\n灰鬃也在那裡。去吧，孩子。',
         progress: '看清楚地上的光。灰鬃會替你擋一次。',
         done: '心葉在你手上。',
         epilogue: ['……停了。', '孩子，心葉在你手上。'],

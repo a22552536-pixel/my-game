@@ -368,7 +368,8 @@
             return '<button class="sp' + (on ? ' on' : '') + '" data-act="setSlot" data-arg="' + id + ':' + i + '" title="' + (on ? '點一下拿下來' : other ? '換掉「' + other.name + '」' : '空格') + '">' + I.label(a) + (other ? '<i>' + other.name.slice(0, 1) + '</i>' : '') + '</button>';
           }).join('') + '</div>';
         }
-        if (lv < S.maxLv) h += '<div class="ds next">下一級：' + S.desc(lv + 1) + mpTxt(lv + 1) + '</div>';
+        // 只有 1 級的技能（五轉）：學會就是完整的
+        if (lv < S.maxLv) h += '<div class="ds next">' + (S.maxLv === 1 ? '學會就是完整的（1 點）：' : '下一級：') + S.desc(lv + 1) + mpTxt(lv + 1) + '</div>';
         h += '</div><div class="btns">';
         const tut = id === 'roar' && G.tutorial.current() && G.tutorial.current().id === 'learn';
         h += '<button class="primary' + (tut ? ' tut-glow' : '') + '" data-act="learn" data-arg="' + id + '"' + (P.sp > 0 && lv < S.maxLv ? '' : ' disabled') + '>＋</button>';

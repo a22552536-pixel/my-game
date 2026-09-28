@@ -61,7 +61,11 @@
         if (G.data.forms[a.to].apex) P.apexLine = G.data.forms[a.from].line || P.apexLine || 'might';
         P.form = a.to;
         G.formSwitch.ensurePages(P);
-        G.formSwitch.addSP(P, 1);
+        // 五轉多送 1 點（balance.apexSP = 2）：兩招五轉技能各 1 點就點滿，一進五轉就能全部學會
+        const apex = !!G.data.forms[a.to].apex;
+        a.sp = apex ? G.data.balance.apexSP || 1 : 1;
+        G.formSwitch.addSP(P, a.sp);
+        if (apex) G.world.flags.apexSP2 = true;
         P.recalc();
         P.hp = P.maxHp;
         P.mp = P.maxMp;
@@ -72,7 +76,7 @@
       }
       if (a.t >= 4.2) {
         this.anim = null;
-        G.hud.toast('進化成「' + G.data.forms[P.form].name + '」！獲得 1 點技能點，點左上角的「技能」圖示學新技能；也可以用「形態」圖示切換路線', '#ffe14a');
+        G.hud.toast('進化成「' + G.data.forms[P.form].name + '」！獲得 ' + (a.sp || 1) + ' 點技能點，點左上角的「技能」圖示學新技能；也可以用「形態」圖示切換路線', '#ffe14a');
         G.save.write();
       }
       return true;
