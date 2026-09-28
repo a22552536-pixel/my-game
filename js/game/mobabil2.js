@@ -19,7 +19,11 @@
     G.world.zones.push(z);
     return z;
   };
-  const say = (m, text, color) => G.fx.text(m.x, m.y - (m.hover || 0) - m.h * (m.scale || 1) - 22, text, color, 16, 0.9);
+  // 一般怪物不喊招式名（使用者要求）；只留真的在教玩家怎麼打的提示
+  const SAY_KEEP = { '擋住了！繞到背後': 1, '心核打開了！': 1 };
+  const say = (m, text, color) => {
+    if (SAY_KEEP[text]) G.fx.text(m.x, m.y - (m.hover || 0) - m.h * (m.scale || 1) - 22, text, color, 16, 0.9);
+  };
   const inZone = (P, z, dy) => P.alive() && Math.abs(P.x - z.x) < z.r && Math.abs(P.y - z.y) < (dy || 90);
   // 地上的波、殘影、星線……每幀在 tick 裡推進
   const waves = [];
@@ -656,7 +660,7 @@
             G.fx.ring(m.x, m.y - m.h * 0.5, 'rgba(255,214,120,0.9)', 360, 0.5, 3);
             G.world.monsters.filter((o) => !o.dead && o !== m && Math.abs(o.x - m.x) < 360 && Math.abs(o.y - m.y) < 200).forEach((o) => {
               o.hasteT = 5;
-              G.fx.text(o.x, o.y - o.h * (o.scale || 1) - 20, '加速！', '#ffd35a', 14, 0.7);
+              // （一般怪物不喊招式名）
             });
           }
           return true;

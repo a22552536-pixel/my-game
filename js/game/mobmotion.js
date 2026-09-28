@@ -17,7 +17,11 @@
     G.world.zones.push(z);
     return z;
   };
-  const say = (m, text, color) => G.fx.text(m.x, m.y - (m.hover || 0) - m.h * (m.scale || 1) - 22, text, color, 16, 0.9);
+  // 一般怪物不喊招式名（使用者要求）；只留真的在教玩家怎麼打的提示
+  const SAY_KEEP = { '擋住了！繞到背後': 1, '心核打開了！': 1 };
+  const say = (m, text, color) => {
+    if (SAY_KEEP[text]) G.fx.text(m.x, m.y - (m.hover || 0) - m.h * (m.scale || 1) - 22, text, color, 16, 0.9);
+  };
   const slowP = (P, t, mul) => {
     P.slowT = Math.max(P.slowT || 0, t);
     P.slowMul = Math.min(P.slowMul || 0.55, mul);

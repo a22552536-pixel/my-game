@@ -175,7 +175,7 @@
           if (m.nearT > 0.6) {
             m.nearT = 0;
             m.ringT = 1.2;
-            G.fx.text(m.x, m.y - m.h - 24, '鈴鈴鈴！', '#ffe066', 16, 0.9);
+            // （一般怪物不喊招式名）
           }
         } else m.nearT = 0;
         return false;
@@ -224,7 +224,7 @@
           c.aggroT = 3;
           G.world.monsters.push(c);
         }
-        G.fx.text(m.x, m.y - m.h - 20, '喀啦！', '#ffd35a', 16, 0.8);
+        // （一般怪物不喊招式名）
       },
     },
     stamp: {
@@ -346,7 +346,7 @@
         if (m.fx.rage >= 5) {
           m.chargeT = 1.4;
           m.angry = true;
-          G.fx.text(m.x, m.y - m.h * m.scale - 20, '氣炸了！', '#ff5a3a', 18, 0.9);
+          // （一般怪物不喊招式名）
           m.fx.rage = 2;
         }
       },
@@ -508,7 +508,7 @@
           const next = ['red', 'blue', 'yellow'].filter((x) => x !== m.fx.mood);
           m.fx.mood = U.pick(next);
           m.moodT = U.rand(4, 5.5);
-          G.fx.text(m.x, m.y - m.h - 22, { red: '火之元素！', blue: '水之元素……', yellow: '光之元素！' }[m.fx.mood], { red: '#ff6a5a', blue: '#7ab8ff', yellow: '#ffe066' }[m.fx.mood], 16, 0.9);
+          // （一般怪物不喊招式名）
         }
         // 紅（火）：主動衝撞；藍（水）：遠遠吐水彈；黃（光）：替旁邊的同伴回血
         m.abil.ranged = m.fx.mood === 'blue';

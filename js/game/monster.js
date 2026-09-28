@@ -218,7 +218,7 @@
     if (this.abil.shell && this.shellT <= 0 && Math.random() < 0.35) {
       this.shellT = 1.6;
       this.vx = 0;
-      G.fx.text(this.x, this.y - this.h - 20, '縮殼！', '#e3c28a', 16, 0.8);
+      // （一般怪物不喊招式名）
       return dmg;
     }
     if (this.shellT > 0) return dmg;
