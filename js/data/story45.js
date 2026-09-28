@@ -6,7 +6,7 @@
 //   第四章：霜靈讓整座山停下來，不付。沒有人老，也沒有孩子出生；白角鹿被凍在冰裡三年。打倒他，山又開始變老。
 //   終章：老陸龜說出天上的立場（時鐘要的比收的少；多的那一份讓神殿浮著，也長出了你）。
 //   時間醒來保護樹，你和灰鬃一起打倒它；時鐘停了。你把心葉放回樹上。單一、中性的結局。
-// 字數規則見 STORY.md 第 0 節：NPC 每頁最多 2 行、每行最多 20 字；委託 offer 最多 2 行、done 1 行。
+// 字數規則見 STORY.md 第 0 節：NPC 每頁最多 2 行、每行最多 20 字；委託 offer 3 行（說清楚為什麼要去）、progress／done 各 1 行。
 (function () {
   'use strict';
   const D = G.data;
@@ -107,16 +107,16 @@
       name: '學人走路的東西', npc: 'harekid', req: { lv: 38 }, type: 'kill', target: 'echoferret', count: 12,
       reward: { exp: 2600, gold: 900 },
       lines: {
-        offer: '雪地上，有東西學我走路。\n是鎌鼬。幫我趕走 12 隻。',
+        offer: '我每天去村口，等哥哥從山上下來。\n鎌鼬在雪原上亂砍，大人不准我去了。\n幫我趕走 12 隻，我想去村口等。',
         progress: '牠砍完別站原地，殘影會再砍一次。',
-        done: '腳步聲不見了。金葉給你。',
+        done: '村口安全了。金葉給你。',
       },
     },
     q61: {
       name: '會響的鼓', npc: 'yakelder', req: { lv: 40 }, type: 'collect', item: 'drumskin', count: 6,
       reward: { exp: 2900, equip: { base: 'claw7', rarity: 'rare' } },
       lines: {
-        offer: '祭典鼓破了。\n拿 6 塊雷獸的雷鼓皮回來。',
+        offer: '村裡的祭典鼓，冬天被凍裂了。\n三年沒辦祭典，大家都快忘了日子。\n拿 6 塊雷獸的鼓皮回來，我來補。',
         progress: '牠擂鼓時，地面一波波震過來。跳。',
         done: '好皮。這爪套我用不到了，拿去。',
       },
@@ -125,7 +125,7 @@
       name: '等不到的春天', npc: 'marmot', req: { lv: 41 }, type: 'kill', target: 'avalanchehare', count: 12,
       reward: { exp: 3100, gold: 1000 },
       lines: {
-        offer: '小雪男把我的陷阱都滾平了。\n幫我打 12 隻。',
+        offer: '三個冬天，村裡的存糧快見底了。\n雪男把我下的陷阱全滾平了。\n幫我打 12 隻，我才能再去下套。',
         progress: '雪球會越滾越大。跳過去，別硬擋。',
         done: '三年了，這裡的雪一片也沒融過。',
       },
@@ -134,16 +134,17 @@
       name: '影子的債', npc: 'snowleopard', req: { lv: 43 }, type: 'kill', target: 'shadowwolf', count: 12,
       reward: { exp: 3400, equip: { base: 'mane7', rarity: 'rare' } },
       lines: {
-        offer: '我的搭檔，在這條路上被影子咬住。\n幫我砍 12 隻影之芬里爾。',
+        offer: '搭檔的墳，就在冰瀑那條路上。\n每次去看他，都被影子圍住。\n幫我砍 12 隻影之芬里爾。',
         progress: '地上有影子滑過來，就往旁邊跳。',
         done: '這鬃飾是他的。你戴著往上走。',
       },
     },
+    // q64（實際台詞由 rebalance.js 的 FBQ 覆蓋成野外魔王委託，這裡保持一致）
     q64: {
       name: '睡在參道上的旅人', npc: 'crane', req: { lv: 45 }, type: 'kill', target: 'dreamsheep', count: 12,
       reward: { exp: 3700, gold: 1200 },
       lines: {
-        offer: '參道上的旅人睡倒了，叫不醒。\n請你趕走 12 隻雪女。',
+        offer: '參道深處那座冰像，前幾天醒了。\n上山的旅人被打傷，全抬到我這裡。\n藥不夠用了。去把冰像打倒吧。',
         progress: '紫色的霧裡會變慢。先離開霧，再打。',
         done: '大家都醒了。',
       },
@@ -152,7 +153,7 @@
       name: '結界的破洞', npc: 'foxmiko', req: { lv: 46 }, type: 'collect', item: 'sealtalisman', count: 6,
       reward: { exp: 4000, equip: { base: 'charm8', rarity: 'rare' } },
       lines: {
-        offer: '結界破了，暴風雪灌進村子。\n九尾封印狐的封符，請帶 6 張回來。',
+        offer: '村子外的結界破了，暴風雪灌進來。\n九尾封印狐身上的封符，還能拿來補。\n去千鈴參道，帶 6 張回來。',
         progress: '牠身邊浮起三團狐火，就是要放了。',
         done: '這是我奶奶的字。護符給你。',
       },
@@ -161,7 +162,7 @@
       name: '心的藥', npc: 'crane', req: { lv: 47 }, type: 'collect', item: 'lifecrystal', count: 6,
       reward: { exp: 4200, equip: { base: 'mane8', rarity: 'rare' } },
       lines: {
-        offer: '要救冰裡的白鹿，得先暖她的心。\n拿 6 片古松樹靈的心回來。',
+        offer: '冰裡的白鹿還有心跳，很慢很慢。\n要化開冰，得先讓她的心暖起來。\n古松樹靈的心會跳，也會發熱。拿 6 片。',
         progress: '等牠樹皮打開、露出紅色的心再打。',
         done: '夠了。我跟在你後面上山。',
       },
@@ -170,7 +171,7 @@
       name: '不會停的鐘聲', npc: 'foxmiko', req: { lv: 47 }, type: 'boss', target: 'frostSpirit', count: 1, main: true,
       reward: { exp: 9000, gold: 2500 },
       lines: {
-        offer: '霜靈讓這座山停下來了。\n沒有人老，也沒有孩子出生。',
+        offer: '霜靈讓這座山停下來了。\n三年，沒有人老，也沒有孩子出生。\n葉子在山頂，在他身上。去吧。',
         progress: '冰柱落下前，地上會先發亮。',
         done: '雲上的階梯，打開了。',
         epilogue: ['鐘聲又響了。', '從今天起，山上的人又會變老。'],
@@ -182,43 +183,43 @@
       name: '掃不完的前庭', npc: 'tortoisesage', req: { lv: 50 }, type: 'kill', target: 'hourowl', count: 12,
       reward: { exp: 4800, gold: 1500 },
       lines: {
-        offer: '時之鳳凰一燒，時間就往回流。\n幫老頭子趕走 12 隻吧。',
+        offer: '時之鳳凰落過的地方，石板都燒裂了。\n神殿又沉了一點，經不起再裂。\n幫老頭子趕走 12 隻吧。',
         progress: '牠血少時會重生一次。再打一次就好。',
         done: '乾淨了。這前庭，我掃了一千年。',
       },
     },
     q71: {
-      name: '謎題的答案', npc: 'sphinxcat', req: { lv: 51 }, type: 'collect', item: 'mirrorshard', count: 8,
+      name: '迴廊的鏡子', npc: 'sphinxcat', req: { lv: 51 }, type: 'collect', item: 'mirrorshard', count: 8,
       reward: { exp: 5200, equip: { base: 'claw9', rarity: 'rare' } },
       lines: {
-        offer: '你看它，它也看你。是什麼？\n鏡子。拿 8 片麒麟鏡鱗來。',
+        offer: '回憶迴廊的燈，靠鏡子一面面傳光。\n鏡子裂了，我進貨的路一片黑。\n鏡麒麟的鏡鱗能補。拿 8 片來。',
         progress: '分不出真假，就兩隻都打。',
-        done: '亮晶晶。爪套給你。',
+        done: '迴廊又亮了。爪套給你。',
       },
     },
     q72: {
       name: '停住的午後', npc: 'tortoisesage', req: { lv: 52 }, type: 'kill', target: 'stopmoth', count: 12,
       reward: { exp: 5500, equip: { base: 'mane9', rarity: 'rare' } },
       lines: {
-        offer: '時停蝶一振翅，時間就停了。\n幫我打 12 隻。',
+        offer: '時停蝶飛過的地方，水也停住不流。\n樹要喝的水，從迴廊那邊引過來。\n水渠停了三天了。幫我打 12 隻。',
         progress: '地上金色的圓是牠的領域，別進去。',
-        done: '停住的東西，又開始落下了。',
+        done: '水又開始流了。',
       },
     },
     q73: {
       name: '最後一題', npc: 'sphinxcat', req: { lv: 53 }, type: 'kill', target: 'clocksnail', count: 8,
       reward: { exp: 5800, gold: 1800 },
       lines: {
-        offer: '聖甲蟲把走廊的時間弄亂了。\n打 8 隻。',
+        offer: '聖甲蟲把走廊的時間弄得忽快忽慢。\n我的貨，有的放一夜就爛了。\n去打 8 隻，不然這家店開不下去。',
         progress: '牠放出金色光圈後，先打牠。',
-        done: '答案是：樹。越老，越貪吃。',
+        done: '貨放得住了。金葉你收著。',
       },
     },
     q74: {
       name: '繞一圈又回來', npc: 'cloudmane', req: { lv: 54 }, type: 'kill', target: 'ouroboros', count: 12,
       reward: { exp: 6200, equip: { base: 'charm9', rarity: 'rare' } },
       lines: {
-        offer: '銜尾蛇繞一圈，又回到起點。\n打倒 12 隻吧。',
+        offer: '明天，我就要下山了。\n銜尾蛇盤在下去的路上，繞不過去。\n幫我打倒 12 隻吧。',
         progress: '牠變成車輪時很硬。等牠停下來。',
         done: '……一百年後，又是你。',
       },
@@ -227,16 +228,17 @@
       name: '通往哪裡的門', npc: 'cloudmane', req: { lv: 55 }, type: 'collect', item: 'riftcloth', count: 6,
       reward: { exp: 6600, equip: { base: 'claw10', rarity: 'rare' } },
       lines: {
-        offer: '我想看看，地上是什麼樣子。\n拿 6 根虛空鯨鬚給我。',
+        offer: '五片葉子，都是我從地上收回來的。\n可是我從沒看過，那裡長什麼樣子。\n虛空鯨鬚能摸到很遠的地方。拿 6 根。',
         progress: '牠潛進裂縫，會從你背後游出來。',
         done: '原來，是這個樣子。',
       },
     },
+    // q76（實際台詞由 rebalance.js 的 FBQ 覆蓋成野外魔王委託，這裡保持一致）
     q76: {
       name: '哪一個是真的', npc: 'sphinxcat', req: { lv: 56 }, type: 'kill', target: 'parallelfox', count: 12,
       reward: { exp: 7000, equip: { base: 'mane10', rarity: 'rare' } },
       lines: {
-        offer: '平行狐只有一隻是真的。\n打 12 隻。',
+        offer: '星之階梯，晚上靠星星照路。\n星蝕魔龍把星星一顆顆吞了，路黑了。\n已經有人踩空，掉下雲海。去打倒牠。',
         progress: '打碎假的，真的就會現形。',
         done: '你分得出真假了。',
       },
@@ -245,7 +247,7 @@
       name: '時間的帳', npc: 'tortoisesage', req: { lv: 56 }, type: 'boss', target: 'timeItself', count: 1, main: true,
       reward: { exp: 14000, gold: 5000 },
       lines: {
-        offer: '時鐘要的，比收的少。\n多的那一份，讓神殿浮著，也長出了你。',
+        offer: '時間醒了，擋在樹的前面。\n心葉在它身上。不拿回來，樹撐不過今年。\n灰鬃也在那裡。去吧，孩子。',
         progress: '看清楚地上的光。灰鬃會替你擋一次。',
         done: '心葉在你手上。',
         epilogue: ['……停了。', '孩子，心葉在你手上。'],
