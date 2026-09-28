@@ -1688,7 +1688,7 @@
     // 眼睛
     if (L.eyeMask) eyeMask(ctx, L, hx, hy, t);
     A.eye(ctx, hx + 2, hy - 3, 3.9, 5.4, eyeKind, 1);
-    A.eye(ctx, hx + 12, hy - 4, 3.6, 5.2, eyeKind, 1);
+    A.eye(ctx, hx + 12, hy - 4, 3.6, 5.2, eyeKind === 'hurt' ? 'hurt2' : eyeKind, 1);
     if (L.eyeTint && (eyeKind === 'normal' || eyeKind === 'angry')) {
       ctx.fillStyle = A.c(L.eyeTint);
       ctx.globalAlpha = 0.75;

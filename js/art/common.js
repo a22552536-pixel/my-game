@@ -108,14 +108,17 @@
       ctx.stroke();
       return;
     }
-    if (kind === 'hurt') {
+    // hurt＝「>」、hurt2＝「<」：兩隻眼睛一左一右配成 > <
+    if (kind === 'hurt' || kind === 'hurt2') {
+      const s = kind === 'hurt2' ? -1 : 1;
       ctx.strokeStyle = A.outline();
       ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(x - rx, y - ry * 0.6);
-      ctx.lineTo(x + rx, y);
-      ctx.lineTo(x - rx, y + ry * 0.6);
+      ctx.moveTo(x - rx * s, y - ry * 0.6);
+      ctx.lineTo(x + rx * s, y);
+      ctx.lineTo(x - rx * s, y + ry * 0.6);
       ctx.stroke();
       return;
     }
