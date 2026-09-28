@@ -191,7 +191,8 @@
                 if (prev && X.alive(prev)) G.fx.streak(prev.x, prev.y - prev.h * 0.5, Math.atan2(cy - (prev.y - prev.h * 0.5), m.x - prev.x), Math.abs(m.x - prev.x) + 20, '#ffe44a', 4);
                 G.fx.bolt(m.x + U.rand(-10, 10), cy - 60, cy + 10);
               }
-              G.combat.hitMonster(m, S.mult(a.lv), { knock: 20, sound: 'double' });
+              // 連鎖的連打：只有第一下推鏡頭／頓幀，後面的不再推（不然視角一直晃）
+              G.combat.hitMonster(m, S.mult(a.lv), { knock: 20, sound: 'double', calm: k > 0 || i > 0, noSquash: true });
             });
           });
         }

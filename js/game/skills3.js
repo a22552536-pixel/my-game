@@ -563,19 +563,19 @@
         list.forEach((m, i) => {
           X.later(i * 0.16, () => {
             if (!alive(m)) return;
-            G.fx.ghost(P.x, P.y, P.dir, { state: 'dash', t: P.t, p: 0, form: P.form }, '#5ab8ff');
+            G.fx.ghost(P.x, P.y, P.dir, { state: 'dash', t: P.t, p: 0, form: P.form }, '#3a0a14'); // 黑紅色的殘影
             if (bats) bats.burst(P.x, P.y - 30, 5, P.dir);
             const side = i % 2 ? 1 : -1;
             P.x = U.clamp(m.x + side * 44, 20, G.world.map.w - 20);
             P.y = m.y;
             P.dir = -side;
             P.vy = 0;
-            G.fx.sparkle(P.x, P.y - 30, '#bfe0ff', 6, 20);
+            G.fx.sparkle(P.x, P.y - 30, '#ff4a5a', 6, 20);
             if (bats) bats.burst(P.x, P.y - 30, 4, -side);
             for (let k = 0; k < S.hits; k++) {
               X.later(k * 0.04, () => {
                 if (!alive(m)) return;
-                G.fx.slash(m.x, midY(m) + U.rand(-12, 12), k % 2 ? 1 : -1, 36, k % 2 ? '#bfe0ff' : '#ffffff', 'claw');
+                G.fx.slash(m.x, midY(m) + U.rand(-12, 12), k % 2 ? 1 : -1, 36, k % 2 ? '#c8203a' : '#2a0a10', 'claw');
                 G.combat.hitMonster(m, S.mult(lv), { knock: 0, sound: 'double' });
               });
             }
@@ -583,7 +583,7 @@
         });
         X.later(list.length * 0.16 + 0.14, () => {
           if (P.dead) return;
-          G.fx.ghost(P.x, P.y, P.dir, { state: 'dash', t: P.t, p: 0, form: P.form }, '#5ab8ff');
+          G.fx.ghost(P.x, P.y, P.dir, { state: 'dash', t: P.t, p: 0, form: P.form }, '#3a0a14'); // 黑紅色的殘影
           if (bats) bats.burst(P.x, P.y - 30, 6, 0);
           P.x = home.x;
           P.y = home.y;
@@ -593,7 +593,7 @@
           P.vx = 0;
           P.vy = 0;
           if (bats) bats.burst(P.x, P.y - 30, 10, 0);
-          G.fx.sparkle(P.x, P.y - 30, '#bfe0ff', 8, 24);
+          G.fx.sparkle(P.x, P.y - 30, '#ff4a5a', 8, 24);
         });
       },
     },

@@ -97,8 +97,8 @@
       if (!r.crit) G.fx.ring(cx, cy, 'rgba(255,255,255,0.8)', 34, 0.18, 3);
       G.fx.impact(cx + U.rand(-8, 8), cy + U.rand(-8, 8), r.crit ? 38 : opts.heavy ? 58 : 44, r.crit ? '#ff3a4a' : opts.heavy ? '#ffe08a' : '#fff3c8');
       G.fx.streak(cx, cy, dir > 0 ? U.rand(-0.7, -0.3) : Math.PI + U.rand(0.3, 0.7), r.crit ? 120 : 95, r.crit ? '#ffffff' : '#ffffff', r.crit ? 7 : 6);
-      G.fx.kick(dir * (r.crit ? 7 : opts.heavy ? 5 : 3), r.crit ? -2 : 0);
-      m.squash = 1;
+      if (!opts.calm) G.fx.kick(dir * (r.crit ? 7 : opts.heavy ? 5 : 3), r.crit ? -2 : 0);
+      if (!opts.noSquash) m.squash = 1; // 雷刃連鎖等連打技能不壓扁怪物
       // 地爆天星的每一發都是黑閃（大一號、閃電繞著石球）；其他攻擊只有暴擊才是黑閃，繞著怪物的身體
       const chi = opts.sound === 'crit' && G.skillExec.ults ? G.skillExec.ults.find((u) => u.kind === 'chibaku' && u.m === m) : null;
       if (chi) G.fx.blackFlash(chi.hitX != null ? chi.hitX : cx, chi.hitY != null ? chi.hitY : cy, dir, chi.n >= chi.S.hits - 1 ? 2.3 : 1.5, chi.size * 0.8);
@@ -106,13 +106,13 @@
         // 黑閃：命中點空間扭曲、細碎分岔的黑色閃電
         if (!chi) G.fx.blackFlash(cx, cy, dir, 1, Math.max(14, Math.min(70, Math.max(m.w || 40, m.h || 40) * (m.scale || 1) * 0.45)));
         if (P.specials.focus) P.mp = Math.min(P.maxMp, P.mp + 3);
-        G.fx.addHitstop(killed ? 0.13 : 0.12);
+        G.fx.addHitstop(opts.calm ? 0.03 : killed ? 0.13 : 0.12);
         // 黑閃不震畫面（常常連發，整個畫面一直抖會累）：特效只留在命中點附近
       } else if (opts.heavy) {
         G.fx.addHitstop(Math.max(b.hitstop.heavy * 0.8, killed ? 0.09 : 0));
         if (!chi) G.fx.shake(b.shake.heavy[0] * 0.6, b.shake.heavy[1]);
       } else {
-        G.fx.addHitstop(killed ? 0.085 : b.hitstop.normal);
+        G.fx.addHitstop(opts.calm ? 0 : killed ? 0.085 : b.hitstop.normal);
       }
       if (G.feel) G.feel.onHit(m, tier, opts, dir, killed);
       else G.audio.play(r.crit ? 'crit' : opts.heavy ? 'heavy' : 'hit');

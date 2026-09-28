@@ -90,8 +90,10 @@
       const mat = this.matOf(m);
       A.hit(mat, tier, opts.sound, this.pan(m.x));
       // 目標本身的反應：往被打的方向後仰（Boss 幅度小）
-      m.rcl = tier >= 2 ? 1 : 0.75;
-      m.rclDir = dir || 1;
+      if (!opts.noSquash) {
+        m.rcl = tier >= 2 ? 1 : 0.75;
+        m.rclDir = dir || 1;
+      }
       // 沿攻擊方向噴出的小碎屑（材質顏色，不發光）
       const D = DEBRIS[mat];
       const cy = m.y - m.h * (m.scale || 1) * 0.5 - (m.hover || 0);

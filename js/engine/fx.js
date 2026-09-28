@@ -450,8 +450,9 @@
 
     // 朝某個方向的鏡頭推力
     kick(dx, dy) {
-      this.kickX += dx;
-      this.kickY += dy;
+      // 多段技能一次打十幾下時，推力不要一直疊加（畫面會被甩來甩去）：總量限制在 ±8／±4
+      this.kickX = Math.max(-8, Math.min(8, this.kickX + dx));
+      this.kickY = Math.max(-4, Math.min(4, this.kickY + dy));
     },
 
     // 塵土
