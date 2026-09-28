@@ -274,7 +274,9 @@
       const q = (t * 2.2 + i / 7) % 1;
       const a = i * 2.4 + t;
       const d = z.r * (1.4 - q * 1.2);
-      ctx.fillRect(z.x + Math.cos(a) * d - 1.5, z.y + Math.sin(a) * d - 1.5, 3, 3);
+      ctx.beginPath();
+      ctx.arc(z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, 1.8, 0, TAU);
+      ctx.fill();
     }
     ctx.fillStyle = 'rgba(255,255,255,' + (0.4 + 0.6 * k).toFixed(3) + ')';
     ctx.beginPath();

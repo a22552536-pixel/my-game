@@ -2786,7 +2786,9 @@
       for (let i = 0; i < 4; i++) {
         const q = (t * 3 + i / 4) % 1;
         ctx.fillStyle = rgba(i % 2 ? '#ffe68a' : OU.rune, 1 - q);
-        ctx.fillRect(-6 - q * 30, -2 - q * 10 + i, 2.2, 2.2);
+        ctx.beginPath(); // 圓點（以前是青綠色小方塊，看起來像畫面壞掉）
+        ctx.arc(-6 - q * 30, -2 - q * 10 + i, 1.4, 0, TAU);
+        ctx.fill();
       }
       ctx.save();
       ctx.translate(0, cy);

@@ -1493,11 +1493,14 @@
         ctx.lineTo(q.x, q.y + q.s * 1.6);
         ctx.stroke();
       } else {
-        // 金粉、沙、火星、虛空塵：小方點（時停的圈裡金粉停在半空）
+        // 金粉、沙、火星、虛空塵：小圓點（時停的圈裡金粉停在半空）
         const s = q.stop;
         if (s && s.fired && s.t < s.tele + s.hold) q.t = Math.min(q.t, q.life * 0.5);
+        // 圓點（以前是小方塊，飄在畫面上像壞掉的像素）
         ctx.fillStyle = rgba(q.c, a);
-        ctx.fillRect(q.x - q.s / 2, q.y - q.s / 2, q.s, q.s);
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, q.s * 0.55, 0, TAU);
+        ctx.fill();
       }
     }
   }
