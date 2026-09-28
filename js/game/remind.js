@@ -123,7 +123,7 @@
       for (const it of P.bag) {
         if (!it || this.seen[it.uid]) continue;
         this.seen[it.uid] = true;
-        if (it.isNew && G.ui.isUpgrade && G.ui.isUpgrade(it)) {
+        if (it.isNew && G.ui.isBest && G.ui.isBest(it)) {
           this.say('「' + it.name + '」比身上的好！打開左上角「裝備」換上', '#9dffa0', 'inventory');
           break; // 一次只講一件
         }

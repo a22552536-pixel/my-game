@@ -166,11 +166,22 @@
       const cur = G.player.equip[it.slot];
       return G.data.items.score(G.loot.totalStats(it)) > (cur ? G.data.items.score(G.loot.totalStats(cur)) : 0) + 0.01;
     },
+    // 背包裡同一個部位只標一件：比身上好、而且是背包裡分數最高的那件（同分取第一件）
+    isBest(it) {
+      if (!this.isUpgrade(it)) return false;
+      const sc = (x) => G.data.items.score(G.loot.totalStats(x));
+      let best = null;
+      for (const o of G.player.bag) {
+        if (!o || o.slot !== it.slot) continue;
+        if (!best || sc(o) > sc(best) + 0.01) best = o;
+      }
+      return best === it;
+    },
 
     itemCell(it, act, extra) {
       const R = G.data.items.rarity[it.rarity];
       const sel = this.selected === it.uid ? ' sel' : '';
-      const up = act === 'select' && this.isUpgrade(it) ? '<span class="uparrow">▲</span>' : '';
+      const up = act === 'select' && this.isBest(it) ? '<span class="uparrow">▲</span>' : '';
       const low = it.isNew ? ' newitem' : '';
       return '<button class="cell' + sel + low + '" style="border-color:' + R.color + '" data-act="' + act + '" data-arg="' + it.uid + '" title="' + esc(it.name) + '"><img src="' + G.art.iconURL(it.slot, it.tint) + '" alt="">' + up + (extra || '') + '</button>';
     },
@@ -203,7 +214,7 @@
       const consHTML = '<div class="cons"><div class="lbl">消耗品（點一下使用）</div>' + (cons.length ? cons.map((k) => '<button class="usebtn" data-act="useItem" data-arg="' + k + '" title="' + D.potions[k].name + '：' + D.potions[k].desc + '"><img src="' + G.art.iconURL(D.potions[k].icon) + '"><span>' + P.potions[k] + '</span></button>').join('') : '<span class="dim">沒有消耗品</span>') + '</div>';
       const mats = Object.keys(D.materials).filter((k) => (P.questItems[k] || 0) > 0);
       const matsHTML = '<div class="cons"><div class="lbl">材料（可以賣給商店，或拿去貓頭鷹的小舖交換）</div>' + (mats.length ? mats.map((k) => '<button class="usebtn' + (this.selected === 'mat:' + k ? ' on' : '') + '" data-act="select" data-arg="mat:' + k + '" title="' + D.materials[k].name + '"><img src="' + G.art.iconURL(k) + '"><span>' + P.questItems[k] + '</span></button>').join('') : '<span class="dim">打倒怪物會掉材料</span>') + '</div>';
-      let detail = '<div class="detail dim">點一下物品查看詳細資料。<br>▲ 表示比身上的更好。</div>';
+      let detail = '<div class="detail dim">點一下物品查看詳細資料。<br>▲ 每個部位只標一件：背包裡最好、而且比身上好的那件。</div>';
       const sel = this.findItem(this.selected);
       if (this.selected && this.selected.startsWith('mat:') && P.questItems[this.selected.slice(4)] > 0) {
         const k = this.selected.slice(4);
