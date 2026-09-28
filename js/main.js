@@ -164,7 +164,6 @@
     G.time += dt;
     G.hudIcons.update(dt);
     if (G.remind) G.remind.update(dt);
-    G.demo.update();
     if (G.scene === 'play') {
       G.cut.tick();
       if (G.cut.update(dt)) {
@@ -269,7 +268,5 @@
   });
 
   G.scenes.toTitle();
-  // 網址加上 ?demo=1 直接進試玩模式
-  if (/[?&]demo=1/.test(location.search)) G.demo.start();
   requestAnimationFrame(frame);
 })();

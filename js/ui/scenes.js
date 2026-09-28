@@ -4808,9 +4808,9 @@
         '<div class="logo"><div class="name">小獅子的冒險</div><div class="sub">一隻小獅子，往天空的家爬回去</div></div>' +
         '<div class="tbtns">' + cont +
         '<button class="' + (cont ? '' : 'primary ') + 'big" data-t="new">' + (cont ? '新遊戲' : '開始冒險') + '</button>' +
-        '<button data-t="keys">按鍵設定</button><button data-t="demo">試玩模式（所有形態與技能）</button></div>' +
+        '<button data-t="keys">按鍵設定</button></div>' +
         '<div class="hint">方向鍵移動 · ' + G.input.label('jump') + ' 跳躍 · ' + G.input.label('attack') + ' 攻擊 · ↑ 爬繩／對話／傳送門 · Esc 選單</div>' +
-        '<div class="ver">M1 試玩版' + (G.debug ? ' · 除錯模式' : '') + '</div>';
+        (G.debug ? '<div class="ver">除錯模式</div>' : '');
       el.addEventListener('click', (e) => {
         const b = e.target.closest('[data-t]');
         if (!b) return;
@@ -4828,8 +4828,6 @@
           this.newGame();
         } else if (t === 'keys') {
           G.ui.open('keys');
-        } else if (t === 'demo') {
-          G.demo.start();
         }
       });
       document.getElementById('ui').appendChild(el);
