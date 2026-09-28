@@ -24,6 +24,7 @@
     seen: {}, // 已經提醒過的裝備 uid
     glow: {},
     lastMap: null,
+    bossMap: null,
 
     reset() {
       this.sp0 = null;
@@ -92,6 +93,29 @@
           this.glow.forms = now + 8;
           this.say('一轉之後，力量／法術／敏捷三條路線都能用了！', '#ffd0ff', 'forms');
           setTimeout(() => this.say('點左上角「形態」選擇、切換新形態', '#ffd0ff', 'forms'), 1600);
+        }
+      }
+
+      // ── 章節 Boss 的委託可以接了：第一次達成條件時提醒一次；之後每次走進那位 NPC 所在的地圖、還沒接的話再提醒 ──
+      const QS = G.quests;
+      if (QS && QS.available) {
+        const entered = this.bossMap !== mapId;
+        this.bossMap = mapId;
+        for (const qid in G.data.quests) {
+          const q = G.data.quests[qid];
+          if (q.type !== 'boss' || !QS.available(qid)) continue;
+          const npc = G.data.npcs[q.npc];
+          const npcName = npc ? npc.name : '';
+          const here = (W.npcs || []).some((n) => n.id === q.npc);
+          const key = 'bossHint_' + qid;
+          if (!W.flags[key]) {
+            W.flags[key] = true;
+            this.say('可以挑戰章節 Boss 了！回營地找' + npcName + '接「' + q.name + '」', '#ffb0b0', 'quests');
+            break;
+          } else if (entered && here) {
+            this.say(npcName + '有 Boss 委託「' + q.name + '」，頭上有「！」', '#ffb0b0', 'quests');
+            break;
+          }
         }
       }
 
