@@ -1164,7 +1164,9 @@
     ctx.save();
     ctx.translate(m.x, m.y);
 
-    if (m.frozenT > 0) {
+    // 極光風暴的冰封（緩速期間）也用這一套冰凍的畫法（js/art/stormfrost.js A.auroraIce）
+    const iceT = m.frozenT > 0 ? m.frozenT : A.auroraIce && A.auroraIce.on(m) ? m.slowT || 0 : 0;
+    if (iceT > 0) {
       // 冰凍：一團不規則的冰（包住身體的冰殼）＋從幾個生長點往外長的晶簇。
       // 每根晶體的粗細、長度、角度、斷面數、頂端（尖、斜切、斷裂）都不同，大晶體旁再長小晶體。
       // 形狀用位置當種子，同一隻怪每一格都一樣。
@@ -1180,7 +1182,7 @@
         ctx.rect(-bw * 2, -bh * 3, bw * 4, bh * 3 + 3);
         ctx.clip();
       }
-      const a = m.frozenT < 0.5 ? 0.5 + 0.5 * Math.abs(Math.sin(t * 18)) : 1;
+      const a = iceT < 0.5 ? 0.5 + 0.5 * Math.abs(Math.sin(t * 18)) : 1;
       let rs = Math.floor(Math.abs(seed * 1e4)) + 7;
       const R = () => {
         rs = (rs * 16807) % 2147483647;

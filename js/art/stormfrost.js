@@ -719,7 +719,8 @@
     const t = G.time || 0;
     for (const c of IC) {
       const m = c.m;
-      if (m.frozenT > 0) continue; // 另一種冰凍（寒冰穿刺）的冰已經包著它了
+      // 冰殼改用技能原本的冰凍畫法（js/art/skills3.js A.drawStatus），這裡不再另外畫一層
+      if (m.frozenT > 0 || A.drawStatus) continue;
       const hb = hbOf(m);
       const W = hb.w * 1.16 + 14;
       const H = hb.h * 1.08 + 12;
