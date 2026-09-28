@@ -208,11 +208,12 @@
           let best = -1;
           map.platforms.forEach((pl, i) => {
             if (P.x < pl[0] || P.x > pl[1]) return;
-            const dy = up ? P.y - pl[2] : pl[2] - P.y;
-            if (dy > 8 && dy <= dist + 40 && (best < 0 || Math.abs(map.platforms[best][2] - P.y) > dy)) best = i;
+            const sy = G.physics.surfaceY(map, i, P.x);
+            const dy = up ? P.y - sy : sy - P.y;
+            if (dy > 8 && dy <= dist + 40 && (best < 0 || Math.abs(G.physics.surfaceY(map, best, P.x) - P.y) > dy)) best = i;
           });
           if (best >= 0) {
-            P.y = map.platforms[best][2];
+            P.y = G.physics.surfaceY(map, best, P.x);
             P.plat = best;
             P.onGround = true;
             P.vy = 0;

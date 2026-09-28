@@ -1947,9 +1947,10 @@
       const i = G.physics.platformBelow(map, m.x, feet - 4);
       if (i >= 0) {
         const p = map.platforms[i];
-        if (p[2] - feet < 240) {
+        const sy = G.physics.surfaceY ? G.physics.surfaceY(map, i, m.x) : p[2];
+        if (sy - feet < 240) {
           s.ground = true;
-          s.gy = p[2];
+          s.gy = sy;
           s.span0 = p[0];
           s.span1 = p[1];
           s.depth = i === 0 ? 150 : 20;

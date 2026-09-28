@@ -75,7 +75,7 @@
       const dir = tx < P.x ? 1 : -1;
       G.ui.closeAll();
       P.dir = -dir;
-      this.epi = { qid, region, openEnd, npc: G.data.npcs[q.npc], lines: q.lines.epilogue, i: 0, t: 0, shown: 0, x: tx - dir * 420, tx, y: P.y, dir, walking: true };
+      this.epi = { qid, region, openEnd, npc: G.data.npcs[q.npc], lines: q.lines.epilogue, i: 0, t: 0, shown: 0, x: tx - dir * 420, tx, y: P.y, dir, walking: true, gnd: P.onGround && P.plat === 0 };
     },
 
     endEpilogue() {
@@ -208,6 +208,7 @@
             e.t = 0;
             G.audio.play('ui');
           } else e.x += Math.sign(e.tx - e.x) * step;
+          if (e.gnd) e.y = G.physics.groundY(G.world.map, e.x); // 起伏的地面：走過來時貼著地表
           this.clicked = false;
           return true;
         }

@@ -166,6 +166,7 @@
   }
   // 聖甲蟲的太陽輪：貼著平台滾，滾出平台就熄掉，一路留下焦痕
   function wheelTick(p, d) {
+    if (p.gnd) p.base = G.physics.groundY(G.world.map, p.x); // 起伏的地面：貼著地表滾
     p.y = p.base - p.r;
     p.spin += (p.vx / p.r) * d;
     if (p.x < p.lo || p.x > p.hi) p.life = Math.min(p.life, p.t + 0.05);
@@ -275,12 +276,13 @@
           if (m.kkT <= 0.15 && !m.kkDone) {
             m.kkDone = true;
             const base = m.y;
+            const gnd = m.plat === 0 && m.onGround;
             G.audio.play('swing');
             G.world.projectiles.push({
               kind: 'snowball', x: m.x + m.dir * 30, y: base - 14, vx: m.dir * 250, vy: 0, r: 14, dmg: Math.round(m.atk * 1.2), life: 2.8, t: 0, seed: Math.random() * 6, owner: 'monster',
               onTick(p, d) {
                 p.r = Math.min(42, p.r + 12 * d);
-                p.y = base - p.r;
+                p.y = (gnd ? G.physics.groundY(G.world.map, p.x) : base) - p.r;
               },
             });
           }
@@ -594,7 +596,7 @@
           m.tmCd = U.rand(6, 7);
           m.tsT = 0.7;
           m.tsX = P.x;
-          m.tsY = P.onGround ? P.y : G.world.map.platforms[P.plat >= 0 ? P.plat : 0][2];
+          m.tsY = P.onGround ? P.y : G.physics.surfaceY(G.world.map, P.plat >= 0 ? P.plat : 0, P.x);
           say(m, '滴答——', '#ffe6a0');
           return true;
         }
@@ -928,7 +930,7 @@
       fire(m, P, st) {
         const [lo, hi] = m.bounds();
         const hw = m.halfW || 0;
-        shot({ kind: 'sunwheel', x: m.x + m.dir * 40, y: m.y - 26, base: m.y, vx: m.dir * 270, vy: 0, r: 26, dmg: Math.round(m.atk * 1.3), life: 2.2, fade: 0.25, spin: 0, lo: lo - hw, hi: hi + hw, lastMark: m.x, onTick: wheelTick });
+        shot({ kind: 'sunwheel', x: m.x + m.dir * 40, y: m.y - 26, base: m.y, gnd: m.plat === 0 && m.onGround, vx: m.dir * 270, vy: 0, r: 26, dmg: Math.round(m.atk * 1.3), life: 2.2, fade: 0.25, spin: 0, lo: lo - hw, hi: hi + hw, lastMark: m.x, onTick: wheelTick });
         m.discT = 2.2;
         m.fx.discOut = true;
         G.audio.play('fire');
@@ -949,7 +951,7 @@
         st.bx = U.clamp(2 * P.x - m.x, lo, hi);
         if (Math.abs(st.bx - P.x) < 80) st.bx = U.clamp(P.x + U.sign(P.x - m.x) * 160, lo, hi);
         st.y = m.y;
-        st.ghost = { kind: 'twinghost', x: st.bx, y: m.y, r: 50, t: 0, life: 3, dir: -m.dir, src: m, visual: true, k: 0 };
+        st.ghost = { kind: 'twinghost', x: st.bx, y: G.physics.surfaceY(G.world.map, m.plat, st.bx), r: 50, t: 0, life: 3, dir: -m.dir, src: m, visual: true, k: 0 };
         G.world.zones.push(st.ghost);
         st.zs.push(st.ghost);
         const lane = MA.warn(st.ax, st.bx, m.y, 0.8, '200,170,255', 70);
@@ -988,13 +990,14 @@
         m.vx = 0;
         st.ghost.x = st.bx - s * st.run;
         st.ghost.dir = -s;
+        st.ghost.y = G.physics.surfaceY(G.world.map, m.plat, st.ghost.x);
         // 衝撞（本體、分身各打一次）＋星光蹄印
         const hb = P.hitbox();
         if (!st.hitA && P.alive() && U.overlap({ x: m.x - 40, y: m.y - 64, w: 80, h: 64 }, hb)) {
           st.hitA = true;
           P.hurt(Math.round(m.atk * 1.2), m.x);
         }
-        if (!st.hitB && P.alive() && U.overlap({ x: st.ghost.x - 40, y: st.y - 64, w: 80, h: 64 }, hb)) {
+        if (!st.hitB && P.alive() && U.overlap({ x: st.ghost.x - 40, y: st.ghost.y - 64, w: 80, h: 64 }, hb)) {
           st.hitB = true;
           P.hurt(Math.round(m.atk * 1.2), st.ghost.x);
         }
@@ -1002,13 +1005,13 @@
           const x = w === 'A' ? m.x : st.ghost.x;
           if (Math.abs(x - st['last' + w]) > 44) {
             st['last' + w] = x;
-            const z = { kind: 'hoofstar', x, y: st.y, r: 18, t: 0, life: 1.1, visual: true, seed: Math.random() * 6 };
+            const z = { kind: 'hoofstar', x, y: w === 'A' ? m.y : st.ghost.y, r: 18, t: 0, life: 1.1, visual: true, seed: Math.random() * 6 };
             G.world.zones.push(z);
             st.zs.push(z);
           }
         }
         // 蹄印燙腳：踩在剛留下的蹄印上（整招只燙一次）
-        if (!st.hitP && P.alive() && P.onGround && Math.abs(P.y - st.y) < 30) {
+        if (!st.hitP && P.alive() && P.onGround && Math.abs(P.y - st.y) < 60) {
           for (const z of st.zs) {
             if (z.kind === 'hoofstar' && z.t > 0.15 && z.t < z.life && Math.abs(P.x - z.x) < 20) {
               st.hitP = true;

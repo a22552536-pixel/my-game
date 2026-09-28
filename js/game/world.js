@@ -1,6 +1,7 @@
 // 目前地圖上的所有東西：載入、更新、繪製、切換地圖。
 (function () {
   'use strict';
+  const SY = (map, i, x) => G.physics.surfaceY(map, i, x);
   const U = G.util;
 
   const W = (G.world = {
@@ -35,6 +36,7 @@
       if (!map) throw new Error('找不到地圖 ' + mapId);
       // 土地變老：強度在進地圖時依旗標決定（背景、地形快取看到強度變了就重建）
       map._aged = G.art.agedLevel ? G.art.agedLevel(map, this.flags) : 0;
+      G.physics.terrain(map); // 地面起伏（繩子下端跟著地表）
       if (!map._theme) G.art.prepareMap(map);
       this.map = map;
       this.mapId = mapId;
@@ -50,10 +52,10 @@
       if (G.mobAbil) G.mobAbil.reset();
       G.music.forMap(map);
 
-      this.npcs = (map.npcs || []).filter((n) => (!n.flag || this.flags[n.flag]) && (!n.noFlag || !this.flags[n.noFlag])).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: map.platforms[n.p][2] }));
-      this.chests = (map.chests || []).map((c) => ({ id: c.id, x: c.x, y: map.platforms[c.p][2], opened: !!this.openedChests[c.id] }));
-      this.springs = (map.springs || []).map((s) => ({ x: s.x, p: s.p, y: map.platforms[s.p][2], power: s.power, squash: 0 }));
-      this.signs = (map.signs || []).map((s) => ({ x: s.x, y: map.platforms[s.p][2], text: s.text }));
+      this.npcs = (map.npcs || []).filter((n) => (!n.flag || this.flags[n.flag]) && (!n.noFlag || !this.flags[n.noFlag])).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: SY(map, n.p, n.x) }));
+      this.chests = (map.chests || []).map((c) => ({ id: c.id, x: c.x, y: SY(map, c.p, c.x), opened: !!this.openedChests[c.id] }));
+      this.springs = (map.springs || []).map((s) => ({ x: s.x, p: s.p, y: SY(map, s.p, s.x), power: s.power, squash: 0 }));
+      this.signs = (map.signs || []).map((s) => ({ x: s.x, y: SY(map, s.p, s.x), text: s.text }));
       this.critters = [];
       const th = map.theme;
       let nC = th === 'rootCave' ? 14 : ['queenHall', 'crabNest', 'lavaBed', 'volcanoNest', 'reef', 'snowCamp', 'snowField', 'iceFall', 'bellShrine', 'frostAltar', 'starStair', 'timeThrone', 'timeCorridor'].indexOf(th) >= 0 ? 0 : 6;
@@ -96,7 +98,7 @@
         }
       }
       P.x = px;
-      P.y = map.platforms[pp][2];
+      P.y = SY(map, pp, px);
       P.plat = pp;
       P.onGround = true;
       P.invT = Math.max(P.invT, 1);
@@ -125,7 +127,7 @@
       // 重生避讓：不要生在玩家旁邊（清完一圈又冒一圈，是被圍毆的主因）
       if (avoid) {
         const P = G.player;
-        const close = (xx) => Math.abs(xx - P.x) < 350 && Math.abs(P.y - p[2]) < 160;
+        const close = (xx) => Math.abs(xx - P.x) < 350 && Math.abs(P.y - SY(map, g.p, xx)) < 160;
         for (let k = 0; k < 8 && close(x); k++) x = U.rand(x1, Math.max(x1 + 1, x2));
         if (close(x)) return null;
       }
@@ -408,7 +410,7 @@
 
     updateProjectiles(dt) {
       const P = G.player;
-      const ground = this.map.platforms[0][2];
+      const gmap = this.map;
       for (let i = this.projectiles.length - 1; i >= 0; i--) {
         const p = this.projectiles[i];
         p.t += dt;
@@ -426,6 +428,13 @@
         }
         p.x += p.vx * dt;
         p.y += p.vy * dt;
+        // 起伏的地面：一開始就貼著地面、水平前進的東西（Boss 的浪、地面衝擊波）一路貼著地表走
+        if (p.gnd == null) {
+          const x0 = p.x - p.vx * dt;
+          const B = this.boss;
+          p.gnd = !p.vy && !p.grav && p.owner === 'boss' && G.physics.terrain(gmap) && (Math.abs(p.y - G.physics.groundY(gmap, x0)) < 1.5 || (B && B.onGround && B.plat === 0 && Math.abs(p.y - B.y) < 1.5)) ? 1 : 0;
+        }
+        if (p.gnd && !p.vy) p.y = G.physics.groundY(gmap, p.x);
         if (p.onTick) p.onTick(p, dt);
         if (p.owner === 'monster' && p.wave) p.y += Math.cos(p.t * 8 + (p.seed || 0)) * p.wave * 8 * dt;
         let remove = p.t > p.life || p.x < -50 || p.x > this.map.w + 50;
@@ -471,6 +480,7 @@
           if (remove) this.projectiles.splice(i, 1);
           continue;
         }
+        const ground = p.kind === 'lavaRock' || p.kind === 'sporeBomb' ? G.physics.groundY(gmap, p.x) : 0;
         if (p.kind === 'lavaRock' && p.y >= ground) {
           // 熔岩落石：砸在地上留下一灘熔岩
           this.zones.push({ kind: 'lava', x: p.x, y: ground, r: 60, t: 0, life: 4, tick: 0, pct: 0.05, noSlow: true });
@@ -577,7 +587,7 @@
           if (pr.done < pr.total) label += '（封印 ' + pr.done + '/' + pr.total + '）';
         }
         if (p.req && !this.flags[p.req]) label += '（未開放）';
-        G.art.drawPortal(ctx, p.x, map.platforms[p.p][2], t, label);
+        G.art.drawPortal(ctx, p.x, SY(map, p.p, p.x), t, label);
       });
       if (map.camp) {
         G.art.drawCampHouses(ctx, map.camp.x1, map.camp.x2, map.platforms[0][2], t, map.region);
@@ -588,7 +598,28 @@
       this.critters.forEach((c) => G.art.drawCritter(ctx, c, t));
       this.chests.forEach((c) => G.art.drawChest(ctx, c, t));
       this.npcs.forEach((n) => G.art.drawNpc(ctx, n, t, G.quests.marker(n.id)));
-      this.zones.forEach((z) => G.art.drawZone(ctx, z, t));
+      this.zones.forEach((z) => {
+        // 起伏的地面：貼在地上的區域（岩漿池、毒雲、焦痕……）跟著坡度斜切（直立的火焰、煙還是直的）
+        if (z.kind === 'quake' && G.physics.terrain(map) && Math.abs(z.y - G.physics.groundY(map, z.x)) < 3) {
+          // 往兩側擴散的震波：左右兩半各自對齊浪頭那裡的地表
+          for (let s = -1; s <= 1; s += 2) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(s < 0 ? z.x - 4000 : z.x, z.y - 400, 4000, 800);
+            ctx.clip();
+            ctx.translate(0, G.physics.groundY(map, z.x + s * z.r) - z.y);
+            G.art.drawZone(ctx, z, t);
+            ctx.restore();
+          }
+          return;
+        }
+        const k = G.physics.groundShear(map, z.x, z.y, z.r);
+        if (!k) return G.art.drawZone(ctx, z, t);
+        ctx.save();
+        ctx.transform(1, k, 0, 1, 0, -k * z.x);
+        G.art.drawZone(ctx, z, t);
+        ctx.restore();
+      });
       G.loot.draw(ctx, t);
       this.monsters.forEach((m) => m.draw(ctx));
       if (this.boss) {
@@ -610,7 +641,7 @@
     drawCamp(ctx, map, t) {
       // 營火
       const x = (map.camp.x1 + map.camp.x2) / 2 - 20;
-      const y = map.platforms[0][2];
+      const y = G.physics.groundY(map, x);
       ctx.save();
       ctx.translate(x, y);
       const g = ctx.createRadialGradient(0, -20, 4, 0, -20, 120);

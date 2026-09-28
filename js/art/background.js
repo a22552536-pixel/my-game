@@ -8825,7 +8825,9 @@
     const ropes = map.ropes || [];
     const near = (list, i, x, d) => (list || []).some((o) => (o.p || 0) === i && Math.abs(o.x - x) < d);
     const clear = (i, x) => {
-      const y = P[i][2];
+      const y = G.physics.surfaceY(map, i, x);
+      // 起伏的地面：寶箱只放在平緩的地方
+      if (i === 0 && Math.abs(G.physics.groundSlope(map, x)) > 0.1) return false;
       if (near(map.portals, i, x, 160) || near(map.npcs, i, x, 150) || near(map.signs, i, x, 120) || near(map.springs, i, x, 100)) return false;
       // 真寶箱：不管在哪一層，水平 220 以內都不放（免得上下疊在一起、讓人以為能開）
       if ((map.chests || []).some((c) => Math.abs(c.x - x) < 220)) return false;
@@ -8854,7 +8856,7 @@
       const ok = cands.filter(([i, x]) => clear(i, x) && chosen.every((c) => Math.abs(c.x - x) > 420));
       if (!ok.length) continue;
       const [i, x] = inOrder ? ok[0] : ok[Math.floor(rnd() * ok.length)];
-      chosen.push({ kind: 'chest', x, y: P[i][2], s: 1.1, flip: 1, style: map.region || 1 });
+      chosen.push({ kind: 'chest', x, y: G.physics.surfaceY(map, i, x), s: 1.1, flip: 1, style: map.region || 1 });
     }
     for (const c of chosen) map._props.push(c);
   }
@@ -9550,7 +9552,7 @@
     let pcAge = '';
     let pcTiles = new Map();
     let pcFrame = 0;
-    function buildTile(map, i, tx0, tw, top, h, sc) {
+    function buildTile(map, i, tx0, tw, top, h, sc, warp) {
       const c = document.createElement('canvas');
       c.width = Math.ceil(tw * sc);
       c.height = Math.ceil(h * sc);
@@ -9560,6 +9562,9 @@
       // 只留下這一個平台（其他平台移到很遠的地方），索引不變，裝飾與細節才對得上
       const proxy = Object.create(map);
       proxy.platforms = map.platforms.map((q, k) => (k === i ? q : [-1e9, -1e9 + 1, -1e9]));
+      // 地形先照平的畫（起伏在下面整塊折彎）
+      proxy._gp = null;
+      proxy._gpDone = proxy.platforms;
       // 土地變老：平台上的小花、小菇少掉大半，整塊地形在這裡調色一次
       const age = ageProfile(map);
       if (age) {
@@ -9581,7 +9586,18 @@
         activeAge = prevAge;
       }
       terrMap = map;
-      return c;
+      if (!warp) return c;
+      // 起伏的地面：把畫好的平地切成 2px 寬的直條，每條依地表起伏上下移（土層、草皮、草叢、樹根全部一起跟著彎）
+      const c2 = document.createElement('canvas');
+      c2.width = c.width;
+      c2.height = Math.ceil((h + warp.hi - warp.lo) * sc);
+      const g2 = c2.getContext('2d');
+      for (let u = 0; u < c.width; u += 2) {
+        const w = Math.min(2, c.width - u);
+        const off = (G.physics.groundDy(map, tx0 + (u + w / 2) / sc) - warp.lo) * sc;
+        g2.drawImage(c, u, 0, w, c.height, u, off, w, c.height);
+      }
+      return c2;
     }
     A.drawPlatforms = function (ctx, map, cam) {
       const tr = ctx.getTransform ? ctx.getTransform() : null;
@@ -9604,6 +9620,11 @@
         const isGround = i === 0;
         const top = p[2] - PAD_UP;
         const h = isGround ? Math.min(900, map.h + 80 - top) : PAD_UP + PAD_DN;
+        // 起伏的地面：快取塊往上、往下各多留起伏的高度
+        const gr = isGround ? G.physics.groundRange(map) : null;
+        const warp = gr && (gr.lo || gr.hi) ? gr : null;
+        const dTop = warp ? top + warp.lo : top;
+        const dH = warp ? h + warp.hi - warp.lo : h;
         const L = p[0] - 14;
         const R = p[1] + 14;
         for (let tx = L; tx < R; tx += TILE) {
@@ -9612,11 +9633,11 @@
           const key = i + ':' + tx;
           let e = pcTiles.get(key);
           if (!e) {
-            e = { c: buildTile(map, i, tx, tw, top, h, sc), used: 0 };
+            e = { c: buildTile(map, i, tx, tw, top, h, sc, warp), used: 0 };
             pcTiles.set(key, e);
           }
           e.used = pcFrame;
-          ctx.drawImage(e.c, tx, top, tw, h);
+          ctx.drawImage(e.c, tx, dTop, tw, dH);
         }
       });
       // 很久沒用到的塊丟掉，省記憶體

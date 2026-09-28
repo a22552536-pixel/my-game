@@ -666,7 +666,7 @@
       for (let i = quakes.length - 1; i >= 0; i--) {
         const q = quakes[i];
         q.z.r += 520 * dt;
-        if (!q.hit && P.alive() && P.onGround && Math.abs(P.y - q.z.y) < 30 && Math.abs(Math.abs(P.x - q.z.x) - q.z.r) < 26) {
+        if (!q.hit && P.alive() && P.onGround && (P.plat === q.m.plat || Math.abs(P.y - q.z.y) < 30) && Math.abs(Math.abs(P.x - q.z.x) - q.z.r) < 26) {
           q.hit = true;
           P.hurt(q.dmg, q.z.x);
         }

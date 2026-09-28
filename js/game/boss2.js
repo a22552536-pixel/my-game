@@ -158,7 +158,8 @@
     if (!on) {
       const k = h.t / h.delay;
       ctx.fillStyle = 'rgba(255,90,30,' + (0.1 + 0.25 * k).toFixed(3) + ')';
-      ctx.fillRect(lo, y - 8, hi - lo, 10);
+      if (h.gnd) G.physics.fillGroundBand(ctx, G.world.map, lo, hi, -8, 2);
+      else ctx.fillRect(lo, y - 8, hi - lo, 10);
       ctx.restore();
       return;
     }
@@ -405,7 +406,7 @@
           this.rainT = this.phase === 2 ? 0.3 : 0.42;
           const tx = U.clamp(P.x + P.vx * 0.45 + U.rand(-30, 30), 50, map.w - 50);
           const pp = this.playerPlat();
-          const ty = map.platforms[pp >= 0 ? pp : 0][2];
+          const ty = G.physics.surfaceY(map, pp >= 0 ? pp : 0, tx);
           this.addHz({ type: 'mark', style: 'beam', x: tx, y: ty, r: 62, delay: 0.75, mult: 0.85, src: 'barrage', hgt: 200, sound: 'thunder', small: true });
         }
         if (this.stateT <= 0) {
@@ -587,11 +588,12 @@
       if (this.state === 'tidePrep') {
         const k = this.prog();
         ctx.fillStyle = 'rgba(90,180,255,' + (0.12 + 0.18 * k).toFixed(3) + ')';
-        ctx.fillRect(0, y - 8, G.world.map.w, 10);
+        if (this.plat === 0) G.physics.fillGroundBand(ctx, G.world.map, 0, G.world.map.w, -8, 2);
+        else ctx.fillRect(0, y - 8, G.world.map.w, 10);
       }
       if (this.state === 'flopPrep' || (this.state === 'flopAir' && this.air)) {
         const tx = this.state === 'flopAir' ? this.slamX : G.player.x;
-        Kit.drawTele(ctx, tx, this.groundY(), (this.w * 0.6 * this.A) / this.S, this.state === 'flopAir' ? 1 : this.prog(), Kit.STY.claw, 0, this.t);
+        Kit.drawTele(ctx, tx, this.groundY(tx), (this.w * 0.6 * this.A) / this.S, this.state === 'flopAir' ? 1 : this.prog(), Kit.STY.claw, 0, this.t);
       }
       if (this.state === 'shell') {
         const beams = this.phase === 2 ? [this.beamX, this.beam2X] : [this.beamX];
@@ -988,19 +990,20 @@
       if (this.state === 'rollPrep' || this.state === 'roll') {
         const k = this.state === 'roll' ? 0.4 : this.prog();
         ctx.fillStyle = 'rgba(255,60,60,' + (0.1 + 0.2 * k).toFixed(3) + ')';
-        ctx.fillRect(0, this.groundY() - 8, G.world.map.w, 10);
+        G.physics.fillGroundBand(ctx, G.world.map, 0, G.world.map.w, -8, 2);
       }
       if (this.state === 'breathPrep') {
         const k = this.prog();
         const len = this.phase === 2 ? 540 : 440;
         const x1 = this.x + this.dir * this.w * 0.42;
         ctx.fillStyle = 'rgba(255,110,40,' + (0.12 + 0.3 * k).toFixed(3) + ')';
-        ctx.fillRect(Math.min(x1, x1 + this.dir * len), y - 8, len, 10);
+        if (this.plat === 0 && this.onGround) G.physics.fillGroundBand(ctx, G.world.map, x1, x1 + this.dir * len, -8, 2);
+        else ctx.fillRect(Math.min(x1, x1 + this.dir * len), y - 8, len, 10);
       }
       if (this.state === 'quakePrep') {
         const k = this.prog();
         ctx.fillStyle = 'rgba(255,90,30,' + (0.1 + 0.22 * k).toFixed(3) + ')';
-        ctx.fillRect(0, this.groundY() - 8, G.world.map.w, 10);
+        G.physics.fillGroundBand(ctx, G.world.map, 0, G.world.map.w, -8, 2);
       }
       if (this.state === 'meteorPrep' || this.state === 'meteor' || this.state === 'transform') {
         // 天空被火山照紅

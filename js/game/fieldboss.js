@@ -40,6 +40,13 @@
   // 野外魔王的台詞放在血條下方的專用欄位（js/ui/hud.js bossLine）；章節 Boss 召喚出來的分身才畫在頭上
   const say = (m, text, color) => (m.illusion ? G.fx.text(m.x, topY(m) - 26, text, color || '#ffb0d8', 20, 1.1) : G.hud.bossLine(text, color || '#ffb0d8'));
   const groundUnder = (P, m) => (P.onGround && P.climbing < 0 ? P.y : m.y);
+  // 起伏的地面：gy 是地面那一層（不是浮空平台）時，換成 x 那裡的地表高度（浮空平台離地至少 84px，地面起伏不到 76px）
+  const gAt = (gy, x) => {
+    const map = G.world.map;
+    if (!G.physics.terrain(map)) return gy;
+    const g = G.physics.groundY(map, x);
+    return Math.abs(gy - g) < 76 ? g : gy;
+  };
   // 打到玩家：原始傷害封頂在最大 HP 的 34%（防禦、包圍減傷照常）
   const hurtP = (m, k, fromX, touch) => {
     const P = G.player;
@@ -72,6 +79,7 @@
   // 從天而降的投射物（流星、冰晶、墜星）：預警圓 1.0 秒後落地
   const skyDrop = (m, x, gy, o) => {
     const T = o.T || 1.05;
+    gy = gAt(gy, x);
     warn(x, gy, o.r || 60, T + 0.05);
     const dx = o.dx != null ? o.dx : 0;
     const H = 720;
@@ -144,7 +152,7 @@
         const dir = m.dir;
         const r = m.fx.rage ? 210 : 170;
         const cx = m.x + dir * (m.halfW + r * 0.85);
-        const gy = m.y;
+        const gy = gAt(m.y, cx);
         warn(cx, gy, r, 1.05);
         G.audio.play('bossWarn');
         let fired = false;
@@ -253,7 +261,7 @@
         const gy = groundUnder(P, m);
         const xs = [];
         for (let i = 0; i < n; i++) xs.push(mapClamp(P.x + (i - (n - 1) / 2) * 150 + U.rand(-25, 25)));
-        xs.forEach((x) => warn(x, gy, 56, 1.1));
+        xs.forEach((x) => warn(x, gAt(gy, x), 56, 1.1));
         G.audio.play('bossWarn');
         m.attackPhase = 'wind';
         let done = false;
@@ -270,9 +278,10 @@
             G.audio.play('slam');
             let hit = false;
             xs.forEach((x) => {
-              zone({ kind: 'fb_tentacle', x, y: gy, r: 45, h: 170, life: 0.9 });
-              G.fx.burst(x, gy - 6, ['#5a8a7a', '#2a3a3a', '#9fe8d0'], 10, 280, { angle: -Math.PI / 2, spread: 0.9 });
-              if (!hit) hit = hitBox(m, { x: x - 45, y: gy - 170, w: 90, h: 170 }, 1.25, x);
+              const gx = gAt(gy, x);
+              zone({ kind: 'fb_tentacle', x, y: gx, r: 45, h: 170, life: 0.9 });
+              G.fx.burst(x, gx - 6, ['#5a8a7a', '#2a3a3a', '#9fe8d0'], 10, 280, { angle: -Math.PI / 2, spread: 0.9 });
+              if (!hit) hit = hitBox(m, { x: x - 45, y: gx - 170, w: 90, h: 170 }, 1.25, x);
             });
           }
           m.fx.slam = Math.max(0, 1 - (t - 1.05) * 2);
@@ -284,10 +293,11 @@
       id: 'anchor', w: 2.5,
       ok: (m, P) => Math.abs(P.x - m.x) > 120,
       run(m, P) {
-        const gy = groundUnder(P, m);
+        const gy0 = groundUnder(P, m);
+        const gy = gy0;
         const targets = [mapClamp(P.x)];
         if (m.fx.rage) targets.push(mapClamp(P.x + U.sign(P.x - m.x) * 170));
-        targets.forEach((x) => warn(x, gy, 70, 0.9 + 0.95));
+        targets.forEach((x) => warn(x, gAt(gy, x), 70, 0.9 + 0.95));
         m.attackPhase = 'wind';
         G.audio.play('bossWarn');
         let thrown = false;
@@ -302,6 +312,7 @@
             m.attackPhase = 'strike';
             G.audio.play('swing');
             targets.forEach((tx) => {
+              const gy = gAt(gy0, tx);
               const sx = m.x + m.dir * m.halfW * 0.5;
               const sy = topY(m) + 20;
               const T = 0.95;
@@ -328,8 +339,8 @@
     {
       id: 'ink', w: 2,
       run(m, P) {
-        const gy = groundUnder(P, m);
         const x = mapClamp(P.x);
+        const gy = gAt(groundUnder(P, m), x);
         const r = m.fx.rage ? 175 : 145;
         warn(x, gy, r, 1.0);
         m.fx.ink = true;
@@ -612,8 +623,8 @@
   // 從天而降（正上方）：地上預警圓 r
   function dropPalm(m, P2, o) {
     if (palmCount() >= palmCap()) return null;
-    const gy = groundUnder(P2, m);
     const tx = zkReach(m, o.x != null ? o.x : P2.x);
+    const gy = gAt(groundUnder(P2, m), tx);
     const r = o.r || 110;
     const sz = 4.2 * (r / 110);
     warn(tx, gy, r, o.warn + 0.05);
@@ -671,8 +682,8 @@
   // 斜刺：從左上（from = −1）或右上（from = 1）朝目標直直刺下；預警線從光環連到落點
   function thrustPalm(m, P2, o) {
     if (palmCount() >= palmCap()) return null;
-    const gy = groundUnder(P2, m);
     const tx = zkReach(m, o.x != null ? o.x : P2.x);
+    const gy = gAt(groundUnder(P2, m), tx);
     // 刺向玩家時，玩家若貼近地圖邊緣，光環一律放在牆那側：往遠離光環（空曠）的那邊躲就好
     let s = o.from;
     if (o.x == null && tx < 320) s = -1;
@@ -720,8 +731,8 @@
   // 合掌：左右兩隻直立的巨掌從兩側滑進來，在目標 x 拍在一起（判定只有正中 ±110）
   function clapPalms(m, P2, o) {
     if (palmCount() >= palmCap() - 1) return null;
-    const gy = groundUnder(P2, m);
     const cx = zkReach(m, P2.x);
+    const gy = gAt(groundUnder(P2, m), cx);
     const sz = o.sz || 4.3;
     const hw = PALM_HW * sz;
     const yc = gy - 28 - PALM_WRIST * sz; // 手腕離地 28 px（前臂從側面伸過來，不會插進地裡）
@@ -1346,7 +1357,7 @@
       for (let i = waves.length - 1; i >= 0; i--) {
         const w = waves[i];
         w.z.r += w.speed * dt;
-        if (!w.hit && P.alive() && P.onGround && Math.abs(P.y - w.z.y) < 30 && Math.abs(Math.abs(P.x - w.z.x) - w.z.r) < 28) {
+        if (!w.hit && P.alive() && P.onGround && (Math.abs(P.y - w.z.y) < 30 || (P.plat === 0 && w.m.plat === 0)) && Math.abs(Math.abs(P.x - w.z.x) - w.z.r) < 28) {
           w.hit = true;
           hurtP(w.m, w.dmg, w.z.x);
         }

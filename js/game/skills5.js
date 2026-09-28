@@ -152,7 +152,7 @@
         let p = G.physics.platformBelow(map, m.x, m.y - 2);
         if (p < 0) p = G.physics.platformBelow(map, m.x, m.y - H);
         if (p < 0) p = 0;
-        const surf = map.platforms[p][2];
+        const surf = G.physics.surfaceY(map, p, m.x);
         m.plat = p;
         m.vy = 0;
         if (m.y >= surf - 1) {

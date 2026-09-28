@@ -250,7 +250,7 @@
   // 全地圖的地面預警條
   function groundBar(ctx, rgb, k, y) {
     ctx.fillStyle = 'rgba(' + rgb + ',' + (0.1 + 0.25 * k).toFixed(3) + ')';
-    ctx.fillRect(0, y - 8, G.world.map.w, 10);
+    G.physics.fillGroundBand(ctx, G.world.map, 0, G.world.map.w, -8, 2); // 起伏的地面：沿著地表
   }
   // 往 dir 方向的箭頭（衝鋒預警）
   function arrows(ctx, x, y, dir, n, k, rgb) {
@@ -259,10 +259,12 @@
     ctx.lineWidth = 2;
     for (let i = 1; i <= n; i++) {
       const ax = x + dir * i * 110;
+      const gy = G.physics.groundY(G.world.map, ax);
+      const ay = Math.abs(y - gy) < 40 ? gy : y; // 起伏的地面：箭頭沿著地表
       ctx.beginPath();
-      ctx.moveTo(ax + dir * 22, y - 14);
-      ctx.lineTo(ax - dir * 6, y - 26);
-      ctx.lineTo(ax - dir * 6, y - 2);
+      ctx.moveTo(ax + dir * 22, ay - 14);
+      ctx.lineTo(ax - dir * 6, ay - 26);
+      ctx.lineTo(ax - dir * 6, ay - 2);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -346,7 +348,7 @@
       const id = this.pickType(b);
       if (!id) return false;
       const x = this.pickX(b, id);
-      const gy = G.world.map.platforms[0][2];
+      const gy = G.physics.groundY(G.world.map, x);
       const d = G.data.monsters[id];
       b.sumPend = b.sumPend || [];
       b.sumPend.push({ id, x, t: SUM_RISE });
@@ -1016,7 +1018,7 @@
       }
       if (this.state === 'stompPrep' || (this.state === 'stompAir' && this.air)) {
         const tx = this.state === 'stompAir' ? this.slamX : G.player.x;
-        Kit.drawTele(ctx, tx, this.groundY(), this.w * 0.55, this.state === 'stompAir' ? 1 : this.prog(), STY.ice, 0, this.t);
+        Kit.drawTele(ctx, tx, this.groundY(tx), this.w * 0.55, this.state === 'stompAir' ? 1 : this.prog(), STY.ice, 0, this.t);
       }
       if (this.state === 'spikePrep') groundBar(ctx, '150,215,255', this.prog(), this.groundY());
     }
@@ -1353,7 +1355,7 @@
     if (!g) g = { x: P.x, y: P.y };
     const x = U.clamp(g.x, 30, map.w - 30);
     const pl = G.physics.platformBelow(map, x, g.y - 2);
-    const gy = map.platforms[pl >= 0 ? pl : 0][2];
+    const gy = G.physics.surfaceY(map, pl >= 0 ? pl : 0, x);
     this.ghost = { x, y: Math.min(g.y, gy), gy };
     const T = 1.9;
     this.addHz({ type: 'mark', style: 'star', x, y: gy, r: 85, delay: T + 1.15, mult: 1.15, src: 'rewind', hgt: 150, sound: 'thunder' });
@@ -1546,7 +1548,7 @@
     const map = G.world.map;
     this.b = boss;
     this.x = U.clamp(G.player.x - 70, 40, map.w - 40);
-    this.y = map.platforms[0][2];
+    this.y = G.physics.groundY(map, this.x);
     this.vx = 0;
     this.vy = 0;
     this.dir = 1;
@@ -1602,7 +1604,7 @@
     const b = this.b;
     const P = G.player;
     const map = G.world.map;
-    const gy = map.platforms[0][2];
+    let gy = G.physics.groundY(map, this.x);
     this.t += dt;
     if (this.shield > 0) this.shield -= dt * 1.5;
     if (this.guard && b.fightT > this.guard.until) {
@@ -1647,6 +1649,9 @@
     // 時停中也跟著變慢
     const slow = b.state === 'stop' ? 0.35 : 1;
     this.x = U.clamp(this.x + this.vx * dt * slow, 20, map.w - 20);
+    // 起伏的地面：走路時貼著地表
+    gy = G.physics.groundY(map, this.x);
+    if (this.mode !== 'pounce' && this.vy >= 0 && Math.abs(this.y - gy) < 10) this.y = gy;
     if (!this.onGround() || this.vy < 0) {
       this.vy += 2100 * dt * slow;
       this.y += this.vy * dt * slow;
@@ -1669,7 +1674,7 @@
   };
 
   Greymane.prototype.onGround = function () {
-    return this.y >= G.world.map.platforms[0][2] - 0.5 && this.vy >= 0;
+    return this.y >= G.physics.groundY(G.world.map, this.x) - 0.5 && this.vy >= 0;
   };
 
   Greymane.prototype.pounce = function () {
@@ -1725,7 +1730,7 @@
 
   Greymane.prototype.draw = function (ctx) {
     const b = this.b;
-    const gy = G.world.map.platforms[0][2];
+    const gy = G.physics.groundY(G.world.map, this.x);
     const run = Math.abs(this.vx) > 20 && this.onGround();
     const air = !this.onGround();
     const t = this.t;

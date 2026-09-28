@@ -37,7 +37,7 @@
     this.armor = b.monsterDef(d.lv);
     this.exp = Math.round(b.monsterExp(d.lv) * (this.elite ? b.eliteExpMult : 1) * (this.shiny ? b.shinyExpMult : 1) * (V ? V.exp || 1 : 1));
     this.x = x;
-    this.y = p[2];
+    this.y = G.physics.surfaceY(map, plat, x);
     this.vx = 0;
     this.vy = 0;
     this.dir = Math.random() < 0.5 ? -1 : 1;
@@ -305,6 +305,7 @@
     if (!this.onGround && this.y > G.world.map.platforms[plat][2] + 400) this.plat = 0;
     if (wasAir && this.onGround) this.landT = 0.15;
     this.x = U.clamp(this.x, this.bounds()[0], this.bounds()[1]);
+    if (this.onGround && this.plat === 0) this.y = G.physics.groundY(G.world.map, this.x); // 起伏的地面：夾回範圍後貼回地表
 
     // 碰撞傷害
     if (P.alive() && this.touchCd <= 0 && U.overlap(this.hitbox(), P.hitbox())) {

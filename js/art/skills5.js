@@ -560,7 +560,8 @@
       const i = G.physics.platformBelow(map, u.ox, u.oy);
       if (i >= 0) {
         const p = map.platforms[i];
-        if (p[2] - u.oy <= 160) s = { i, x0: p[0], x1: p[1], y: p[2], ground: i === 0 };
+        const sy = G.physics.surfaceY ? G.physics.surfaceY(map, i, u.ox) : p[2];
+        if (sy - u.oy <= 160) s = { i, x0: p[0], x1: p[1], y: sy, ground: i === 0 };
       }
     }
     u.surf = s;
@@ -885,7 +886,9 @@
           if (ex - sx > 1) {
             ctx.save();
             ctx.globalAlpha = ga;
-            ctx.drawImage(f.ground, sx, 0, ex - sx, f.depth, f.gx + sx, f.gy, ex - sx, f.depth);
+            // 起伏的地面：裂縫圖切成直條貼著地表
+            if (u.surf && u.surf.ground && G.physics.drawOnGround) G.physics.drawOnGround(ctx, G.world.map, f.ground, sx, 0, ex - sx, f.depth, f.gx + sx, f.gy, u.ox);
+            else ctx.drawImage(f.ground, sx, 0, ex - sx, f.depth, f.gx + sx, f.gy, ex - sx, f.depth);
             ctx.restore();
           }
         }
@@ -1256,9 +1259,17 @@
 
   const QK = [];
   // 某個 x 上、跟 y0 同一層的平台表面（沒有平台 → null）
+  let qGround = false; // 這一次震地是不是從（起伏的）地面發出的：是的話整條地裂都貼著地表
   function surfY(x, y0) {
     const map = G.world && G.world.map;
     if (!map || !G.physics) return null;
+    if (qGround) {
+      const p0 = map.platforms[0];
+      if (x < p0[0] || x > p0[1]) return null;
+      const q = [p0[0], p0[1], G.physics.groundY(map, x)];
+      q.gnd = true;
+      return q;
+    }
     const i = G.physics.platformBelow(map, x, y0 - 40);
     if (i < 0) return null;
     const p = map.platforms[i];
@@ -1285,6 +1296,8 @@
   function quakeCast(o) {
     const L = G.lowFx;
     const e = { t: 0, x: o.x, gy: o.y, rocks: [], cracks: [], reach: o.reach, speed: o.speed || 1100 };
+    const gmap = G.world && G.world.map;
+    qGround = !!(gmap && G.physics && G.physics.groundY && Math.abs(o.y - G.physics.groundY(gmap, o.x)) < 3);
     const tg = o.targets || [];
     // 打中怪的大岩刺：出現時間跟傷害時間一樣（距離 ÷ 震波速度），提早一點點讓尖端剛好頂到
     tg.forEach((m) => {
@@ -1325,7 +1338,7 @@
           pts.push(x, NaN, 0);
           continue;
         }
-        y = clamp(y + rr(-2.2, 2.2), p[2] + 2, p[2] + (p === G.world.map.platforms[0] ? 11 : 7));
+        y = clamp(y + rr(-2.2, 2.2), p[2] + 2, p[2] + (p.gnd || p === G.world.map.platforms[0] ? 11 : 7));
         pts.push(x, y, p[2]);
       }
       // 分叉：往下斜劈幾道短縫
@@ -1757,12 +1770,13 @@
     const i = G.physics.platformBelow(map, x, y0 - 6);
     if (i < 0) return null;
     const p = map.platforms[i];
-    return p[2] - y0 < 60 ? { p, i } : null;
+    const y = G.physics.surfaceY ? G.physics.surfaceY(map, i, x) : p[2];
+    return y - y0 < 60 ? { p, i, y } : null;
   }
 
   function cast(o) {
     const pl = platAt(o.x, o.y);
-    const gy = pl ? pl.p[2] : o.y;
+    const gy = pl ? pl.y : o.y;
     const side = o.from || -1;
     const e = {
       t: 0, fall: o.fall || 0.75, x: o.x, gy, blast: o.blast || 180, burn: o.burn || 3,

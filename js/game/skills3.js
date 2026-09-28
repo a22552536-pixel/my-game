@@ -86,11 +86,16 @@
         const pl = map.platforms[p.plat];
         if (pl && (p.x < pl[0] || p.x > pl[1])) {
           p.vy += 1600 * dt;
-          if (p.y > map.platforms[0][2] - p.r) {
-            p.y = map.platforms[0][2] - p.r;
+          const gy = G.physics.groundY(map, p.x);
+          if (p.y > gy - p.r) {
+            p.y = gy - p.r;
             p.vy = 0;
             p.plat = 0;
           }
+        } else if (p.plat === 0 && !p.vy) {
+          // 起伏的地面：貼著地表滾上滾下
+          const gy = G.physics.groundY(map, p.x);
+          if (Math.abs(p.y + p.r - gy) < 60) p.y = gy - p.r;
         }
         if (Math.random() < 0.5) G.fx.dust(p.x - p.dir * p.r * 0.6, p.y + p.r, p.dir, 1);
       }

@@ -14,6 +14,20 @@
 (function () {
   'use strict';
   const U = G.util;
+  // 危險區的中心 x（掉落物／預警圈用 x；橫掃用目前位置；區域用兩端中點）
+  const hzX = (h) => (typeof h.x === 'number' ? h.x : typeof h.x0 === 'number' ? h.x0 : typeof h.x1 === 'number' && typeof h.x2 === 'number' ? (h.x1 + h.x2) / 2 : null);
+  // 起伏的地面：放在地面高度的危險區（y 等於平地高度、Boss 腳下的地面、或落點的地面）改成貼著落點的地表
+  function groundHz(boss, h) {
+    const map = G.world.map;
+    if (!map || typeof h.y !== 'number' || h.noGnd || !G.physics.terrain(map)) return;
+    const x = hzX(h);
+    if (x == null || isNaN(x)) return;
+    const g = G.physics.groundY(map, x);
+    if (Math.abs(h.y - map.platforms[0][2]) < 1.5 || Math.abs(h.y - g) < 1.5 || Math.abs(h.y - G.physics.groundY(map, boss.x)) < 1.5) {
+      h.gnd = true;
+      h.y = g;
+    }
+  }
 
   // ───────────────────────── 共用 ─────────────────────────
   const Kit = (G.BossKit = {});
@@ -24,7 +38,7 @@
     Object.assign(b, {
       id, def: d, isBoss: true, scale: 1, S: d.sizeK || 1, A: d.atkK || d.sizeK || 1, w: d.w, h: d.h, halfW: d.w / 2, level: d.lv,
       maxHp: d.hp, hp: d.hp, atk: d.atk, armor: d.def, exp: d.exp,
-      x, y: map.platforms[0][2], vx: 0, vy: 0, dir: -1, onGround: true, plat: 0, ignorePlat: -1, ignoreT: 0,
+      x, y: G.physics.groundY(map, x), vx: 0, vy: 0, dir: -1, onGround: true, plat: 0, ignorePlat: -1, ignoreT: 0,
       t: 0, state: 'intro', stateT: 1.6, stateT0: 1.6, enraged: false, phase: 1, p2k: 0, hurtFlash: 0, dead: false, deadT: 0,
       // S：體型倍率（bosses.js 的 sizeK）。跟身體大小有關的固定距離都要乘上它。
       // A：攻擊範圍的倍率（bosses.js 的 atkK）。預警圈、落地判定、岩漿池這類攻擊範圍乘它。
@@ -172,7 +186,7 @@
         this.airT += dt;
         // 保險：在空中太久（理論上不會發生）就直接放回地面
         if (this.airT > 3.5) {
-          this.y = P[0][2];
+          this.y = G.physics.groundY(map, this.x);
           this.vy = 0;
           this.vx = 0;
           this.onGround = true;
@@ -195,14 +209,15 @@
       tx = U.clamp(tx, lo, hi);
       const g = G.data.balance.gravity * gs;
       this.vx = (tx - this.x) / T;
-      this.vy = (p[2] - this.y - 0.5 * g * T * T) / T;
+      this.vy = (G.physics.surfaceY(map, tp, tx) - this.y - 0.5 * g * T * T) / T;
       this.onGround = false;
       this.air = { plat: tp, tx, T, t: 0, gs };
       if (Math.abs(tx - this.x) > 4) this.dir = U.sign(tx - this.x);
       return tx;
     },
-    groundY() {
-      return G.world.map.platforms[0][2];
+    // 地面高度（起伏的地面：預設是 Boss 腳下）
+    groundY(x) {
+      return G.physics.groundY(G.world.map, x == null ? this.x : x);
     },
     // 玩家站在哪一塊平台（-1 表示在空中／繩子上）
     playerPlat() {
@@ -234,6 +249,7 @@
     // ── 地面預警、光柱、落石、火焰區 ──
     addHz(h) {
       h.t = 0;
+      groundHz(this, h);
       this.hz.push(h);
       return h;
     },
@@ -244,13 +260,28 @@
       for (let i = this.hz.length - 1; i >= 0; i--) {
         const h = this.hz[i];
         h.t += dt;
+        if (h.gnd) h.y = G.physics.groundY(G.world.map, hzX(h));
         const done = HZ[h.type].update.call(this, h, dt, P, ph);
+        if (h.gnd) h.y = G.physics.groundY(G.world.map, hzX(h)); // 移動中的（橫掃）跟上這一幀的位置
         if (done) this.hz.splice(i, 1);
       }
     },
     drawHz(ctx) {
       if (this.dead) return;
-      for (const h of this.hz) HZ[h.type].draw.call(this, ctx, h);
+      const map = G.world.map;
+      for (const h of this.hz) {
+        // 貼在起伏地面上的預警圈／爆炸：跟著坡度斜切
+        const k = h.gnd ? G.physics.groundShear(map, hzX(h), h.y, h.r || 60) : 0;
+        if (!k) {
+          HZ[h.type].draw.call(this, ctx, h);
+          continue;
+        }
+        const x = hzX(h);
+        ctx.save();
+        ctx.transform(1, k, 0, 1, 0, -k * x);
+        HZ[h.type].draw.call(this, ctx, h);
+        ctx.restore();
+      }
     },
   };
 
@@ -304,7 +335,9 @@
           this.threats.push({ x1: h.x - h.r, x2: h.x + h.r, y, t: h.delay - h.t, kind: 'area' });
           if (h.t >= h.delay) {
             h.fired = true;
-            const box = { x: h.x - h.r, y: y - (h.hgt || 150), w: h.r * 2, h: (h.hgt || 150) + 6 };
+            // 起伏的地面：圈內比圈中心低的地表也打得到
+            const yb = h.gnd ? Math.max(y, G.physics.groundY(G.world.map, U.clamp(P.x, h.x - h.r, h.x + h.r))) : y;
+            const box = { x: h.x - h.r, y: y - (h.hgt || 150), w: h.r * 2, h: (h.hgt || 150) + 6 + (yb - y) };
             if (P.alive() && U.overlap(box, ph)) this.hit(h.mult, h.x, h.src || 'mark', h.noKnock ? { noKnock: true } : null);
             const s = STY[h.style] || STY.claw;
             G.fx.burst(h.x, y - 8, s.core, h.small ? 8 : 16, h.small ? 220 : 340, { angle: -Math.PI / 2, spread: 0.9 });
@@ -365,7 +398,8 @@
           this.threats.push({ x1: h.x - h.r, x2: h.x + h.r, y, t: h.delay - h.t, kind: 'area' });
           if (h.t >= h.delay) {
             h.fired = true;
-            if (P.alive() && Math.abs(P.x - h.x) < h.r + 14 && P.y > y - 90 && P.y <= y + 4) this.hit(h.mult, h.x, h.src || 'rock');
+            const yy = h.gnd ? G.physics.groundY(G.world.map, P.x) : y;
+            if (P.alive() && Math.abs(P.x - h.x) < h.r + 14 && P.y > yy - 90 && P.y <= yy + 4) this.hit(h.mult, h.x, h.src || 'rock');
             const s = STY[h.style] || STY.lava;
             G.fx.burst(h.x, y - 10, s.core, 14, 280, { angle: -Math.PI / 2, spread: 1.2 });
             G.fx.shake(5, 0.15);
@@ -677,7 +711,7 @@
         }
         break;
       case 'slamAir':
-        if (this.air) this.threats.push({ x1: this.slamX - this.w * 0.5, x2: this.slamX + this.w * 0.5, y: G.world.map.platforms[this.slamPlat][2], t: Math.max(0, this.air.T - this.air.t), kind: 'area' });
+        if (this.air) this.threats.push({ x1: this.slamX - this.w * 0.5, x2: this.slamX + this.w * 0.5, y: G.physics.surfaceY(G.world.map, this.slamPlat, this.slamX), t: Math.max(0, this.air.T - this.air.t), kind: 'area' });
         if (this.onGround) {
           this.vx = 0;
           this.squash = 1;
@@ -704,7 +738,7 @@
             const tf = 0.85 + i * 0.07;
             G.world.projectiles.push({
               kind: 'sporeBomb', x: sx, y: sy, vx: (tx - sx) / tf,
-              vy: (this.groundY() - sy - 0.5 * 1200 * tf * tf) / tf,
+              vy: (this.groundY(tx) - sy - 0.5 * 1200 * tf * tf) / tf,
               grav: 1200, r: 14, dmg: this.dmg(0.7), life: 3, t: 0, owner: 'boss', seed: 0,
             });
           }
@@ -937,7 +971,7 @@
         // 預警：落點的紅圈
         const k = this.state === 'slamAir' ? 1 : this.prog();
         const tx = this.state === 'slamAir' ? this.slamX : G.player.x;
-        const ty = this.state === 'slamAir' ? G.world.map.platforms[this.slamPlat || 0][2] : this.groundY();
+        const ty = this.state === 'slamAir' ? G.physics.surfaceY(G.world.map, this.slamPlat || 0, tx) : this.groundY(tx);
         Kit.drawTele(ctx, tx, ty, this.w * 0.6, k, STY.claw, 0, this.t);
       }
       if (this.state === 'spinPrep' || this.state === 'spin') {
