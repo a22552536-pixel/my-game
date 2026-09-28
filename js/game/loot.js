@@ -130,7 +130,7 @@
       }
       // 材料：身上有對應的收集任務時更容易掉
       (d.mats || []).forEach(([id, chance]) => {
-        const c = G.quests.collectActive(id) ? Math.max(chance, 0.6) : chance;
+        const c = G.quests.collectActive(id) ? Math.max(chance, 0.85) : chance; // 節奏 v2：有收集委託時幾乎必掉
         if (Math.random() < c * (m.V ? 2 : 1)) this.spawn('quest', x, y, { qitem: id });
       });
     },

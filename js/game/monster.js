@@ -27,10 +27,10 @@
       if (m._agMap === W.mapId && m._agK != null) return m._agK;
       const d = m.def || {};
       const map = W.map || {};
-      let k = 1;
+      let k = 0.5; // 節奏 v2：出手頻率的加強減半
       if (d.boss || d.fieldBoss || m.isBoss || m.fieldBoss || map.type === 'boss') k = 0;
       else if (W.mapId === '1-1' || W.mapId === '1-2') k = 0;
-      else if ((d.lv || 1) <= 10) k = 0.4;
+      else if ((d.lv || 1) <= 10) k = 0.2;
       m._agMap = W.mapId;
       m._agK = k;
       return k;

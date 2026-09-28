@@ -90,9 +90,10 @@
   //   CH_ATK 是想要的倍率，實際 = min(CH_ATK, 上限)：第一章 1.27（Lv5 以上；Lv1～4 的新手區怪維持 1）、第二章 2.14、第三章 2.0、
   //   第四章 1.63、終章 1.54（第四章、終章被 Boss 的攻擊力卡住）。
   //   倍率記在 d.chAtk，由 monster.js 乘上去；章節 Boss 地圖裡召喚出來的小怪不乘（章節 Boss 戰的難度維持原樣）。
-  const CH_ATK = { 1: 1.65, 2: 2.15, 3: 2.2, 4: 3.0, 5: 3.5 };
+  // 節奏 v2（使用者：要 1 小時出頭破關、第二章一直死）：各章倍率再大砍
+  const CH_ATK = { 1: 1.1, 2: 1.2, 3: 1.3, 4: 1.15, 5: 1.1 };
   // 使用者回饋（第二章死了三次）：第二章一般怪的傷害、血量再 ×0.75（野外魔王照小怪平均算，也會跟著降）
-  const CH_EASE = { 2: 0.75 };
+  const CH_EASE = {};
   const chapterOfLv = (lv) => (lv <= 10 ? 1 : lv <= 20 ? 2 : lv <= 30 ? 3 : lv <= 40 ? 4 : 5);
   const chCap = {};
   for (const r in CH_ATK) {
@@ -117,7 +118,7 @@
   //   目標：第一章 2 下、第二三章 3 下、第四章與終章 4 下 → 倍率 1.55／2.45／2.3／7.7／9.3（Lv1～4 的新手區怪維持 1）。
   //   普通攻擊（×1.0）因此要 5／10／13／39／47 下：後期主要靠技能，MP 與藥水變成真正的資源。
   //   倍率記在 d.chHp，由 monster.js 乘上去；章節 Boss 地圖裡召喚出來的小怪不乘（章節 Boss 戰維持原樣）。
-  const CH_HP = { 1: 1.55, 2: 2.45, 3: 2.3, 4: 7.7, 5: 9.3 };
+  const CH_HP = { 1: 1.1, 2: 1.2, 3: 1.4, 4: 3.8, 5: 4.6 }; // 節奏 v2：約 2 下技能打死一隻
   const CH_HITS = { 1: 2, 2: 3, 3: 3, 4: 4, 5: 4 };
   B.chapterHp = CH_HP;
   for (const id in D.monsters) {
@@ -126,7 +127,7 @@
     d.chHp = d.lv <= 4 ? 1 : CH_HP[chapterOfLv(d.lv)] * (CH_EASE[chapterOfLv(d.lv)] || 1);
   }
   // 野外魔王的血量：約 30 次中階技能（實戰邊閃邊打，約 60～90 秒）＝ 所在地圖小怪平均血量 × 30 ÷ 該章目標下數；不低於原本。
-  const FB_CASTS = 30;
+  const FB_CASTS = 15; // 節奏 v2：野外魔王血量減半
   for (const mid in D.fieldBosses || {}) {
     const fb = D.monsters[D.fieldBosses[mid]];
     const map = D.maps[mid];
@@ -322,5 +323,14 @@
     const q = D.quests[qid];
     if (q && q.req && q.req.lv) q.req.lv = Math.min(q.req.lv, EARLY[qid]);
   }
+  // ── 節奏 v2（使用者：打到第二章就 32 分鐘，希望 1 小時出頭破關）──
+  //   委託的擊殺／收集數量減半（至少 3）；委託經驗 ×1.7、一般怪經驗 ×1.8，補回少打的經驗，抵達 Boss 的等級不掉。
+  for (const qid in D.quests) {
+    const q = D.quests[qid];
+    if ((q.type === 'kill' || q.type === 'collect') && q.count > 1) q.count = Math.max(3, Math.round(q.count * 0.5));
+    if (q.type !== 'boss' && q.reward && q.reward.exp) q.reward.exp = Math.round(q.reward.exp * 1.7);
+  }
+  const mExp0 = B.monsterExp;
+  if (typeof mExp0 === 'function') B.monsterExp = function (lv) { return Math.max(1, Math.round(mExp0.apply(this, arguments) * 1.8)); };
   B.apexSP = 2; // 五轉送 2 點：冥道殘月破、地爆天星各 1 點，一進五轉就能全部學滿（js/data/skillcap.js）
 })();
