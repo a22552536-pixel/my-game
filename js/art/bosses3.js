@@ -2310,6 +2310,13 @@
       glowK = k;
     }
     if (dead) A4 = [PI * 0.55, PI * 0.45, PI * 0.6, PI * 0.4];
+    // 召喚的儀式（js/game/boss3.js m.ritualT，1.4 秒）：錶盤整個亮起、數字發光，光芒往外放射，一圈金光往外擴
+    const ritK = !dead && m.ritualT > 0 ? Math.sin(PI * clamp(1 - m.ritualT / 1.4, 0, 1)) : 0;
+    if (ritK > 0) {
+      glowK = Math.max(glowK, ritK);
+      hot = Math.max(hot, ritK);
+      eyeK = Math.max(eyeK, ritK);
+    }
     // 眼睛只在預警與出招時睜開（預警一開始就很快睜大），平常閉著
     const ATK_ST = ['sweepPrep', 'sweep', 'stab', 'stopPrep', 'stop', 'rewindPrep', 'rewind', 'clockworkPrep', 'clockwork', 'echo', 'transform'];
     const openK = dead || portrait || !ATK_ST.includes(st) ? 0 : /Prep$/.test(st) ? clamp(k * 5, 0.25, 1) : 1;
@@ -2322,7 +2329,40 @@
     // ── 錶盤光環 ──
     ctx.save();
     ctx.translate(0, -228);
+    if (ritK > 0) {
+      // 錶盤後面的金光＋十二道慢慢轉的光芒
+      glow(ctx, 0, 0, 330, '255,226,150', 0.55 * ritK);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.rotate(t * 0.4);
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * TAU;
+        const g = ctx.createLinearGradient(0, 0, Math.cos(a) * 360, Math.sin(a) * 360);
+        g.addColorStop(0, 'rgba(255,236,180,' + (0.34 * ritK).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,236,180,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a - 0.06) * 360, Math.sin(a - 0.06) * 360);
+        ctx.lineTo(Math.cos(a + 0.06) * 360, Math.sin(a + 0.06) * 360);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
     timeHalo(ctx, t, p2, dead ? 0 : glowK, spin, dirL, hot, ts);
+    if (ritK > 0) {
+      // 一圈金光從錶盤往外擴散
+      const q = clamp(1 - m.ritualT / 1.4, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = (1 - q) * 0.9;
+      ctx.strokeStyle = '#ffe6a0';
+      ctx.lineWidth = 6 * (1 - q) + 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 150 + q * 260, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
     // 四根時針（在石獅後面，伸得比身體長）
     const lens = [170, 236, 250, 200];
     const kinds = ['hour', 'minute', 'second', 'fate'];

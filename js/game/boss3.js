@@ -293,7 +293,8 @@
   const SUM_FROST_AT = 0.65; // 霜靈：血量 ≤ 65% 時（第一階段中段）召喚一次
   // 時間：從開打就每 5 秒召喚一隻「時間殘影」野外魔王（不限總數，不擺施法姿勢、Boss 照常出招）；
   //   每隻只活 life 秒（或被打倒）就散成星沙，所以同時大約 3～4 隻。五種輪流（不會連續同一種；千手冰像同時只會有一隻，放在場地邊緣）。
-  const SUM_TIME = { first: 1.5, every: 5, life: 15 };
+  const RITUAL = 1.4; // 召喚時錶盤發亮的秒數
+  const SUM_TIME = { first: 5, every: 5, life: 15 }; // 開戰 5 秒後才開始召喚
   const Sum = (Kit.fbSummon = {
     list(b) {
       return G.world.monsters.filter((m) => m.summoner === b && !m.dead);
@@ -1252,7 +1253,7 @@
     this.ghost = null;
     this.ally = new Greymane(this);
     this.sumT = SUM_TIME.first; // 下一隻野外魔王殘影
-    this.echoT = 3; // 下一次喚出過去 Boss 的殘影
+    this.echoT = 5.5; // 下一次喚出過去 Boss 的殘影（開戰 5 秒後才開始）
     this.echoSeq = 0;
     this.echoHit = {};
     // 時針：一直快速地正轉、逆轉（handPh 累積角度；美術 js/art/bosses3.js 讀它）
@@ -1302,6 +1303,7 @@
     this.ally.update(dt);
     Sum.tick(this, dt);
     // 時針：時間的感覺——有時慢、有時快、有時越轉越快、有時突然停住、有時像真的時鐘一格一格跳；方向也會隨機倒過來
+    if (this.ritualT > 0) this.ritualT = Math.max(0, this.ritualT - dt);
     this.handSw -= dt;
     if (this.handSw <= 0) {
       const modes = ['slow', 'fast', 'accel', 'stop', 'tick', 'fast', 'slow'];
@@ -1337,12 +1339,13 @@
       this.sumT -= dt;
       if (this.sumT <= 0) {
         this.sumT = SUM_TIME.every;
-        Sum.echo(this);
+        if (Sum.echo(this) !== false) this.ritualT = RITUAL; // 召喚的儀式：錶盤發亮（js/art/bosses3.js 讀 m.ritualT）
       }
       this.echoT -= dt;
       if (this.echoT <= 0) {
         this.echoT = U.rand(ECHO_EVERY[0], ECHO_EVERY[1]);
         this.castEchoes();
+        this.ritualT = RITUAL;
       }
     }
     if (this.dead) {
@@ -1534,9 +1537,10 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { sweep: 20, stab: 20, stop: 16, rewind: 14 }
-        : { sweep: 14, stab: 16, stop: 14, rewind: 12, clockwork: 16 };
-      pick = this.pick(table, { clockwork: 18, stop: 14, rewind: 12, echo: 7 });
+        ? { sweep: 14, stab: 14, stop: 12, rewind: 75 }
+        : { sweep: 10, stab: 12, stop: 10, rewind: 75, clockwork: 14 };
+      // 時間倒退（把玩家拉回過去的位置）是「時間」的招牌：很常用，兩次之間至少隔 4 秒
+      pick = this.pick(table, { clockwork: 18, stop: 14, rewind: 4, echo: 7 });
     } else this.pickT[pick] = this.fightT;
     // 召喚野外魔王：不限次數、不限時間；同時存在最多 4 隻，每 15 秒一次
     if (pick !== 'clockwork' && this.sumReady()) {
