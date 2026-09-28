@@ -259,21 +259,7 @@
     // 兩端的直線
     ctx.fillRect(z.x1, z.y - z.h, 2, z.h);
     ctx.fillRect(z.x2 - 2, z.y - z.h, 2, z.h);
-    // 方向箭頭（往出手的方向流動）
-    if (z.dir) {
-      ctx.fillStyle = c + '0.85)';
-      const n = Math.max(1, Math.floor(w / 36));
-      for (let i = 0; i < n; i++) {
-        const q = (i + ((t * 2) % 1)) / n;
-        const x = z.dir > 0 ? z.x1 + q * w : z.x2 - q * w;
-        ctx.beginPath();
-        ctx.moveTo(x + z.dir * 7, z.y - 16);
-        ctx.lineTo(x - z.dir * 3, z.y - 23);
-        ctx.lineTo(x - z.dir * 3, z.y - 9);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
+    // （以前這裡有往出手方向流動的橘色小三角形：預警帶很淡時只看得到三角形，像畫面壞掉，拿掉了）
     ctx.restore();
   };
 
