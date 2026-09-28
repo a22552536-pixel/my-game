@@ -57,14 +57,17 @@
   }
 
   // 由 skills2.js chain 在出手那一刻呼叫：list 就是命中順序（list[0], list[1], … 重複 repeat 輪）
-  function cast(P, list, repeat, hop) {
+  // hold > 0（雷刃連鎖）：苦無只串過每個目標一次，之後鎖鏈把它們串著定住 hold 秒、持續通電（skills2.js 每一下呼叫 zap），最後才收回
+  function cast(P, list, repeat, hop, hold) {
     HOP = hop || 0.045;
     C.on = true;
     C.t = 0;
     C.dir = P.dir;
     C.tg = list.map((m) => ({ m, x: m.x, y: midY(m) }));
-    C.n = list.length * repeat;
+    C.n = hold ? list.length : list.length * repeat;
     C.end = (C.n - 1) * HOP;
+    C.linger = hold ? hold : 0.07;
+    C.hold = hold || 0;
     C.pulses.length = 0;
     C.lastHop = -1;
     C.spin = 0;
@@ -149,6 +152,14 @@
     if (!lite()) for (let i = 0; i < 3; i++) spawn(1, x + R(-14, 14), y + R(-14, 14), R(-60, 60), R(-90, -20), R(0.2, 0.36), R(2, 3.2));
   }
 
+  // 通電的一下：整條鎖鏈跑一道電流，被串住的那隻爆雷斬
+  function zap(m) {
+    if (!C.on) return;
+    C.pulses.push({ t: 0, life: 0.2 });
+    if (C.pulses.length > 8) C.pulses.shift();
+    if (m && !m.dead) hit(m.x + R(-8, 8), midY(m) + R(-10, 10), C.dir);
+  }
+
   function step(dt) {
     if (C.on) {
       C.t += dt;
@@ -162,6 +173,19 @@
         if (!gm || !gm.dead) hit(p[0], p[1], U.sign(p[0] - prev[0]) || C.dir);
         C.pulses.push({ t: 0, life: 0.14 });
         if (C.pulses.length > 6) C.pulses.shift();
+      }
+      // 串住期間：鎖鏈上一直有電流跑、被串住的怪身上一直冒電屑
+      if (C.hold && C.t > C.end && C.t < C.end + C.hold) {
+        C.autoT = (C.autoT || 0) - dt;
+        if (C.autoT <= 0) {
+          C.autoT = lite() ? 0.22 : 0.12;
+          C.pulses.push({ t: 0, life: 0.16 });
+          if (C.pulses.length > 8) C.pulses.shift();
+        }
+        if (Math.random() < (lite() ? 0.25 : 0.6)) {
+          const g = tgPos(C.tg[(Math.random() * C.tg.length) | 0]);
+          if (g && !(g.m && g.m.dead)) spawn(1, g.x + R(-18, 18), g.y + R(-18, 18), R(-60, 60), R(-80, -10), R(0.12, 0.24), R(2, 3.2));
+        }
       }
       C.spin += dt * (C.t <= C.end ? 38 : 26);
       for (let i = C.pulses.length - 1; i >= 0; i--) {
@@ -528,7 +552,7 @@
     drawParticles(ctx);
   }
 
-  A.kunaiChainFx = { cast, active: () => C.on };
+  A.kunaiChainFx = { cast, zap, active: () => C.on };
   if (A.skillFx) {
     A.skillFx.add({
       live: () => C.on || SL.length > 0 || live > 0,

@@ -490,7 +490,7 @@
               G.combat.hitMonster(m, S.mult(a.lv), { knock: 60, sound: 'spirit' });
               if (!m.isBoss) m.slowT = S.slow;
               // 真的冰住（不動、不出手），冰才不會跟著怪物走；野外魔王不冰
-              if (!m.fieldBoss && !(m.def && m.def.fieldBoss)) freeze(m, S.slow);
+              if (!m.fieldBoss && !(m.def && m.def.fieldBoss)) freeze(m, S.slow + 0.1); // 冰先碎（緩速結束），0.1 秒後才解凍
             });
           });
         }
@@ -647,6 +647,8 @@
       }
       if (m.frozenT > 0) {
         m.frozenT -= dt;
+        // 冰住時緩速也要一起倒數（以前會停住：解凍後還帶著極光的冰慢慢走，冰塊看起來在移動）
+        if (m.slowT > 0) m.slowT -= dt;
         m.vx = 0;
         m.attackT = 0;
         return true;
