@@ -134,4 +134,12 @@
   for (const id in D.items.uniques) D.items.uniques[id].req = f(D.items.uniques[id].req);
   const tierOld = D.items.tierForLevel;
   D.items.tierForLevel = (lv) => tierOld(Math.round(finv(lv)));
+
+  // ── 剛到新章節的營地就有事做：比上一章 Boss 低一級（約 9／19／29／39）就能接營地的前兩個委託，
+  //    接著一兩級再開下一個，不用先在野外空打怪升級 ──
+  const ARRIVE = { q30: 9, q31: 9, q32: 10, q33: 12, q50: 19, q51: 19, q52: 20, q53: 22, q60: 29, q61: 29, q62: 31, q70: 39, q71: 39, q72: 41 };
+  for (const qid in ARRIVE) {
+    const q = D.quests[qid];
+    if (q && q.req) q.req.lv = Math.min(q.req.lv || 99, ARRIVE[qid]);
+  }
 })();
