@@ -272,7 +272,6 @@
     c.src = m;
     c.msign = sign;
     c.maxHp = c.hp = 1;
-    if (G.demo) c.demoHp = G.demo.tough; // 試玩的「怪物耐打」不套在分身上：分身永遠一碰就碎
     c.exp = 0;
     c.atk = Math.round(m.atk * 0.2);
     c.aggroT = 30;

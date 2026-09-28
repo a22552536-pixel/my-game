@@ -209,7 +209,6 @@
           bx += 76;
         }
       }
-      if (G.debug) this.text(ctx, 'FPS ' + G.fps + '  ' + G.world.mapId + '  x' + Math.round(P.x) + ' y' + Math.round(P.y), 230, 25, 12, '#9f9');
 
       // ── 任務追蹤 ──
       const tr = G.quests.tracked();

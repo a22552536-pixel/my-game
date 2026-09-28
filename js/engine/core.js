@@ -9,7 +9,6 @@
     data: {},
     art: {},
     ui: {},
-    debug: /[?&]debug=1/.test(location.search),
     scene: 'title',
     time: 0,
     paused: false,

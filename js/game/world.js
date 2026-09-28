@@ -178,7 +178,7 @@
         if (Math.abs(P.x - p.x) < 36 && P.plat === p.p) {
           // Boss 房：這一章的委託全部完成才開（已經打倒過就可以直接進去挑戰回憶）
           const dest = G.data.maps[p.to];
-          if (dest && dest.type === 'boss' && !this.flags[dest.boss.m + 'Defeated'] && !(G.demo && G.demo.active)) {
+          if (dest && dest.type === 'boss' && !this.flags[dest.boss.m + 'Defeated']) {
             const pr = G.quests.chapterProgress(dest.region);
             if (pr.done < pr.total) {
               G.hud.toast('封印還沒解開：完成這一章所有 NPC 的委託（' + pr.done + ' / ' + pr.total + '）', '#ffd84a');

@@ -64,7 +64,7 @@
       if (want) G.fieldBoss.clearCooldown(fbId);
     }
     // 終章：第一次到神殿前庭，灰鬃在等你（營地的委託要等雲鬃的傳承之後）
-    if (map && map.type === 'camp' && map.region === 5 && !this.flags.ch5GuideHint && !G.quests.state.q78 && !this.flags.apexBlessing && !(G.demo && G.demo.active)) {
+    if (map && map.type === 'camp' && map.region === 5 && !this.flags.ch5GuideHint && !G.quests.state.q78 && !this.flags.apexBlessing) {
       this.flags.ch5GuideHint = true;
       setTimeout(() => G.scene === 'play' && G.hud.toast('灰鬃在營地等你。他頭上有「！」', '#ffd35a'), 2500);
     }

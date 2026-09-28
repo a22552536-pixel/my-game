@@ -4803,14 +4803,15 @@
         const m = save.pos && G.data.maps[save.pos.map] ? G.data.maps[save.pos.map].name : '營地';
         cont = '<button class="primary big" data-t="continue">繼續遊戲<small>Lv.' + save.player.level + ' · ' + m + ' · ' + U.fmtTime(save.player.playTime || 0) + '</small></button>';
       }
-      const old = !save && G.save.outdated() ? '<div class="old-save">遊戲已經大改版（等級、怪物、委託都重新設計），舊存檔無法繼續，請開新遊戲。</div>' : '';
+      // 舊版本的存檔直接清掉（正式版重新開始，不再提示）
+      if (!save && G.save.outdated()) G.save.clear();
+      const old = '';
       el.innerHTML = old +
         '<div class="logo"><div class="name">小獅子的冒險</div><div class="sub">一隻小獅子，往天空的家爬回去</div></div>' +
         '<div class="tbtns">' + cont +
         '<button class="' + (cont ? '' : 'primary ') + 'big" data-t="new">' + (cont ? '新遊戲' : '開始冒險') + '</button>' +
         '<button data-t="keys">按鍵設定</button></div>' +
-        '<div class="hint">方向鍵移動 · ' + G.input.label('jump') + ' 跳躍 · ' + G.input.label('attack') + ' 攻擊 · ↑ 爬繩／對話／傳送門 · Esc 選單</div>' +
-        (G.debug ? '<div class="ver">除錯模式</div>' : '');
+        '<div class="hint">方向鍵移動 · ' + G.input.label('jump') + ' 跳躍 · ' + G.input.label('attack') + ' 攻擊 · ↑ 爬繩／對話／傳送門 · Esc 選單</div>';
       el.addEventListener('click', (e) => {
         const b = e.target.closest('[data-t]');
         if (!b) return;

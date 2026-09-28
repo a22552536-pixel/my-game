@@ -3,7 +3,8 @@
   'use strict';
   const KEY = 'xiaozong_save_v1';
   // v2：第二章起的怪物、委託、等級帶全部改版，舊存檔（v1）不能繼續，要開新遊戲
-  const VERSION = 3;
+  // v4：正式版，之前玩的存檔全部重置
+  const VERSION = 4;
   const current = () => {
     const d = G.store.get(KEY);
     return d && (d.v || 1) >= VERSION ? d : null;
@@ -26,7 +27,6 @@
 
     write() {
       if (G.scene !== 'play' || !G.world.map) return false;
-      if (G.demo && G.demo.active) return false; // 試玩模式不存檔
       const P = G.player;
       const data = {
         v: VERSION,

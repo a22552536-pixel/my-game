@@ -10,7 +10,7 @@
     },
 
     note(kind, id) {
-      if (!id || (G.demo && G.demo.active) || G.scene !== 'play') return;
+      if (!id || G.scene !== 'play') return;
       const d = this.data();
       if (d[kind][id]) return;
       d[kind][id] = 1;

@@ -27,7 +27,7 @@
       if (P.level < lv) return '需要 Lv' + lv;
       // 每一轉都綁在劇情上：打倒該章 Boss 才能進化；五轉要雲鬃的傳承
       const gate = [['queenShroomDefeated', '打倒菇菇女王'], ['hermitCrabDefeated', '打倒潮汐寄居蟹'], ['lavaTortoiseDefeated', '打倒熔岩甲龜'], ['frostSpiritDefeated', '打倒霜靈'], ['apexBlessing', '接受雲鬃的傳承（倒轉庭園）']][n - 1];
-      if (gate && !G.world.flags[gate[0]] && !(G.demo && G.demo.active)) return '需要' + gate[1];
+      if (gate && !G.world.flags[gate[0]]) return '需要' + gate[1];
       return null;
     },
 

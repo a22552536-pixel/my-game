@@ -151,7 +151,6 @@
   }
 
   G.input.init();
-  if (G.debug && G.debugPanel) G.debugPanel.init();
 
   const STEP = 1 / 60;
   let acc = 0;

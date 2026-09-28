@@ -51,7 +51,6 @@
       const W = G.world;
       if (!P || !W || !W.map || !W.flags || !W.flags.tutorialDone) return;
       if ((G.tutorial && G.tutorial.active) || (G.cut && G.cut.active && G.cut.active()) || (G.story && G.story.cer)) return;
-      if (G.demo && G.demo.active) return;
       const inCamp = W.map.type === 'camp';
       const now = G.time;
 
