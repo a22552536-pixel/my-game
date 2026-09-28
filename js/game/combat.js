@@ -73,13 +73,21 @@
       const dir = U.sign(m.x - P.x);
       const dealt = m.takeDamage(r.dmg, dir, opts.knock || 0, r.crit);
       const stack = m.nextStack();
-      G.fx.damage(m.x, m.y - m.h * (m.scale || 1) - 10, dealt, r.crit ? 'crit' : 'normal', stack);
+      // 普攻（沒有指定音色、不是重擊）用一般數字；技能用技能數字；暴擊另外一種
+      const basic = opts.sound === undefined && !opts.heavy;
+      G.fx.damage(m.x, m.y - (m.hover || 0) - m.h * (m.scale || 1) - 10, dealt, r.crit ? 'crit' : basic ? 'normal' : 'skill', stack, dir);
+      // 打擊感：命中聲（材質＋強度）、目標後仰、碎屑（js/game/feel.js）；這一下打死的話算「最後一擊」，
+      // 命中停頓也多停一點（連續打死好幾隻時照 hsCool 規則只補兩成，不會一頓一頓）
+      const killed = m.dead && dealt > 0;
+      const tier = r.crit ? 2 : killed && !opts.noFx ? 4 : opts.heavy ? 3 : basic ? 0 : 1;
 
       const cx = m.x;
-      const cy = m.y - m.h * (m.scale || 1) * 0.5;
+      // 飛行怪（hover）：命中特效打在身體上，不是影子上
+      const cy = m.y - (m.hover || 0) - m.h * (m.scale || 1) * 0.5;
       // 持續型的多段傷害（例如冥道殘月破的黑洞）：只留小火花，不震畫面、不頓格、不推鏡頭
       if (opts.noFx) {
         m.squash = 1;
+        if (killed && G.feel) G.feel.onHit(m, 1, opts, dir, true);
         G.fx.burst(cx, cy, r.crit ? ['#ffffff', '#ffd27a'] : ['#ffffff', '#d8c8ff'], r.crit ? 4 : 2, 160, { life: 0.25 });
       } else {
       // 暴擊（黑閃）的命中光改成冷硬的白＋暗紅，不再是金黃色的星星，黑色閃電才是主角
@@ -96,18 +104,16 @@
         // 黑閃：命中點空間扭曲、細碎分岔的黑色閃電
         if (!chi) G.fx.blackFlash(cx, cy, dir, 1, Math.max(14, Math.min(70, Math.max(m.w || 40, m.h || 40) * (m.scale || 1) * 0.45)));
         if (P.specials.focus) P.mp = Math.min(P.maxMp, P.mp + 3);
-        G.fx.addHitstop(0.13);
+        G.fx.addHitstop(killed ? 0.13 : 0.12);
         // 黑閃不震畫面（常常連發，整個畫面一直抖會累）：特效只留在命中點附近
-        G.audio.play('crit');
       } else if (opts.heavy) {
-        G.fx.addHitstop(b.hitstop.heavy * 0.8);
+        G.fx.addHitstop(Math.max(b.hitstop.heavy * 0.8, killed ? 0.09 : 0));
         if (!chi) G.fx.shake(b.shake.heavy[0] * 0.6, b.shake.heavy[1]);
-        G.audio.play(opts.sound === 'rock' ? 'rockHit' : opts.sound === 'sweep' ? 'sweepHit' : 'heavy');
       } else {
-        G.fx.addHitstop(b.hitstop.normal);
-        const snd = { spirit: 'spiritHit', feather: 'featherHit', double: 'claw' }[opts.sound];
-        G.audio.play(snd || 'hit');
+        G.fx.addHitstop(killed ? 0.085 : b.hitstop.normal);
       }
+      if (G.feel) G.feel.onHit(m, tier, opts, dir, killed);
+      else G.audio.play(r.crit ? 'crit' : opts.heavy ? 'heavy' : 'hit');
       }
 
       // 傳說特效

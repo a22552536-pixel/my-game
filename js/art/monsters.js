@@ -2464,6 +2464,11 @@
       const k = m.pull;
       ctx.transform(1, 0, -k * 0.32, 1 + Math.abs(k) * 0.04, Math.sin((m.t || 0) * 60) * Math.abs(k) * 1.5, 0);
     }
+    // 被打中時往被打的方向後仰（以腳底為軸斜一下、身體被推開一點；Boss 幅度小）。rcl 由 js/game/feel.js 設定、遞減
+    if (m.rcl > 0 && !m.dead) {
+      const q = Math.sin(Math.min(1, m.rcl) * Math.PI * 0.5) * (m.isBoss || m.fieldBoss ? 0.3 : 1) * (m.rclDir || 1);
+      ctx.transform(1, 0, -0.14 * q, 1, 5 * q * sc, 0);
+    }
     ctx.scale(m.dir * sc, sc);
     if (m.squash > 0) {
       // 被打中時的壓扁回彈
@@ -2474,6 +2479,14 @@
       const k = Math.min(1, m.deadT / (m.isBoss ? 2 : 0.5));
       ctx.globalAlpha = Math.max(0, 1 - k);
       ctx.translate(0, -k * 10);
+      if (!m.isBoss) {
+        // 一般怪：先鼓起來（0.06 秒）再縮小消失，像被打爆
+        const pk = k < 0.12 ? Math.sin((k / 0.12) * Math.PI * 0.5) : 1 - (k - 0.12) / 0.88;
+        const s2 = k < 0.12 ? 1 + 0.16 * pk : 0.55 + 0.61 * pk * pk;
+        ctx.translate(0, -m.h * 0.5);
+        ctx.scale(s2, k < 0.12 ? 1 + 0.1 * pk : s2);
+        ctx.translate(0, m.h * 0.5);
+      }
     }
     const flash = m.hurtFlash > 0 ? Math.min(1, m.hurtFlash / 0.06) : 0;
     const V = m.V;

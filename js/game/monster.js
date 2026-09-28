@@ -148,7 +148,9 @@
     this.dead = true;
     this.deadT = 0.0001;
     this.vx = 0;
-    G.audio.play('die');
+    // 擊殺回饋（擊殺聲、碎屑、經驗值光點、連殺數）在 js/game/feel.js
+    if (G.feel) G.feel.onKill(this);
+    else G.audio.play('die');
     G.fx.burst(this.x, this.y - this.h * 0.5 * this.scale, ['#fff', '#fff6c8', '#ffe39a'], 14, 260);
     if (G.mobAbilHooks) G.mobAbilHooks.onDie(this);
     G.world.onMonsterKilled(this);

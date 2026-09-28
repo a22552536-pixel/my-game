@@ -15,9 +15,7 @@
           const AC = window.AudioContext || window.webkitAudioContext;
           if (!AC) return;
           this.ctx = new AC();
-          this.master = this.ctx.createGain();
-          this.master.gain.value = this.volume;
-          this.master.connect(this.ctx.destination);
+          this.buildBus(this.ctx);
           const len = this.ctx.sampleRate;
           this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
           const d = this.noiseBuf.getChannelData(0);
@@ -30,6 +28,34 @@
       if (this.ctx && G.music) G.music.onUnlock();
     },
 
+    // 混音：音效 → sfxIn → 音效壓縮（黏合）→ master（總音量）→ 限幅器 → 輸出；音樂、環境音直接進 master。
+    // 多段技能一次打到很多隻時，疊起來的音效不會爆音。
+    voices: 0,
+    buildBus(c) {
+      this.master = c.createGain();
+      this.master.gain.value = this.volume;
+      const lim = c.createDynamicsCompressor();
+      lim.threshold.value = -6;
+      lim.knee.value = 2;
+      lim.ratio.value = 20;
+      lim.attack.value = 0.001;
+      lim.release.value = 0.12;
+      this.master.connect(lim);
+      lim.connect(c.destination);
+      this.limiter = lim;
+      this.sfxIn = c.createGain();
+      const glue = c.createDynamicsCompressor();
+      glue.threshold.value = -14;
+      glue.knee.value = 6;
+      glue.ratio.value = 4;
+      glue.attack.value = 0.003;
+      glue.release.value = 0.15;
+      this.sfxIn.connect(glue);
+      glue.connect(this.master);
+      this.sfxGlue = glue;
+      if (!this._end) this._end = () => { this.voices = Math.max(0, this.voices - 1); };
+    },
+
     setEnabled(on) {
       this.enabled = on;
       G.store.set('xiaozong_audio_v1', Object.assign(G.store.get('xiaozong_audio_v1') || {}, { enabled: on }));
@@ -40,7 +66,8 @@
       if (p && typeof p.enabled === 'boolean') this.enabled = p.enabled;
     },
 
-    tone(freq, dur, type, vol, slideTo, delay) {
+    // dest：接到哪個節點（預設音效匯流排）；每個 tone/noise 算一個聲部（voices），結束時自動扣回
+    tone(freq, dur, type, vol, slideTo, delay, dest) {
       const c = this.ctx;
       const t0 = c.currentTime + (delay || 0);
       const o = c.createOscillator();
@@ -52,12 +79,15 @@
       g.gain.exponentialRampToValueAtTime(vol || 0.2, t0 + 0.008);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       o.connect(g);
-      g.connect(this.master);
+      g.connect(dest || this.sfxIn || this.master);
+      o.onended = this._end;
+      this.voices++;
       o.start(t0);
       o.stop(t0 + dur + 0.02);
     },
 
-    noise(dur, vol, freq, ftype, delay) {
+    // q：濾波器 Q 值；atk：起音時間（預設瞬間）
+    noise(dur, vol, freq, ftype, delay, dest, q, atk) {
       const c = this.ctx;
       const t0 = c.currentTime + (delay || 0);
       const s = c.createBufferSource();
@@ -65,12 +95,18 @@
       const f = c.createBiquadFilter();
       f.type = ftype || 'lowpass';
       f.frequency.value = freq || 2000;
+      if (q) f.Q.value = q;
       const g = c.createGain();
-      g.gain.setValueAtTime(vol || 0.3, t0);
+      if (atk) {
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(vol || 0.3, t0 + atk);
+      } else g.gain.setValueAtTime(vol || 0.3, t0);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       s.connect(f);
       f.connect(g);
-      g.connect(this.master);
+      g.connect(dest || this.sfxIn || this.master);
+      s.onended = this._end;
+      this.voices++;
       s.start(t0, Math.random() * 0.5);
       s.stop(t0 + dur + 0.02);
     },
@@ -78,12 +114,17 @@
     play(name) {
       if (!this.enabled || !this.ctx) return;
       const f = this.sfx[name];
+      // 聲部上限：太多聲音同時響時，丟掉不重要的（介面、升級、任務這類一定要聽到的不受限）
+      if (this.voices > this.HARD_CAP && !this.MUST[name]) return;
       if (f) {
         try {
           f.call(this);
         } catch (e) { /* 音效失敗不影響遊戲 */ }
       }
     },
+
+    HARD_CAP: 44,
+    MUST: { ui: 1, error: 1, levelup: 1, quest: 1, evolve: 1, legendary: 1, epic: 1, rare: 1, victory: 1, portal: 1, hurt: 1, bossWarn: 1, chest: 1 },
 
     sfx: {
       swing() { this.noise(0.09, 0.18, 2600, 'bandpass'); },

@@ -18,7 +18,7 @@ G.data.balance = {
   invincible: 1.5,
 
   // ── 打擊感 ──
-  hitstop: { normal: 0.05, heavy: 0.09 },
+  hitstop: { normal: 0.04, heavy: 0.09 },
   shake: { heavy: [5, 0.18], crit: [3, 0.12], boss: [12, 0.35] },
 
   // ── 成長 ──

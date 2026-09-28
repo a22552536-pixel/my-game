@@ -290,15 +290,19 @@
       }
     },
 
-    // 楓之谷式傷害數字：多段傷害會往上疊
+    // 楓之谷式傷害數字：多段傷害會往上疊；疊起來的數字左右錯開一點，才不會壓在一起。
+    // dir：被打飛的方向（數字往那邊微微飄，走一段小弧線）
     damage(x, y, value, kind, stack) {
+      const dir = arguments[5] || 0;
+      const sk = stack || 0;
       this.numbers.push({
-        x: x + U.rand(-6, 6),
-        y: y - (stack || 0) * 30,
+        x: x + U.rand(-6, 6) + (sk ? (sk % 2 ? 1 : -1) * Math.min(sk, 4) * 7 : 0),
+        y: y - sk * 32,
         value: String(value),
         kind: kind || 'normal',
         t: 0,
         life: kind === 'crit' ? 1.05 : 0.9,
+        drift: dir ? dir * U.rand(10, 22) : 0,
       });
     },
 
@@ -548,6 +552,7 @@
       const k = Math.pow(0.0005, dt);
       this.kickX *= k;
       this.kickY *= k;
+      if (G.feel) G.feel.update(dt);
     },
 
     drawGhosts(ctx) {
@@ -729,6 +734,7 @@
 
       this.drawCuts(ctx);
       if (this.bfs.length) this.drawBlackFlash(ctx);
+      if (G.feel) G.feel.drawWorld(ctx);
       this.drawNumbers(ctx);
 
       for (const t of this.texts) {
@@ -995,7 +1001,8 @@
 
     drawNumbers(ctx) {
       const style = {
-        normal: { size: 30, top: '#fff7c2', bottom: '#ffb52e', stroke: '#5a2a00' },
+        normal: { size: 28, top: '#fff7c2', bottom: '#ffb52e', stroke: '#5a2a00' },
+        skill: { size: 32, top: '#fff1d0', bottom: '#ff7a2a', stroke: '#4a1400' },
         crit: { size: 42, top: '#ff8a8a', bottom: '#d0101e', stroke: '#140004' },
         player: { size: 30, top: '#f3c6ff', bottom: '#b03cd6', stroke: '#2a0036' },
         heal: { size: 26, top: '#d4ffd0', bottom: '#35c24a', stroke: '#063a10' },
@@ -1008,21 +1015,26 @@
       for (const n of this.numbers) {
         const st = style[n.kind] || style.normal;
         const k = n.t / n.life;
-        // 彈出 → 停住 → 往上淡出
-        const pop = k < 0.08 ? 0.4 + (k / 0.08) * 0.9 : k < 0.16 ? 1.3 - ((k - 0.08) / 0.08) * 0.3 : 1;
+        // 彈出 → 停住 → 往上淡出；暴擊彈得更大、再回彈一下
+        const crit = n.kind === 'crit';
+        const pop = crit
+          ? k < 0.07 ? 0.3 + (k / 0.07) * 1.3 : k < 0.14 ? 1.6 - ((k - 0.07) / 0.07) * 0.7 : k < 0.2 ? 0.9 + ((k - 0.14) / 0.06) * 0.1 : 1
+          : k < 0.08 ? 0.4 + (k / 0.08) * 0.9 : k < 0.16 ? 1.3 - ((k - 0.08) / 0.08) * 0.3 : 1;
         const rise = k < 0.5 ? -k * 30 : -15 - (k - 0.5) * 80;
         const size = Math.round(st.size * pop);
         ctx.globalAlpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
         ctx.font = 'bold ' + size + 'px ' + G.art.NUMFONT;
         const y = n.y + rise;
+        // 小弧線：往被打飛的方向飄一點（先快後慢）
+        const nx = n.drift ? n.x + n.drift * (1 - (1 - k) * (1 - k)) : n.x;
         ctx.lineWidth = 7;
         ctx.strokeStyle = st.stroke;
-        ctx.strokeText(n.value, n.x, y);
+        ctx.strokeText(n.value, nx, y);
         const g = ctx.createLinearGradient(0, y - size, 0, y);
         g.addColorStop(0, st.top);
         g.addColorStop(1, st.bottom);
         ctx.fillStyle = g;
-        ctx.fillText(n.value, n.x, y);
+        ctx.fillText(n.value, nx, y);
         if (n.kind === 'crit' && k < 0.8) {
           // 黑閃：黑字、細紅邊、微微斜體；剛出現時抖幾下，還帶一點紅色錯位
           const ty = y - size - 3;
@@ -1030,7 +1042,7 @@
           const jx = jit ? (Math.random() - 0.5) * 2 * jit : 0;
           const jy = jit ? (Math.random() - 0.5) * 2 * jit : 0;
           ctx.save();
-          ctx.translate(n.x + jx, ty + jy);
+          ctx.translate(nx + jx, ty + jy);
           ctx.transform(1, 0, -0.2, 1, 0, 0);
           ctx.font = '900 ' + (k < 0.06 ? 18 : 16) + 'px ' + G.art.FONT;
           if (jit) {
