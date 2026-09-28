@@ -25,7 +25,8 @@
 
   // ── 執行期改資料（不改 js/data/mobs45.js）──
   const DM = G.data.monsters;
-  if (DM.mirrordeer) DM.mirrordeer.abilities = ['mirror', 'prism', 'mirrorpane'];
+  // 鏡麒麟不再分出鏡像（畫面會被鏡像塞滿，使用者要求拿掉）：只留稜鏡光束和鏡面折射
+  if (DM.mirrordeer) DM.mirrordeer.abilities = ['prism', 'mirrorpane'];
   if (DM.hourowl) DM.hourowl.abilities = ['ranged', 'rewind', 'phoenixfan', 'hourfeather'];
 
   const MM = (G.mobMotion5 = {
