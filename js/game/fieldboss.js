@@ -16,6 +16,13 @@
   const SLOWMO = 0.3; // 打倒時的慢動作（實際秒數）
   const HP_CAP = 0.34; // 單一招式最多吃掉最大 HP 的 34%：絕不秒殺
   const SKILL_K = 1.5; // 有預警的招式比身體碰撞痛：沒閃的代價要看得出來
+  // 出招節奏（使用者回饋：野外魔王太弱 → 攻擊力不動，改成出手更頻繁）：
+  //   兩招之間的停頓 1.2～2.0 秒 → 0.8～1.3 秒（約 −35%；第二階段照舊再 ×0.7）；千手冰像本來就快，只小幅縮短（見 fbZakum）。
+  //   連發型的招式多一下：苔冠鱷王撲起砸地 1 → 2 跳（第二跳重新瞄準、再預警 1.45 秒）；沉船海魔地下觸手多一波（第二波 0.75 秒後、少一根、各自預警 1.1 秒）、
+  //   甩錨 1／2 → 2／3 個落點（往魔王的反方向排開，往魔王那側躲就安全）；赤焰炎魔流星 5／8 → 6／9 顆；
+  //   千手冰像從天而降 2 → 3 掌（暴走維持 3 掌）；星蝕魔龍吐息 1／2 → 2／3 道、黑洞球 1 → 2 顆（暴走維持 2 顆）、墜星 6／9 → 7／10 顆。
+  //   每一下的預警都 ≥ 0.45 秒（千手冰像以外都 ≥ 0.9 秒）。
+  const GAP = [0.8, 1.3];
 
   // progression.js 把所有非 Boss 怪的藥水／裝備掉率設成一般怪的值；野外魔王的掉落由這裡發放，所以清掉
   for (const id in G.data.monsters) {
@@ -110,9 +117,28 @@
     return p;
   };
 
+  // 章節 Boss（霜靈、時間）召喚出來的野外魔王（m.summoned）維持改版前（v1.3）的數值與節奏：章節 Boss 戰不受這次調整影響。
+  // 血量、攻擊在 boss3.js 召喚時用資料算好，這裡在第一幀換回改版前的倍率（d.base，js/data/rebalance.js 記下的）。
+  const OLD = (m) => !!m.summoned;
+  function legacyStats(m) {
+    if (!m.summoned || m.fbLegacy) return;
+    m.fbLegacy = true;
+    const D = G.data;
+    const ref = D.monsters[D.fieldBosses && D.fieldBosses[(G.world.map && G.world.map.region) + '-4']];
+    if (ref && ref.base && ref.base.hpMul && ref.hpMul) {
+      const k = ref.base.hpMul / ref.hpMul;
+      m.maxHp = Math.max(1, Math.round(m.maxHp * k));
+      m.hp = Math.min(m.maxHp, Math.max(1, Math.round(m.hp * k)));
+    }
+    const b = m.def && m.def.base;
+    if (b && b.atkMul && m.def.atkMul) m.atk = Math.max(1, Math.round((m.atk * b.atkMul) / m.def.atkMul));
+  }
+  const touchKOf = (m) => (m.summoned && m.def && m.def.base ? m.def.base.touchK : m.def && m.def.touchK) || 0.5;
+
   // ── 共通的出招節奏 ──
   // moves: [{ id, w, ok(m, P), run(m, P) → step(t, dt, P) 回傳 true 表示這招結束 }]
   function brain(m, dt, P, moves, idle) {
+    legacyStats(m);
     m.fx.spawn = Math.max(0, (m.fx.spawn || 0) - dt / 1.2);
     if (engaged(m, P)) m.aggroT = Math.max(m.aggroT, 3);
     if (m.fbAct) {
@@ -123,7 +149,7 @@
       if (a.step(a.t, dt, P)) {
         m.fbAct = null;
         m.attackPhase = null;
-        m.fbCd = U.rand(1.2, 2.0) * (m.fx.rage ? 0.7 : 1);
+        m.fbCd = (OLD(m) ? U.rand(1.2, 2.0) : U.rand(GAP[0], GAP[1])) * (m.fx.rage ? 0.7 : 1);
       }
       return true;
     }
@@ -193,7 +219,7 @@
       id: 'jump', w: 3,
       ok: (m, P) => Math.abs(P.x - m.x) < 700,
       run(m, P) {
-        const tx = clampX(m, P.x);
+        let tx = clampX(m, P.x);
         const r = 140;
         warn(tx, m.y, r, 1.45);
         G.audio.play('bossWarn');
@@ -202,7 +228,10 @@
         let air = 0;
         let x0 = m.x;
         const AIR = 0.86;
-        return (t, dt, P2) => {
+        let hops = OLD(m) ? 0 : 1; // 連跳 2 次：落地停 0.45 秒後重新瞄準、再預警一次
+        let t0 = 0;
+        return (tw, dt, P2) => {
+          const t = tw - t0;
           if (phase === 0) {
             m.squash = 0.4; // 蹲低蓄力
             if (t >= 0.6) {
@@ -233,7 +262,21 @@
             }
             return false;
           }
-          return t > 0.6 + AIR + 0.45;
+          if (t <= 0.6 + AIR + 0.45) return false;
+          if (hops > 0 && engaged(m, P2)) {
+            hops--;
+            t0 = tw;
+            phase = 0;
+            air = 0;
+            tx = clampX(m, P2.x);
+            m.dir = U.sign(P2.x - m.x) || m.dir;
+            m.fbAct.dir = m.dir;
+            warn(tx, m.y, r, 1.45);
+            G.audio.play('bossWarn');
+            m.attackPhase = 'wind';
+            return false;
+          }
+          return true;
         };
       },
     },
@@ -267,35 +310,43 @@
     {
       id: 'tentacle', w: 3,
       run(m, P) {
-        const n = m.fx.rage ? 5 : 3;
-        const gy = groundUnder(P, m);
-        const xs = [];
-        for (let i = 0; i < n; i++) xs.push(mapClamp(P.x + (i - (n - 1) / 2) * 150 + U.rand(-25, 25)));
-        xs.forEach((x) => warn(x, gAt(gy, x), 56, 1.1));
-        G.audio.play('bossWarn');
+        // 兩波：第二波在 0.75 秒後瞄準玩家當時的位置（各自預警 1.1 秒，兩波打下來相隔 0.75 秒）。
+        // 第二波少一根（2／4 根），夾在玩家兩側：站在正中間的空隙（60 px）或跑出外側都躲得掉
+        const WAVE2 = 0.75;
+        const wave = (P2, n) => {
+          const gy = groundUnder(P2, m);
+          const xs = [];
+          for (let i = 0; i < n; i++) xs.push(mapClamp(P2.x + (i - (n - 1) / 2) * 150 + U.rand(-25, 25)));
+          xs.forEach((x) => warn(x, gAt(gy, x), 56, 1.1));
+          G.audio.play('bossWarn');
+          return { gy, xs, done: false };
+        };
+        const strike = (w) => {
+          w.done = true;
+          m.attackPhase = 'strike';
+          m.fx.slam = 1;
+          G.fx.shake(6, 0.2);
+          G.audio.play('slam');
+          let hit = false;
+          w.xs.forEach((x) => {
+            const gx = gAt(w.gy, x);
+            zone({ kind: 'fb_tentacle', x, y: gx, r: 45, h: 170, life: 0.9 });
+            G.fx.burst(x, gx - 6, ['#5a8a7a', '#2a3a3a', '#9fe8d0'], 10, 280, { angle: -Math.PI / 2, spread: 0.9 });
+            if (!hit) hit = hitBox(m, { x: x - 45, y: gx - 170, w: 90, h: 170 }, 1.25, x);
+          });
+        };
+        const n1 = m.fx.rage ? 5 : 3;
+        const w1 = wave(P, n1);
+        let w2 = null;
         m.attackPhase = 'wind';
-        let done = false;
-        return (t) => {
-          if (t < 1.05) {
-            m.fx.slam = Math.min(0.6, t / 1.05 * 0.6);
-            return false;
-          }
-          if (!done) {
-            done = true;
-            m.attackPhase = 'strike';
-            m.fx.slam = 1;
-            G.fx.shake(6, 0.2);
-            G.audio.play('slam');
-            let hit = false;
-            xs.forEach((x) => {
-              const gx = gAt(gy, x);
-              zone({ kind: 'fb_tentacle', x, y: gx, r: 45, h: 170, life: 0.9 });
-              G.fx.burst(x, gx - 6, ['#5a8a7a', '#2a3a3a', '#9fe8d0'], 10, 280, { angle: -Math.PI / 2, spread: 0.9 });
-              if (!hit) hit = hitBox(m, { x: x - 45, y: gx - 170, w: 90, h: 170 }, 1.25, x);
-            });
-          }
-          m.fx.slam = Math.max(0, 1 - (t - 1.05) * 2);
-          return t > 1.7;
+        return (t, dt, P2) => {
+          if (!w2 && t >= WAVE2 && !OLD(m)) w2 = wave(P2, n1 - 1);
+          if (!w1.done && t >= 1.05) strike(w1);
+          if (w2 && !w2.done && t >= WAVE2 + 1.05) strike(w2);
+          if (t < 1.05) m.fx.slam = Math.min(0.6, t / 1.05 * 0.6);
+          else if (t < WAVE2 + 1.05 && !OLD(m)) m.fx.slam = Math.max(0.3, 1 - (t - 1.05) * 2);
+          else m.fx.slam = Math.max(0, 1 - (t - (OLD(m) ? 0 : WAVE2) - 1.05) * 2);
+          return t > (OLD(m) ? 0 : WAVE2) + 1.7;
         };
       },
     },
@@ -305,8 +356,11 @@
       run(m, P) {
         const gy0 = groundUnder(P, m);
         const gy = gy0;
+        // 落點往魔王的反方向排開（一般 2 個、暴走 3 個）：往魔王那一側躲就安全
+        const away = U.sign(P.x - m.x) || 1;
         const targets = [mapClamp(P.x)];
-        if (m.fx.rage) targets.push(mapClamp(P.x + U.sign(P.x - m.x) * 170));
+        if (!OLD(m) || m.fx.rage) targets.push(mapClamp(P.x + away * 170));
+        if (!OLD(m) && m.fx.rage) targets.push(mapClamp(P.x + away * 340));
         targets.forEach((x) => warn(x, gAt(gy, x), 70, 0.9 + 0.95));
         m.attackPhase = 'wind';
         G.audio.play('bossWarn');
@@ -523,7 +577,7 @@
         say(m, '燃燒吧！', '#ffb070');
         m.attackPhase = 'wind';
         G.audio.play('bossWarn');
-        const n = m.fx.rage ? 8 : 5;
+        const n = (m.fx.rage ? 9 : 6) - (OLD(m) ? 1 : 0);
         let k = 0;
         return (t, dt, P2) => {
           while (k < n && t >= 0.5 + k * 0.2) {
@@ -841,11 +895,11 @@
   }
   const zakumMoves = [
     {
-      // 從天而降：連續 2 掌（暴走 3 掌），每掌瞄準玩家當下的位置
+      // 從天而降：連續 3 掌（原本一般 2 掌、暴走 3 掌），每掌瞄準玩家當下的位置
       id: 'drop', w: 3,
       run(m, P) {
         const rage = m.fx.rage;
-        const n = rage ? 3 : 2;
+        const n = OLD(m) && !rage ? 2 : 3; // 2 → 3 掌（暴走本來就 3 掌）
         const gap = rage ? 0.25 : 0.3;
         const W = rage ? 0.6 : 0.7;
         const r = rage ? 95 : 100;
@@ -946,9 +1000,13 @@
     let seg = null;
     let warnZ = null;
     let beamZ = null;
+    let tgt = null;
     const place = (k, fire) => {
-      const e = o.eye(k, fire, ang);
-      seg = { x1: e.x, y1: e.y, x2: e.x + Math.cos(ang) * o.len, y2: e.y + Math.sin(ang) * o.len };
+      // 預警線直接畫在「發射時」的那一條線上（從發射時的嘴、通過瞄準點）：以前預警線從蓄力時往後仰的嘴畫出去，
+      // 和真正的光束平行、差了約 70 px，站在預警線外面一點點的人還是會被打到
+      const e = o.eye(fire ? k : 1, true, ang);
+      const a = tgt ? Math.atan2(tgt.y - e.y, tgt.x - e.x) : ang;
+      seg = { x1: e.x, y1: e.y, x2: e.x + Math.cos(a) * o.len, y2: e.y + Math.sin(a) * o.len };
       for (const z of [fire ? beamZ : warnZ]) {
         if (!z) continue;
         Object.assign(z, seg);
@@ -959,6 +1017,7 @@
     const aim = (P2) => {
       const tx = P2.x;
       const ty = P2.y - 30;
+      tgt = { x: tx, y: ty };
       // 起點會跟著角度（頭的仰角）移動，算兩次讓光束確實從嘴巴指向玩家
       let e = o.eye(1, true, 0);
       for (let i = 0; i < 2; i++) {
@@ -968,8 +1027,9 @@
       }
       ang = Math.atan2(ty - e.y, tx - e.x);
       if (o.pose) o.pose(ang);
-      const s = o.eye(0, false, ang);
-      warnZ = warnLine(s.x, s.y, s.x + Math.cos(ang) * o.len, s.y + Math.sin(ang) * o.len, o.w, 1.2);
+      const s = o.eye(1, true, ang);
+      const a0 = Math.atan2(ty - s.y, tx - s.x);
+      warnZ = warnLine(s.x, s.y, s.x + Math.cos(a0) * o.len, s.y + Math.sin(a0) * o.len, o.w, 1.2);
       beamZ = null;
       G.audio.play('bossWarn');
     };
@@ -1053,7 +1113,7 @@
         return beamMove(m, P, {
           eye: (k, fire) => voidMouth(m, k, fire),
           pose: (a) => (m.fx.beamTilt = voidTilt(m, a)),
-          len: 1150, w: 70, k: 1.5, color: '#b88aff', flag: 'breath', times: m.fx.rage ? 2 : 1,
+          len: 1150, w: 70, k: 1.5, color: '#b88aff', flag: 'breath', times: (m.fx.rage ? 3 : 2) - (OLD(m) ? 1 : 0),
         });
       },
     },
@@ -1062,7 +1122,7 @@
       run(m, P) {
         m.attackPhase = 'wind';
         G.audio.play('bossWarn');
-        const n = m.fx.rage ? 2 : 1;
+        const n = OLD(m) && !m.fx.rage ? 1 : 2; // 1 → 2 顆（暴走本來就 2 顆）
         let done = false;
         return (t) => {
           if (t < 0.9) {
@@ -1084,7 +1144,9 @@
               };
               p.onTick = (pp, d) => {
                 const P2 = G.player;
-                if (P2.alive() && U.dist(P2.x, P2.y - 30, pp.x, pp.y) < pp.pullR) {
+                // 吸力不疊加：同一幀只有一顆球在吸（兩顆球時玩家的走速 215 仍然跑得贏吸力 120）
+                if (P2.alive() && P2.fbPullAt !== G.time && U.dist(P2.x, P2.y - 30, pp.x, pp.y) < pp.pullR) {
+                  P2.fbPullAt = G.time;
                   P2.x += U.sign(pp.x - P2.x) * 120 * d;
                   P2.slowT = Math.max(P2.slowT || 0, 0.15);
                 }
@@ -1109,7 +1171,7 @@
         say(m, '星辰，墜落吧。', '#d8c8ff');
         m.attackPhase = 'wind';
         G.audio.play('bossWarn');
-        const n = m.fx.rage ? 9 : 6;
+        const n = (m.fx.rage ? 10 : 7) - (OLD(m) ? 1 : 0);
         let k = 0;
         return (t, dt, P2) => {
           while (k < n && t >= 0.5 + k * 0.17) {
@@ -1163,8 +1225,8 @@
         m.fx.palmK = U.clamp((m.fx.palmK || 0) + (m.fx.palm ? dt * 4 : -dt * 2), 0, 1);
         const was = !!m.fbAct;
         brain(m, dt, P, zakumMoves);
-        // 百式的節奏：兩招之間幾乎不停（一般 0.55～0.9 秒、暴走 0.3～0.5 秒）
-        if (was && !m.fbAct) m.fbCd = m.fx.rage ? U.rand(0.3, 0.5) : U.rand(0.55, 0.9);
+        // 百式的節奏：兩招之間幾乎不停（一般 0.45～0.75 秒、暴走 0.26～0.42 秒；原本 0.55～0.9／0.3～0.5，小幅縮短約 −16%）
+        if (was && !m.fbAct) m.fbCd = OLD(m) ? (m.fx.rage ? U.rand(0.3, 0.5) : U.rand(0.55, 0.9)) : m.fx.rage ? U.rand(0.26, 0.42) : U.rand(0.45, 0.75);
         m.vx = 0;
         if (!m.fbAct && P.alive()) m.dir = U.sign(P.x - m.x) || m.dir;
         return true;
@@ -1261,7 +1323,7 @@
         m.h = d.h / s;
       }
       m.halfW = d.w / 2;
-      m.exp = Math.round(G.data.balance.monsterExp(d.lv) * 25);
+      m.exp = Math.round(G.data.balance.monsterExp(d.lv) * 10); // 節奏 v1.4：25 → 10 倍一般怪（見 js/data/rebalance.js）
       m.touchCd = 99;
       m.fbTouch = 1;
       m.aggroT = 3;
@@ -1344,7 +1406,7 @@
       // 掉落：金幣約一般怪 20 倍、必掉 1 件史詩以上、2～3 瓶大紅／大藍
       const L = G.loot;
       const lv = m.level;
-      const total = Math.round(U.rand(lv * 1.0, lv * 1.8) * 20);
+      const total = Math.round(U.rand(lv * 1.0, lv * 1.8) * (G.data.balance.fbGoldK || 20)); // 經濟 v1.4：20 → 12（js/data/rebalance.js）
       const piles = 5;
       const by = m.y - 60;
       for (let i = 0; i < piles; i++) L.spawn('gold', cx + U.rand(-80, 80), by, { amount: Math.max(1, Math.round(total / piles)) });
@@ -1397,13 +1459,13 @@
             m.frozenT = 0;
           }
         }
-        // 身體碰撞：比一般怪溫和（0.5 倍攻擊、1.5 秒一次）
+        // 身體碰撞：1.5 秒一次（倍率 touchK：預設 0.5，js/data/rebalance.js 把五隻野外魔王都設成 1.0）
         m.touchCd = 99;
         m.fbTouch = (m.fbTouch || 0) - dt;
         if (m.fbTouch <= 0 && P.alive()) {
           const hb = m.hitbox();
           const body = { x: hb.x + hb.w * 0.2, y: hb.y + hb.h * 0.15, w: hb.w * 0.6, h: hb.h * 0.85 };
-          if (U.overlap(body, P.hitbox()) && hurtP(m, (m.def && m.def.touchK) || 0.5, m.x, true)) m.fbTouch = 1.5;
+          if (U.overlap(body, P.hitbox()) && hurtP(m, touchKOf(m), m.x, true)) m.fbTouch = 1.5;
         }
         if (!m.fx.rage && m.hp <= m.maxHp * 0.5) this.enrage(m);
       }

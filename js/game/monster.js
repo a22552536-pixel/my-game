@@ -3,6 +3,88 @@
   'use strict';
   const U = G.util;
 
+  // ── 怪物積極度（使用者回饋：章節 Boss 剛好，一般怪太弱 → 攻擊力不動，改成「出手更頻繁」）──
+  //   K＝強化程度：1-1、1-2（新手區）0；第一章其他地圖 0.4（Lv≤10 的怪）；第二章起 1；
+  //   章節 Boss 地圖、章節 Boss、野外魔王一律 0（野外魔王的節奏在 js/game/fieldboss.js 另外調）。
+  //   K = 1 時（第一章 0.4 倍的幅度）：
+  //     普通攻擊（遠程／鞭打）冷卻 ×0.7（ATK 0.3）；技能冷卻 ×0.75（SKILL 0.25）；
+  //     輔助型技能（分身、加速、時停、睡霧、警鈴、情緒衝撞）×0.85（UTIL 0.15）；
+  //     身體碰撞的再判定間隔 0.5 → 0.4 秒（TOUCH 0.2）；主動怪的視野 ×1.25（SIGHT）；追擊速度 1.35 → 1.55 倍（CHASE）；
+  //     第二章起的「追擊」：普攻／技能冷卻重設時 45% 機率只給 0.35～0.6 秒（連出兩下），追擊後下一次一定是正常冷卻；
+  //     被動怪第一次被打（沒仇恨 → 有仇恨）：普攻冷卻壓到 0.25～0.5 秒、技能冷卻壓到 0.4～0.8 秒，馬上還手。
+  //   蓄力／預警時間一律不動（最短的是鞭打 0.35 秒）。
+  const SKILL_CDS = ['stampCd', 'strCd', 'igCd', 'magCd', 'qCd', 'pcCd', 'mkCd', 'lgCd', 'kkCd', 'drCd', 'shCd', 'ffCd', 'bsCd', 'whCd', 'wpCd', 'gpCd', 'csCd', 'glideCd', 'kiteCd', 'gCd', 'flickT'];
+  const UTIL_CDS = ['alarmCd', 'redCd', 'slCd', 'tmCd', 'mrCd', 'plCd', 'gCd2'];
+  // 沒有明顯蓄力的招（滑翔、俯衝、吹風、熄燈瞬移）不給追擊
+  const NO_FOLLOW = { glideCd: 1, kiteCd: 1, gCd: 1, flickT: 1 };
+  // 通用招式的狀態物件（mobabil.js strike → m.stk；mobabil2.js cast(name) → m[name + 'St']），冷卻在 .cd
+  const ST_KEYS = ['stk', 'icepinSt', 'phoenixfanSt', 'prismSt', 'clockhandSt', 'sundiscSt', 'twinchargeSt', 'starspitSt'];
+  const AG = (G.mobAggro = {
+    ATK: 0.3, SKILL: 0.25, UTIL: 0.15, TOUCH: 0.2, SIGHT: 0.25, CHASE: 0.2, FOLLOW: 0.3, FU: [0.35, 0.6],
+    SKILL_CDS, UTIL_CDS, ST_KEYS,
+    k(m) {
+      const W = G.world;
+      if (m._agMap === W.mapId && m._agK != null) return m._agK;
+      const d = m.def || {};
+      const map = W.map || {};
+      let k = 1;
+      if (d.boss || d.fieldBoss || m.isBoss || m.fieldBoss || map.type === 'boss') k = 0;
+      else if (W.mapId === '1-1' || W.mapId === '1-2') k = 0;
+      else if ((d.lv || 1) <= 10) k = 0.4;
+      m._agMap = W.mapId;
+      m._agK = k;
+      return k;
+    },
+    // 冷卻剛被重設成 val（prev＝重設前的值；null 表示第一次設定）：回傳縮短後的冷卻
+    reset(m, key, prev, val, cut, fuOK) {
+      const k = this.k(m);
+      if (k <= 0) return val;
+      const fu = m._agFu || (m._agFu = {});
+      if (fuOK && prev != null && k >= 1 && !fu[key] && Math.random() < this.FOLLOW) {
+        fu[key] = 1;
+        return Math.min(val, U.rand(this.FU[0], this.FU[1]));
+      }
+      fu[key] = 0;
+      return val * (1 - cut * k);
+    },
+    // 包住 G.mobAbilHooks.update：比對前後的冷卻欄位，被重設（變大）的就縮短
+    abilUpdate(m, dt, P, aggro) {
+      const H = G.mobAbilHooks;
+      if (this.k(m) <= 0) return H.update(m, dt, P, aggro);
+      const a = SKILL_CDS.map((key) => m[key]);
+      const b = UTIL_CDS.map((key) => m[key]);
+      const c = ST_KEYS.map((key) => (m[key] ? m[key].cd : null));
+      const out = H.update(m, dt, P, aggro);
+      SKILL_CDS.forEach((key, i) => {
+        const v = m[key];
+        if (typeof v === 'number' && (a[i] == null || v > a[i] + 0.05)) m[key] = this.reset(m, key, a[i], v, this.SKILL, !NO_FOLLOW[key]);
+      });
+      UTIL_CDS.forEach((key, i) => {
+        const v = m[key];
+        if (typeof v === 'number' && (b[i] == null || v > b[i] + 0.05)) m[key] = this.reset(m, key, b[i], v, this.UTIL, false);
+      });
+      ST_KEYS.forEach((key, i) => {
+        const st = m[key];
+        if (st && typeof st.cd === 'number' && (c[i] == null || st.cd > c[i] + 0.05)) st.cd = this.reset(m, key, c[i], st.cd, this.SKILL, true);
+      });
+      return out;
+    },
+    // 被動怪剛被打出仇恨：馬上還手
+    retaliate(m) {
+      const k = this.k(m);
+      if (k <= 0 || m.dead) return;
+      const pull = (v, lo, hi) => (typeof v === 'number' ? Math.min(v, v + (U.rand(lo, hi) - v) * k) : v);
+      m.atkCd = pull(m.atkCd, 0.25, 0.5);
+      SKILL_CDS.forEach((key) => {
+        if (key !== 'flickT' && typeof m[key] === 'number') m[key] = pull(m[key], 0.4, 0.8);
+      });
+      ST_KEYS.forEach((key) => {
+        const st = m[key];
+        if (st && !st.ph) st.cd = pull(st.cd, 0.4, 0.8);
+      });
+    },
+  });
+
   function Monster(id, plat, x, opts) {
     opts = opts || {};
     const d = G.data.monsters[id];
@@ -31,9 +113,13 @@
     this.h = d.h;
     this.halfW = (d.w * this.scale) / 2;
     this.level = d.lv;
-    this.maxHp = Math.round(b.monsterHp(d.lv) * (d.hpMul || 1) * (this.elite ? b.eliteHpMult : 1) * (V ? V.hp || 1 : 1));
+    // d.chHp：章節血量倍率（js/data/rebalance.js），同樣不乘在章節 Boss 地圖裡
+    const chHp = d.chHp && !(map && map.type === 'boss') ? d.chHp : 1;
+    this.maxHp = Math.round(b.monsterHp(d.lv) * (d.hpMul || 1) * chHp * (this.elite ? b.eliteHpMult : 1) * (V ? V.hp || 1 : 1));
     this.hp = this.maxHp;
-    this.atk = Math.round(b.monsterAtk(d.lv) * (d.atkMul || 1) * (this.elite ? b.eliteAtkMult : 1) * (V ? V.atk || 1 : 1));
+    // d.chAtk：章節傷害倍率（js/data/rebalance.js）；章節 Boss 地圖裡召喚出來的小怪不乘，Boss 戰維持原樣
+    const chAtk = d.chAtk && !(map && map.type === 'boss') ? d.chAtk : 1;
+    this.atk = Math.round(b.monsterAtk(d.lv) * (d.atkMul || 1) * chAtk * (this.elite ? b.eliteAtkMult : 1) * (V ? V.atk || 1 : 1));
     this.armor = b.monsterDef(d.lv);
     this.exp = Math.round(b.monsterExp(d.lv) * (this.elite ? b.eliteExpMult : 1) * (this.shiny ? b.shinyExpMult : 1) * (V ? V.exp || 1 : 1));
     this.x = x;
@@ -119,6 +205,7 @@
     this.hp -= dmg;
     this.hurtFlash = 0.1;
     this.hpShowT = 4;
+    const fresh = !(this.aggroT > 0);
     this.aggroT = G.data.balance.aggroTime;
     if (this.hp <= 0) {
       this.hp = 0;
@@ -126,6 +213,7 @@
       return dmg;
     }
     if (G.mobAbilHooks) G.mobAbilHooks.onHurt(this, dmg, dir);
+    if (fresh) AG.retaliate(this);
     // 樹皮龜：被打有機率縮進殼裡
     if (this.abil.shell && this.shellT <= 0 && Math.random() < 0.35) {
       this.shellT = 1.6;
@@ -220,7 +308,8 @@
       }
     }
     if (this.aggroT > 0) this.aggroT -= dt;
-    if ((d.behavior === 'aggressive' || (this.V && this.V.aggressive)) && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < (d.sight || 300)) {
+    const agK = AG.k(this);
+    if ((d.behavior === 'aggressive' || (this.V && this.V.aggressive)) && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < (d.sight || 300) * (1 + AG.SIGHT * agK)) {
       this.aggroT = Math.max(this.aggroT, 2);
     }
     if (this.moodAggro && P.alive() && this.sameLevelAs(P) && Math.abs(P.x - this.x) < 320) this.aggroT = Math.max(this.aggroT, 2);
@@ -234,7 +323,7 @@
       return false;
     }
     // 新怪物的能力：回傳 true 時這一幀由能力自己控制移動
-    const custom = this.hurtT <= 0 && G.mobAbilHooks ? G.mobAbilHooks.update(this, dt, P, aggro) : false;
+    const custom = this.hurtT <= 0 && G.mobAbilHooks ? AG.abilUpdate(this, dt, P, aggro) : false;
 
     if (this.hopOut > 0) {
       // 正在跳出小坑：保持水平速度，落地就結束
@@ -274,7 +363,7 @@
         if (aggro && this.sameLevelAs(P) && Math.abs(dx) > 14) {
           this.dir = U.sign(dx);
           const keepAway = this.abil.ranged && Math.abs(dx) < 160;
-          this.vx = keepAway ? 0 : this.dir * speed * 1.35;
+          this.vx = keepAway ? 0 : this.dir * speed * (1.35 + AG.CHASE * agK);
         } else {
           this.stateT -= dt;
           if (this.stateT <= 0) {
@@ -325,7 +414,7 @@
     // 碰撞傷害
     if (P.alive() && this.touchCd <= 0 && U.overlap(this.hitbox(), P.hitbox())) {
       if (P.hurt(this.atk, this.x)) {
-        this.touchCd = 0.5;
+        this.touchCd = 0.5 * (1 - AG.TOUCH * agK);
         if (G.variantHooks) G.variantHooks.onHit(this);
       }
     }
@@ -417,7 +506,8 @@
     } else {
       this.attackPhase = null;
       this.attackT = 0;
-      this.atkCd = d.projectile ? d.projectile.cd * U.rand(0.8, 1.2) : U.rand(1.4, 2);
+      const cd = d.projectile ? d.projectile.cd * U.rand(0.8, 1.2) : U.rand(1.4, 2);
+      this.atkCd = AG.reset(this, 'atkCd', 0, cd, AG.ATK, true);
     }
   };
 

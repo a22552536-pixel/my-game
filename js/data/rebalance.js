@@ -76,6 +76,82 @@
     fb.hpMul = Math.max(8, (boss.hp * 0.3) / B.monsterHp(fb.lv));
     fb.atkMul = 1.0;
   }
+  // 改版前（v1.3）的野外魔王數值：章節 Boss（霜靈、時間）召喚出來的野外魔王照舊用這一組（js/game/fieldboss.js legacyStats）
+  for (const mid in D.fieldBosses || {}) {
+    const fb = D.monsters[D.fieldBosses[mid]];
+    if (fb) fb.base = { hpMul: fb.hpMul, atkMul: fb.atkMul || 1, touchK: fb.touchK };
+  }
+
+  // ── 章節傷害倍率（使用者回饋：第三章 HP 已經破千，小怪的傷害還跟第一章差不多）──
+  //   玩家最大 HP 隨等級＋進化＋裝備＋星楓葉成長得比 monsterAtk（3 + 1.75·lv）快：改版前小怪一下只佔最大 HP 的
+  //   第一章 4%、第二章 3.2%、第三章 3.7%、第四章 2.5%、終章 2.3%（三條路線平均、當章商店稀有裝 +2；aggro/hp2.js）。
+  //   目標：一下約 8～12%（第一章新手區不動）。但小怪不能比該章 Boss 還痛：倍率上限＝「站在 Boss 等級的小怪，身體碰撞剛好等於
+  //   Boss 的基本一擊（atk ×1.0；Boss 的重招是 ×1.45～1.6、第二階段再 ×1.25）」＝ boss.atk ÷ monsterAtk(boss.lv)。
+  //   CH_ATK 是想要的倍率，實際 = min(CH_ATK, 上限)：第一章 1.27（Lv5 以上；Lv1～4 的新手區怪維持 1）、第二章 2.14、第三章 2.0、
+  //   第四章 1.63、終章 1.54（第四章、終章被 Boss 的攻擊力卡住）。
+  //   倍率記在 d.chAtk，由 monster.js 乘上去；章節 Boss 地圖裡召喚出來的小怪不乘（章節 Boss 戰的難度維持原樣）。
+  const CH_ATK = { 1: 1.65, 2: 2.15, 3: 2.2, 4: 3.0, 5: 3.5 };
+  const chapterOfLv = (lv) => (lv <= 10 ? 1 : lv <= 20 ? 2 : lv <= 30 ? 3 : lv <= 40 ? 4 : 5);
+  const chCap = {};
+  for (const r in CH_ATK) {
+    const boss = D.monsters[D.story.chapters[r].boss];
+    chCap[r] = boss && boss.atk ? Math.min(CH_ATK[r], boss.atk / B.monsterAtk(boss.lv)) : 1;
+  }
+  B.chapterAtk = chCap;
+  for (const id in D.monsters) {
+    const d = D.monsters[id];
+    if (!d.lv || d.boss || d.fieldBoss) continue;
+    const r = chapterOfLv(d.lv);
+    const boss = D.monsters[D.story.chapters[r].boss];
+    // 本來就比較痛的怪（atkMul > 1）另外壓一次：就算站在 Boss 的等級，身體碰撞也不超過 Boss 的基本一擊
+    const cap = boss && boss.atk ? boss.atk / (B.monsterAtk(boss.lv) * Math.max(1, d.atkMul || 1)) : chCap[r];
+    d.chAtk = d.lv <= 4 ? 1 : Math.max(1, Math.round(Math.min(chCap[r], cap) * 100) / 100);
+  }
+  // ── 章節血量倍率（使用者回饋：一進第四章，千斤錘一下就沒有怪活得下來）──
+  //   技能倍率跟著轉數長得比 monsterHp 快（又沒有冷卻）：改版前，典型等級的玩家（三條路線、當章商店稀有裝 +2、技能 Lv5）
+  //   用當章的中階單體技（取三條路線的中位數：第二章 重爪、第三章 冰霜長槍、第四章 千斤錘、終章 獅王連斬）打一隻一般怪，
+  //   第一章 1.3 下、第二章 1.2、第三章 1.3、第四章 0.5、終章 0.4（aggro/htk.js）。
+  //   目標：第一章 2 下、第二三章 3 下、第四章與終章 4 下 → 倍率 1.55／2.45／2.3／7.7／9.3（Lv1～4 的新手區怪維持 1）。
+  //   普通攻擊（×1.0）因此要 5／10／13／39／47 下：後期主要靠技能，MP 與藥水變成真正的資源。
+  //   倍率記在 d.chHp，由 monster.js 乘上去；章節 Boss 地圖裡召喚出來的小怪不乘（章節 Boss 戰維持原樣）。
+  const CH_HP = { 1: 1.55, 2: 2.45, 3: 2.3, 4: 7.7, 5: 9.3 };
+  const CH_HITS = { 1: 2, 2: 3, 3: 3, 4: 4, 5: 4 };
+  B.chapterHp = CH_HP;
+  for (const id in D.monsters) {
+    const d = D.monsters[id];
+    if (!d.lv || d.boss || d.fieldBoss) continue;
+    d.chHp = d.lv <= 4 ? 1 : CH_HP[chapterOfLv(d.lv)];
+  }
+  // 野外魔王的血量：約 30 次中階技能（實戰邊閃邊打，約 60～90 秒）＝ 所在地圖小怪平均血量 × 30 ÷ 該章目標下數；不低於原本。
+  const FB_CASTS = 30;
+  for (const mid in D.fieldBosses || {}) {
+    const fb = D.monsters[D.fieldBosses[mid]];
+    const map = D.maps[mid];
+    const region = map && map.region;
+    if (!fb || !region) continue;
+    const ids = (map.mobs || []).map((g) => g.m).filter((id) => D.monsters[id]);
+    if (!ids.length) continue;
+    const avgHp = ids.reduce((t, id) => t + B.monsterHp(D.monsters[id].lv) * (D.monsters[id].hpMul || 1) * (D.monsters[id].chHp || 1), 0) / ids.length;
+    fb.hpMul = Math.max(fb.hpMul || 1, (avgHp * FB_CASTS) / CH_HITS[region] / B.monsterHp(fb.lv));
+  }
+  // 野外魔王（第二章起）：有預警的招式（atk × skillK 1.5）≈ 所在地圖小怪一下的 1.5 倍，
+  // 但不超過該章 Boss 的基本一擊（atk × skillK ≤ boss.atk），也不低於原本的攻擊力。
+  for (const mid in D.fieldBosses || {}) {
+    const fb = D.monsters[D.fieldBosses[mid]];
+    const map = D.maps[mid];
+    const region = map && map.region;
+    const boss = region && D.monsters[D.story.chapters[region].boss];
+    if (!fb || !boss || region < 2) continue;
+    const ids = (map.mobs || []).map((g) => g.m).filter((id) => D.monsters[id]);
+    if (!ids.length) continue;
+    const avg = ids.reduce((t, id) => t + B.monsterAtk(D.monsters[id].lv) * (D.monsters[id].atkMul || 1) * (D.monsters[id].chAtk || 1), 0) / ids.length;
+    const sk = fb.skillK || 1.5;
+    const cur = B.monsterAtk(fb.lv) * (fb.atkMul || 1);
+    const want = Math.max(cur, Math.min((avg * 1.5) / sk, boss.atk / sk));
+    fb.atkMul = want / B.monsterAtk(fb.lv);
+    // 身體碰撞 0.5 → 1.0 倍（≈ 該章 Boss 基本一擊的 2/3）：原本高防禦時只剩個位數
+    fb.touchK = Math.max(fb.touchK || 0.5, 1.0);
+  }
   // 第一章的苔冠鱷王：原本身體碰撞只有 0.5 倍，比路上的小怪還不痛。
   // 改成：攻擊力 ≈ 1-4 小怪平均的 1.5 倍（但不超過菇菇女王），碰撞吃滿攻擊力；
   // 有預警的招式不再額外乘 1.5，最重的一招（1.4 倍）也打不贏女王最重的一下。
@@ -86,11 +162,14 @@
     if (!fb || !queen || !map) return;
     const ids = (map.mobs || []).map((g) => g.m).filter((id) => D.monsters[id]);
     if (!ids.length) return;
-    const avg = ids.reduce((t, id) => t + B.monsterAtk(D.monsters[id].lv) * (D.monsters[id].atkMul || 1), 0) / ids.length;
+    const avg = ids.reduce((t, id) => t + B.monsterAtk(D.monsters[id].lv) * (D.monsters[id].atkMul || 1) * (D.monsters[id].chAtk || 1), 0) / ids.length;
     const want = Math.min(avg * 1.5, (queen.atk || B.monsterAtk(queen.lv)) * 0.95);
     fb.atkMul = want / B.monsterAtk(fb.lv);
     fb.touchK = 1.0;
     fb.skillK = 1.0;
+    // 改版前的算法（小怪沒有章節倍率）：章節 Boss 召喚的苔冠鱷王照舊用這個
+    const avg0 = ids.reduce((t, id) => t + B.monsterAtk(D.monsters[id].lv) * (D.monsters[id].atkMul || 1), 0) / ids.length;
+    if (fb.base) Object.assign(fb.base, { atkMul: Math.min(avg0 * 1.5, (queen.atk || B.monsterAtk(queen.lv)) * 0.95) / B.monsterAtk(fb.lv), touchK: 1.0 });
   })();
 
   // ── 每章一個委託改成「討伐野外魔王」（發委託的 NPC 在該章營地，先接委託才會遇到魔王）──
@@ -141,5 +220,65 @@
   for (const qid in ARRIVE) {
     const q = D.quests[qid];
     if (q && q.req) q.req.lv = Math.min(q.req.lv || 99, ARRIVE[qid]);
+  }
+
+  // ── 節奏 v1.4（使用者回饋：打完寄居蟹 Lv23、打完熔岩甲龜 Lv34；應該剛好 20、30 左右）──
+  //   模擬（aggro/sim.js）：做完該章 Boss 前的委託＋委託要的擊殺＋額外擊殺（委託擊殺數 ×1.5）＋野外魔王打兩次，
+  //   改版前打完 Boss 是 Lv11.6／22.7／33.0／43.2（和使用者的 23、34 吻合）。抵達 Boss 時其實只高 0.5～1.5 級（委託的需求等級把進度卡住），
+  //   多出來的主要是：打完 Boss 的 Boss 經驗＋主線 Boss 委託經驗（約 +2 級）、野外魔王（一隻 25 倍一般怪），而且每章往下一章累積。
+  //   星楓葉的祝福（js/game/pacing.js）本來就會把不足的補到該章上限（10／20／30／40），所以：
+  //   章節 Boss 經驗 ×0.2、主線 Boss 委託（q4／q35／q56／q67／q77）經驗 ×0.1；野外魔王的經驗 25 → 10 倍一般怪（js/game/fieldboss.js）。
+  //   結果（同一個模型）：打完 Boss 是 Lv10.2／20.6／30.7／40.9（打得少一點的玩家：10.1／20.5／30.6／40.4），抵達 Boss 時 Lv10／20.3／30.4／40.6。
+  const PACE_BOSS_EXP = 0.2;
+  const PACE_MAIN_QUEST = 0.1;
+  for (const r in chapters) {
+    const b = D.monsters[chapters[r].boss];
+    if (b && b.exp) b.exp = Math.max(1, Math.round(b.exp * PACE_BOSS_EXP));
+  }
+  for (const qid in D.quests) {
+    const q = D.quests[qid];
+    if (q.type === 'boss' && q.reward && q.reward.exp) q.reward.exp = Math.max(5, Math.round(q.reward.exp * PACE_MAIN_QUEST));
+  }
+
+  // ── 經濟 v1.4（使用者回饋：第三章打完身上有 35,000 金葉，沒地方花）──
+  //   收入模擬（aggro/gold.js，擊殺數用 sim.js 的模型）：第一～三章約 4.4k／14.4k／25.1k，累計 44k；
+  //   一般花費（每一級商店裝買兩件、藥水、強化到 +3）到第三章底約 14.6k → 身上剩 ~29k，跟使用者的 35k 同一個量級。
+  //   收入：一般怪掉的金葉 第一章 ×0.7、第二章起 ×0.5；材料賣價 ×0.7；委託金葉 ×0.8；
+  //         寶箱 randi(60,120)·r² → randi(40,80)·r(r+1)/2（js/game/loot.js）；野外魔王 等級×(1～1.8)×20 → ×12（js/game/fieldboss.js）。
+  //   花費：強化上限 +5 → +10，+6 起每級費用大幅上升（一件第六級裝備 +6～+10 共約 4 萬）；
+  //         各章營地商店賣「神祕裝備箱」（當章等級、稀有以上，G.loot.randomEquip(等級, 'chest')）：1,500／4,000／9,000／18,000／30,000。
+  //   結果：第三章底收入累計約 26k，扣掉一般花費剩 ~11k（目標 8～12k）；多的錢可以買裝備箱、強化 +6 以上。
+  const GOLD_K = { 1: 0.7, 2: 0.5, 3: 0.5, 4: 0.5, 5: 0.5 };
+  for (const id in D.monsters) {
+    const d = D.monsters[id];
+    if (!d.lv || d.boss || d.fieldBoss || !d.drops || !d.drops.gold) continue;
+    const k = GOLD_K[chapterOfLv(d.lv)];
+    d.drops.gold = d.drops.gold.map((g) => Math.max(1, Math.round(g * k)));
+  }
+  for (const k in D.items.materials) {
+    const m = D.items.materials[k];
+    if (m.price) m.price = Math.max(1, Math.round(m.price * 0.7));
+  }
+  for (const qid in D.quests) {
+    const q = D.quests[qid];
+    if (q.reward && q.reward.gold) q.reward.gold = Math.round((q.reward.gold * 0.8) / 10) * 10;
+  }
+  D.items.chestGold = (r) => 60 * ((r * (r + 1)) / 2); // 平均值（寶箱實際是 randi(40,80)·r(r+1)/2）
+  B.fbGoldK = 12;
+  // 強化 +1～+5 照舊（10 × 等級 ×（目前 +N + 1）），+6 起：60 × 等級 ×（N + 1）× 1.5^(N − 5)
+  B.enhanceMax = 10;
+  B.enhanceCost = (item) => {
+    const t = item.tier || 1;
+    const n = item.plus || 0;
+    if (n < 5) return 10 * t * (n + 1);
+    return Math.round((60 * t * (n + 1) * Math.pow(1.5, n - 5)) / 10) * 10;
+  };
+  // 神祕裝備箱：各章營地商店
+  const BOX = { owl: [1, 8, 1500], gull: [2, 18, 4000], capybara: [3, 28, 9000], yakelder: [4, 38, 18000], sphinxcat: [5, 48, 30000] };
+  for (const sid in BOX) {
+    const list = sid === 'owl' ? D.items.shops.owl : D.items.moreShops[sid];
+    if (!list || list.some((g) => g.type === 'box')) continue;
+    const [r, lv, price] = BOX[sid];
+    list.push({ type: 'box', level: lv, table: 'chest', price, name: '神祕裝備箱', desc: '第' + ['', '一', '二', '三', '四', '五'][r] + '章等級的隨機裝備（稀有以上）' });
   }
 })();

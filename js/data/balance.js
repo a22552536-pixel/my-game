@@ -49,6 +49,8 @@ G.data.balance = {
   critMult: 1.6,
   dmgVariance: [0.85, 1.0],
   defFactor: 0.5,
+  // 防禦最多擋掉一下的 50%（player.hurt）：後期裝備的防禦不會把小怪、野外魔王的身體碰撞擋成個位數
+  defCap: 0.5,
 
   // ── 怪物 ──
   // 第二章（Lv11）開始，怪物的血量、攻擊跟著等級加速成長：

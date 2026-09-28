@@ -581,6 +581,10 @@
           const price = free ? '<s>' + p.price + '</s> 0 金葉<span class="tut-free">教學免費</span>' : p.price + ' 金葉';
           buy += '<div class="good' + (free ? ' tut-box' : '') + '"><img src="' + G.art.iconURL(p.icon) + '"><div class="info"><div class="nm">' + p.name + '</div><div class="ds">' + p.desc + ' · ' + price + ' · 持有 ' + (P.potions[g.id] || 0) + '</div></div>' +
             '<button class="' + (free ? 'primary tut-box' : '') + '" data-act="buy" data-arg="' + i + ':1"' + (free || P.gold >= p.price ? '' : ' disabled') + '>' + (free ? '買 1（免費）' : '買 1') + '</button><button data-act="buy" data-arg="' + i + ':10"' + (P.gold >= p.price * 10 ? '' : ' disabled') + '>買 10</button></div>';
+        } else if (g.type === 'box') {
+          // 神祕裝備箱（js/data/rebalance.js 經濟 v1.4）：當章等級的隨機裝備，稀有以上
+          buy += '<div class="good"><img src="' + G.art.iconURL('charm') + '"><div class="info"><div class="nm" style="color:' + D.rarity.epic.text + '">' + g.name + '</div><div class="ds">' + g.desc + ' · ' + g.price + ' 金葉</div></div>' +
+            '<button data-act="buy" data-arg="' + i + ':1"' + (P.gold >= g.price ? '' : ' disabled') + '>購買</button></div>';
         } else {
           const base = D.bases[g.base];
           const R = D.rarity[g.rarity];
@@ -638,9 +642,13 @@
           return;
         }
         P.gold -= g.price;
-        const bought = G.loot.makeEquip(g.base, g.rarity, g.fixed);
+        const bought = g.type === 'box' ? G.loot.randomEquip(g.level, g.table || 'chest') : G.loot.makeEquip(g.base, g.rarity, g.fixed);
         bought.isNew = true;
         P.bag.push(bought);
+        if (g.type === 'box') {
+          G.hud.toast('打開神祕裝備箱：「' + bought.name + '」', D.rarity[bought.rarity].color);
+          G.audio.play(bought.rarity === 'legendary' ? 'legendary' : bought.rarity === 'epic' ? 'epic' : 'rare');
+        }
       }
       G.audio.play('coin');
       G.save.write();

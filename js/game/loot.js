@@ -150,7 +150,8 @@
     // 寶箱：金葉和藥水，不掉裝備
     dropFromChest(ch) {
       const r = (G.world.map && G.world.map.region) || 1;
-      this.spawn('gold', ch.x - 12, ch.y - 30, { amount: U.randi(60, 120) * r * r });
+      // 經濟 v1.4：randi(60,120)·r² → randi(40,80)·r(r+1)/2（第三章一箱平均 810 → 360；見 js/data/rebalance.js）
+      this.spawn('gold', ch.x - 12, ch.y - 30, { amount: Math.round((U.randi(40, 80) * r * (r + 1)) / 2) });
       this.spawn('potion', ch.x, ch.y - 30, { potion: 'hp', count: 3 });
       this.spawn('potion', ch.x + 12, ch.y - 30, { potion: 'mp', count: 2 });
     },

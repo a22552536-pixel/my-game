@@ -635,7 +635,10 @@
         this.invT = 0.35;
         return false;
       }
-      let dmg = Math.max(1, Math.round(raw * U.rand(0.9, 1.1) - this.def * b.defFactor));
+      // 防禦是固定減傷，但最多擋掉這一下的 defCap（50%）：高防禦不會把小怪、身體碰撞擋成個位數；
+      // 章節 Boss 的一擊遠大於防禦，本來就擋不到一半，所以不受影響
+      const rawR = raw * U.rand(0.9, 1.1);
+      let dmg = Math.max(1, Math.round(rawR - Math.min(this.def * b.defFactor, rawR * (b.defCap || 1))));
       // 包圍減傷：5 秒內連續挨打，後面每一下遞減（最低 45%），無敵時間也拉長，留出逃跑的空檔
       const now = this.t || 0;
       this.recentHits = (this.recentHits || []).filter((h) => now - h < 5);
