@@ -501,7 +501,6 @@
     st.panes = panes;
     st.beam = { pts, t: 0, tele: PANE.wind, fire: 0.15, life: PANE.wind + PANE.beam, hit: false, dmg: Math.round(m.atk), m };
     MM.beams.push(st.beam);
-    say(m, '鏡光折射！', '#bfe8ff');
     G.audio.play('charge');
   }
   function tickBeams(dt, P) {
