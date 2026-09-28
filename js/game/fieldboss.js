@@ -59,9 +59,11 @@
   const hurtP = (m, k, fromX, touch) => {
     const P = G.player;
     if (!P.alive()) return false;
-    return P.hurt(Math.min(m.atk * k * (touch ? 1 : SKILL_K), P.maxHp * HP_CAP), fromX);
+    return P.hurt(Math.min(m.atk * k * (touch ? 1 : skillK(m)), P.maxHp * HP_CAP), fromX);
   };
-  const capDmg = (m, k) => Math.round(Math.min(m.atk * k * SKILL_K, G.player.maxHp * HP_CAP));
+  // 個別魔王可以在資料裡改：skillK（有預警招式的倍率）、touchK（身體碰撞的倍率）
+  const skillK = (m) => (m.def && m.def.skillK) || SKILL_K;
+  const capDmg = (m, k) => Math.round(Math.min(m.atk * k * skillK(m), G.player.maxHp * HP_CAP));
   const hitBox = (m, box, k, fromX) => {
     const P = G.player;
     if (P.alive() && U.overlap(box, P.hitbox())) return hurtP(m, k, fromX == null ? m.x : fromX);
@@ -1401,7 +1403,7 @@
         if (m.fbTouch <= 0 && P.alive()) {
           const hb = m.hitbox();
           const body = { x: hb.x + hb.w * 0.2, y: hb.y + hb.h * 0.15, w: hb.w * 0.6, h: hb.h * 0.85 };
-          if (U.overlap(body, P.hitbox()) && hurtP(m, 0.5, m.x, true)) m.fbTouch = 1.5;
+          if (U.overlap(body, P.hitbox()) && hurtP(m, (m.def && m.def.touchK) || 0.5, m.x, true)) m.fbTouch = 1.5;
         }
         if (!m.fx.rage && m.hp <= m.maxHp * 0.5) this.enrage(m);
       }

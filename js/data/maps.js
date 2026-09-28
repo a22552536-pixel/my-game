@@ -175,7 +175,8 @@ G.data.maps = {
       { id: 'l', x: 70, p: 0, to: '1-3', target: 'r' },
       { id: 'r', x: 3730, p: 0, to: '1-B', target: 'l' },
     ],
-    npcs: [{ id: 'mole', x: 3420, p: 0 }],
+    // 鼴鼠（苔冠鱷王的委託）放在入口附近：先遇到牠、接了委託，才往右邊遇到鱷魚
+    npcs: [{ id: 'mole', x: 250, p: 0 }],
     signs: [{ x: 3620, p: 0, text: '女王菇的殿堂　閒雜菇等，請勿進入。' }],
     mobs: [
       { m: 'woodsnail', p: 0, n: 2, x1: 400, x2: 1800 },

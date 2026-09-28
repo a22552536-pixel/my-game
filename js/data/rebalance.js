@@ -76,6 +76,22 @@
     fb.hpMul = Math.max(8, (boss.hp * 0.3) / B.monsterHp(fb.lv));
     fb.atkMul = 1.0;
   }
+  // 第一章的苔冠鱷王：原本身體碰撞只有 0.5 倍，比路上的小怪還不痛。
+  // 改成：攻擊力 ≈ 1-4 小怪平均的 1.5 倍（但不超過菇菇女王），碰撞吃滿攻擊力；
+  // 有預警的招式不再額外乘 1.5，最重的一招（1.4 倍）也打不贏女王最重的一下。
+  (function () {
+    const fb = D.monsters.fb_shroom;
+    const queen = D.monsters.queenShroom;
+    const map = D.maps['1-4'];
+    if (!fb || !queen || !map) return;
+    const ids = (map.mobs || []).map((g) => g.m).filter((id) => D.monsters[id]);
+    if (!ids.length) return;
+    const avg = ids.reduce((t, id) => t + B.monsterAtk(D.monsters[id].lv) * (D.monsters[id].atkMul || 1), 0) / ids.length;
+    const want = Math.min(avg * 1.5, (queen.atk || B.monsterAtk(queen.lv)) * 0.95);
+    fb.atkMul = want / B.monsterAtk(fb.lv);
+    fb.touchK = 1.0;
+    fb.skillK = 1.0;
+  })();
 
   // ── 每章一個委託改成「討伐野外魔王」（發委託的 NPC 就在野外魔王那張地圖上）──
   const FBQ = {

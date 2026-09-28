@@ -456,8 +456,9 @@
           const fxX = this.x + this.dir * 40;
           const fxY = this.y - 30;
           if (S.fx === 'rock') {
-            G.fx.slash(fxX, fxY, this.dir, 40, '#e8d0a8', 'wide');
-            G.fx.burst(fxX + this.dir * 20, fxY, ['#9a7b5a', '#c8aa80', '#6e5236'], 10, 280, { shape: 'square', size: 6 });
+            // 重爪：三道岩色爪痕、碎岩、地裂（js/art/heavyclaw.js）
+            if (G.art.heavyClawFx) G.art.heavyClawFx.hit(fxX + this.dir * 12, fxY, this.dir, this.y);
+            else G.fx.slash(fxX, fxY, this.dir, 40, '#e8d0a8', 'wide');
           } else if (S.fx === 'sweep') {
             G.fx.slash(this.x + this.dir * 60, fxY, this.dir, 80, '#fff0d0', 'wide');
             G.fx.slash(this.x + this.dir * 70, fxY + 6, this.dir, 64, 'rgba(210,180,130,0.9)', 'wide');

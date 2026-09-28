@@ -23,6 +23,7 @@
     spN: 0,
     seen: {}, // 已經提醒過的裝備 uid
     glow: {},
+    lastMap: null,
 
     reset() {
       this.sp0 = null;
@@ -79,6 +80,20 @@
         this.say('還有 ' + P.sp + ' 點技能點沒用', '#ffe07a', 'skills');
       }
       this.sp0 = P.sp;
+
+      // ── 一轉之後，換到下一張地圖時提醒可以選形態（只提醒一次）──
+      const mapId = W.mapId;
+      if (this.lastMap !== mapId) {
+        const moved = this.lastMap != null;
+        this.lastMap = mapId;
+        const tier = (G.data.forms[P.form] || {}).tier || 0;
+        if (moved && tier >= 1 && !W.flags.formHint) {
+          W.flags.formHint = true;
+          this.glow.forms = now + 8;
+          this.say('一轉之後，力量／法術／敏捷三條路線都能用了！', '#ffd0ff', 'forms');
+          setTimeout(() => this.say('點左上角「形態」選擇、切換新形態', '#ffd0ff', 'forms'), 1600);
+        }
+      }
 
       // ── 撿到比身上好的裝備 ──
       for (const it of P.bag) {
