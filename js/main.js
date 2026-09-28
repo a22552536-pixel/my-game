@@ -163,6 +163,7 @@
   function update(dt) {
     G.time += dt;
     G.hudIcons.update(dt);
+    if (G.remind) G.remind.update(dt);
     G.demo.update();
     if (G.scene === 'play') {
       G.cut.tick();

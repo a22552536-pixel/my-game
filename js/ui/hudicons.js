@@ -136,7 +136,8 @@
       LIST.forEach(([id]) => {
         const b = this.el.querySelector('[data-win="' + id + '"]');
         if (!b) return;
-        b.classList.toggle('tut-glow', glow === id);
+        const rem = !!(G.remind && G.remind.glowing(id));
+        b.classList.toggle('tut-glow', glow === id || rem);
         b.classList.toggle('tut-show', glow === id);
       });
       set('forms', G.evolve.canEvolve() ? '↑' : '');
