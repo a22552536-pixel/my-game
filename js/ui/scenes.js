@@ -5090,6 +5090,21 @@
     },
   });
 
+  // 結局（js/ui/ending.js）借用開場的圖層快取與繪畫零件，兩邊的畫風才會一致。
+  // setK：依目前畫布的放大倍率決定圖層解析度；free：用完的圖層釋放。
+  S.kit = {
+    IX, DEFS, BAR, FULL, LEAVES, TREE_LEAVES, TREE_X, TREE_Y, TREE_S, SKY_DAWN, MARBLE, MARBLE_S, GOLD,
+    cl, sm, lerp, hash, newCv, glowSpr, glow, haze, paint, softEdge, sparkle, leafGem, leafSpr,
+    layer, blit, blitAt, drawL, cam, band, sky, rays, motes, petals, leafStream, treeLeaves, cub,
+    grassTuft, flower, ivy, column, statue, caption,
+    setK(k) {
+      IX.k = k;
+    },
+    free(ids) {
+      ids.forEach((id) => delete IX.L[id]);
+    },
+  };
+
   document.addEventListener('mousedown', () => {
     if (G.story.cer && G.story.cer.t > 5) G.story.clicked = true;
     if (G.scene === 'intro') S.clicked = true;
