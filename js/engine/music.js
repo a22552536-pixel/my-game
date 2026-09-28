@@ -105,54 +105,11 @@
       ],
     },
 
-    // 第一章狩獵場：明亮輕快的森林冒險。F 大調 132 BPM、切分撥弦、馬林巴分解和弦、B 段轉 G 大調由小提琴接手
-    forest: {
-      bpm: 132, swing16: 0.08, verb: 0.3, gain: 1.05,
-      form: 'in:2 A:8 A2:8 B:8 T:2',
-      P: {
-        in: 'C6/2 F6/2 A6/2 C7/2 A6/2 F6/2 r/4 | Bb6/2 A6/2 G6/2 E6/2 C6/8',
-        a1: 'C5/2 F5/2 A5/3 G5/3 F5/2 C6/4 | A5/6 G5/2 F5/2 D5/2 F5/4 | D6/3 C6/3 Bb5/2 A5/2 F5/2 D5/4 | G5/6 F5/2 E5/4 r/4',
-        a2: 'C5/2 F5/2 A5/3 G5/3 F5/2 E6/4 | D6/3 C6/3 A5/2 F#5/4 A5/4 | Bb5/3 A5/3 G5/2 D6/4 Bb5/2 A5/2 | G5/8 r/2 C5/2 E5/2 G5/2',
-        a3: 'C6/2 E6/2 D6/3 C6/3 A5/2 E5/4 | F#5/6 A5/2 C6/4 D6/4 | D6/3 C6/3 Bb5/2 G5/3 A5/3 Bb5/2 | C6/6 B5/2 A5/4 F#5/2 A5/2',
-        b1: 'B5/8 G5/2 A5/2 B5/2 C6/2 | D6/6 E6/2 D6/4 A5/4 | F#5/3 A5/3 B5/2 D6/4 F#6/4 | E6/6 D6/2 B5/2 G#5/2 E5/4',
-        b2: 'A5/2 C6/2 E6/4 G6/3 E6/3 C6/2 | D6/6 C6/2 A5/2 F#5/2 D5/4 | F#5/2 G5/2 A5/2 B5/2 G#5/2 B5/2 D6/4 | C6/6 B5/2 A5/4 F#5/4',
-        t: 'Bb5/3 A5/3 G5/2 r/8 | r/16',
-      },
-      chords:
-        'Fmaj7 Gm7:C7 ' +
-        'Fmaj7 Dm7 Bbmaj7 C7sus4:C7 Fmaj7 Am7:D7 Gm7 C7 ' +
-        'Fmaj7 Dm7 Bbmaj7 C7sus4:C7 Am7 D7 Bbmaj7:C7 Am7:D7 ' +
-        'Cmaj7 D/C Bm7 E7 Am7 D7 Bm7:E7 Am7:D7 ' +
-        'Gm7 C7sus4:C7',
-      voices: [
-        { inst: 'glock', m: '@in', at: 'in', role: 'orn', vol: 0.8 },
-        { inst: 'flute', m: '@a1 @a2', at: 'A' },
-        { inst: 'flute', m: '@a1 @a3', at: 'A2' },
-        { inst: 'xylo', m: '@a1 @a3', at: 'A2', vol: 0.7, role: 'counter', pan: 0.3 },
-        { inst: 'violin', m: '@b1 @b2', at: 'B' },
-        { inst: 'flute', m: '@b2', at: 'B+4', oct: 12, vol: 0.4, role: 'counter', pan: 0.25 },
-        { inst: 'flute', m: '@t', at: 'T' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'strings', in: 'A2 B', center: 62, vol: 0.9 },
-        { role: 'comp', inst: 'pizz', pat: 'x..x..x...x..x..', center: 60, n: 3 },
-        { role: 'comp', inst: 'ep', in: 'B', pat: '..x...x...x..x.x', center: 64, n: 3, vol: 0.7, pan: 0.35 },
-        { role: 'arp', inst: 'marimba', rate: 2, seq: [0, 2, 1, 3, 2, 4, 3, 1], lo: 62, vol: 0.9 },
-        { role: 'bass', inst: 'pbass', pat: 'R..5..8.R...5.A.' },
-        { role: 'drums', kit: 'fieldIn', in: 'in' },
-        { role: 'drums', kit: 'forestA', in: 'A A2', fill: 'tom', crash: 'C' },
-        { role: 'drums', kit: 'forestB', in: 'B T', fill: 'tom', fillLen: 8, crash: 'C' },
-        { role: 'answer', inst: 'glock', in: 'A', c: 81 },
-        { role: 'answer', inst: 'flute', in: 'B', c: 76 },
-        { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.75 },
-        { role: 'guide', inst: 'horn', in: 'B', lo: 55, hi: 67, move: true },
-        { role: 'gliss', inst: 'harp', lo: 67 },
-      ],
-    },
+    // 第一章狩獵場 forest、第二章狩獵場 sea：重寫後在 music2.js
 
     // 第二章營地 燈塔岬：溫暖懷舊的港口（維多利亞港式）。降 B 大調搖擺、手風琴＋木吉他、B 段轉 C 大調弦樂接手
     harbor: {
-      bpm: 104, swing: 0.6, verb: 0.38, gain: 1.2,
+      bpm: 104, swing: 0.6, verb: 0.38, gain: 1.35,
       form: 'in:2 A:8 A2:8 B:8 T:2',
       P: {
         in: 'D6/2 F6/2 A6/2 F6/2 D6/4 Bb5/4 | Eb6/2 G6/2 C6/4 A5/2 C6/2 Eb6/4',
@@ -191,51 +148,6 @@
         { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.75 },
         { role: 'guide', inst: 'horn', in: 'B', lo: 55, hi: 66, vol: 0.8 },
         { role: 'gliss', inst: 'harp', lo: 65 },
-      ],
-    },
-
-    // 第二章狩獵場 潮風海岬：陽光海邊冒險。G 大調卡利普索、鋼鼓主旋律、康加與沙鈴、B 段轉 A 大調小號接手
-    sea: {
-      bpm: 128, swing16: 0.1, verb: 0.3, gain: 1.25,
-      form: 'in:2 A:8 A2:8 B:8 T:2',
-      P: {
-        in: 'B5/2 D6/2 G6/2 D6/2 B5/2 D6/2 G6/4 | E6/2 G6/2 C6/4 F#6/2 A6/2 D6/4',
-        a1: 'D5/3 G5/3 B5/2 D6/4 B5/4 | D6/3 B5/3 G5/2 E5/4 G5/4 | E5/3 G5/3 C6/2 E6/4 D6/2 C6/2 | A5/6 F#5/2 D5/4 r/4',
-        a2: 'D5/3 G5/3 B5/2 D6/4 G6/4 | F#6/3 D#6/3 B5/2 A5/4 F#5/4 | G5/3 B5/3 E6/2 D6/4 B5/4 | C#6/4 A5/4 C6/4 F#5/4',
-        a3: 'D6/3 B5/3 F#5/2 A5/4 B5/4 | G#5/3 B5/3 D6/2 E6/8 | C6/3 A5/3 E5/2 F#5/4 A5/4 | B5/6 G5/2 G#5/4 B5/4',
-        b1: 'F#5/3 A5/3 C#6/2 E6/4 C#6/4 | B5/3 G#5/3 E5/2 B5/8 | E5/3 G#5/3 B5/2 C#6/4 E6/4 | C#6/8 A5/4 F#5/4',
-        b2: 'D6/3 C#6/3 B5/2 F#5/4 A5/4 | G#5/3 A5/3 B5/2 D6/4 E6/4 | E6/4 C#6/4 A#5/4 C#6/4 | D6/6 B5/2 G#5/4 E5/4',
-        t: 'C6/3 A5/3 E5/2 G5/8 | F#5/8 r/8',
-      },
-      chords:
-        'G C:D ' +
-        'G Em7 C D7 G B7 Em7 A7:D7 ' +
-        'G Em7 C D7 Bm7 E7 Am7:D7 Cmaj7:E7 ' +
-        'Dmaj7 E C#m7 F#m7 Bm7 E7 C#m7:F#7 Bm7:E7 ' +
-        'Am7 D7',
-      voices: [
-        { inst: 'steel', m: '@in', at: 'in', role: 'orn' },
-        { inst: 'steel', m: '@a1 @a2', at: 'A' },
-        { inst: 'flute', m: '@a1 @a3', at: 'A2' },
-        { inst: 'steel', m: '@a1 @a3', at: 'A2', oct: -12, vol: 0.45, role: 'counter', pan: -0.3 },
-        { inst: 'trumpet', m: '@b1 @b2', at: 'B' },
-        { inst: 'steel', m: '@t', at: 'T' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'warm', in: 'A', center: 62, vol: 0.9 },
-        { role: 'pad', inst: 'strings', in: 'A2 B T', center: 62, vol: 0.8 },
-        { role: 'comp', inst: 'uke', pat: '..x...x...x..xx.', center: 64, n: 4, strum: 0.01 },
-        { role: 'comp', inst: 'brass', in: 'B', pat: '......x.......x.', center: 62, n: 3, len: 1, vol: 0.6 },
-        { role: 'arp', inst: 'marimba', rate: 1, seq: [0, 2, 4, 2, 1, 3, 5, 3], lo: 60, pat: 'x.xxx.xxx.xxx.xx', vol: 0.75 },
-        { role: 'bass', inst: 'pbass', pat: 'R..5..R.R..5..A.' },
-        { role: 'drums', kit: 'fieldIn', in: 'in' },
-        { role: 'drums', kit: 'seaA', in: 'A A2', fill: 'conga', crash: 'C' },
-        { role: 'drums', kit: 'seaB', in: 'B T', fill: 'tom', fillLen: 8, crash: 'C' },
-        { role: 'answer', inst: 'glock', in: 'A', c: 81 },
-        { role: 'answer', inst: 'steel', in: 'B', c: 76, vol: 0.7 },
-        { role: 'harm', inst: 'clarinet', in: 'A2', vol: 0.7 },
-        { role: 'guide', inst: 'strlead', in: 'B', lo: 60, hi: 72, move: true },
-        { role: 'gliss', inst: 'harp', lo: 67 },
       ],
     },
 
@@ -283,17 +195,20 @@
       ],
     },
 
-    // 第三章狩獵場 赤岩峽谷：勇士村式的部落鼓。A 小調（多利安 F#）、太鼓與締太鼓、三味線式撥弦 riff、銅管重音、B 段轉 B 小調小號接手
+    // 第三章狩獵場 赤岩峽谷：勇士村式的部落鼓。A 小調（多利安 F#）、太鼓與締太鼓、三味線式撥弦 riff、銅管重音、B 段轉 B 小調小號接手。
+    // C 段是太鼓合奏＋低音法國號的吟唱（主旋律休息），A3 回到主題、竹笛與小號八度齊奏；第二輪換二胡主奏、A 段拿掉鼓
     canyon: {
       bpm: 118, swing16: 0.06, verb: 0.3, gain: 0.95,
-      form: 'in:2 A:8 A2:8 B:8 T:2',
+      form: 'in:2 A:8 A2:8 B:8 C:8 A3:8 T:2',
       P: {
         in: 'A4/2 A4/2 C5/2 A4/2 D5/2 A4/2 E5/2 G5/2 | A5/2 G5/2 E5/2 D5/2 C5/2 D5/2 E5/4',
         a1: 'A4/3 C5/3 D5/2 E5/4 G5/2 E5/2 | D5/6 B4/2 G4/4 D5/4 | F#5/3 E5/3 D5/2 A5/8 | G5/3 E5/3 D5/2 C5/2 D5/2 E5/4',
         a2: 'A5/3 G5/3 E5/2 C6/4 A5/4 | B5/3 A5/3 G5/2 D5/8 | E5/2 G5/2 A5/4 B5/4 G5/4 | A5/8 G#5/8',
         a3: 'C6/3 A5/3 G5/2 E5/4 G5/4 | D6/3 B5/3 G5/2 A5/2 B5/2 D6/4 | F5/2 A5/2 C6/4 B5/4 D6/4 | E6/4 B5/4 C#6/4 A#5/4',
+        a4: 'A5/3 G5/3 E5/2 C6/4 A5/4 | B5/3 A5/3 G5/2 D6/8 | C6/2 B5/2 A5/4 G5/4 B5/4 | A5/16',
         b1: 'F#5/3 A5/3 B5/2 D6/4 F#6/4 | E6/6 C#6/2 A5/4 E5/4 | G#5/3 B5/3 E6/2 D6/4 B5/4 | B5/12 A5/2 B5/2',
         b2: 'D6/3 B5/3 G5/2 F#5/4 D5/4 | E5/3 A5/3 C#6/2 E6/8 | F#6/4 C#6/4 D6/4 B5/4 | G5/4 B5/4 A#5/4 C#6/4',
+        c1: 'A4/4 C5/4 D5/4 E5/4 | G5/8 E5/8 | F5/4 E5/4 D5/4 C5/4 | D5/16 | A4/4 C5/4 D5/4 E5/4 | A5/8 G5/8 | F5/8 G5/8 | E5/8 G#4/8',
         t: 'A5/4 C6/4 B5/4 D6/4 | E6/8 G#5/8',
       },
       chords:
@@ -301,6 +216,8 @@
         'Am G D/F# Am Fmaj7 G Am:Em Esus4:E ' +
         'Am G D/F# Am Fmaj7 G Dm7:G Em:F#7 ' +
         'Bm A E/G# Bm Gmaj7 A F#m:Bm Em7:F# ' +
+        'Am G F G Am Am F:G Esus4:E ' +
+        'Am G D/F# Am Fmaj7 G Dm7:G Am:E ' +
         'F:G Esus4:E',
       voices: [
         { inst: 'pluck', m: '@in', at: 'in', role: 'orn', vol: 1.1 },
@@ -308,21 +225,31 @@
         { inst: 'bamboo', m: '@a1 @a3', at: 'A2' },
         { inst: 'horn', m: '@a1 @a3', at: 'A2', oct: -12, vol: 0.6, role: 'counter', pan: -0.25 },
         { inst: 'trumpet', m: '@b1 @b2', at: 'B' },
+        { inst: 'horn', m: '@c1', at: 'C', vol: 1.2 },
+        { inst: 'bamboo', m: '@a1 @a4', at: 'A3' },
+        { inst: 'trumpet', m: '@a1 @a4', at: 'A3', oct: -12, vol: 0.55, role: 'counter', pan: 0.25 },
         { inst: 'trumpet', m: '@t', at: 'T' },
       ],
       parts: [
-        { role: 'pad', inst: 'choir', in: 'A2 B T', center: 60, n: 3, vol: 0.8 },
+        { role: 'pad', inst: 'choir', in: 'A2 B C A3 T', center: 60, n: 3, vol: 0.8 },
         { role: 'pad', inst: 'strings', in: 'A', center: 57, n: 3, vol: 0.8 },
-        { role: 'arp', inst: 'pluck', rate: 1, seq: [0, 0, 2, 0, 3, 0, 2, 4], lo: 57, pat: 'x.xx.xx.x.xx.x.x', vol: 1.3 },
-        { role: 'comp', inst: 'brass', in: 'A2 B T', pat: 'x.....x...x.....', center: 60, n: 3, len: 2, vol: 0.8 },
+        { role: 'arp', inst: 'pluck', in: 'in A A2 B A3 T', rate: 1, seq: [0, 0, 2, 0, 3, 0, 2, 4], lo: 57, pat: 'x.xx.xx.x.xx.x.x', vol: 1.3 },
+        { role: 'arp', inst: 'pluck', in: 'C', rate: 2, seq: [0, 0, 2, 0], lo: 45, pat: 'x...x.x.x...x.x.', vol: 1.2 },
+        { role: 'comp', inst: 'brass', in: 'A2 B A3 T', pat: 'x.....x...x.....', center: 60, n: 3, len: 2, vol: 0.8 },
+        { role: 'comp', inst: 'brass', in: 'A', pat: 'x.....x...x.....', center: 60, n: 3, len: 2, vol: 0.7, layer: 'combat' },
         { role: 'bass', inst: 'synbass', pat: 'R.RR..R.R.R...5.' },
         { role: 'drums', kit: 'canyonIn', in: 'in' },
         { role: 'drums', kit: 'canyonA', in: 'A', fill: 'taiko', crash: 'C' },
-        { role: 'drums', kit: 'canyonB', in: 'A2 B T', fill: 'taiko', fillLen: 8, crash: 'C' },
-        { role: 'answer', inst: 'pluck', in: 'A', c: 69 },
+        { role: 'drums', kit: 'canyonB', in: 'A2 B A3 T', fill: 'taiko', fillLen: 8, crash: 'C' },
+        { role: 'drums', kit: 'canyonC', in: 'C', fill: 'taiko', fillLen: 8, crash: 'C' },
+        { role: 'drums', kit: 'canyonHit', in: 'A A2 B A3', layer: 'combat' },
+        { role: 'answer', inst: 'pluck', in: 'A A3', c: 69 },
         { role: 'guide', inst: 'horn', in: 'B', lo: 55, hi: 66 },
+        { role: 'guide', inst: 'strlead', in: 'C', lo: 60, hi: 71 },
         { role: 'gliss', inst: 'koto', lo: 57 },
       ],
+      vary: [{}, { swap: { bamboo: 'erhu' }, mute: ['drums@A', 'counter@A3'] }],
+      aged: { lp: 2400 },
     },
 
     // Boss：緊張、英雄感。C 小調 152 BPM、弦樂十六分急奏、銅管主旋律、定音鼓與太鼓、B 段轉 D 小調弦樂高八度
@@ -366,46 +293,21 @@
       ],
     },
 
-    // ── 第四章以後：先放短的草稿，做到那一章時會重寫 ──
-    snow: {
-      bpm: 88, verb: 0.55, gain: 1.5,
-      form: 'A:8',
-      P: {},
-      chords: 'Em C G D Em C D D',
-      voices: [
-        { inst: 'musicbox', m: 'B5/8 G5/4 E5/4 | E5/4 G5/4 C6/4 B5/4 | B5/4 D6/8 B5/4 | A5/8 F#5/8 | G5/8 B5/4 E6/4 | D6/4 C6/4 B5/4 G5/4 | A5/8 D5/4 F#5/4 | A5/12 r/4', at: 'A' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'strings', center: 62 },
-        { role: 'arp', inst: 'harp', rate: 2, seq: [0, 2, 4, 3, 5, 4, 2, 3], lo: 55 },
-        { role: 'bass', inst: 'upright', pat: 'R.......5.......' },
-        { role: 'drums', kit: 'snow' },
-        { role: 'guide', inst: 'flute', lo: 64, hi: 76, vol: 0.6 },
-      ],
-    },
-    sky: {
-      bpm: 124, verb: 0.35, gain: 1.0,
-      form: 'A:8 A2:8',
-      P: { a: 'A5/4 C6/4 A5/4 F5/4 | G5/8 E5/4 C5/4 | D5/4 F5/4 A5/4 G5/2 F5/2 | F5/8 D5/8 | C5/4 F5/4 A5/4 C6/4 | C6/4 Bb5/4 G5/4 E5/4 | F5/4 G5/4 A5/4 Bb5/4 | C6/12 r/4' },
-      chords: 'F C Dm Bb F C Bb C F C Dm Bb F C Bb C',
-      voices: [
-        { inst: 'flute', m: '@a', at: 'A' },
-        { inst: 'trumpet', m: '@a', at: 'A2' },
-      ],
-      parts: [
-        { role: 'pad', inst: 'strings', center: 62 },
-        { role: 'comp', inst: 'pizz', pat: 'x..x..x...x..x..', center: 60, n: 3 },
-        { role: 'arp', inst: 'marimba', rate: 2, seq: [0, 2, 1, 3, 2, 4, 3, 1], lo: 62, vol: 0.8 },
-        { role: 'bass', inst: 'pbass', pat: 'R..5..8.R...5.A.' },
-        { role: 'drums', kit: 'forestA', fill: 'tom', crash: 'C' },
-        { role: 'answer', inst: 'glock', c: 81 },
-      ],
-    },
   };
 
-  const REGION_SONG = { 1: 'forest', 2: 'sea', 3: 'canyon', 4: 'snow', 5: 'sky' };
-  // 營地另有一首（小鎮感），沒有的區域就沿用狩獵場的曲子
-  const CAMP_SONG = { 1: 'town', 2: 'harbor', 3: 'spa', 4: 'town', 5: 'sky' };
+  // 第二輪循環的變奏（換主奏樂器、A 段拿掉鼓），讓一首曲子兩輪之後才一模一樣地重複
+  SONGS.title.vary = [{}, { swap: { flute: 'ocarina' } }, { swap: { horn: 'cello', violin: 'flute' }, mute: ['drums@A'] }];
+  SONGS.town.vary = [{}, { swap: { ocarina: 'flute', accordion: 'clarinet' }, mute: ['drums@A'] }, { swap: { violin: 'accordion', ocarina: 'marimba' } }];
+  SONGS.harbor.vary = [{}, { swap: { accordion: 'violin', violin: 'accordion' }, mute: ['drums@A'] }, { swap: { accordion: 'reed', violin: 'cello' } }];
+  SONGS.spa.vary = [{}, { swap: { bamboo: 'erhu', erhu: 'bamboo' }, mute: ['drums@A'] }, { swap: { bamboo: 'ocarina', koto: 'harp' } }];
+  SONGS.boss.vary = [{}, { swap: { brass: 'horn', violin: 'strlead' } }];
+
+  // 新曲子（第一、二章重寫、第四、五章、各章 Boss、野外魔王、結局的重新開始）在 music2.js，用 G.music.addSongs 加進來
+  const REGION_SONG = { 1: 'forest', 2: 'sea', 3: 'canyon', 4: 'snow', 5: 'temple' };
+  // 營地另有一首（小鎮感）
+  const CAMP_SONG = { 1: 'town', 2: 'harbor', 3: 'spa', 4: 'frostvillage', 5: 'templeCamp' };
+  // 每個章節 Boss 一首；時間在第二階段換成 time2（見 resolve）
+  const BOSS_SONG = { queenShroom: 'bossQueen', hermitCrab: 'bossCrab', lavaTortoise: 'bossTortoise', frostSpirit: 'bossFrost', timeItself: 'time' };
 
   // ─────────────────────────── 鼓組 ───────────────────────────
   // 每個字母一種打擊樂器；字元是力度：'.' 無、'-' 很輕、'o' 輕、'x' 正常、'X' 重音。長度可以是 1 或 2 小節。
@@ -429,10 +331,11 @@
     canyonIn: { T: 'X.......x.......', J: '..x.x.x...x.x.xx' },
     canyonA: { T: 'X.....x.x.......', J: '..o.x...o.x.o.xo', k: 'x.......x.......', r: '....x.......x...', L: '..........o.....' },
     canyonB: { T: 'X.....x.x...x...', J: 'x.ox-.x.x.ox-.x.', k: 'x.....x.x.......', c: '....x.......x...', L: '......o.......o.' },
+    canyonC: { T: 'X..x..X.X..x..X.', J: 'x.xxx.xxx.xxx.xx', L: '..o...o...x...x.', M: '......x.......x.', k: 'x.......x.......' },
+    canyonHit: { T: '........x.....x.', L: '......x.......x.', m: 'x...............' },
     bossIn: { m: 'x...x...x...x.x.', T: 'X.......x.......', S: 'x-x-x-x-x-x-x-x-' },
     bossA: { m: 'x.......x.......', k: 'x.....x.x.....x.', s: '....x.......x...', h: 'x-o-x-o-x-o-x-o-', r: '..o.....o.o...o.' },
     bossB: { k: 'x.x...x.x.x...x.', s: '....x.......x.x-', h: 'x-x-x-x-x-x-x-x-', T: 'X.......x.......', o: '......o.......o.' },
-    snow: { n: 'x...............................', S: 'x.o.x.o.x.o.x.o.', k: 'o.......o.......' },
   };
   // 段落結尾的過門：每一格可以同時打幾個字母
   const FILLS = {
@@ -579,6 +482,8 @@
     if (at !== nb) throw new Error('form has ' + at + ' bars but chords have ' + nb);
     const secStart = new Uint8Array(nb + 1);
     sections.forEach((x) => (secStart[x.from] = 1));
+    const secOf = [];
+    sections.forEach((x) => { for (let b = x.from; b < x.from + x.n; b++) secOf[b] = x.name; });
     const loopSec = s.loop ? sections.find((x) => x.name === s.loop) : sections.length > 1 && sections[0].name === 'in' ? sections[1] : sections[0];
     const loopBar = loopSec.from;
     // 某小節是不是段落的最後一小節（下一小節是新段落，或曲子要循環了）
@@ -602,11 +507,13 @@
       return x.from + (+m[2] || 0);
     };
     const steps = nb * barLen;
-    const C = { steps, barLen, nb, segs, sections, secStart, secEnd, loopBar, loop: loopBar * barLen, bars: [], chans: [], ev: [], rt: [] };
+    const C = { steps, barLen, nb, segs, sections, secStart, secEnd, secOf, loopBar, loop: loopBar * barLen, bars: [], chans: [], ev: [], rt: [] };
     C.chordAt = (step) => chordAt(C, step);
     const chan = (role, o) => {
       const fx = ROLE_FX[role] || ROLE_FX.lead;
-      C.chans.push({ vol: o.vol == null ? 1 : o.vol, pan: o.pan == null ? fx[2] : o.pan, rv: (o.rv == null ? fx[0] : o.rv) * (s.verb || 0.3), dl: o.dl == null ? fx[1] : o.dl });
+      // tags：給變奏（vary）與土地變老（aged）挑聲部用；layer：適應式的層（combat 戰鬥時淡入、p2 Boss 第二階段、calm 戰鬥時變小）
+      const tags = [role, o.inst, o.kit, o.tag].filter(Boolean);
+      C.chans.push({ vol: o.vol == null ? 1 : o.vol, pan: o.pan == null ? fx[2] : o.pan, rv: (o.rv == null ? fx[0] : o.rv) * (s.verb || 0.3), dl: o.dl == null ? fx[1] : o.dl, layer: o.layer || null, tags });
       return C.chans.length - 1;
     };
     const push = (step, e) => (C.ev[step] || (C.ev[step] = [])).push(e);
@@ -737,8 +644,17 @@
   }
 
   // ─────────────────────────── 播放器 ───────────────────────────
+  // 遊戲只說「想聽哪一首」（play / forMap → req）；實際播什麼由 resolve() 依當下狀態決定，每 0.25 秒看一次：
+  //   ・時鐘停住（G.cut.clockHold）→ 靜音（環境音照舊）；放開時先放 restart 動機，再接回原本的曲子
+  //   ・時間 Boss 進入第二階段 → time2（同一份材料，碎開、變快）
+  //   ・野外魔王在場（G.fieldBoss.current）→ fieldboss，倒下 2.5 秒後回原曲
+  //   ・土地變老（map._aged）→ 同一首的「變老」編制：拿掉點綴聲部、變暗、微微走音、慢一點
+  // 曲子本身的適應層（layer）：combat＝附近有怪盯上／最近被打（淡入約 1 秒，平靜 6 秒後淡出）、
+  //   p2＝章節 Boss 第二階段、calm＝戰鬥時變小的細緻聲部。
   const MAX_LIVE = 200;
   const ctx = () => M._ctx || G.audio.ctx;
+  const AGED_DROP = ['answer', 'gliss', 'harm', 'orn', 'counter'];
+  const LITE_DROP = ['answer', 'gliss', 'harm', 'counter'];
 
   const M = (G.music = {
     enabled: true,
@@ -746,10 +662,21 @@
     out: null,
     bus: null,
     track: null,
-    want: null,
+    want: null, // 解鎖音訊之前要求的曲子
+    req: null, // 遊戲要求的曲子
     timer: null,
     live: 0,
     peakLive: 0,
+    pollT: -1,
+    hitAt: -99,
+    combatAt: -99,
+    lastHp: null,
+    fbSeen: -99,
+    mapRef: null,
+    held: false,
+    restartUntil: 0,
+    duck: 1,
+    lastLevels: null,
 
     loadPrefs() {
       const p = G.store.get('xiaozong_audio_v1');
@@ -764,22 +691,22 @@
       if (this.out) this.out.gain.setTargetAtTime(on ? this.volume : 0, G.audio.ctx.currentTime, 0.2);
     },
 
-    // 殘響脈衝：兩聲道去相關的雜訊，前 80ms 有幾個早期反射，尾巴越後面越暗
+    // 殘響脈衝：兩聲道去相關的雜訊，前 80ms 有幾個早期反射，尾巴越後面越暗（2.8 秒，神殿、雪原的長音需要大一點的空間）
     makeVerb(c) {
       const sr = c.sampleRate;
-      const len = Math.floor(sr * 2.4);
+      const len = Math.floor(sr * 2.8);
       const buf = c.createBuffer(2, len, sr);
       for (let ch = 0; ch < 2; ch++) {
         const d = buf.getChannelData(ch);
         let lp = 0;
         for (let i = 0; i < len; i++) {
           const x = i / len;
-          const k = 0.75 - 0.6 * x; // 越後面低通越重
+          const k = 0.72 - 0.6 * x; // 越後面低通越重
           lp += k * ((Math.random() * 2 - 1) - lp);
-          d[i] = lp * Math.pow(1 - x, 2.6) * (i < sr * 0.012 ? i / (sr * 0.012) : 1);
+          d[i] = lp * Math.pow(1 - x, 2.9) * (i < sr * 0.014 ? i / (sr * 0.014) : 1);
         }
-        [0.013, 0.021, 0.034, 0.047, 0.061].forEach((s, j) => {
-          const at = Math.floor(sr * (s + ch * 0.004));
+        [0.013, 0.021, 0.034, 0.047, 0.061, 0.079].forEach((s, j) => {
+          const at = Math.floor(sr * (s + ch * 0.0045));
           d[at] += (j % 2 ? -1 : 1) * (0.5 - j * 0.07);
         });
       }
@@ -788,7 +715,7 @@
       return cv;
     },
 
-    // 混音匯流排：out → 壓縮 → dest；另外有殘響與乒乓回聲兩個 send
+    // 混音匯流排：out → 壓縮 → 限幅 → dest；另外有殘響與乒乓回聲兩個 send
     makeBus(c, dest) {
       const b = {};
       b.out = c.createGain();
@@ -799,8 +726,31 @@
       comp.ratio.value = 3;
       comp.attack.value = 0.01;
       comp.release.value = 0.2;
+      // 限幅：音樂自己先把偶發的尖峰壓在 -3 dB 以下，讓 master 後面的總限幅器不必為音樂工作
+      const lim = c.createDynamicsCompressor();
+      lim.threshold.value = -3;
+      lim.knee.value = 0;
+      lim.ratio.value = 20;
+      lim.attack.value = 0.002;
+      lim.release.value = 0.12;
+      // DynamicsCompressor 會自動補增益（(1/曲線在 0dB 的增益)^0.6，這裡約 +1.7 dB），接一個反向的增益抵掉
+      const makeup = c.createGain();
+      makeup.gain.value = Math.pow(10, (-0.6 * (3 - 3 / 20)) / 20);
       b.out.connect(comp);
-      comp.connect(dest);
+      comp.connect(lim);
+      lim.connect(makeup);
+      // 立體聲加寬（M/S）：側邊訊號 ×1.4，單聲道相加的結果不變
+      const sp = c.createChannelSplitter(2);
+      const mg = c.createChannelMerger(2);
+      const w = 0.2;
+      [[0, 0, 1 + w], [1, 0, -w], [1, 1, 1 + w], [0, 1, -w]].forEach(([from, to, k]) => {
+        const g = c.createGain();
+        g.gain.value = k;
+        sp.connect(g, from);
+        g.connect(mg, 0, to);
+      });
+      makeup.connect(sp);
+      mg.connect(dest);
       b.verbIn = c.createGain();
       const hp = c.createBiquadFilter();
       hp.type = 'highpass';
@@ -864,9 +814,13 @@
     songFor(map) {
       if (!map) return 'title';
       if (map.music) return map.music;
-      if (map.type === 'boss') return 'boss';
-      if (map.type === 'camp' && CAMP_SONG[map.region]) return CAMP_SONG[map.region];
-      return REGION_SONG[map.region] || 'forest';
+      if (map.type === 'boss') {
+        const b = map.boss && BOSS_SONG[map.boss.m];
+        return b && SONGS[b] ? b : 'boss';
+      }
+      if (map.type === 'camp' && CAMP_SONG[map.region] && SONGS[CAMP_SONG[map.region]]) return CAMP_SONG[map.region];
+      const f = REGION_SONG[map.region];
+      return f && SONGS[f] ? f : 'forest';
     },
 
     forMap(map) {
@@ -874,42 +828,221 @@
     },
 
     current() {
-      return this.track ? this.track.id : this.want;
+      return this.track ? this.track.id : this.req || this.want;
     },
 
     play(id) {
       if (!SONGS[id]) return;
+      this.req = id;
       if (!this.out) {
         this.want = id;
         return;
       }
-      if (this.track && this.track.id === id) return;
+      this.apply();
+    },
+
+    stop(fade) {
+      this.fadeOut(fade || 0.8);
+      this.track = null;
+      this.req = null;
+      this.want = null;
+    },
+
+    // 依狀態決定真正要播的：{ id, aged, xf 淡出秒, fin 淡入秒 }；null ＝ 安靜
+    resolve() {
       const c = G.audio.ctx;
-      this.fadeOut(0.9);
-      this.track = this.newTrack(id, this.bus, c.currentTime + 0.25, 1.2);
+      const now = c ? c.currentTime : 0;
+      const cut = G.cut;
+      const held = !!(cut && cut.clockHold && cut.clockHold());
+      if (this.held && !held && SONGS.restart) {
+        const C = compile(SONGS.restart);
+        this.restartUntil = now + (C.steps * 15) / SONGS.restart.bpm - 2.5;
+      }
+      this.held = held;
+      if (held) return null;
+      if (now < this.restartUntil) return { id: 'restart', xf: 2.5, fin: 0.3 };
+      const id = this.req;
+      if (!id) return null;
+      const r = { id, aged: 0 };
+      const W = G.world;
+      if (G.scene !== 'play' || !W || !W.map) return r;
+      const map = W.map;
+      if (this.mapRef !== map) {
+        this.mapRef = map;
+        this.fbSeen = -99;
+      }
+      const b = W.boss;
+      if (id === 'time' && b && b.id === 'timeItself' && !b.dead && b.phase === 2 && SONGS.time2) {
+        r.id = 'time2';
+        r.xf = 0.7;
+        r.fin = 0.4;
+        return r;
+      }
+      const field = Object.values(REGION_SONG).indexOf(id) >= 0 || id === map.music;
+      if (field && !b && map.type !== 'boss' && SONGS.fieldboss) {
+        const fb = G.fieldBoss && G.fieldBoss.current && G.fieldBoss.current();
+        if (fb) this.fbSeen = now;
+        if (now - this.fbSeen < 2.5) return { id: 'fieldboss', xf: 0.6, fin: 0.35 };
+      }
+      if (map._aged && SONGS[id].aged !== false && (id === REGION_SONG[map.region] || id === CAMP_SONG[map.region])) {
+        r.aged = Math.round(Math.min(1, map._aged) * 10) / 10;
+      }
+      return r;
+    },
+
+    apply() {
+      if (!this.out) return;
+      const r = this.resolve();
+      const key = r ? r.id + (r.aged ? '~' + r.aged : '') : null;
+      const tr = this.track;
+      if (tr ? tr.key === key : !key) return;
+      const c = G.audio.ctx;
+      this.fadeOut(r ? r.xf || 0.9 : 1.8);
+      this.track = null;
+      if (!r) return;
+      this.track = this.newTrack(r.id, this.bus, c.currentTime + ((r.xf || 0.9) < 0.8 ? 0.05 : 0.25), r.fin || 1.2, { aged: r.aged });
+      this.track.key = key;
+      this.updateLayers(true);
+    },
+
+    // 戰鬥強度：最近 4 秒被打到、或 500px 內有盯上玩家的怪 → 交戰中；交戰結束 6 秒後淡出
+    intensity(now) {
+      const W = G.world;
+      const P = G.player;
+      if (G.scene !== 'play' || !W || !W.map || !P) return 0;
+      if (P.hp != null) {
+        if (this.lastHp != null && P.hp < this.lastHp && W.map === this.mapRef) this.hitAt = now;
+        this.lastHp = P.hp;
+      }
+      let engaged = now - this.hitAt < 4 || !!(W.boss && !W.boss.dead);
+      if (!engaged && W.monsters) {
+        for (const m of W.monsters) {
+          if (!m.dead && m.aggroT > 0 && Math.abs(m.x - P.x) < 500 && Math.abs(m.y - P.y) < 420) {
+            engaged = true;
+            break;
+          }
+        }
+      }
+      if (engaged) this.combatAt = now;
+      return now - this.combatAt < 6 ? 1 : 0;
+    },
+
+    updateLayers(instant) {
+      const tr = this.track;
+      const c = G.audio.ctx;
+      if (!tr || !c) return;
+      const now = c.currentTime;
+      const combat = this.intensity(now);
+      const b = G.world && G.world.boss;
+      const lv = { combat, p2: b && !b.dead && b.phase === 2 ? 1 : 0, calm: 1 - 0.6 * combat };
+      this.lastLevels = lv;
+      this.setLayers(tr, lv, now, instant);
+    },
+
+    setLayers(tr, lv, now, instant) {
+      tr.ch.forEach((inp, i) => {
+        const cf = tr.c.chans[i];
+        if (!cf.layer || tr.dead[i]) return;
+        const k = lv[cf.layer] != null ? lv[cf.layer] : cf.layer === 'calm' ? 1 : 0;
+        if (tr.lvl[i] === k && !instant) return;
+        const up = k > tr.lvl[i];
+        tr.lvl[i] = k;
+        const g = inp.gain;
+        const tgt = tr.base[i] * k;
+        g.cancelScheduledValues(now);
+        if (instant) g.setValueAtTime(tgt, now);
+        else {
+          g.setValueAtTime(g.value, now);
+          g.setTargetAtTime(tgt, now, up ? 0.3 : 1.3);
+        }
+        tr.offAt[i] = k > 0 ? 0 : now + (instant ? 0 : 5);
+      });
+    },
+
+    // 環境音：時鐘停住時完全不壓（只剩環境音）；Boss 曲比較滿，環境音再讓一點
+    duckAmb() {
+      const A = G.ambience;
+      if (!A || !A.setDuck) return;
+      const tr = this.track;
+      const k = this.held ? 1 : tr && tr.song.duckAmb ? tr.song.duckAmb : 1;
+      if (k !== this.duck) {
+        this.duck = k;
+        A.setDuck(k);
+      }
+    },
+
+    poll() {
+      this.apply();
+      this.updateLayers(false);
+      this.duckAmb();
     },
 
     // 一首曲子的混音台：每個聲部一個 channel（音量、聲像、殘響/回聲 send），最後統一經過推桿做淡入淡出
+    // opt.aged 土地變老強度、opt.layers 初始層、opt.solo 只開一個 channel、opt.pass 從第幾輪變奏開始
     newTrack(id, bus, t0, fadeIn, opt) {
+      opt = opt || {};
       const c = ctx();
       const song = SONGS[id];
       const C = compile(song);
+      const aged = opt.aged || 0;
+      const AG = song.aged || {};
+      const now = c.currentTime;
+      const tr = { id, song, c: C, step: 0, next: t0, pass: opt.pass || 0, bpm: song.bpm, ch: [], base: [], lvl: [], offAt: [], dead: [], up: [], vm: [], rtp: C.rt, swap: null, extra: [] };
+      let dryTo = bus.out;
+      if (aged) {
+        // 變老：低通變暗、磁帶式的慢速走音（wow）與一點顫動（flutter）、速度慢一點
+        const lpf = c.createBiquadFilter();
+        lpf.type = 'lowpass';
+        lpf.frequency.value = (AG.lp || 2600) * (1 + (1 - aged) * 2);
+        lpf.Q.value = 0.5;
+        lpf.connect(bus.out);
+        dryTo = lpf;
+        const w = c.createGain();
+        const l1 = c.createOscillator();
+        const g1 = c.createGain();
+        l1.frequency.value = 0.27;
+        g1.gain.value = (AG.wow || 9) * aged;
+        const l2 = c.createOscillator();
+        const g2 = c.createGain();
+        l2.frequency.value = 5.1;
+        g2.gain.value = 1.6 * aged;
+        l1.connect(g1);
+        g1.connect(w);
+        l2.connect(g2);
+        g2.connect(w);
+        l1.start(now);
+        l2.start(now);
+        tr.wow = w;
+        tr.extra.push(lpf, l1, l2, g1, g2, w);
+        tr.bpm = song.bpm * (1 - (AG.slow != null ? AG.slow : 0.045) * aged);
+      }
       const mk = (to) => {
         const g = c.createGain();
         if (fadeIn) {
-          g.gain.setValueAtTime(0.0001, c.currentTime);
-          g.gain.exponentialRampToValueAtTime(1, c.currentTime + fadeIn);
+          // 線性淡入：交叉淡入淡出時新曲一開始就聽得到（指數曲線前半段幾乎是靜音）
+          g.gain.setValueAtTime(0, now);
+          g.gain.linearRampToValueAtTime(1, now + fadeIn);
         }
         g.connect(to);
         return g;
       };
-      const fader = mk(bus.out);
+      const fader = mk(dryTo);
       const vF = mk(bus.verbIn);
       const eF = mk(bus.echoIn);
-      const trim = (song.gain || 1) * 0.95;
-      const ch = C.chans.map((cf, i) => {
+      const trim = (song.gain || 1) * 0.95 * (aged ? AG.gain || 0.95 : 1);
+      const drop = aged ? AG.drop || AGED_DROP : null;
+      const lite = G.lowFx && !M._ctx;
+      const lv0 = opt.layers || {};
+      C.chans.forEach((cf, i) => {
         const inp = c.createGain();
-        inp.gain.value = opt && opt.solo != null && opt.solo !== i ? 0 : cf.vol * trim;
+        const dead = (opt.solo != null && opt.solo !== i) || (drop && cf.tags.some((t) => drop.indexOf(t) >= 0)) || (lite && cf.tags.some((t) => LITE_DROP.indexOf(t) >= 0));
+        tr.dead[i] = dead ? 1 : 0;
+        tr.base[i] = cf.vol * trim;
+        const k = cf.layer ? (lv0[cf.layer] != null ? lv0[cf.layer] : cf.layer === 'calm' ? 1 : 0) : 1;
+        tr.lvl[i] = k;
+        tr.offAt[i] = 0;
+        tr.up[i] = 0;
+        inp.gain.value = dead ? 0 : tr.base[i] * k;
         let node = inp;
         if (cf.pan && c.createStereoPanner) {
           const p = c.createStereoPanner();
@@ -930,53 +1063,104 @@
           node.connect(s);
           s.connect(eF);
         }
-        return inp;
+        tr.ch.push(inp);
       });
-      const echo = Math.min(1.5, (3 * 15) / song.bpm);
-      bus.dL.delayTime.setValueAtTime(echo, c.currentTime);
-      bus.dR.delayTime.setValueAtTime(echo, c.currentTime);
-      return { id, song, c: C, faders: [fader, vF, eF], ch, step: 0, next: t0 };
+      tr.faders = [fader, vF, eF];
+      this.setPass(tr);
+      const echo = Math.min(1.5, (3 * 15) / tr.bpm);
+      bus.dL.delayTime.setValueAtTime(echo, now);
+      bus.dR.delayTime.setValueAtTime(echo, now);
+      return tr;
     },
 
-    stop(fade) {
-      this.fadeOut(fade || 0.8);
-      this.track = null;
-      this.want = null;
+    // 變奏：每循環一次換下一組 vary（拿掉某些聲部 'drums@A'、換樂器 swap、移八度 up），
+    // 所以同一首要 (一輪長度 × vary 數) 之後才會一模一樣地重複
+    setPass(tr) {
+      const V = tr.song.vary;
+      const C = tr.c;
+      const mod = V && V.length ? V[tr.pass % V.length] || {} : {};
+      const has = (cf, tag) => cf.tags.indexOf(tag) >= 0;
+      C.chans.forEach((cf, i) => {
+        tr.vm[i] = null;
+        tr.up[i] = 0;
+        (mod.mute || []).forEach((spec) => {
+          const [tag, sec] = spec.split('@');
+          if (!has(cf, tag)) return;
+          if (!sec) tr.vm[i] = true;
+          else if (tr.vm[i] !== true) {
+            tr.vm[i] = tr.vm[i] || {};
+            sec.split('+').forEach((s) => (tr.vm[i][s] = 1));
+          }
+        });
+        for (const tag in mod.up || {}) if (has(cf, tag)) tr.up[i] += mod.up[tag];
+      });
+      tr.swap = mod.swap || null;
+      tr.rtp = C.rt.map((p) => {
+        if (!tr.swap) return p;
+        const inst = tr.swap[p.inst];
+        const kit = tr.swap[p.kit];
+        return inst || kit ? Object.assign({}, p, inst ? { inst } : null, kit ? { kit } : null) : p;
+      });
     },
 
     fadeOut(sec) {
       const tr = this.track;
       if (!tr) return;
       const c = G.audio.ctx;
+      tr.done = true;
       tr.faders.forEach((f) => {
         const g = f.gain;
         g.cancelScheduledValues(c.currentTime);
         g.setValueAtTime(Math.max(0.0001, g.value), c.currentTime);
         g.exponentialRampToValueAtTime(0.0001, c.currentTime + sec);
       });
-      setTimeout(() => tr.faders.forEach((f) => f.disconnect()), (sec + 1.5) * 1000);
+      setTimeout(() => {
+        tr.faders.forEach((f) => f.disconnect());
+        tr.extra.forEach((n) => {
+          try {
+            if (n.stop) n.stop();
+            n.disconnect();
+          } catch (e) { /* 已經停了 */ }
+        });
+      }, (sec + 1.5) * 1000);
     },
 
     tick() {
-      const tr = this.track;
       const c = G.audio.ctx;
-      if (!tr || !c || c.state !== 'running') return;
-      if (tr.next < c.currentTime - 0.3) tr.next = c.currentTime + 0.05;
-      this.scheduleUntil(tr, c.currentTime + 0.2);
+      if (!c || c.state !== 'running') return;
+      const now = c.currentTime;
+      if (now - this.pollT > 0.25 || now < this.pollT) {
+        this.pollT = now;
+        try {
+          this.poll();
+        } catch (e) { /* 音樂出錯不影響遊戲 */ }
+      }
+      const tr = this.track;
+      if (!tr || tr.done) return;
+      if (tr.next < now - 0.3) tr.next = now + 0.05;
+      this.scheduleUntil(tr, now + 0.2);
     },
 
     scheduleUntil(tr, until) {
-      const dt = 15 / tr.song.bpm;
-      while (tr.next < until) {
+      const dt = 15 / tr.bpm;
+      while (tr.next < until && !tr.done) {
         this.scheduleStep(tr, tr.step, tr.next, dt);
         tr.step++;
-        if (tr.step >= tr.c.steps) tr.step = tr.c.loop;
+        if (tr.step >= tr.c.steps) {
+          if (tr.song.once) {
+            tr.done = true;
+            break;
+          }
+          tr.step = tr.c.loop;
+          tr.pass++;
+          this.setPass(tr);
+        }
         tr.next += dt;
       }
     },
 
     // 離線算出一段音樂（測試用）：c 是 OfflineAudioContext
-    // opt.bar：從第幾小節開始；opt.solo：只開第幾個 channel
+    // opt.bar：從第幾小節開始；opt.solo：只開第幾個 channel；opt.aged、opt.layers、opt.pass 同 newTrack
     renderOffline(c, id, sec, dest, opt) {
       const keep = [this._ctx, this._nbuf];
       this._ctx = c;
@@ -990,10 +1174,19 @@
         const tr = this.newTrack(id, bus, 0.05, 0, opt);
         if (opt && opt.bar) tr.step = opt.bar * tr.c.barLen;
         this.scheduleUntil(tr, sec);
+        return tr;
       } finally {
         this._ctx = keep[0];
         this._nbuf = keep[1];
       }
+    },
+
+    // 這個 channel 現在要不要發聲
+    off(tr, ci, bar, t) {
+      if (tr.dead[ci]) return true;
+      const v = tr.vm[ci];
+      if (v && (v === true || v[tr.c.secOf[bar]])) return true;
+      return tr.lvl[ci] === 0 && t >= tr.offAt[ci];
     },
 
     scheduleStep(tr, step, t, dt) {
@@ -1004,17 +1197,27 @@
       const sw = (s.swing || 0) * [0, 0.5, 1, 0.5][pos % 4] + (pos % 2 ? s.swing16 || 0 : 0);
       const tt = t + sw * dt;
       const cur = chordAt(C, step);
-      const busy = !this._ctx && this.live > MAX_LIVE;
+      const busy = !this._ctx && this.live > (G.lowFx ? 120 : MAX_LIVE);
+      M._wow = tr.wow || null;
       try {
         const ev = C.ev[step];
-        if (ev) ev.forEach((e) => INST[e.inst](tr.ch[e.ci], hz(e.n), tt, e.len * dt, e.v));
-        for (let i = 0; i < C.rt.length; i++) {
-          const p = C.rt[i];
-          if (!p.on[bar]) continue;
+        if (ev) {
+          for (let j = 0; j < ev.length; j++) {
+            const e = ev[j];
+            if (this.off(tr, e.ci, bar, t)) continue;
+            const inst = (tr.swap && tr.swap[e.inst]) || e.inst;
+            INST[inst](tr.ch[e.ci], hz(e.n + tr.up[e.ci]), tt, e.len * dt, e.v);
+          }
+        }
+        for (let i = 0; i < tr.rtp.length; i++) {
+          const p = tr.rtp[i];
+          if (!p.on[bar] || this.off(tr, p.ci, bar, t)) continue;
           if (busy && p.role !== 'bass' && p.role !== 'drums' && p.role !== 'pad') continue;
           RT[p.role](tr.ch[p.ci], p, C, cur, bar, pos, tt, dt, busy);
         }
-      } catch (e) { /* 音樂出錯不影響遊戲 */ }
+      } catch (e) { /* 音樂出錯不影響遊戲 */ } finally {
+        M._wow = null;
+      }
     },
 
     // ── 發聲的小工具 ──
@@ -1027,6 +1230,7 @@
       osc.type = type;
       osc.frequency.setValueAtTime(f, t);
       if (o.detune) osc.detune.value = o.detune;
+      if (M._wow) M._wow.connect(osc.detune); // 土地變老的磁帶走音
       const a = o.a || 0.01;
       const rel = o.r || 0.1;
       g.gain.setValueAtTime(0.0001, t);
@@ -1120,6 +1324,7 @@
     const g = c.createGain();
     car.frequency.value = f;
     mod.frequency.value = f * ratio;
+    if (M._wow) M._wow.connect(car.detune);
     mg.gain.setValueAtTime(f * index, t);
     mg.gain.exponentialRampToValueAtTime(f * index * 0.08 + 0.01, t + decay * 0.6);
     mod.connect(mg);
@@ -1331,6 +1536,68 @@
       M.voice(d, 'sawtooth', f, t, dur * 0.85, 0.06 * k, { a: 0.004, r: 0.04, lp: 700, lpTo: 300, lpT: 0.1 });
       M.voice(d, 'sine', f, t, dur * 0.85, 0.13 * k, { a: 0.004, r: 0.04 });
     },
+
+    // ── 第四、五章與 Boss 用的新音色 ──
+    // 管鐘：FM 不和諧泛音、長餘韻（雪原、霜靈、時間）
+    bell(d, f, t, dur, k) {
+      k = k || 1;
+      fm(d, f, t, dur, 0.075 * k, 3.5, 1.5, Math.max(2.2, Math.min(dur, 4)));
+      M.voice(d, 'sine', f * 2.005, t, 0, 0.02 * k, { a: 0.002, decay: 1.4 });
+    },
+    // 冰鈴：短、玻璃感，連續八分音符也不會糊（霜靈）
+    icebell(d, f, t, dur, k) {
+      k = k || 1;
+      fm(d, f * 2, t, dur, 0.04 * k, 5.4, 1.0, 0.9);
+      M.voice(d, 'sine', f * 2, t, 0, 0.03 * k, { a: 0.002, decay: 0.7 });
+    },
+    // 星屑：更高更細的鐘（時間第二階段、神殿的點綴）
+    crystal(d, f, t, dur, k) {
+      k = k || 1;
+      fm(d, f * 2, t, dur, 0.035 * k, 7.02, 0.8, 1.1);
+      M.voice(d, 'sine', f * 4, t, 0, 0.01 * k, { a: 0.001, decay: 0.3 });
+    },
+    // 頌缽：兩個很近的正弦互相拍打（慢慢呼吸的聲音）＋不和諧泛音
+    bowl(d, f, t, dur, k) {
+      k = k || 1;
+      M.voice(d, 'sine', f, t, dur, 0.055 * k, { a: 0.5, r: 2.4 });
+      M.voice(d, 'sine', f * 1.0045, t, dur, 0.045 * k, { a: 0.7, r: 2.4 });
+      M.voice(d, 'sine', f * 2.71, t, 0, 0.012 * k, { a: 0.01, decay: 2.2 });
+    },
+    // 手搖鈴：泛音是整數倍，比管鐘暖（霜鈴村）
+    handbell(d, f, t, dur, k) {
+      k = k || 1;
+      fm(d, f * 2, t, dur, 0.045 * k, 2, 0.55, 1.5, 0.2);
+      M.voice(d, 'sine', f * 4.02, t, 0, 0.008 * k, { a: 0.002, decay: 0.5, pan: 0.2 });
+    },
+    // 大提琴：兩支微走音鋸齒波、濾波器慢慢打開、慢抖音
+    cello(d, f, t, dur, k) {
+      k = k || 1;
+      const o1 = M.voice(d, 'sawtooth', f, t, dur * 0.96, 0.05 * k, { a: 0.09, r: 0.3, lp: 450, lpTo: 1500, lpT: 0.3, detune: -6, pan: -0.15 });
+      const o2 = M.voice(d, 'sawtooth', f, t, dur * 0.96, 0.045 * k, { a: 0.1, r: 0.3, lp: 450, lpTo: 1400, lpT: 0.35, detune: 6, pan: 0.15 });
+      vibrato(o1, f, t, dur, 0.005, 4.8);
+      vibrato(o2, f, t, dur, 0.005, 4.3);
+      M.voice(d, 'sine', f, t, dur * 0.96, 0.07 * k, { a: 0.08, r: 0.25 });
+    },
+    // 六角手風琴（海岸）：兩支左右分開、走音比較寬的方波簧片，聲音細、帶鼻音
+    reed(d, f, t, dur, k) {
+      k = k || 1;
+      M.voice(d, 'square', f, t, dur * 0.93, 0.032 * k, { a: 0.03, r: 0.09, lp: 1600, lpTo: 2200, lpT: 0.1, detune: -13, pan: -0.2 });
+      M.voice(d, 'square', f, t, dur * 0.93, 0.032 * k, { a: 0.03, r: 0.09, lp: 1800, lpTo: 2400, lpT: 0.1, detune: 13, pan: 0.2 });
+      M.voice(d, 'sawtooth', f * 2, t, dur * 0.93, 0.008 * k, { a: 0.04, r: 0.08, lp: 3000 });
+      M.voice(d, 'triangle', f, t, dur * 0.93, 0.07 * k, { a: 0.03, r: 0.09 });
+    },
+    // 大鍵琴：亮起音、濾波器很快關起來（女王的宮廷）
+    harpsi(d, f, t, dur, k) {
+      k = k || 1;
+      M.voice(d, 'sawtooth', f, t, 0, 0.034 * k, { a: 0.001, decay: 0.75, lp: Math.min(12000, f * 10), lpTo: f * 2.2, lpT: 0.3 });
+      M.voice(d, 'square', f * 2, t, 0, 0.01 * k, { a: 0.001, decay: 0.35, lp: Math.min(12000, f * 8) });
+    },
+    // 弓奏低音：慢起音的低音提琴（神殿、海岸的低音線）
+    lowbow(d, f, t, dur, k) {
+      k = k || 1;
+      M.voice(d, 'sawtooth', f, t, dur * 0.95, 0.055 * k, { a: 0.08, r: 0.25, lp: 380, lpTo: 650, lpT: 0.3 });
+      M.voice(d, 'sine', f, t, dur * 0.95, 0.15 * k, { a: 0.06, r: 0.25 });
+    },
   };
 
   // 和弦鋪底：一次拿到整個和弦
@@ -1377,6 +1644,50 @@
         const f = hz(n);
         M.voice(d, 'square', f, t, dur * 0.97, 0.012 * k, { a: 0.08, r: 0.2, lp: 1400, detune: i % 2 ? 8 : -8, pan: i % 2 ? 0.3 : -0.3 });
         M.voice(d, 'triangle', f, t, dur * 0.97, 0.022 * k, { a: 0.08, r: 0.2 });
+      });
+    },
+    // 霜：慢起音的玻璃感鋪底（正弦＋三角波左右分開、高八度泛音）
+    frost(d, notes, t, dur, k) {
+      notes.forEach((n, i) => {
+        const f = hz(n);
+        const pan = i % 2 ? 0.45 : -0.45;
+        M.voice(d, 'sine', f, t, dur, 0.03 * k, { a: 0.9, r: 1.4, detune: -5, pan });
+        M.voice(d, 'triangle', f, t, dur, 0.018 * k, { a: 1.1, r: 1.4, detune: 5, pan: -pan, lp: 1800 });
+        M.voice(d, 'sine', f * 2, t, dur, 0.006 * k, { a: 1.4, r: 1.2 });
+      });
+    },
+    // 低音弦樂：暗、厚（海岸、Boss 的底）
+    lowstr(d, notes, t, dur, k) {
+      notes.forEach((n, i) => {
+        const f = hz(n);
+        const pan = i % 2 ? 0.35 : -0.35;
+        M.voice(d, 'sawtooth', f, t, dur, 0.018 * k, { a: 0.35, r: 0.5, lp: 750, detune: -8, pan });
+        M.voice(d, 'sawtooth', f, t, dur, 0.018 * k, { a: 0.4, r: 0.5, lp: 700, detune: 8, pan: -pan });
+      });
+    },
+    // 管風琴（時間）：基音、八度、十二度，最低音加一個低八度
+    pipe(d, notes, t, dur, k) {
+      notes.forEach((n, i) => {
+        const f = hz(n);
+        const pan = i % 2 ? 0.25 : -0.25;
+        M.voice(d, 'sine', f, t, dur * 0.98, 0.022 * k, { a: 0.12, r: 0.35, pan });
+        M.voice(d, 'sine', f * 2, t, dur * 0.98, 0.012 * k, { a: 0.12, r: 0.35, pan: -pan });
+        M.voice(d, 'sine', f * 3, t, dur * 0.98, 0.006 * k, { a: 0.14, r: 0.3 });
+        if (i === 0) M.voice(d, 'triangle', f / 2, t, dur * 0.98, 0.02 * k, { a: 0.15, r: 0.4 });
+      });
+    },
+    // 合唱「嗚」：共振峰比「啊」低，比較遠、比較冷
+    ooh(d, notes, t, dur, k) {
+      const c = ctx();
+      const bp = c.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 480;
+      bp.Q.value = 1.4;
+      bp.connect(d);
+      notes.forEach((n, i) => {
+        const f = hz(n);
+        const o = M.voice(bp, 'sawtooth', f, t, dur, 0.06 * k, { a: 0.6, r: 0.8, detune: i % 2 ? 7 : -7, pan: i % 2 ? 0.35 : -0.35 });
+        vibrato(o, f, t, dur, 0.004, 4.2);
       });
     },
   };
@@ -1440,7 +1751,77 @@
     M(d, t, v) { tom(d, t, v, 135, 0); },
     H(d, t, v) { tom(d, t, v, 185, 0.3); },
     C(d, t, v) { M.noise(d, t, 1.3, 0.04 * v, 5500, 'highpass', 0, 0.15); },
+    // ── 新的打擊 ──
+    // 時鐘：K 滴（高、短）、N 答（低一點）
+    K(d, t, v) {
+      M.voice(d, 'sine', 3300, t, 0, 0.04 * v, { a: 0.0005, decay: 0.03, pan: 0.22 });
+      M.noise(d, t, 0.018, 0.03 * v, 6200, 'bandpass', 3, 0.22);
+    },
+    N(d, t, v) {
+      M.voice(d, 'sine', 1180, t, 0, 0.06 * v, { a: 0.0005, decay: 0.05, pan: -0.22 });
+      M.noise(d, t, 0.025, 0.028 * v, 2100, 'bandpass', 3, -0.22);
+    },
+    // 鑼：低、不和諧、慢慢散開（段落開頭）
+    G(d, t, v) {
+      fm(d, 98, t, 3, 0.08 * v, 1.41, 2.4, 3.4);
+      M.noise(d, t, 1.6, 0.016 * v, 900, 'bandpass', 1);
+    },
+    // 低沉的框鼓／踏地聲（船歌、雪原的心跳）
+    D(d, t, v) {
+      const o = M.voice(d, 'sine', 96, t, 0, 0.3 * v, { a: 0.002, decay: 0.42 });
+      o.frequency.exponentialRampToValueAtTime(52, t + 0.26);
+      M.noise(d, t, 0.06, 0.05 * v, 600, 'lowpass');
+    },
+    // 鐵砧／鐵鍊（寄居蟹）
+    A(d, t, v) {
+      fm(d, 620, t, 0.2, 0.045 * v, 2.76, 3, 0.35, 0.25);
+      M.noise(d, t, 0.05, 0.035 * v, 4200, 'bandpass', 4, 0.25);
+    },
+    // 浪／風：濾波雜訊慢慢湧上來再退下去
+    W(d, t, v) { swell(d, t, 2.6, 0.05 * v, 380, 1300, -0.3); },
+    // 冰晶：三顆隨機的高音
+    I(d, t, v) {
+      for (let i = 0; i < 3; i++) M.voice(d, 'sine', 2600 + Math.random() * 2400, t + i * 0.045 + Math.random() * 0.02, 0, 0.011 * v, { a: 0.001, decay: 0.6, pan: Math.random() * 0.8 - 0.4 });
+    },
+    // 倒轉的湧聲（時間第二階段）：短促地往上湧
+    Z(d, t, v) { swell(d, t, 0.9, 0.04 * v, 1500, 7000, 0.3, true); },
   };
+  // 湧聲：雜訊從 f0 掃到 f1。rev＝倒轉（一路變大，最後切掉）；否則前 45% 湧上、後面退掉
+  function swell(d, t, dur, vol, f0, f1, pan, rev) {
+    const c = ctx();
+    const s = c.createBufferSource();
+    s.buffer = M._nbuf || G.audio.noiseBuf;
+    s.loop = true;
+    const f = c.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 1.2;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    if (rev) {
+      f.frequency.setValueAtTime(f0, t);
+      f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.exponentialRampToValueAtTime(vol, t + dur);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.02);
+    } else {
+      f.frequency.setValueAtTime(f0, t);
+      f.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.45);
+      f.frequency.exponentialRampToValueAtTime(f0 * 1.2, t + dur);
+      g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.45);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    }
+    s.connect(f);
+    f.connect(g);
+    let out = g;
+    if (pan && c.createStereoPanner) {
+      const p = c.createStereoPanner();
+      p.pan.value = pan;
+      g.connect(p);
+      out = p;
+    }
+    out.connect(d);
+    s.start(t, Math.random() * 0.3);
+    s.stop(t + dur + 0.05);
+  }
   function tom(d, t, v, f, pan) {
     const o = M.voice(d, 'sine', f, t, 0, 0.2 * v, { a: 0.002, decay: 0.3, pan });
     o.frequency.exponentialRampToValueAtTime(f * 0.6, t + 0.25);
@@ -1537,6 +1918,18 @@
   M.SONGS = SONGS;
   M.KITS = KITS;
   M.INST = INST;
+  M.PADS = PADS;
+  M.DRUM = DRUM;
+  M.FILLS = FILLS;
+  M.REGION_SONG = REGION_SONG;
+  M.CAMP_SONG = CAMP_SONG;
+  M.BOSS_SONG = BOSS_SONG;
   M.compile = compile;
+  M.hz = hz;
+  M.vibrato = vibrato;
+  M.scoop = scoop;
+  M.fm = fm;
+  // 其他檔案加曲子：同名會覆蓋（重寫舊曲），編譯快取一併清掉
+  M.addSongs = (o) => Object.keys(o).forEach((k) => (SONGS[k] = o[k]));
   M.loadPrefs();
 })();
