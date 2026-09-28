@@ -475,6 +475,7 @@
           if (m.pcWind <= 0) {
             m.attackPhase = null;
             m.chargeT = 1.0;
+            m.chargeDir = 0;
             m.angry = true;
             m.fx.charge = true;
           }

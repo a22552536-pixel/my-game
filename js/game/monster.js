@@ -234,6 +234,7 @@
     // 小野豬：被打之後衝撞
     if (this.abil.charge && this.chargeT <= 0 && Math.random() < 0.5) {
       this.chargeT = 1.1;
+      this.chargeDir = 0;
       this.angry = true;
     }
     return dmg;
@@ -343,10 +344,17 @@
       this.updateAttack(dt);
     } else if (this.chargeT > 0) {
       this.chargeT -= dt;
-      this.dir = U.sign(P.x - this.x);
+      // 衝鋒開始時鎖定方向，直直衝過去（以前每一格都重新瞄準玩家：衝到玩家身上就一直左右翻面，看起來像好幾隻疊在一起）
+      if (!this.chargeDir) this.chargeDir = U.sign(P.x - this.x) || this.dir || 1;
+      this.dir = this.chargeDir;
       this.vx = this.dir * speed * 3.2;
       if (Math.random() < 0.3) G.fx.burst(this.x - this.dir * 20, this.y - 4, '#d9c7a0', 1, 60, { life: 0.3, grav: 0 });
-      if (this.chargeT <= 0) this.angry = false;
+      // 已經衝過玩家一段距離就收住
+      if ((this.x - P.x) * this.dir > 90) this.chargeT = 0;
+      if (this.chargeT <= 0) {
+        this.angry = false;
+        this.chargeDir = 0;
+      }
     } else {
       // 決定是否發動攻擊
       if (this.atkCd > 0) this.atkCd -= dt;
@@ -399,6 +407,7 @@
       if (this.chargeT > 0) {
         this.chargeT = 0;
         this.angry = false;
+        this.chargeDir = 0;
       }
     }
     const wasAir = !this.onGround;
@@ -466,7 +475,7 @@
     this.attackPhase = 'wind';
     this.attackT = kind === 'whip' ? 0.35 : 0.45;
     this.vx = 0;
-    this.dir = U.sign(P.x - this.x);
+    this.dir = U.sign(P.x - this.x) || this.dir;
   };
 
   Monster.prototype.updateAttack = function (dt) {
