@@ -79,7 +79,7 @@
     auroraStorm: {
       name: '極光風暴', form: 'magic4', maxLv: 10, icon: 'auroraStorm', type: 'auroraS',
       mp: mpf(26), mult: lin(1.6, 0.09), radius: 480, waves: 3, targets: 10, slow: 3, castTime: 0.7, hitAt: 0.25,
-      desc: (lv) => '極光在身邊捲成風暴：半徑 480 內最多 10 隻，3 波各 ' + pct(1.6 + 0.09 * (lv - 1)) + ' 並緩速',
+      desc: (lv) => '極光在身邊捲成風暴：半徑 480 內最多 10 隻，3 波各 ' + pct(1.6 + 0.09 * (lv - 1)) + ' 並冰凍 3 秒',
     },
 
     // ═════════ 敏捷 ═════════

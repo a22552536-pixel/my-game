@@ -134,7 +134,7 @@
     },
     // ── 敏捷 三轉：雷影獅 ──
     thunderCombo: {
-      name: '雷刃連鎖', form: 'agile3', maxLv: 10, icon: 'thunderCombo', type: 'chain', thrown: true,
+      name: '雷刃連鎖', form: 'agile3', maxLv: 10, icon: 'thunderCombo', type: 'chain', thrown: true, hop: 0.085,
       mp: mpf(16), mult: lin(0.9, 0.05), targets: 3, repeat: 6, radius: 360, castTime: 0.7, hitAt: 0.12,
       desc: (lv) => '擲出雷刃，在最多 3 隻敵人之間連跳，每隻 6 下 ' + pct(0.9 + 0.05 * (lv - 1)) + '，每一下都能打出黑閃',
     },

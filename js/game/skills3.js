@@ -489,6 +489,8 @@
               else G.fx.pillar(m.x, m.y, cols[(w + 1) % 3], 0.35, 40);
               G.combat.hitMonster(m, S.mult(a.lv), { knock: 60, sound: 'spirit' });
               if (!m.isBoss) m.slowT = S.slow;
+              // 真的冰住（不動、不出手），冰才不會跟著怪物走；野外魔王不冰
+              if (!m.fieldBoss && !(m.def && m.def.fieldBoss)) freeze(m, S.slow);
             });
           });
         }

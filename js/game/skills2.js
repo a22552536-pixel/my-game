@@ -173,7 +173,8 @@
         const list = X.nearTargets(P, S.radius, S.targets);
         if (!list.length) G.hud.toast('附近沒有目標', '#cfe');
         const KC = S.thrown && list.length ? G.art.kunaiChainFx : null; // 純視覺：雷刃苦無＋鎖鏈（js/art/kunaichain.js）
-        if (KC) KC.cast(P, list, S.repeat);
+        const hop = S.hop || 0.045; // 雷刃連鎖放慢到每跳 0.085 秒，看得清苦無（雷光鏈維持 0.045）
+        if (KC) KC.cast(P, list, S.repeat, hop);
         else if (S.thrown && list.length) {
           const m0 = list[0];
           const ty = m0.y - m0.h * 0.5;
@@ -184,7 +185,7 @@
         for (let k = 0; k < S.repeat; k++) {
           list.forEach((m, i) => {
             const prev = i ? list[i - 1] : null;
-            X.later(n++ * 0.045, () => {
+            X.later(n++ * hop, () => {
               if (!X.alive(m)) return;
               const cy = m.y - m.h * (m.scale || 1) * 0.5;
               if (!KC) {

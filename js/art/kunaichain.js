@@ -10,7 +10,7 @@
   const TAU = Math.PI * 2;
   const lite = () => !!G.lowFx;
   const R = (a, b) => a + (b - a) * Math.random();
-  const HOP = 0.045; // 和 skills2.js chain 的 X.later(n * 0.045) 一致
+  let HOP = 0.045; // 和 skills2.js chain 的 X.later(n * hop) 一致（cast 時傳進來）
 
   // ── 粒子池：0 火花（短線） 1 電屑（小十字） ──
   const N = 120;
@@ -57,7 +57,8 @@
   }
 
   // 由 skills2.js chain 在出手那一刻呼叫：list 就是命中順序（list[0], list[1], … 重複 repeat 輪）
-  function cast(P, list, repeat) {
+  function cast(P, list, repeat, hop) {
+    HOP = hop || 0.045;
     C.on = true;
     C.t = 0;
     C.dir = P.dir;
@@ -324,7 +325,7 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rot);
-    ctx.scale(1.35, 1.35);
+    ctx.scale(1.8, 1.8); // 放大，看得出是苦無
     ctx.globalAlpha = alpha;
     // 刃上的雷光（先畫在底下當光暈）
     ctx.globalCompositeOperation = 'lighter';
@@ -517,9 +518,10 @@
         ctx.globalAlpha = 1;
       }
       // 苦無：飛行時沿方向＋一圈圈旋轉（每跳轉約一圈），收回時尾環朝前倒飛
-      const rot = k.phase === 'back' ? k.a : k.a + (C.t <= C.end ? Math.sin(k.spin) * 0.4 + k.spin : 0);
+      // 刃尖朝飛行方向、只輕輕擺動（以前一直高速旋轉，轉成一團光，看不出是苦無）
+      const rot = k.a + (k.phase !== 'back' && C.t <= C.end ? Math.sin(k.spin * 0.35) * 0.12 : 0);
       // 殘影
-      if (!lite()) for (let i = 1; i <= 2; i++) drawKunai(ctx, k.x - Math.cos(k.a) * i * 10, k.y - Math.sin(k.a) * i * 10, rot - i * 0.7, 0.28 / i);
+      if (!lite()) for (let i = 1; i <= 2; i++) drawKunai(ctx, k.x - Math.cos(k.a) * i * 16, k.y - Math.sin(k.a) * i * 16, rot, 0.22 / i);
       drawKunai(ctx, k.x, k.y, rot, 1);
     }
     drawSlashes(ctx);
