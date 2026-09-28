@@ -47,6 +47,7 @@
         P.action = { type: 'shotCast', id, lv, t: 0, dur: S.castTime, fired: 0 };
         P.glowT = 0.3;
         G.audio.play(S.proj === 'flame' ? 'charge' : S.proj === 'icelance' ? 'spiritShot' : S.proj === 'boulder' ? 'heavyWind' : 'featherShot');
+        if (S.proj === 'icelance' && G.art.iceLanceFx) G.art.iceLanceFx.cast(P); // 純視覺：爪前凝出冰晶
       },
     },
     shotCast: {
@@ -100,7 +101,8 @@
         if (Math.random() < 0.5) G.fx.dust(p.x - p.dir * p.r * 0.6, p.y + p.r, p.dir, 1);
       }
       if (S.proj === 'flame' && Math.random() < 0.8) G.fx.particles.push({ x: p.x - p.dir * 8, y: p.y + U.rand(-5, 5), vx: -p.dir * 60, vy: U.rand(-40, 10), life: 0.35, t: 0, size: U.rand(3, 6), color: U.pick(['#ffb03a', '#ff6a2a', '#ffe07a']), grav: -40, shape: 'circle', drag: 2 });
-      if (S.proj === 'icelance' && Math.random() < 0.6) G.fx.particles.push({ x: p.x - p.dir * 30, y: p.y + U.rand(-4, 4), vx: -p.dir * 30, vy: 0, life: 0.4, t: 0, size: 3, color: '#dff4ff', grav: 0, shape: 'star', drag: 1 });
+      if (S.proj === 'icelance' && G.art.iceLanceFx) G.art.iceLanceFx.trail(p, dt); // 冰霧、雪粒、冰屑
+      else if (S.proj === 'icelance' && Math.random() < 0.6) G.fx.particles.push({ x: p.x - p.dir * 30, y: p.y + U.rand(-4, 4), vx: -p.dir * 30, vy: 0, life: 0.4, t: 0, size: 3, color: '#dff4ff', grav: 0, shape: 'star', drag: 1 });
       if (S.proj === 'bigShuriken' && Math.random() < 0.4) G.fx.particles.push({ x: p.x + U.rand(-50, 50), y: p.y + U.rand(-50, 50), vx: -p.dir * 80, vy: 0, life: 0.4, t: 0, size: 2, color: 'rgba(200,255,200,0.8)', grav: 0, shape: 'circle', drag: 1 });
       for (const m of G.combat.targets()) {
         const hb = m.hitbox();
@@ -121,7 +123,8 @@
         G.combat.hitMonster(m, S.mult(p.lv), { knock: S.knock || 0, heavy: !!S.heavy, sound: S.proj === 'boulder' ? 'rock' : S.proj === 'flame' ? 'spirit' : 'feather' });
         if (S.freeze) {
           freeze(m, S.freeze);
-          G.fx.burst(p.x, p.y, ['#dff4ff', '#8fd8ff', '#ffffff'], 10, 220, { shape: 'star', size: 4 });
+          G.fx.burst(p.x, p.y, ['#dff4ff', '#8fd8ff', '#ffffff'], G.art.iceLanceFx ? 4 : 10, 220, { shape: 'star', size: 4 });
+          if (S.proj === 'icelance' && G.art.iceLanceFx) G.art.iceLanceFx.hit(p.x + p.dir * 20, p.y, p.dir, m); // 碎冰、冰晶簇、地上的霜
         }
         if (S.explode) {
           // 爆炸：打中的地方炸開，旁邊的敵人也受傷並燃燒

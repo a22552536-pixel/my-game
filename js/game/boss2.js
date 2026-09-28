@@ -66,6 +66,8 @@
     ctx.restore();
   };
   Kit.drawSweep.water = function (ctx, h) {
+    // 新的海嘯浪（js/art/tsunami.js）；只是畫法，命中範圍還是 boss.js 的 sweep
+    if (G.art.tsunami) return G.art.tsunami.sweep(ctx, h);
     const y = h.y;
     const d = U.sign(h.x1 - h.x0);
     if (h.t < (h.delay || 0)) {
@@ -590,6 +592,7 @@
         ctx.fillStyle = 'rgba(90,180,255,' + (0.12 + 0.18 * k).toFixed(3) + ')';
         if (this.plat === 0) G.physics.fillGroundBand(ctx, G.world.map, 0, G.world.map.w, -8, 2);
         else ctx.fillRect(0, y - 8, G.world.map.w, 10);
+        if (G.art.tsunami) G.art.tsunami.tele(ctx, this.x, y, k, this.plat === 0); // 地上的水往蟹這邊退
       }
       if (this.state === 'flopPrep' || (this.state === 'flopAir' && this.air)) {
         const tx = this.state === 'flopAir' ? this.slamX : G.player.x;

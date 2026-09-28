@@ -407,6 +407,7 @@
         this.vy = Math.min(this.vy, 0) * 0.3;
         G.audio.play('skill');
         G.fx.burst(this.x, this.y - 10, ['#fff3c0', '#ffd27a'], 8, 160, { angle: this.dir > 0 ? Math.PI : 0, spread: 0.6 });
+        if (id === 'chargeSlam' && G.art.chargeFx) G.art.chargeFx.start(this, S); // 純視覺：氣勁盾、刮地火花、撞擊震波
       } else if (S.type === 'area') {
         this.action = { type: 'roar', id, lv, t: 0, dur: S.castTime, hitAt: S.hitAt, done: false };
         this.glowT = 0.5;

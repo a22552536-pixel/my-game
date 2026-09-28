@@ -50,6 +50,7 @@
           continue;
         }
         if (S && S.hitFx === 'steel') G.fx.burst(m.x, m.y - m.h * 0.5, ['#ffd27a', '#ffffff', '#c8d4e6'], 10, 300, { shape: 'square', size: 3 });
+        if (S && S.hitFx === 'steel' && G.art.chargeFx) G.art.chargeFx.hit(m, U.sign(m.x - G.player.x) || G.player.dir);
         this.hitMonster(m, mult, { knock: (S && S.knock) || 260, heavy: true, sound: S && S.hitFx === 'steel' ? 'rock' : undefined });
       }
     },
