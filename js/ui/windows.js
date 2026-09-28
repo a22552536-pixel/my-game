@@ -211,6 +211,14 @@
         '<span class="leaves" title="每片星楓葉：HP、攻擊永久 +4%">星楓葉 ' + G.story.count() + '/5 ' + [1, 2, 3, 4, 5].map((ch) => { const d = G.story.leafDef(ch); return G.story.hasLeaf(ch) ? '<img title="' + d.name + '：' + d.gift + '" src="' + G.art.iconURL('starleaf', d.color) + '">' : '<i title="？？？"></i>'; }).join('') + '</span>' +
         '</div>';
       const cons = Object.keys(D.potions).filter((k) => (P.potions[k] || 0) > 0);
+      // 藥水快捷鍵：紅（A）、藍（S）各自選先用哪一種
+      const prefRow = (kind, key, label) => {
+        const opts = [kind, kind + 'L', kind + 'XL'].filter((k) => D.potions[k]);
+        const cur = (P.potPref && P.potPref[kind]) || kind;
+        return '<div class="potpref"><span class="lbl">' + label + '（' + G.input.label(key) + ' 鍵）</span>' +
+          opts.map((k) => '<button class="usebtn' + (k === cur ? ' on' : '') + '" data-act="potPref" data-arg="' + kind + ':' + k + '" title="' + D.potions[k].name + '"><img src="' + G.art.iconURL(D.potions[k].icon) + '"><span>' + (P.potions[k] || 0) + '</span></button>').join('') + '</div>';
+      };
+      const prefHTML = '<div class="cons"><div class="lbl">藥水快捷鍵先用哪一種（點一下切換；用完會自動換下一種）</div>' + prefRow('hp', 'hpPot', '紅') + prefRow('mp', 'mpPot', '藍') + '</div>';
       const consHTML = '<div class="cons"><div class="lbl">消耗品（點一下使用）</div>' + (cons.length ? cons.map((k) => '<button class="usebtn" data-act="useItem" data-arg="' + k + '" title="' + D.potions[k].name + '：' + D.potions[k].desc + '"><img src="' + G.art.iconURL(D.potions[k].icon) + '"><span>' + P.potions[k] + '</span></button>').join('') : '<span class="dim">沒有消耗品</span>') + '</div>';
       const mats = Object.keys(D.materials).filter((k) => (P.questItems[k] || 0) > 0);
       const matsHTML = '<div class="cons"><div class="lbl">材料（可以賣給商店，或拿去貓頭鷹的小舖交換）</div>' + (mats.length ? mats.map((k) => '<button class="usebtn' + (this.selected === 'mat:' + k ? ' on' : '') + '" data-act="select" data-arg="mat:' + k + '" title="' + D.materials[k].name + '"><img src="' + G.art.iconURL(k) + '"><span>' + P.questItems[k] + '</span></button>').join('') : '<span class="dim">打倒怪物會掉材料</span>') + '</div>';
@@ -242,7 +250,7 @@
         }
         detail += '</div></div>';
       }
-      return this.frame('背包（' + P.bag.length + '/' + G.data.balance.bagSize + '）', '<div class="inv"><div class="left">' + eq + stats + '</div><div class="right">' + grid + misc + consHTML + matsHTML + detail + '</div></div>');
+      return this.frame('背包（' + P.bag.length + '/' + G.data.balance.bagSize + '）', '<div class="inv"><div class="left">' + eq + stats + '</div><div class="right">' + grid + misc + consHTML + prefHTML + matsHTML + detail + '</div></div>');
     },
 
     findItem(uid) {
@@ -253,6 +261,15 @@
       return it ? { item: it, where: 'bag' } : null;
     },
 
+    a_potPref(arg) {
+      const [kind, id] = String(arg).split(':');
+      const P = G.player;
+      P.potPref = Object.assign({ hp: 'hp', mp: 'mp' }, P.potPref);
+      P.potPref[kind] = id;
+      G.audio.play('ui');
+      G.hud.toast((kind === 'hp' ? '紅' : '藍') + '藥水快捷鍵先用「' + G.data.items.potions[id].name + '」', '#bfe8ff');
+      this.render('inventory');
+    },
     a_useItem(id) {
       G.player.useItem(id);
     },

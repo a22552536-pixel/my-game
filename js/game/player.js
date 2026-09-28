@@ -572,17 +572,16 @@
     },
 
     // 藥水鍵（預設 A／S）：先用小的，用完再用大的
+    // 藥水快捷鍵先用背包裡選定的那一種（potPref，在背包「藥水快捷鍵」那一列選），用完再依序用別的
+    potOrder(kind) {
+      const pref = (this.potPref && this.potPref[kind]) || kind;
+      return [pref].concat([kind, kind + 'L', kind + 'XL'].filter((k) => k !== pref));
+    },
     usePotion(kind) {
-      const big = kind + 'L';
-      const xl = kind + 'XL';
-      if ((this.potions[kind] || 0) <= 0 && (this.potions[big] || 0) > 0) return this.useItem(big);
-      if ((this.potions[kind] || 0) <= 0 && (this.potions[xl] || 0) > 0) return this.useItem(xl);
-      if ((this.potions[kind] || 0) <= 0) {
-        G.hud.toast((kind === 'hp' ? '紅漿果' : '藍花蜜') + '用完了', '#ddd');
-        G.audio.play('error');
-        return;
-      }
-      return this.useItem(kind);
+      const next = this.potOrder(kind).find((k) => (this.potions[k] || 0) > 0);
+      if (next) return this.useItem(next);
+      G.hud.toast((kind === 'hp' ? '紅漿果' : '藍花蜜') + '用完了', '#ddd');
+      G.audio.play('error');
     },
 
     useItem(id) {

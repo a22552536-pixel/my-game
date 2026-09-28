@@ -171,8 +171,15 @@
       const px = sx0 + slots.length * 52;
       const hpN = (P.potions.hp || 0) + (P.potions.hpL || 0) + (P.potions.hpXL || 0);
       const mpN = (P.potions.mp || 0) + (P.potions.mpL || 0) + (P.potions.mpXL || 0);
-      this.slot(ctx, px, barY + 5, I.label('hpPot'), P.potions.hp > 0 || !P.potions.hpL ? 'hpPot' : 'hpPotL', () => (hpN > 0 ? null : 'nomp'), hpN);
-      this.slot(ctx, px + 52, barY + 5, I.label('mpPot'), P.potions.mp > 0 || !P.potions.mpL ? 'mpPot' : 'mpPotL', () => (mpN > 0 ? null : 'nomp'), mpN);
+      // 快捷鍵格子顯示「下一瓶會用哪一種」的圖示和那一種的數量（全部用完才變灰）
+      const potIcon = (kind) => {
+        const k = P.potOrder ? P.potOrder(kind).find((x) => (P.potions[x] || 0) > 0) : kind;
+        return { icon: k ? G.data.items.potions[k].icon : kind + 'Pot', n: k ? P.potions[k] : 0 };
+      };
+      const hpS = potIcon('hp');
+      const mpS = potIcon('mp');
+      this.slot(ctx, px, barY + 5, I.label('hpPot'), hpS.icon, () => (hpN > 0 ? null : 'nomp'), hpS.n);
+      this.slot(ctx, px + 52, barY + 5, I.label('mpPot'), mpS.icon, () => (mpN > 0 ? null : 'nomp'), mpS.n);
       } // 觸控模式
 
       // ── 經驗條 ──

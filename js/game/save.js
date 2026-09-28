@@ -35,7 +35,7 @@
           level: P.level, exp: P.exp, form: P.form, sp: P.sp,
           hp: Math.max(1, Math.round(P.hp)), mp: Math.round(P.mp),
           gold: P.gold, skills: P.skills, hotbar: P.hotbar,
-          equip: P.equip, bag: P.bag, potions: P.potions, buffs: P.buffs,
+          equip: P.equip, bag: P.bag, potions: P.potions, buffs: P.buffs, potPref: P.potPref || null,
           questItems: P.questItems, playTime: P.playTime, pages: P.pages || null, apexLine: P.apexLine || null,
           ultSlots: 1, // 五轉大招已經改成放在技能欄（舊存檔沒有這個標記）
         },
@@ -57,7 +57,7 @@
       Object.assign(P, {
         level: d.level, exp: d.exp, form: d.form || 'base', sp: d.sp,
         gold: d.gold, skills: Object.assign({}, P.skills, d.skills), hotbar: d.hotbar || P.hotbar,
-        equip: d.equip || P.equip, bag: d.bag || [], potions: d.potions || { hp: 0, mp: 0 }, buffs: d.buffs || {},
+        equip: d.equip || P.equip, bag: d.bag || [], potions: d.potions || { hp: 0, mp: 0 }, buffs: d.buffs || {}, potPref: d.potPref || { hp: 'hp', mp: 'mp' },
         questItems: d.questItems || {}, playTime: d.playTime || 0,
       });
       P.pages = d.pages || null;
