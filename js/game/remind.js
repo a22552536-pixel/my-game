@@ -87,7 +87,8 @@
         const moved = this.lastMap != null;
         this.lastMap = mapId;
         const tier = (G.data.forms[P.form] || {}).tier || 0;
-        if (moved && tier >= 1 && !W.flags.formHint) {
+        // 第二章有完整的形態教學（js/game/formtut.js），這裡的一次性提示就不在第二章跳
+        if (moved && tier >= 1 && !W.flags.formHint && W.map.region !== 2) {
           W.flags.formHint = true;
           this.glow.forms = now + 8;
           this.say('一轉之後，力量／法術／敏捷三條路線都能用了！', '#ffd0ff', 'forms');

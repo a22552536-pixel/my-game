@@ -183,6 +183,7 @@
       G.ui.handleKeys();
       if (!G.ui.blocking()) G.world.update(dt);
       G.tutorial.update(dt);
+      if (G.formTut) G.formTut.update(dt);
       G.fx.update(dt);
       G.hud.update(dt);
     } else if (G.scene === 'intro') {
@@ -204,6 +205,7 @@
       G.world.draw(ctx);
       G.hud.draw(ctx);
       G.tutorial.draw(ctx);
+      if (G.formTut) G.formTut.draw(ctx);
       G.evolve.draw(ctx);
       G.story.drawCeremony(ctx);
       G.cut.draw(ctx);

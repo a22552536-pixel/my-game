@@ -91,6 +91,8 @@
   //   第四章 1.63、終章 1.54（第四章、終章被 Boss 的攻擊力卡住）。
   //   倍率記在 d.chAtk，由 monster.js 乘上去；章節 Boss 地圖裡召喚出來的小怪不乘（章節 Boss 戰的難度維持原樣）。
   const CH_ATK = { 1: 1.65, 2: 2.15, 3: 2.2, 4: 3.0, 5: 3.5 };
+  // 使用者回饋（第二章死了三次）：第二章一般怪的傷害、血量再 ×0.75（野外魔王照小怪平均算，也會跟著降）
+  const CH_EASE = { 2: 0.75 };
   const chapterOfLv = (lv) => (lv <= 10 ? 1 : lv <= 20 ? 2 : lv <= 30 ? 3 : lv <= 40 ? 4 : 5);
   const chCap = {};
   for (const r in CH_ATK) {
@@ -106,6 +108,7 @@
     // 本來就比較痛的怪（atkMul > 1）另外壓一次：就算站在 Boss 的等級，身體碰撞也不超過 Boss 的基本一擊
     const cap = boss && boss.atk ? boss.atk / (B.monsterAtk(boss.lv) * Math.max(1, d.atkMul || 1)) : chCap[r];
     d.chAtk = d.lv <= 4 ? 1 : Math.max(1, Math.round(Math.min(chCap[r], cap) * 100) / 100);
+    if (CH_EASE[r]) d.chAtk = Math.round(d.chAtk * CH_EASE[r] * 100) / 100;
   }
   // ── 章節血量倍率（使用者回饋：一進第四章，千斤錘一下就沒有怪活得下來）──
   //   技能倍率跟著轉數長得比 monsterHp 快（又沒有冷卻）：改版前，典型等級的玩家（三條路線、當章商店稀有裝 +2、技能 Lv5）
@@ -120,7 +123,7 @@
   for (const id in D.monsters) {
     const d = D.monsters[id];
     if (!d.lv || d.boss || d.fieldBoss) continue;
-    d.chHp = d.lv <= 4 ? 1 : CH_HP[chapterOfLv(d.lv)];
+    d.chHp = d.lv <= 4 ? 1 : CH_HP[chapterOfLv(d.lv)] * (CH_EASE[chapterOfLv(d.lv)] || 1);
   }
   // 野外魔王的血量：約 30 次中階技能（實戰邊閃邊打，約 60～90 秒）＝ 所在地圖小怪平均血量 × 30 ÷ 該章目標下數；不低於原本。
   const FB_CASTS = 30;
