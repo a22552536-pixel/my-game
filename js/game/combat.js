@@ -66,7 +66,8 @@
         const v = P.buffs.clone.v;
         G.skillExec.later(0.12, () => {
           if (!G.skillExec.alive(m)) return;
-          G.fx.ghost(m.x - U.sign(m.x - P.x) * 40, P.y, U.sign(m.x - P.x), { state: 'attack', t: P.t, p: 0.5, form: P.form }, '#ffe44a');
+          // 身邊的影子分身（js/art/shadowclone.js）影步過去出手；分身不在時才用舊的殘影
+          if (!(G.art.shadowCloneFx && G.art.shadowCloneFx.strike(m))) G.fx.ghost(m.x - U.sign(m.x - P.x) * 40, P.y, U.sign(m.x - P.x), { state: 'attack', t: P.t, p: 0.5, form: P.form }, '#ffe44a');
           this.hitMonster(m, mult * v, Object.assign({}, opts, { clone: true, knock: 0 }));
         });
       }

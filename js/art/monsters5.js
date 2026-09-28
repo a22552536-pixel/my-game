@@ -1700,17 +1700,20 @@
     const kind = eyeKind(m);
     const cast = dead ? 0 : clamp(Math.max(num(fx.cast, 0), wind ? 0.6 : 0, strike ? 1 : 0), 0, 1);
     const moving = Math.abs(m.vx || 0) > 5 && !dead;
+    // 空中奔馳（fx.gallop 0..1）：腿大步輪轉、身體前後起伏、鬃毛與長鬚往後拉直；fx.gtele：起跑前揚起前蹄
+    const gal = dead ? 0 : clamp(num(fx.gallop, 0), 0, 1);
+    const gtel = dead ? 0 : clamp(num(fx.gtele, 0), 0, 1);
     const B = BZ_BODY;
     const M = BZ_MANE;
     ctx.save();
     if (hurt) ctx.rotate(-0.08);
-    const u = moving ? t * 7 : t * 2;
-    const amp = moving ? 1 : 0.35;
+    const u = gal > 0.3 ? t * 17 : moving ? t * 7 : t * 2;
+    const amp = (moving ? 1 : 0.35) + gal * 1.5 + gtel * 0.4;
     const bob = Math.sin(t * 2.4) * 1.6 + (moving ? Math.cos(u * 2) * 1 : 0);
     ctx.translate(0, bob);
     // 施法時身體前半微微抬起
     ctx.translate(-6, -30);
-    ctx.rotate(-cast * 0.07 + (moving ? Math.sin(u) * 0.02 : 0));
+    ctx.rotate(-cast * 0.07 + (moving ? Math.sin(u) * 0.02 : 0) + gal * (0.05 + Math.sin(u) * 0.07) - gtel * 0.16);
     ctx.translate(6, 30);
     const hx = 24;
     const hy = -52 - cast * 2 - bob * 0.35;
@@ -1741,7 +1744,7 @@
       ctx.restore();
     };
     // ── 尾巴：獅尾（慢半拍擺動）＋淡青捲毛尾穗 ──
-    const tsw = Math.sin(t * 2.5 - 0.8) * 4;
+    const tsw = Math.sin(t * (2.5 + gal * 10) - 0.8) * (4 + gal * 3) - gal * 6;
     const tailFn = cb(-26, -34, -38, -33, -44, -46, -38 + tsw, -58);
     rimShape(ctx, (c) => taper(c, tailFn, (s) => 5.5 - s * 2.5, 12), B[0], B[1], null, { cel: 1.5, lw: 2 });
     const tt = tailFn(1);
@@ -1835,11 +1838,13 @@
     ctx.restore();
 
     // ── 鬃毛：一束束浪花狀的髮束，從頭後往後流（外層深、內層淺，末端捲起） ──
-    const ms = Math.sin(t * 2.2 - 0.9);
+    const ms = Math.sin(t * (2.2 + gal * 13) - 0.9) * (1 - gal * 0.4);
+    const mk = 1 - gal * 0.5; // 奔馳時髮束收攏、往後拉直
+    const ml = 1 + gal * 0.3;
     if (cast > 0) glowH(ctx, hx - 6, hy + 2, 30, M[2], cast * 0.35);
     // 後層（淡青陰影色）三大束，前層兩束，末端捲起
-    [[-0.35, 26, 13, 1], [0.15, 30, 14, -1], [0.62, 26, 13, 1]].forEach((L, i) => waveLock(ctx, hx - 6, hy + 2, L[1], L[2], PI + L[0] + ms * 0.07 * (1 + i * 0.4), L[3], 1, M[1], P4.tealD, null, 2.1));
-    [[-0.1, 22, 11, -1], [0.4, 21, 10, 1]].forEach((L, i) => waveLock(ctx, hx - 4, hy + 1, L[1], L[2], PI + L[0] + ms * 0.1 * (1 + i * 0.5), L[3], 1, M[0], M[1], M[2], 2));
+    [[-0.35, 26, 13, 1], [0.15, 30, 14, -1], [0.62, 26, 13, 1]].forEach((L, i) => waveLock(ctx, hx - 6, hy + 2, L[1] * ml, L[2], PI + L[0] * mk + ms * 0.07 * (1 + i * 0.4), L[3], 1, M[1], P4.tealD, null, 2.1));
+    [[-0.1, 22, 11, -1], [0.4, 21, 10, 1]].forEach((L, i) => waveLock(ctx, hx - 4, hy + 1, L[1] * ml, L[2], PI + L[0] * mk + ms * 0.1 * (1 + i * 0.5), L[3], 1, M[0], M[1], M[2], 2));
     // 遠側的角
     const horn = (fn, w0, col, sh) => {
       const wf = (s) => w0 * (1 - s * 0.85);
@@ -1898,7 +1903,7 @@
     ctx.quadraticCurveTo(hx + 15, hy + 4.5 + cast * 1.5, hx + 10, hy + 4.5 + cast * 1.5);
     ctx.stroke();
     // 長鬚（淡青的浪花捲，慢半拍擺動）
-    const bw = Math.sin(t * 2.5 - 1.2) * 0.12;
+    const bw = Math.sin(t * (2.5 + gal * 12) - 1.2) * 0.12 + gal * 0.95;
     waveLock(ctx, hx + 9, hy + 6, 18, 7, PI / 2 + 0.25 + bw, -1, 1, M[0], M[1], M[2], 1.8);
     waveLock(ctx, hx + 5, hy + 7, 13, 5.5, PI / 2 + 0.55 + bw, 1, 0.8, M[1], P4.tealD, null, 1.6);
     // 眼睛與額頭的第三眼
@@ -2954,8 +2959,10 @@
     const hurt = m.hurtT > 0;
     const walk = walking(m) && !m.dead;
     const gone = !!fx.shadowless;
-    const spd = 9;
-    const o = { u: walk ? t * spd : null, crouch: ph === 'wind' ? 1 : 0, lunge: ph === 'strike' ? 1 : 0, bite: ph === 'strike' };
+    // fx.run：大範圍疾馳（腿轉得快、身體拉長成奔跑姿勢）
+    const run = m.dead ? 0 : clamp(num(fx.run, 0), 0, 1);
+    const spd = 9 + run * 9;
+    const o = { u: walk ? t * spd : null, crouch: ph === 'wind' ? 1 : 0, lunge: ph === 'strike' ? 1 : run > 0.5 ? 0.45 : 0, bite: ph === 'strike' };
     ctx.save();
     if (hurt) ctx.rotate(-0.06);
     if (gone) {
@@ -3082,7 +3089,9 @@
     const pinDraw = pinK > 0.02 && !pinThrow;
     const cast = Math.max(puffK, pinK * 0.8, ph === 'wind' ? 0.5 : 0, ph === 'strike' ? 0.8 : 0);
     const fl = Math.sin(t * 1.6) * 3;
-    const wind = 1 + (walk ? 0.6 : 0) + cast * 0.4;
+    // fx.gale：暴風雪（預警到吹完）時髮與和服被風整個往後掀
+    const gale = dead ? 0 : clamp(num(fx.gale, 0), 0, 1);
+    const wind = 1 + (walk ? 0.6 : 0) + cast * 0.4 + gale * 2.4;
     const hw = (k, ph2) => Math.sin(t * 2.2 - k * 2.5 + (ph2 || 0)) * k;
     const sw = (k) => hw(k, 0.5) * wind * 0.8;
     ctx.save();
@@ -3917,6 +3926,13 @@
     const sway = Math.sin(t * 1.1) * 1.6 + (walk ? Math.sin(u - 0.7) * 1.6 : 0);
     ctx.save();
     if (hurt) ctx.rotate(-0.04);
+    // 松果連射（fx.lean 紮根後仰、fx.recoil 每一發的後座力：樹幹抖一下）
+    const lean = dead ? 0 : clamp(num(fx.lean, 0), 0, 1);
+    const recoil = dead ? 0 : clamp(num(fx.recoil, 0), 0, 1);
+    if (lean > 0 || recoil > 0) {
+      ctx.rotate(-lean * 0.09 - recoil * 0.025);
+      ctx.translate(Math.sin(t * 90) * recoil * 1.6 - recoil * 2, 0);
+    }
     // ── 根腳抓著的積雪岩石 ──
     const rockP = (c) => {
       c.moveTo(-26, 0);
@@ -4439,10 +4455,13 @@
     const wind = ph === 'wind';
     const striking = !dead && (bash > 0.05 || ph === 'strike');
     const recover = !dead && !striking && (ph === 'recover' || !guardF);
+    // 居合（fx.iai：1 蹲低按刀預警、2 拔刀斬、3 慢慢收刀；fx.iaiK 各階段的進度）
+    const iai = dead ? 0 : num(fx.iai, 0) | 0;
+    const iaiK = clamp(num(fx.iaiK, 0), 0, 1);
     // fx.guard 平常一直是 true：只有蓄力時、或玩家靠近（約 200px 內）且沒在走時，才舉刀格擋；其他時候是放鬆的待機
     const P0 = G.player;
     const near0 = !!(P0 && m.x != null && Math.abs(P0.x - m.x) < 200 && Math.abs((P0.y || 0) - (m.y || 0)) < 140);
-    const guarding = !dead && !striking && !recover && (wind || (guardF && !walk && near0));
+    const guarding = !dead && !iai && !striking && !recover && (wind || (guardF && !walk && near0));
     const fireK = dead ? 0 : recover ? 0.45 + 0.35 * Math.abs(Math.sin(t * 13)) : guarding ? 1.3 : striking ? 1.2 : 1;
     const rattle = hurt ? Math.sin(t * 70) : 0;
     ctx.save();
@@ -4492,8 +4511,13 @@
     // 身體浮在地面上方一點
     const fl = -2 + Math.sin(t * 1.6) * 1.2;
     const u = walk ? t * 4.5 : 0;
-    const lunge = striking ? 10 : 0;
-    ctx.translate(lunge, fl);
+    const lunge = iai === 2 ? 18 : striking ? 10 : 0;
+    // 待機、走路時身體輕輕晃；走路時一步一沉、往前傾一點；居合預警時蹲低
+    const crouch = iai === 1 ? 6 * iaiK : 0;
+    ctx.translate(lunge, fl + crouch - (walk ? Math.abs(Math.sin(u)) * 2.5 : 0));
+    ctx.translate(0, -30);
+    ctx.rotate((iai ? 0 : Math.sin(t * 1.6) * 0.022) + (walk ? 0.04 + Math.sin(u) * 0.015 : 0) + (iai === 1 ? 0.06 * iaiK : 0));
+    ctx.translate(0, 30);
     if (striking) {
       ctx.translate(0, -34);
       ctx.rotate(0.1);
@@ -4502,7 +4526,7 @@
     // ── 腳：寬大的破袴、低而穩的弓步，臑當（脛甲）露在袴下 ──
     const legFn = (near) => {
       const q = u + (near ? 0 : PI);
-      const st = guarding || striking ? 1.2 : 1;
+      const st = guarding || striking || iai === 1 ? 1.25 : 1;
       const fx2 = (near ? 20 : -24) * st + (walk ? Math.cos(q) * 6 : 0);
       const fy2 = walk ? -Math.max(0, -Math.sin(q)) * 4 : 0;
       const hip = [near ? 5 : -6, -36];
@@ -4555,7 +4579,22 @@
     let hand;
     let hand2 = null;
     let bladeA;
-    if (guarding) {
+    let sheathed = false;
+    if (iai === 1 || (iai === 3 && iaiK > 0.72)) {
+      // 刀在鞘裡、刃朝上，手按在刀柄上
+      hand = [8 + (iai === 1 ? iaiK * 2 : 0), -50];
+      bladeA = PI - 0.2;
+      sheathed = true;
+    } else if (iai === 2) {
+      // 拔刀斬：手臂整個伸直，刀平平地往前
+      hand = [44, -58];
+      bladeA = -0.04;
+    } else if (iai === 3) {
+      // 收刀：刀尖慢慢往前下方垂、手收回腰間，最後一下送進鞘裡
+      const k = iaiK / 0.72;
+      hand = [42 - 30 * k, -58 + 8 * k];
+      bladeA = -0.04 + 0.5 * Math.sin(k * PI * 0.5);
+    } else if (guarding) {
       hand = [20, -70];
       hand2 = [10, -68];
       bladeA = -0.14 + Math.sin(t * 2) * 0.02;
@@ -4568,11 +4607,11 @@
       bladeA = PI - 0.6;
     } else {
       // 平常（脇構え風）：刀低低地拿在身側，刀尖往後下方約 27°
-      hand = [22, -42 + (walk ? Math.sin(u) : Math.sin(t * 1.3) * 0.6)];
-      bladeA = PI - 0.47 + Math.sin(t * 1.3) * 0.02;
+      hand = [22, -42 + (walk ? Math.sin(u) * 2 : Math.sin(t * 1.3) * 1.4)];
+      bladeA = PI - 0.47 + Math.sin(t * 1.3) * 0.05 + (walk ? Math.sin(u) * 0.05 : 0);
     }
     // 往後拿的時候把刀翻過來：刃朝下、反（彎）朝上
-    const flipBlade = !guarding && !striking;
+    const flipBlade = !guarding && !striking && iai !== 2;
     // ── 遠側的手臂（鬼火的肘） ──
     const armFar = hand2 || [-24, -48];
     ghostFire(ctx, (-14 + armFar[0]) / 2, (-72 + armFar[1]) / 2 + 4, 2.4, 7, t, 3, 0.8 * fireK);
@@ -4615,6 +4654,22 @@
     // 腰帶（收腰）＋金色的結
     A.shape(ctx, (c) => { c.moveTo(-14, -50); c.quadraticCurveTo(0, -48, 14, -50); c.lineTo(14, -45); c.quadraticCurveTo(0, -43, -14, -45); c.closePath(); }, AR.cordA, AR.blkS, { lw: 1.8, shadeY: -46 });
     A.shape(ctx, (c) => { c.moveTo(-1, -48); c.quadraticCurveTo(-6, -44, -4, -39); c.lineTo(-1, -42); c.lineTo(2, -39); c.quadraticCurveTo(4, -44, 0, -48); c.closePath(); }, P4.gold, P4.goldS, { lw: 1.2, shadeY: -43 });
+    // 結下垂著兩條朱紅的總角房（跟著晃、走路時甩得更大、拔刀時往後飛）
+    [[-3, 0], [3, 1.3]].forEach((q) => {
+      const sw = Math.sin(t * 2.4 + q[1]) * 0.22 + (walk ? Math.sin(u * 2 + q[1]) * 0.3 : 0) + (iai === 2 || striking ? -0.9 : 0) + rattle * 0.3;
+      const L = 15;
+      const ex = q[0] + Math.sin(sw) * L;
+      const ey = -41 + Math.cos(sw) * L;
+      ctx.strokeStyle = A.c(AR.lac);
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(q[0] * 0.3, -42);
+      ctx.quadraticCurveTo(q[0] + Math.sin(sw) * L * 0.4, -35, ex, ey);
+      ctx.stroke();
+      A.shape(ctx, (c) => { c.moveTo(ex - 2.2, ey); c.lineTo(ex + 2.2, ey); c.lineTo(ex + 3 + Math.sin(sw) * 2, ey + 8); c.lineTo(ex - 3 + Math.sin(sw) * 2, ey + 8); c.closePath(); }, AR.lac, AR.lacS, { lw: 1.1, shadeY: ey + 4 });
+      goldStud(ctx, ex, ey, 1);
+    });
     ctx.restore();
     // 脖子的位置：只有鬼火
     ghostFire(ctx, 1, -80, 6, 13, t, 4, fireK);
@@ -4803,6 +4858,36 @@
     ctx.stroke();
     ctx.restore();
     A.shape(ctx, (c) => A.roundRect(c, -28, -2.1, 3, 4.2, 1), P4.gold, P4.goldS, { lw: 1.1, shadeY: 0.6 });
+    if (sheathed) {
+      // 鞘：黑漆、順著刀身的反，鯉口金環、鐺（鞘尾）金、朱紅的下緒；預警時鯉口閃一下光
+      const sayaP = (c) => {
+        c.moveTo(3, cy(0) - bw(0) * 0.5 - 1.8);
+        for (let i = 1; i <= 12; i++) {
+          const q = i / 12;
+          c.lineTo(3 + q * (BL + 3), cy(q) - bw(q) * 0.5 - 1.8);
+        }
+        c.quadraticCurveTo(BL + 9, cy(1), 3 + BL + 3, cy(1) + bw(1) * 0.5 + 1.8);
+        for (let i = 12; i >= 0; i--) {
+          const q = i / 12;
+          c.lineTo(3 + q * (BL + 3), cy(q) + bw(q) * 0.5 + 1.8);
+        }
+        c.closePath();
+      };
+      rimShape(ctx, sayaP, AR.blk, AR.blkS, AR.blkL, { cel: 1.4, rim: 0.9, lw: 1.6 });
+      A.shape(ctx, (c) => A.roundRect(c, 2.5, cy(0) - 4.4, 4, 8.8, 1), P4.gold, P4.goldS, { lw: 1.1, shadeY: 0 });
+      A.shape(ctx, (c) => A.roundRect(c, BL - 4, cy(1) - 3.6, 9, 7.2, 2.5), P4.gold, P4.goldS, { lw: 1.1, shadeY: cy(1) });
+      ctx.strokeStyle = A.c(AR.lac);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(14, cy(0.12) + 3);
+      ctx.quadraticCurveTo(18, cy(0.15) + 12 + Math.sin(t * 3) * 2, 24, cy(0.2) + 8);
+      ctx.stroke();
+      if (iai === 1) {
+        const gl = iaiK > 0.55 ? 1 : 0.4;
+        glowH(ctx, 6, cy(0), 10 + iaiK * 12, '#ffffff', 0.35 + 0.4 * iaiK);
+        sparkle(ctx, 6, cy(0) - 3, (2 + iaiK * 6) * gl * (0.8 + 0.2 * Math.sin(t * 30)), '#ffffff');
+      }
+    }
     ctx.restore();
     // 收招時刀尖碰到雪面，揚起一點雪
     if (recover) {
@@ -4834,7 +4919,7 @@
       ctx.restore();
     }
     ctx.restore();
-    if (striking) {
+    if (striking && iai !== 2) {
       windSlash(ctx, 52 + lunge, -52, 44, 0.1, 0.85);
       windSlash(ctx, 48 + lunge, -48, 33, 0.2, 0.5);
     }

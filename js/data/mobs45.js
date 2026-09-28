@@ -16,9 +16,9 @@
   add('avalanchehare', { name: '雪男', lv: 41, art: 'avalanchehare', behavior: 'aggressive', abilities: ['avalanche'], speed: 80, w: 66, h: 64, sight: 420, mat: 'runepaper' });
   add('drumyak', { name: '雷獸', lv: 42, art: 'drumyak', behavior: 'passive', abilities: ['drum'], speed: 40, w: 96, h: 84, hpMul: 1.35, atkMul: 1.05, mat: 'drumskin' });
   add('shadowwolf', { name: '影之芬里爾', lv: 44, art: 'shadowwolf', behavior: 'aggressive', abilities: ['shadow'], speed: 85, w: 92, h: 64, sight: 460, hpMul: 1.1, mat: 'shadowfur' });
-  add('dreamsheep', { name: '雪女', lv: 45, art: 'dreamsheep', behavior: 'passive', abilities: ['sleep', 'icepin'], speed: 45, w: 72, h: 112, hpMul: 1.25, mat: 'dreamwool' });
+  add('dreamsheep', { name: '雪女', lv: 45, art: 'dreamsheep', behavior: 'passive', abilities: ['blizzard', 'icepin'], speed: 45, w: 72, h: 112, hpMul: 1.25, mat: 'dreamwool' });
   add('silencefox', { name: '九尾封印狐', lv: 46, art: 'silencefox', behavior: 'aggressive', abilities: ['foxfire'], speed: 80, w: 80, h: 66, sight: 400, hpMul: 1.05, mat: 'sealtalisman' });
-  add('heartcedar', { name: '古松樹靈', lv: 48, art: 'heartcedar', behavior: 'passive', abilities: ['ranged', 'heart'], speed: 22, w: 100, h: 130, hpMul: 1.5, mat: 'lifecrystal',
+  add('heartcedar', { name: '古松樹靈', lv: 48, art: 'heartcedar', behavior: 'passive', abilities: ['pinecone', 'heart'], speed: 22, w: 100, h: 130, hpMul: 1.5, mat: 'lifecrystal',
     projectile: { kind: 'icicle', speed: 380, cd: 2.4, range: 460, count: 3 } });
   add('shieldbear', { name: '鎧武者亡靈', lv: 49, art: 'shieldbear', behavior: 'aggressive', abilities: ['shield'], speed: 55, w: 110, h: 100, sight: 380, hpMul: 1.45, atkMul: 1.1, mat: 'shieldshard' });
 

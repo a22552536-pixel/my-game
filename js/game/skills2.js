@@ -172,7 +172,9 @@
         a.done = true;
         const list = X.nearTargets(P, S.radius, S.targets);
         if (!list.length) G.hud.toast('附近沒有目標', '#cfe');
-        if (S.thrown && list.length) {
+        const KC = S.thrown && list.length ? G.art.kunaiChainFx : null; // 純視覺：雷刃苦無＋鎖鏈（js/art/kunaichain.js）
+        if (KC) KC.cast(P, list, S.repeat);
+        else if (S.thrown && list.length) {
           const m0 = list[0];
           const ty = m0.y - m0.h * 0.5;
           G.fx.streak(P.x, P.y - 34, Math.atan2(ty - (P.y - 34), m0.x - P.x), Math.abs(m0.x - P.x) + 20, '#ffe44a', 5);
@@ -185,8 +187,10 @@
             X.later(n++ * 0.045, () => {
               if (!X.alive(m)) return;
               const cy = m.y - m.h * (m.scale || 1) * 0.5;
-              if (prev && X.alive(prev)) G.fx.streak(prev.x, prev.y - prev.h * 0.5, Math.atan2(cy - (prev.y - prev.h * 0.5), m.x - prev.x), Math.abs(m.x - prev.x) + 20, '#ffe44a', 4);
-              G.fx.bolt(m.x + U.rand(-10, 10), cy - 60, cy + 10);
+              if (!KC) {
+                if (prev && X.alive(prev)) G.fx.streak(prev.x, prev.y - prev.h * 0.5, Math.atan2(cy - (prev.y - prev.h * 0.5), m.x - prev.x), Math.abs(m.x - prev.x) + 20, '#ffe44a', 4);
+                G.fx.bolt(m.x + U.rand(-10, 10), cy - 60, cy + 10);
+              }
               G.combat.hitMonster(m, S.mult(a.lv), { knock: 20, sound: 'double' });
             });
           });
