@@ -874,7 +874,7 @@
       if (G.data.forms[P.form].apex) {
         // 五轉：形態固定成星楓獅王，只換沿用哪一條路線的技能頁
         const why = FS.canSwitch(P);
-        h = '<div class="evo-intro">三條路線已經匯集成「星楓獅王」。冥道殘月破、地爆天星每一頁都能用；另外可以選要沿用哪一條路線的技能頁（冷卻 ' + FS.COOLDOWN + ' 秒）。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
+        h = '<div class="evo-intro">三條路線已經匯集成「星楓獅王」。冥道殘月破、地爆天星每一頁都能用；另外可以選要沿用哪一條路線的技能頁。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
         FS.LINES.forEach((line) => {
           const L = G.data.lines[line];
           const cur = line === P.apexLine;
@@ -894,7 +894,7 @@
         return this.frame('切換形態', h, 'evolve');
       }
       const why = FS.canSwitch(P);
-      h = voice + '<div class="evo-intro">三種形態隨時可以切換（冷卻 ' + FS.COOLDOWN + ' 秒）。每種形態有自己的技能頁，升級拿到的技能點三頁都會加。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
+      h = voice + '<div class="evo-intro">三種形態隨時可以切換。每種形態有自己的技能頁，升級拿到的技能點三頁都會加。' + (why && why.indexOf('等') >= 0 ? '<br><b>' + why + '</b>' : '') + '</div><div class="evo-cards">';
       opts.forEach((id) => {
         const f = G.data.forms[id];
         const line = G.data.lines[f.line];

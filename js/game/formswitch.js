@@ -19,7 +19,7 @@
 
   const F = (G.formSwitch = {
     LINES,
-    COOLDOWN: 3,
+    COOLDOWN: 0, // 想切就切（技能冷卻各自保留，切換不會重置）
 
     tier(P) {
       return (G.data.forms[P.form] || G.data.forms.base).tier;
@@ -103,10 +103,8 @@
       P.hotbar = page.hotbar;
       P.sp = page.sp;
       P.action = null;
-      P.cds = {};
       P.formCd = this.COOLDOWN;
       P.recalc();
-      G.fx.screenFlash('#ffffff', 0.3);
       G.fx.ring(P.x, P.y - 34, 'rgba(255,240,180,0.95)', 90, 0.35, 6);
       G.audio.play('portal');
       G.hud.toast('改用「' + G.data.lines[line].name + '」的技能頁', '#ffe14a');
@@ -144,12 +142,10 @@
       P.hotbar = page.hotbar;
       P.sp = page.sp;
       P.action = null;
-      P.cds = {};
       P.formCd = this.COOLDOWN;
       P.recalc();
       P.hp = Math.min(P.hp, P.maxHp);
       P.mp = Math.min(P.mp, P.maxMp);
-      G.fx.screenFlash('#ffffff', 0.35);
       G.fx.ring(P.x, P.y - 34, 'rgba(255,240,180,0.95)', 90, 0.35, 6);
       G.fx.sparkle(P.x, P.y - 40, '#fff3a0', 18, 40);
       G.audio.play('portal');
