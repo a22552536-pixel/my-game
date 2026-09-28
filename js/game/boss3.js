@@ -1300,13 +1300,36 @@
     this.updateEchoes(dt);
     this.ally.update(dt);
     Sum.tick(this, dt);
-    // 時針：隨機 0.6～1.5 秒換一次方向，換向時減速再加速
+    // 時針：時間的感覺——有時慢、有時快、有時越轉越快、有時突然停住、有時像真的時鐘一格一格跳；方向也會隨機倒過來
     this.handSw -= dt;
     if (this.handSw <= 0) {
-      this.handSw = U.rand(0.6, 1.5);
-      this.handDir = -this.handDir;
+      const modes = ['slow', 'fast', 'accel', 'stop', 'tick', 'fast', 'slow'];
+      let mo = modes[Math.floor(Math.random() * modes.length)];
+      if (mo === this.handMode) mo = mo === 'stop' ? 'fast' : 'stop';
+      this.handMode = mo;
+      this.handModeT = 0;
+      if (Math.random() < 0.5) this.handDir = -this.handDir;
+      this.handSw = { slow: U.rand(1.2, 2.4), fast: U.rand(0.5, 1.1), accel: U.rand(1.2, 2.0), stop: U.rand(0.4, 1.1), tick: U.rand(1.5, 2.5) }[mo];
     }
-    this.handV += (this.handDir * HAND_W - this.handV) * Math.min(1, dt * 7);
+    this.handModeT = (this.handModeT || 0) + dt;
+    const hm = this.handMode || 'fast';
+    let want = 0;
+    let resp = 7;
+    if (hm === 'slow') want = HAND_W * 0.12;
+    else if (hm === 'fast') want = HAND_W;
+    else if (hm === 'accel') {
+      want = HAND_W * (0.1 + Math.min(1.5, this.handModeT * 0.9)); // 越轉越快，最後比平常還快
+      resp = 3;
+    } else if (hm === 'stop') {
+      want = 0;
+      resp = 30; // 一下子停住
+    } else if (hm === 'tick') {
+      // 一格一格跳：每 0.5 秒快速跳一小格，其餘時間停著
+      const ph = this.handModeT % 0.5;
+      want = ph < 0.07 ? HAND_W * 0.9 : 0;
+      resp = 40;
+    }
+    this.handV += (this.handDir * want - this.handV) * Math.min(1, dt * resp);
     this.handPh += this.handV * dt;
     // 野外魔王殘影、過去 Boss 殘影：各自一直計時（開場、變身時暫停）
     if (!this.dead && this.state !== 'intro' && this.state !== 'transform') {
