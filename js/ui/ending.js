@@ -1587,7 +1587,7 @@
       }
       if (E.phase === 'card') {
         E.ct += dt;
-        if ((press && E.ct > 1.6) || E.ct > 10) {
+        if ((press && E.ct > 2.6) || E.ct > 10) {
           E.phase = 'out';
           E.pt = 0;
         }
@@ -1649,7 +1649,7 @@
         Wd.fadeDir = -1;
         Wd.load(CAMP_MAP, 'camp');
         P.dir = 1;
-        setTimeout(() => G.hud && G.hud.toast('回到了苔光營地。選單（Esc）裡可以重看結局。', '#ffe9a8'), 1600);
+        // 回到營地時不跳提示（在平淡中結束）；「重看結局」一樣在選單（Esc）裡
       } else {
         Wd.fade = 1;
         Wd.fadeDir = -1;
@@ -1719,30 +1719,15 @@
       g.addColorStop(1, 'rgba(8,6,20,' + (0.35 * k).toFixed(3) + ')');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W(), H());
-      const cx = W() / 2;
-      const cy = H() / 2 - 20;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.globalAlpha = sm(0.4, 2, E.ct);
-      ctx.font = 'bold 46px ' + A.FONT;
-      ctx.shadowColor = 'rgba(255,190,90,0.5)';
-      ctx.shadowBlur = 18;
-      ctx.fillStyle = '#ffe6a8';
-      ctx.fillText('小獅子的冒險', cx, cy - 36);
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = sm(1.2, 2.8, E.ct);
-      ctx.font = 'bold 23px ' + A.FONT;
-      ctx.fillStyle = '#fff3da';
-      ctx.fillText('謝謝你陪小獅子走完這一趟。', cx, cy + 22);
-      const P = G.player;
-      ctx.font = '18px ' + A.FONT;
-      ctx.fillStyle = 'rgba(255,240,220,0.75)';
-      ctx.fillText('遊玩時間 ' + U.fmtTime(P.playTime || 0) + '　·　Lv.' + P.level, cx, cy + 60);
-      if (E.ct > 1.6) {
-        ctx.globalAlpha = 0.45 + 0.35 * Math.sin(E.ct * 3);
-        ctx.font = 'bold 19px ' + A.FONT;
+      // 在平淡中結束：不打標題、不道謝、不寫「完結」，也不列遊玩時間。
+      // 畫面只是慢慢暗一點，過一會兒右下角出現一個很淡的小箭頭，按任意鍵就回到營地。
+      if (E.ct > 2.6) {
+        ctx.globalAlpha = 0.18 + 0.12 * Math.sin(E.ct * 2);
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '18px ' + A.FONT;
         ctx.fillStyle = '#fff3da';
-        ctx.fillText(E.replay ? '按任意鍵繼續' : '按任意鍵，回到營地', cx, cy + 104);
+        ctx.fillText('▸', W() - 28, H() - BAR - 22);
       }
       ctx.restore();
     },

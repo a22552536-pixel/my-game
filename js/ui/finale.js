@@ -22,11 +22,11 @@
       this.finaleI = (this.finaleI || 0) + 1;
       // 第二頁「你把心葉放回樹上。時鐘又開始轉。」：停住的世界恢復顏色與聲音
       if (G.cut && G.cut.resumeClock) G.cut.resumeClock();
-      if (this.finaleI > lines.length) {
+      // 最後一句之後直接回到遊戲：不打「完」、不道謝、不跳提示（在平淡中結束）
+      if (this.finaleI >= lines.length) {
         this.close('finale');
         G.world.flags.gameCleared = true;
         G.save.write();
-        G.hud.toast('冒險還沒結束——世界裡的大家都還在，隨時回去看看他們吧', '#ffd35a');
         return 'keep';
       }
       G.audio.play('ui');
@@ -34,15 +34,6 @@
     r_finale() {
       const lines = G.data.story.ending;
       const i = this.finaleI || 0;
-      if (i >= lines.length) {
-        const P = G.player;
-        return '<div class="panel ending finale"><div class="body">' +
-          '<img class="leaf" src="' + G.art.iconURL('starleaf', '#ffd35a') + '">' +
-          '<div class="big">小獅子的冒險　完</div>' +
-          '<div class="txt">謝謝你陪小獅子走完這一趟。<br>五片星楓葉、五座營地、一路上的每一個人。<br><br>這一次，王座廳沒有空位。<br>下一個一百年，大家說好一起付。</div>' +
-          '<div class="dim">遊玩時間 ' + G.util.fmtTime(P.playTime) + ' · Lv.' + P.level + '</div>' +
-          '<button class="primary" data-act="finaleNext">繼續冒險</button></div></div>';
-      }
       return '<div class="panel ending finale"><div class="body">' +
         '<div class="dim">結局　' + (i + 1) + ' / ' + lines.length + '</div>' +
         '<div class="txt">' + esc(lines[i]) + '</div>' +
