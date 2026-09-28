@@ -2255,6 +2255,7 @@
     let shake = 0;
     let hot = 0; // 十二時：數字發光
     const idleA = [-PI * 0.78 + Math.sin(t * 0.8) * 0.08, -PI * 0.2 + Math.sin(t * 0.9 + 1) * 0.08, Math.floor(t * 2) * (TAU / 60), PI * 0.18 + Math.sin(t * 0.7) * 0.06];
+    if (A.timeHands && m.handPh != null) for (let i = 0; i < 4; i++) idleA[i] += m.handPh * A.timeHands.MUL[i]; // 時針一直正轉逆轉（js/art/stormfrost.js）
     let A4 = idleA.slice();
     let hide = -1; // 被預警畫走的那根針
     const dirL = m.dir || 1;
@@ -2325,6 +2326,7 @@
     // 四根時針（在石獅後面，伸得比身體長）
     const lens = [170, 236, 250, 200];
     const kinds = ['hour', 'minute', 'second', 'fate'];
+    if (A.timeHands && !dead) A.timeHands.blur(ctx, m, A4, lens, hide); // 快轉時針的殘影弧
     for (let i = 3; i >= 0; i--) if (i !== hide) clockHand(ctx, kinds[i], A4[i], lens[i], glowK * (i === 2 ? 0.4 : 1), P2);
     ell(ctx, 0, 0, 22, 22, TS.gold, TS.goldS, { lw: 3, hl: false, cel: [3, 3] });
     ctx.restore();

@@ -291,7 +291,9 @@
   const SUM_CAST = 1.4; // Boss 施法姿勢的長度
   const SUM_HP = { frostSpirit: 0.4, timeItself: 0.3 }; // 該章野外魔王正常最大血量的幾成
   const SUM_FROST_AT = 0.65; // 霜靈：血量 ≤ 65% 時（第一階段中段）召喚一次
-  const SUM_TIME = { first: 14, cap: [4, 4], cd: [15, 15] }; // 時間：開打 14 秒後才會召喚；同時存在上限 4 隻、每 15 秒召喚一次（第一／第二階段）
+  // 時間：從開打就每 5 秒召喚一隻「時間殘影」野外魔王（不限總數，不擺施法姿勢、Boss 照常出招）；
+  //   每隻只活 life 秒（或被打倒）就散成星沙，所以同時大約 3～4 隻。五種輪流（不會連續同一種；千手冰像同時只會有一隻，放在場地邊緣）。
+  const SUM_TIME = { first: 1.5, every: 5, life: 15 };
   const Sum = (Kit.fbSummon = {
     list(b) {
       return G.world.monsters.filter((m) => m.summoner === b && !m.dead);
@@ -311,7 +313,8 @@
     },
     pickType(b) {
       const alive = this.list(b).map((m) => m.id).concat((b.sumPend || []).map((p) => p.id));
-      let pool = FB_IDS.filter((id) => G.data.monsters[id] && alive.indexOf(id) < 0);
+      // 時間：同一種可以同時有好幾隻（活得不久），只有不會動的千手冰像同時一隻
+      let pool = FB_IDS.filter((id) => G.data.monsters[id] && (b.id === 'timeItself' ? id !== 'fb_zakum' || alive.indexOf(id) < 0 : alive.indexOf(id) < 0));
       if (pool.length > 1 && b.sumLast) pool = pool.filter((id) => id !== b.sumLast);
       return pool.length ? U.pick(pool) : null;
     },
@@ -328,6 +331,7 @@
         const r = hi - 20;
         const l = lo + 60;
         const rOk = Math.abs(P.x - r) > 420 && others.every((x) => Math.abs(x - r) > 260);
+        if (b.id === 'timeItself') return Math.abs(P.x - r) >= Math.abs(P.x - l) ? r : l; // 離玩家遠的那一邊
         return rOk ? r : l;
       }
       // 離玩家 420～760（在畫面裡、但不貼臉）、不跟章節 Boss 或其他召喚物疊在一起；找不到就逐步放寬
@@ -363,6 +367,34 @@
       G.audio.play(style === 'time' ? 'portal' : 'bossWarn');
       G.fx.ring(x, gy - 10, style === 'time' ? 'rgba(200,176,255,0.9)' : 'rgba(170,225,255,0.9)', 160, 0.5, 5);
       return true;
+    },
+    // 時間殘影：不擺姿勢，直接在地上開召喚陣（SUM_RISE 秒後升起），Boss 照常出招
+    echo(b) {
+      const id = this.pickType(b);
+      if (!id) return false;
+      const x = this.pickX(b, id);
+      const gy = G.physics.groundY(G.world.map, x);
+      const d = G.data.monsters[id];
+      b.sumPend = b.sumPend || [];
+      b.sumPend.push({ id, x, t: SUM_RISE });
+      b.sumLast = id;
+      b.sumN = (b.sumN || 0) + 1;
+      b.sumCastT = b.fightT;
+      G.world.zones.push({ kind: 'bs_sigil', style: 'time', x, y: gy, r: Math.max(110, d.w * 0.55), t: 0, life: SUM_RISE + 0.7, visual: true, sum: true, seed: Math.random() * 6 });
+      G.audio.play('portal');
+      return true;
+    },
+    // 一隻召喚物散掉（時間到了）：沒有獎勵，碎成星沙
+    dissolve(m) {
+      m.sumDespawn = true;
+      m.dead = true;
+      m.deadT = 0.0001;
+      m.vx = 0;
+      m.fbAct = null;
+      m.sucked = false;
+      const cy = m.y - (m.hover || 0) - m.h * m.scale * 0.5;
+      G.fx.burst(m.x, cy, ['#e8e0ff', '#fff3a8', '#8fa0ff', '#ffffff'], 22, 280, { grav: -80, life: 0.9, size: 4 });
+      G.fx.ring(m.x, cy, 'rgba(232,224,255,0.8)', 140, 0.45, 5);
     },
     // 施法中：回傳 true 表示這一幀由召喚接管（呼叫端跳過一般的狀態機）
     castStep(b) {
@@ -409,15 +441,21 @@
       m.hpShowT = 1;
       m.dir = U.sign(G.player.x - x) || 1;
       m.fx.spawn = 1; // 出現動畫 1 → 0（1.2 秒），這段時間不出招
+      const time = b.id === 'timeItself';
+      if (time) {
+        // 時間殘影：藍金色調、半透明一點；最後 3 秒閃爍（Sum.tick），時間到就散掉
+        m.sumLife = SUM_TIME.life;
+        m.sumLife0 = SUM_TIME.life;
+        m.V = { name: '殘影', color: '#e8dcff', tint: '#8f9cff', tintAmt: 0.3, alpha: 0.9 };
+      }
       W.monsters.push(m);
       const my = m.y - m.h * m.scale * 0.5;
-      const time = b.id === 'timeItself';
-      G.fx.shake(7, 0.4);
+      G.fx.shake(time ? 3 : 7, time ? 0.2 : 0.4);
       G.audio.play('roar');
       G.fx.ring(x, my, time ? 'rgba(200,176,255,0.9)' : 'rgba(170,225,255,0.9)', 200, 0.5, 7);
       G.fx.burst(x, m.y - 10, time ? ['#c8b0ff', '#fff3a8', '#1a0a2a', '#ffffff'] : ['#ffffff', '#bfe8ff', '#6a2a9a'], 30, 380, { angle: -Math.PI / 2, spread: 1.2, life: 0.8 });
       G.fx.text(x, m.y - m.h * m.scale - 40, '召喚：' + d.name, time ? '#e8dcff' : '#dff4ff', 22, 1.6);
-      if ((b.sumN || 0) <= 1) G.hud.toast(b.def.name + '召來了野外魔王「' + d.name + '」！打倒沒有獎勵；' + b.def.name + '倒下時會一起消失', time ? '#e8dcff' : '#bfe8ff');
+      if ((b.sumN || 0) <= 1) G.hud.toast(time ? '時間不停地召來野外魔王的殘影！每隻只留 ' + SUM_TIME.life + ' 秒，打倒沒有獎勵' : b.def.name + '召來了野外魔王「' + d.name + '」！打倒沒有獎勵；' + b.def.name + '倒下時會一起消失', time ? '#e8dcff' : '#bfe8ff');
       return m;
     },
     // 每幀（由 Boss 的 update 呼叫，Boss 死後也呼叫）
@@ -442,6 +480,18 @@
             b.sumDeadT = b.fightT;
           }
           continue;
+        }
+        if (m.sumLife != null) {
+          m.sumLife -= dt;
+          if (m.V) m.V.alpha = m.sumLife < 3 ? 0.55 + 0.35 * Math.abs(Math.sin(m.sumLife * (5 + (3 - m.sumLife) * 3))) : 0.9;
+          if (m.sumLife <= 0) {
+            this.dissolve(m);
+            if (!m.sumGone) {
+              m.sumGone = true;
+              b.sumDeadT = b.fightT;
+            }
+            continue;
+          }
         }
         n++;
         m.hpShowT = Math.max(m.hpShowT, 0.5); // 一直顯示自己的小血條（章節 Boss 的大血條不變）
@@ -608,6 +658,147 @@
   }
   Object.assign(FrostSpirit.prototype, Kit.proto);
 
+  // 暴風雪的強風（第二階段大招的開場）：鐘響 1.5 秒後，一陣強風沿著地面從霜靈往玩家那一側吹到牆邊。
+  //   風道 = 地面往上 GUST_H0（靠近霜靈）～GUST_H1（牆邊）的一條帶子：站上平台、抓準時機跳起來、或繞到霜靈身後就不會被吹到。
+  //   被吹到：傷害 = 暴風雪原本的一擊（冰晶雨 0.8 倍），整個人凍在冰塊裡，往外飛 ICE_DIST（小拋物線＋貼地滑行、彈一下），
+  //   落地冰塊就碎；最多凍 ICE_T 秒，猛按方向鍵可以更快掙脫。碎掉後 ICE_GRACE 秒無敵（不會被接著追打）；
+  //   凍住、無敵期間不會再被凍、被吹（暴風雪的持續風也不推）。
+  //   飛行路線夾在場地牆內（左右各留 40），也不會飛進召喚出來的野外魔王身邊（千手冰像 426 寬、不會動：停在它身體外 ICE_FB_GAP）。
+  const GUST_H0 = 105;
+  const GUST_H1 = 124;
+  const GUST_SPEED = 1900;
+  const ICE_DIST = 480;
+  const ICE_T = 0.9;
+  const ICE_ARC = 0.55; // 前 55% 的時間在空中（小拋物線），後面貼地滑行
+  const ICE_GRACE = 0.6;
+  const ICE_FB_GAP = 90;
+
+  FrostSpirit.prototype.aimGust = function () {
+    const P = G.player;
+    const map = G.world.map;
+    const dir = U.sign(P.x - this.x) || this.dir || 1;
+    this.dir = dir;
+    const x0 = this.x + dir * this.w * 0.25;
+    this.gustLane = { x0, dir, len: Math.max(200, dir > 0 ? map.w - x0 : x0), h0: GUST_H0, h1: GUST_H1 };
+  };
+  // 強風往外推進：波前掃過玩家的那一刻判定一次
+  FrostSpirit.prototype.gustStep = function (dt) {
+    const g = this.gust;
+    const L = this.gustLane;
+    g.t += dt;
+    const front = g.t * GUST_SPEED;
+    const P = G.player;
+    if (!g.done) {
+      const d = (P.x - L.x0) * L.dir;
+      if (d <= front) {
+        g.done = true;
+        const map = G.world.map;
+        const top = G.physics.groundY(map, P.x) - (L.h0 + (L.h1 - L.h0) * U.clamp(d / L.len, 0, 1));
+        const safe = this.fly || G.time < (this.iceGuard || 0) || P.invT > 0;
+        if (P.alive() && !safe && d >= -this.w * 0.3 && d <= L.len + 20 && P.y > top + 8) {
+          // 無敵模式（試玩場）不扣血，但照樣凍住吹走，才看得到這一招
+          if (this.hit(0.8, L.x0 - L.dir * 60, 'blizzardGust', { noKnock: true }) || G.opts.godMode) this.freezeFly(L.dir);
+        }
+      }
+    }
+    if (front > L.len + 300) this.gust = null;
+  };
+  FrostSpirit.prototype.freezeFly = function (dir) {
+    const P = G.player;
+    const map = G.world.map;
+    const x0 = P.x;
+    let lo = 40;
+    let hi = map.w - 40;
+    for (const m of G.world.monsters) {
+      if (m.dead || !m.fieldBoss) continue;
+      const hw = (m.halfW || (m.w * (m.scale || 1)) / 2) + ICE_FB_GAP;
+      // 還沒越過它的中心：最多停在它身體外（已經貼著它就原地凍住）；已經在它另一側就照常吹走
+      if (dir > 0 && x0 < m.x) hi = Math.min(hi, Math.max(x0, m.x - hw));
+      if (dir < 0 && x0 > m.x) lo = Math.max(lo, Math.min(x0, m.x + hw));
+    }
+    const want = x0 + dir * ICE_DIST;
+    const x1 = dir > 0 ? Math.max(x0, Math.min(want, hi)) : Math.min(x0, Math.max(want, lo));
+    const gy0 = G.physics.groundY(map, x0);
+    this.fly = { x0, x1, lift: Math.max(0, gy0 - P.y), dir, t: 0, crack: 0, landed: false, hard: Math.abs(want - x1) > 30 };
+    P.action = null;
+    P.climbing = -1;
+    P.vx = 0;
+    P.vy = 0;
+    P.onGround = false;
+    P.hurtT = ICE_T + 0.05;
+    P.invT = Math.max(P.invT, ICE_T + ICE_GRACE);
+    if (G.art.frostGust) G.art.frostGust.freeze(P, ICE_T);
+    G.fx.shake(5, 0.25);
+    G.audio.play('rockHit');
+    if (!this.iceTold) {
+      this.iceTold = true;
+      G.hud.toast('被凍住吹飛了！猛按方向鍵可以更快掙脫', '#dff4ff');
+    }
+  };
+  // 冰塊飛行：每幀在玩家更新之後把位置擺好（路線事先算好，不會穿牆、不會掉出場地）
+  FrostSpirit.prototype.iceStep = function (dt) {
+    const f = this.fly;
+    if (!f) return;
+    const P = G.player;
+    const map = G.world.map;
+    if (P.dead || !map) {
+      this.fly = null;
+      if (G.art.frostGust) G.art.frostGust.shatter(P.x, P.y);
+      return;
+    }
+    let adv = dt;
+    const I = G.input;
+    ['left', 'right', 'up', 'down', 'jump'].forEach((k) => {
+      if (I.wasPressed(k)) {
+        adv += 0.07;
+        f.crack++;
+      }
+    });
+    if (G.art.frostGust) G.art.frostGust.crack(f.crack / 8);
+    f.t = Math.min(ICE_T, f.t + adv);
+    const k = f.t / ICE_T;
+    const D = f.x1 - f.x0;
+    let x;
+    let y;
+    let hop = 1;
+    if (k < ICE_ARC) {
+      const u = k / ICE_ARC;
+      x = f.x0 + D * 0.74 * u;
+      y = G.physics.groundY(map, x) - f.lift * (1 - u) - 64 * 4 * u * (1 - u);
+    } else {
+      const u = (k - ICE_ARC) / (1 - ICE_ARC);
+      x = f.x0 + D * (0.74 + 0.26 * (1 - (1 - u) * (1 - u)));
+      hop = u < 0.5 ? 16 * Math.sin((u / 0.5) * Math.PI) : 0;
+      y = G.physics.groundY(map, x) - hop;
+      if (!f.landed) {
+        f.landed = true;
+        G.fx.shake(f.hard ? 5 : 3, 0.18);
+        G.audio.play('land');
+        if (G.art.frostGust) G.art.frostGust.land(x, G.physics.groundY(map, x), f.hard);
+      }
+    }
+    P.x = U.clamp(x, 40, map.w - 40);
+    P.y = y;
+    P.vx = 0;
+    P.vy = 0;
+    P.climbing = -1;
+    P.action = null;
+    P.onGround = hop === 0; // 空中、彈起來的時候不算站在地上（地形貼地只在真的落地時做）
+    if (P.onGround) P.plat = 0;
+    if (f.t >= ICE_T) {
+      // 冰塊碎掉：可以動了，再給一小段無敵
+      this.fly = null;
+      P.hurtT = 0;
+      P.invT = Math.max(P.invT, ICE_GRACE);
+      this.iceGuard = G.time + ICE_GRACE;
+      if (G.art.frostGust) G.art.frostGust.shatter(P.x, P.y);
+      G.audio.play('rockHit');
+    } else {
+      P.hurtT = Math.max(P.hurtT, ICE_T - f.t + 0.05);
+      P.invT = Math.max(P.invT, ICE_T - f.t + ICE_GRACE);
+    }
+  };
+
   // 低頭衝鋒時身體壓低一點
   FrostSpirit.prototype.hitbox = function () {
     const h = this.state === 'charge' ? this.h * 0.7 : this.h;
@@ -619,6 +810,7 @@
     const map = G.world.map;
     const frozen = this.tick(dt);
     Sum.tick(this, dt);
+    this.iceStep(dt);
     this.bellSwing *= Math.pow(0.25, dt);
     // 暴風雪濃度
     const wantBliz = this.state === 'blizzard' ? 1 : this.state === 'blizzardPrep' ? this.prog() * 0.5 : 0;
@@ -811,22 +1003,36 @@
         break;
 
       // ── 大招：暴風雪（第二階段）──
-      case 'blizzardPrep':
+      case 'blizzardPrep': {
         this.vx = 0;
+        if (!this.gustLane) this.aimGust();
+        const L = this.gustLane;
         if (Math.random() < 0.6) G.fx.burst(this.x + U.rand(-60, 60), this.y - this.h, ['#ffffff', '#dff4ff'], 2, 220, { angle: -Math.PI / 2, spread: 0.6 });
+        // 鹿角上的鐘一直搖響
+        this.bellT = (this.bellT || 0) - dt;
+        if (this.bellT <= 0) {
+          this.bellT = 0.38;
+          this.bellSwing = Math.max(this.bellSwing, 1.1);
+        }
+        this.threats.push({ x1: Math.min(L.x0, L.x0 + L.dir * L.len), x2: Math.max(L.x0, L.x0 + L.dir * L.len), y: this.groundY(), t: this.stateT, kind: 'area' });
         if (this.stateT <= 0) {
-          this.wind = (P.x < map.w / 2 ? -1 : 1) * 120;
+          this.wind = L.dir * 120;
+          this.gust = { t: 0, done: false };
           this.setState('blizzard', 5.2);
           this.rainT = 0.4;
           this.rainN = 0;
           this.bellSwing = 1.5;
-          G.fx.screenFlash('#ffffff', 0.35);
+          G.fx.shake(5, 0.3);
           G.audio.play('sweep');
+          if (G.art.frostGust) G.art.frostGust.blast(L.x0, this.groundY(L.x0), L.dir, L.len, L.h0);
         }
         break;
+      }
       case 'blizzard':
         this.vx = 0;
-        if (P.alive() && P.climbing < 0) P.x = U.clamp(P.x + this.wind * dt, 24, map.w - 24);
+        if (this.gust) this.gustStep(dt);
+        // 被凍住飛出去、剛碎冰的無敵期間，持續的風不推
+        if (P.alive() && P.climbing < 0 && !this.fly && G.time >= (this.iceGuard || 0)) P.x = U.clamp(P.x + this.wind * dt, 24, map.w - 24);
         this.rainT -= dt;
         if (this.rainT <= 0 && this.stateT > 1.0) {
           this.rainT = 0.36;
@@ -834,6 +1040,8 @@
         }
         if (this.stateT <= 0) {
           this.wind = 0;
+          this.gust = null;
+          this.gustLane = null;
           this.setState('recover', 0.6);
         }
         break;
@@ -887,8 +1095,9 @@
       this.warn();
     } else if (pick === 'blizzard') {
       this.say('噹——噹——噹——', '#dff4ff');
-      G.hud.toast('暴風雪！只看得清身邊——風會把你往一邊推，注意冰晶的影子！', '#dff4ff');
+      G.hud.toast('暴風雪！鐘響完會颳起強風——被吹到會結冰飛走：站上平台、跳起來或繞到牠身後！', '#dff4ff');
       this.setState('blizzardPrep', 1.5);
+      this.aimGust();
       this.warn(true);
     } else {
       this.setState('summon', 0.7);
@@ -1022,6 +1231,7 @@
       }
       if (this.state === 'spikePrep') groundBar(ctx, '150,215,255', this.prog(), this.groundY());
     }
+    if (G.art.frostGust && this.gustLane) G.art.frostGust.tele(ctx, this); // 強風的風道、搖響的鐘、捲進去的雪（js/art/stormfrost.js）
     G.art.drawMonster(ctx, this);
     this.drawWeather(ctx);
     if (!this.dead) this.drawHz(ctx);
@@ -1040,13 +1250,33 @@
     this.stopK = 0;
     this.ghost = null;
     this.ally = new Greymane(this);
+    this.sumT = SUM_TIME.first; // 下一隻野外魔王殘影
+    this.echoT = 3; // 下一次喚出過去 Boss 的殘影
+    this.echoSeq = 0;
+    this.echoHit = {};
+    // 時針：一直快速地正轉、逆轉（handPh 累積角度；美術 js/art/bosses3.js 讀它）
+    this.handPh = 0;
+    this.handV = 0;
+    this.handDir = 1;
+    this.handSw = 1;
   }
   Object.assign(TimeItself.prototype, Kit.proto);
 
-  // 灰鬃擋招：擋得下就不會打到玩家
+  // 過去 Boss 的殘影：每 ECHO_EVERY 秒一次，一次 2～3 個不同的 Boss（第二階段 3 個），出招彼此錯開 ECHO_GAP 秒；
+  // 每個殘影的招式最多打中一次，傷害 = 時間的攻擊 × ECHO_MULT
+  const ECHO_EVERY = [6, 8];
+  const ECHO_GAP = 0.45;
+  const ECHO_MULT = 0.6;
+  const HAND_W = 17; // 時針最快的轉速（弧度／秒，約 2.7 圈；四根針各自再乘 0.75～1.9）
+
+  // 灰鬃擋招：擋得下就不會打到玩家；每個殘影只會打中一次
   TimeItself.prototype.hit = function (mult, fromX, src, opts) {
     if (this.ally && this.ally.absorb(src)) return false;
-    return Kit.proto.hit.call(this, mult, fromX, src, opts);
+    const echo = src && src.indexOf('echo:') === 0;
+    if (echo && this.echoHit[src]) return false;
+    const r = Kit.proto.hit.call(this, mult, fromX, src, opts);
+    if (echo && r) this.echoHit[src] = true;
+    return r;
   };
 
   // 錶盤中心（時針的轉軸）
@@ -1070,6 +1300,27 @@
     this.updateEchoes(dt);
     this.ally.update(dt);
     Sum.tick(this, dt);
+    // 時針：隨機 0.6～1.5 秒換一次方向，換向時減速再加速
+    this.handSw -= dt;
+    if (this.handSw <= 0) {
+      this.handSw = U.rand(0.6, 1.5);
+      this.handDir = -this.handDir;
+    }
+    this.handV += (this.handDir * HAND_W - this.handV) * Math.min(1, dt * 7);
+    this.handPh += this.handV * dt;
+    // 野外魔王殘影、過去 Boss 殘影：各自一直計時（開場、變身時暫停）
+    if (!this.dead && this.state !== 'intro' && this.state !== 'transform') {
+      this.sumT -= dt;
+      if (this.sumT <= 0) {
+        this.sumT = SUM_TIME.every;
+        Sum.echo(this);
+      }
+      this.echoT -= dt;
+      if (this.echoT <= 0) {
+        this.echoT = U.rand(ECHO_EVERY[0], ECHO_EVERY[1]);
+        this.castEchoes();
+      }
+    }
     if (this.dead) {
       // 召喚物在 Boss 倒下的第一幀崩解（在打倒劇情、儀式、結局之前）
       if (!this.sumCleared) {
@@ -1224,17 +1475,8 @@
       case 'echo':
         this.vx = 0;
         if (this.stateT <= 0) {
-          // 一次喚出好幾個殘影，每個晚 0.9 秒出現、各出一招（第一階段 2 個、第二階段 3 個）
-          const n = this.phase === 2 ? 3 : 2;
-          const pool = ECHOES.filter((id) => G.data.monsters[id] && G.art.MONSTER_DRAW[G.data.monsters[id].art] && id !== this.lastEcho);
-          for (let i = 0; i < n && pool.length; i++) {
-            const id = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-            this.lastEcho = id;
-            const side = (i % 2 === 0 ? 1 : -1) * (P.x < map.w / 2 ? 1 : -1);
-            const ex = U.clamp(P.x + side * U.rand(320, 460), 160, map.w - 160);
-            this.echoes.push({ id, x: ex, dir: U.sign(P.x - ex) || 1, t: -i * 0.9, did: false, life: 3.0 + (id === 'hermitCrab' ? 0.8 : 0) });
-          }
-          G.audio.play('quest');
+          // （舊的「殘影」招式：現在由 update 的計時器一直放；被強制出這招時也走同一套）
+          this.castEchoes();
           this.setState('recover', 1.0 * this.cd());
         }
         break;
@@ -1268,8 +1510,8 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { sweep: 20, stab: 20, stop: 16, rewind: 14, echo: 22 }
-        : { sweep: 14, stab: 16, stop: 14, rewind: 12, echo: 24, clockwork: 16 };
+        ? { sweep: 20, stab: 20, stop: 16, rewind: 14 }
+        : { sweep: 14, stab: 16, stop: 14, rewind: 12, clockwork: 16 };
       pick = this.pick(table, { clockwork: 18, stop: 14, rewind: 12, echo: 7 });
     } else this.pickT[pick] = this.fightT;
     // 召喚野外魔王：不限次數、不限時間；同時存在最多 4 隻，每 15 秒一次
@@ -1314,12 +1556,42 @@
     }
   };
 
+  // 野外魔王改由 update 裡的計時器召喚（Sum.echo，每 5 秒一隻），不再佔用出招
   TimeItself.prototype.sumReady = function () {
-    const i = this.phase === 2 ? 1 : 0;
-    if (this.fightT < SUM_TIME.first || Sum.count(this) >= SUM_TIME.cap[i]) return false;
-    // 冷卻從上一次召喚開始算（場上沒滿 4 隻就會一直疊上去）
-    const last = this.sumCastT == null ? -1e9 : this.sumCastT;
-    return this.fightT - last >= SUM_TIME.cd[i];
+    return false;
+  };
+
+  // 一次喚出 2～3 個不同的過去 Boss 殘影，分散在場地各處（離玩家 260 以上、彼此 340 以上）
+  TimeItself.prototype.castEchoes = function () {
+    const P = G.player;
+    const map = G.world.map;
+    const pool = ECHOES.filter((id) => G.data.monsters[id] && G.art.MONSTER_DRAW[G.data.monsters[id].art]);
+    const n = Math.min(pool.length, this.phase === 2 ? 3 : Math.random() < 0.5 ? 2 : 3);
+    // 上一次最後出場的不要排第一個
+    const ids = [];
+    while (ids.length < n && pool.length) {
+      const i = Math.floor(Math.random() * pool.length);
+      if (!ids.length && pool[i] === this.lastEcho && pool.length > 1) continue;
+      ids.push(pool.splice(i, 1)[0]);
+    }
+    const used = [];
+    const sums = Sum.list(this);
+    ids.forEach((id, i) => {
+      let best = null;
+      for (let tries = 0; tries < 24; tries++) {
+        const x = U.rand(170, map.w - 170);
+        // 也不要疊在野外魔王殘影身上（招式預警才分得清是誰放的）
+        const score = Math.min(Math.abs(x - P.x) - 260, ...used.map((u) => Math.abs(u - x) - 340), Math.abs(x - this.x) - 120, ...sums.map((m) => Math.abs(m.x - x) - (m.halfW || 120) - 60));
+        if (!best || score > best.s) best = { x, s: score };
+        if (score > 0 && tries > 6) break;
+      }
+      used.push(best.x);
+      this.lastEcho = id;
+      this.echoes.push({ id, x: best.x, dir: U.sign(P.x - best.x) || 1, t: -i * ECHO_GAP, did: false, life: 3.0 + (id === 'hermitCrab' ? 0.8 : 0), key: 'echo:' + this.echoSeq++ });
+    });
+    this.echoN = (this.echoN || 0) + 1;
+    if (this.echoN === 1) this.say('還記得他們嗎？', '#e8dcff');
+    G.audio.play('quest');
   };
 
   TimeItself.prototype.handSweep = function () {
@@ -1395,15 +1667,15 @@
         const say = { queenShroom: '（孢子……）', hermitCrab: '（哈哈哈！）', lavaTortoise: '（……火。）', frostSpirit: '（噹——）' }[e.id];
         G.fx.text(e.x, gy - 260 * ((G.data.monsters[e.id] && G.data.monsters[e.id].sizeK) || 1), say, '#e8dcff', 18, 1.2);
         if (e.id === 'queenShroom') {
-          for (let k = -1; k <= 1; k++) this.addHz({ type: 'mark', style: 'spore', x: U.clamp(P.x + k * 170, 40, map.w - 40), y: gy, r: 60, delay: 1.0 + (k + 1) * 0.2, mult: 0.9, src: 'echoSpore', hgt: 150, sound: 'spore', small: true });
+          for (let k = -1; k <= 1; k++) this.addHz({ type: 'mark', style: 'spore', x: U.clamp(P.x + k * 170, 40, map.w - 40), y: gy, r: 60, delay: 1.0 + (k + 1) * 0.2, mult: ECHO_MULT, src: e.key, hgt: 150, sound: 'spore', small: true });
         } else if (e.id === 'hermitCrab') {
-          [-1, 1].forEach((d) => this.addHz({ type: 'sweep', style: 'water', x0: e.x + d * 60, x1: d < 0 ? -40 : map.w + 40, x: e.x, y: gy, speed: 430, hgt: 62, hw: 30, mult: 0.9, delay: 0.35, src: 'echoTide' }));
+          [-1, 1].forEach((d) => this.addHz({ type: 'sweep', style: 'water', x0: e.x + d * 60, x1: d < 0 ? -40 : map.w + 40, x: e.x, y: gy, speed: 430, hgt: 62, hw: 30, mult: ECHO_MULT, delay: 0.35, src: e.key }));
         } else if (e.id === 'lavaTortoise') {
-          for (let k = 0; k < 5; k++) this.addHz({ type: 'rock', style: 'lava', x: U.clamp(k === 0 ? P.x : P.x + U.rand(-420, 420), 60, map.w - 60), y: gy, r: 46, delay: 1.0 + k * 0.14, mult: 0.9, src: 'echoRock', seed: Math.random() * 6, drift: U.rand(-100, 100) });
+          for (let k = 0; k < 5; k++) this.addHz({ type: 'rock', style: 'lava', x: U.clamp(k === 0 ? P.x : P.x + U.rand(-420, 420), 60, map.w - 60), y: gy, r: 46, delay: 1.0 + k * 0.14, mult: ECHO_MULT, src: e.key, seed: Math.random() * 6, drift: U.rand(-100, 100) });
         } else {
           const step = 200;
           const off = ((P.x % step) + step) % step;
-          for (let x = off; x < map.w; x += step) if (Math.abs(x - e.x) < 700) this.addHz({ type: 'mark', style: 'ice', x, y: gy, r: 50, delay: 1.1 + Math.abs(x - e.x) / 1800, mult: 0.9, src: 'echoSpike', hgt: 110, sound: 'rockHit', small: true, quiet: true });
+          for (let x = off; x < map.w; x += step) if (Math.abs(x - e.x) < 700) this.addHz({ type: 'mark', style: 'ice', x, y: gy, r: 50, delay: 1.1 + Math.abs(x - e.x) / 1800, mult: ECHO_MULT, src: e.key, hgt: 110, sound: 'rockHit', small: true, quiet: true });
         }
         G.fx.burst(e.x, gy - 120, ['#c8b0ff', '#ffffff'], 12, 220);
       }

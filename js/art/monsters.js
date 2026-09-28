@@ -2465,13 +2465,13 @@
       ctx.transform(1, 0, -k * 0.32, 1 + Math.abs(k) * 0.04, Math.sin((m.t || 0) * 60) * Math.abs(k) * 1.5, 0);
     }
     // 被打中時往被打的方向後仰（以腳底為軸斜一下、身體被推開一點；Boss 幅度小）。rcl 由 js/game/feel.js 設定、遞減
-    if (m.rcl > 0 && !m.dead) {
+    if (m.rcl > 0 && !m.dead && !(A.auroraIce && A.auroraIce.on(m))) {
       const q = Math.sin(Math.min(1, m.rcl) * Math.PI * 0.5) * (m.isBoss || m.fieldBoss ? 0.3 : 1) * (m.rclDir || 1);
       ctx.transform(1, 0, -0.14 * q, 1, 5 * q * sc, 0);
     }
     ctx.scale(m.dir * sc, sc);
-    if (m.squash > 0) {
-      // 被打中時的壓扁回彈
+    if (m.squash > 0 && !(A.auroraIce && A.auroraIce.on(m))) {
+      // 被打中時的壓扁回彈（被極光風暴冰封時不壓扁：js/art/stormfrost.js）
       const q = Math.sin(m.squash * Math.PI) * (m.isBoss ? 0.35 : 1);
       ctx.scale(1 + 0.2 * q, 1 - 0.16 * q);
     }

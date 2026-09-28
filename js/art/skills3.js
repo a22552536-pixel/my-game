@@ -2174,6 +2174,7 @@
   }
   const DP_ = { x: 0, y: 0, cx: 0, cy: 0 };
   function drumPos(e, P, i, n) {
+    if (A.raijinDrums) return A.raijinDrums.pos(e, P, i, n, DP_); // 雷神鼓環的排法（js/art/stormfrost.js）
     const a = eBack(clamp(e.t / 0.2, 0, 1));
     const cx = P.x - P.dir * 4;
     const cy = P.y - 64;
@@ -2196,6 +2197,7 @@
     for (const e of J) {
       const out = drumsOut(e);
       if (out <= 0) continue;
+      if (A.raijinDrums && A.raijinDrums.back(ctx, e, P, out)) continue; // 雷鼓＋黑色三巴鉤玉（js/art/stormfrost.js）
       const t = e.t;
       const a = eBack(clamp(t / 0.2, 0, 1));
       const n = lite() ? 6 : 8;

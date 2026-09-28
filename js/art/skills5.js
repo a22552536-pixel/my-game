@@ -2515,6 +2515,7 @@
   }
   function hit(m, w) {
     if (!m) return;
+    if (A.auroraIce) A.auroraIce.add(m); // 冰封（js/art/stormfrost.js）
     for (const h of HIT) {
       if (h.m === m) {
         h.t = 0;
@@ -2685,6 +2686,7 @@
       }
       const slow = m.slowT > 0 ? clamp(m.slowT / 0.4, 0, 1) : 0;
       if (slow <= 0) continue;
+      if (A.auroraIce && A.auroraIce.on(m)) continue; // 包在冰裡：不再蓋一層拉長的極光（看起來像被壓扁）
       // 身上流動的冰霜極光（很淡）
       const pul = 0.5 + 0.5 * Math.sin(t * 4 + h.ph);
       ctx.globalAlpha = slow * (0.22 + 0.14 * pul);
