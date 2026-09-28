@@ -86,7 +86,7 @@ G.data.balance = {
   magnetRadius: 80,
   dropLifetime: 120,
   potionCooldown: 0.5,
-  bagSize: 30,
+  bagSize: Infinity, // 背包不會滿（顯示格數見 js/ui/windows.js）
 
   // ── 自然回復 ──
   hpRegen: { every: 5, pct: 0.01 },

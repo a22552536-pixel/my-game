@@ -96,7 +96,7 @@ button.small { font-size: 12px; padding: 2px 8px; border-radius: 7px; }
 .eqname { font-weight: bold; font-size: 14px; }
 .eqname.dim { text-shadow: none; }
 .charstats { margin-top: 10px; background: #f6e8c8; border-radius: 10px; padding: 8px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 14px; }
-.grid { display: grid; grid-template-columns: repeat(10, 46px); gap: 4px; }
+.grid { display: grid; grid-template-columns: repeat(10, 46px); gap: 4px; max-height: 246px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; } /* 背包不限格數：超過 5 排就在格子區裡捲動 */
 .cell {
   width: 46px;
   height: 46px;

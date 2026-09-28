@@ -201,7 +201,9 @@
       const stats =
         '<div class="charstats"><div>攻擊 <b>' + Math.round(P.atk) + '</b></div><div>HP <b>' + P.maxHp + '</b></div><div>MP <b>' + P.maxMp + '</b></div><div>防禦 <b>' + Math.round(P.def) + '</b></div><div>黑閃 <b>' + (P.crit * 100).toFixed(1) + '%</b></div></div>';
       let grid = '<div class="grid">';
-      for (let i = 0; i < G.data.balance.bagSize; i++) {
+      // 背包不限格數：至少顯示 30 格，裝得多就一排一排（10 格）往下長，永遠留至少一格空位
+      const cells = Math.max(30, Math.ceil((P.bag.length + 1) / 10) * 10);
+      for (let i = 0; i < cells; i++) {
         const it = P.bag[i];
         grid += it ? this.itemCell(it, 'select') : '<div class="cell empty"></div>';
       }
@@ -250,7 +252,7 @@
         }
         detail += '</div></div>';
       }
-      return this.frame('背包（' + P.bag.length + '/' + G.data.balance.bagSize + '）', '<div class="inv"><div class="left">' + eq + stats + '</div><div class="right">' + grid + misc + consHTML + prefHTML + matsHTML + detail + '</div></div>');
+      return this.frame('背包（' + P.bag.length + ' 件）', '<div class="inv"><div class="left">' + eq + stats + '</div><div class="right">' + grid + misc + consHTML + prefHTML + matsHTML + detail + '</div></div>');
     },
 
     findItem(uid) {
