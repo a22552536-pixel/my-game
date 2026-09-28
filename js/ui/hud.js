@@ -19,6 +19,13 @@
       this.storyLine = null;
     },
 
+    // Boss 的台詞：固定顯示在 Boss 血條正下方的一條專用欄位，一次一句（新的一句接手舊的），
+    // 不再畫在 Boss 頭上（大隻的 Boss 頭頂會撞到提示訊息）
+    bossLine(text, color) {
+      if (!text) return;
+      const prev = this.bossSay;
+      this.bossSay = { text, color: color || '#fff3c0', t: 0, life: Math.max(2.2, 1.2 + text.length * 0.09), prev: prev && prev.t < prev.life ? prev : null };
+    },
     toast(text, color) {
       this.toasts.push({ text, color: color || '#fff', t: 0, life: 3.2 });
       if (this.toasts.length > 5) this.toasts.shift();
@@ -57,6 +64,10 @@
     },
 
     update(dt) {
+      if (this.bossSay) {
+        this.bossSay.t += dt;
+        if (this.bossSay.t > this.bossSay.life) this.bossSay = null;
+      }
       for (let i = this.toasts.length - 1; i >= 0; i--) {
         this.toasts[i].t += dt;
         if (this.toasts[i].t > this.toasts[i].life) this.toasts.splice(i, 1);
@@ -218,12 +229,29 @@
         this.bar(ctx, bx, 72, bw, 16, boss.hp / boss.maxHp, '#ff7ac0', '#b02a7a', Math.ceil(boss.hp) + ' / ' + boss.maxHp);
       }
 
+      // ── Boss 台詞（血條正下方的專用欄位）──
+      let lane = 0;
+      const fbNow = G.fieldBoss && G.fieldBoss.current && G.fieldBoss.current();
+      const sayOn = (boss && !boss.dead) || !!fbNow;
+      if (this.bossSay && sayOn) {
+        const b = this.bossSay;
+        const a = b.t < 0.2 ? b.t / 0.2 : b.t > b.life - 0.4 ? (b.life - b.t) / 0.4 : 1;
+        ctx.globalAlpha = Math.max(0, a);
+        ctx.font = 'bold 18px ' + A.FONT;
+        const w = Math.min(W - 120, ctx.measureText(b.text).width + 40);
+        this.panel(ctx, W / 2 - w / 2, 100, w, 30, 15, 'rgba(40,10,24,0.78)');
+        this.text(ctx, b.text, W / 2, 116, 18, b.color, 'center', false);
+        ctx.globalAlpha = 1;
+        lane = 40;
+      } else if (this.bossSay && !sayOn) this.bossSay = null;
       // ── 提示訊息 ──
       this.toasts.forEach((t, i) => {
         const a = t.t < 0.2 ? t.t / 0.2 : t.t > t.life - 0.5 ? (t.life - t.t) / 0.5 : 1;
         ctx.globalAlpha = Math.max(0, a);
-        // 教學面板開著時，提示往下移，不要疊在一起
-        const y = (G.tutorial && G.tutorial.current() ? 206 : 150) + i * 30;
+        // 教學面板開著時，提示往下移，不要疊在一起；Boss 台詞在的時候也往下讓一格
+        // 章節標題卡或 Boss 登場橫幅還在的時候，提示改排在它們下面
+        const card = this.region || this.banner;
+        const y = (card ? 372 : G.tutorial && G.tutorial.current() ? 206 : 150) + (card ? 0 : lane) + i * 30;
         ctx.font = 'bold 16px ' + A.FONT;
         const w = ctx.measureText(t.text).width + 28;
         this.panel(ctx, W / 2 - w / 2, y - 13, w, 26, 13, 'rgba(25,15,8,0.72)');

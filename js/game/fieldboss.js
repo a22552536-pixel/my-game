@@ -37,7 +37,8 @@
   };
   const warn = (x, y, r, life) => zone({ kind: 'fb_warn', x, y, r, life });
   const warnLine = (x1, y1, x2, y2, w, life) => zone({ kind: 'fb_warnline', x: (x1 + x2) / 2, y: Math.max(y1, y2), x1, y1, x2, y2, w, r: Math.abs(x2 - x1) / 2 + w, life });
-  const say = (m, text, color) => G.fx.text(m.x, topY(m) - 26, text, color || '#ffb0d8', 20, 1.1);
+  // 野外魔王的台詞放在血條下方的專用欄位（js/ui/hud.js bossLine）；章節 Boss 召喚出來的分身才畫在頭上
+  const say = (m, text, color) => (m.illusion ? G.fx.text(m.x, topY(m) - 26, text, color || '#ffb0d8', 20, 1.1) : G.hud.bossLine(text, color || '#ffb0d8'));
   const groundUnder = (P, m) => (P.onGround && P.climbing < 0 ? P.y : m.y);
   // 打到玩家：原始傷害封頂在最大 HP 的 34%（防禦、包圍減傷照常）
   const hurtP = (m, k, fromX, touch) => {

@@ -146,8 +146,9 @@
         if (P.hurt(this.dmg(mult || 0.5), this.x)) this.touchCd = 0.6;
       }
     },
+    // 台詞畫在 Boss 血條下方的專用欄位（js/ui/hud.js bossLine），不會跟提示訊息疊在一起
     say(text, color) {
-      G.fx.text(this.x, this.y - this.h - 40, text, color || '#fff3c0', 20, 1.4);
+      G.hud.bossLine(text, color || '#fff3c0');
     },
     // 物理：只會停在「目前這一塊」或「跳躍目標」的平台上
     phys(dt, gravScale) {
@@ -559,7 +560,7 @@
     b.vx = 0;
     b.setState('transform', dur);
     b.p2k = 0;
-    G.hud.toast(msg, '#ff7a7a');
+    G.hud.bossLine(msg, '#ff9a9a');
     G.audio.play('bossWarn');
     G.fx.shake(8, 0.5);
   };
