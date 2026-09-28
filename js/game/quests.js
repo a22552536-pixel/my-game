@@ -79,6 +79,11 @@
       }
       G.audio.play('quest');
       G.hud.toast('接受任務「' + q.name + '」', '#9fe0ff');
+      // 野外魔王委託一進章節就能接：等級差太多（低 5 級以上）時提醒一句，不擋
+      const fb = q.target && G.data.monsters[q.target];
+      if (fb && fb.fieldBoss && G.player.level <= fb.lv - 5) {
+        G.hud.toast(fb.name + '是 Lv.' + fb.lv + '，現在去還太危險，練到 Lv.' + (fb.lv - 3) + ' 左右再去吧', '#ffb0a0');
+      }
       G.save.write();
     },
 
