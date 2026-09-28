@@ -212,17 +212,27 @@
 
       // ── 任務追蹤 ──
       const tr = G.quests.tracked();
-      if (tr.length) {
+      const pr = G.world.map ? G.quests.chapterProgress(G.world.map.region) : null;
+      // 手上沒有任務時也顯示本章還剩幾個委託（Boss 房裡不顯示）
+      const idle = !tr.length && pr && pr.total && G.world.map.type !== 'boss';
+      if (tr.length || idle) {
         const w = 290;
-        const h = 22 + tr.length * 40;
+        const h = 22 + (tr.length ? tr.length * 40 : 22);
         this.panel(ctx, W - w - 8, 8, w, h, 10);
-        const pr = G.world.map ? G.quests.chapterProgress(G.world.map.region) : null;
         this.text(ctx, '任務' + (pr && pr.total ? '　本章委託 ' + pr.done + ' / ' + pr.total + (pr.done >= pr.total ? '（Boss 房已開放）' : '') : ''), W - w + 4, 22, 13, '#ffe9b0');
         tr.forEach((q, i) => {
           const y = 44 + i * 40;
           this.text(ctx, q.name, W - w + 4, y, 13, q.ready ? '#7dff7a' : '#ffffff');
           this.text(ctx, q.text, W - w + 12, y + 17, 12, q.ready ? '#b8ffb0' : '#d8d0c0');
         });
+        if (!tr.length) {
+          const left = pr.total - pr.done;
+          const QS = G.quests;
+          const reg = G.world.map.region;
+          const canTake = left > 0 && Object.keys(G.data.quests).some((id) => QS.available(id) && QS.chapterOf(id) === reg);
+          const line = left <= 0 ? '本章委託都完成了' : '還剩 ' + left + ' 個委託' + (canTake ? '，去找頭上有「！」的人' : '（等級再高一點就能接）');
+          this.text(ctx, line, W - w + 4, 44, 12, '#d8d0c0');
+        }
       }
 
       // ── Boss 血條 ──
