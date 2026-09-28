@@ -839,7 +839,7 @@
       const opts = G.evolve.options();
       const pick = this.evolvePick;
       const first = G.evolve.tierOf(G.player.form) === 0;
-      let h = '<div class="evo-intro">' + (first ? '身體裡的力量滿溢出來了。選擇你要成為的樣子。<b>選了之後就不能更改。</b>' : '力量又一次滿溢出來，身體開始改變了。') + '</div><div class="evo-cards">';
+      let h = '<div class="evo-intro">' + (first ? '身體裡的力量滿溢出來了。選擇你要成為的樣子（按下「選擇」就會進化）。' : '力量又一次滿溢出來，身體開始改變了。') + '</div><div class="evo-cards">';
       opts.forEach((id) => {
         const f = G.data.forms[id];
         const line = G.data.lines[f.line] || { name: '三條', role: '最終形態', desc: '力量、法術、敏捷匯集成一股。原本那條路線的技能頁會保留，另外學會兩招五轉大招。' };
@@ -853,13 +853,12 @@
           '<button class="primary" data-act="pickForm" data-arg="' + id + '">選擇' + f.name + '</button></div>';
       });
       h += '</div>';
-      if (pick) {
-        h += '<div class="evo-confirm">確定要進化成「' + G.data.forms[pick].name + '」嗎？<button class="primary" data-act="confirmEvolve">確定進化</button><button data-act="pickForm" data-arg="">再想想</button></div>';
-      }
       return this.frame('進化', h, 'evolve');
     },
+    // 按「選擇○○」就直接進化（不再多一個「確定進化」）
     a_pickForm(id) {
       this.evolvePick = id || null;
+      if (id) this.a_confirmEvolve();
     },
     a_confirmEvolve() {
       const id = this.evolvePick;

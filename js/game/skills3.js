@@ -556,16 +556,22 @@
         P.action = { type: 'phantomCast', id, lv, t: 0, dur };
         P.invT = Math.max(P.invT, dur + 0.3);
         G.audio.play('charge');
+        const bats = G.art.phantomBats;
+        // 記住出招的位置：砍完最後一隻就瞬移回原地
+        const home = { x: P.x, y: P.y, plat: P.plat, onGround: P.onGround, dir: P.dir };
+        if (bats) bats.burst(P.x, P.y - 30, 12, 0);
         list.forEach((m, i) => {
           X.later(i * 0.16, () => {
             if (!alive(m)) return;
             G.fx.ghost(P.x, P.y, P.dir, { state: 'dash', t: P.t, p: 0, form: P.form }, '#5ab8ff');
+            if (bats) bats.burst(P.x, P.y - 30, 5, P.dir);
             const side = i % 2 ? 1 : -1;
             P.x = U.clamp(m.x + side * 44, 20, G.world.map.w - 20);
             P.y = m.y;
             P.dir = -side;
             P.vy = 0;
             G.fx.sparkle(P.x, P.y - 30, '#bfe0ff', 6, 20);
+            if (bats) bats.burst(P.x, P.y - 30, 4, -side);
             for (let k = 0; k < S.hits; k++) {
               X.later(k * 0.04, () => {
                 if (!alive(m)) return;
@@ -574,6 +580,20 @@
               });
             }
           });
+        });
+        X.later(list.length * 0.16 + 0.14, () => {
+          if (P.dead) return;
+          G.fx.ghost(P.x, P.y, P.dir, { state: 'dash', t: P.t, p: 0, form: P.form }, '#5ab8ff');
+          if (bats) bats.burst(P.x, P.y - 30, 6, 0);
+          P.x = home.x;
+          P.y = home.y;
+          P.plat = home.plat;
+          P.onGround = home.onGround;
+          P.dir = home.dir;
+          P.vx = 0;
+          P.vy = 0;
+          if (bats) bats.burst(P.x, P.y - 30, 10, 0);
+          G.fx.sparkle(P.x, P.y - 30, '#bfe0ff', 8, 24);
         });
       },
     },
