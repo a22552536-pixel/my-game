@@ -1221,15 +1221,31 @@
     ctx.restore();
     if (!noTag) A.nameTag(ctx, npc.x, npc.y + 14, npc.def.name, '#ffe9a8');
     if (marker) {
-      const y = npc.y - 92 + Math.sin(t * 4) * 4;
-      ctx.font = 'bold 30px ' + A.NUMFONT;
+      // 大一點、會發光、會一跳一跳的「！／？」：遠遠就看得到這個人有委託
+      const done = marker === '?';
+      const y = npc.y - 104 - Math.abs(Math.sin(t * 3.2)) * 10;
+      const pulse = 1 + Math.sin(t * 6) * 0.07;
+      const rgb = done ? '125,255,122' : '255,216,74';
+      ctx.save();
+      const g = ctx.createRadialGradient(npc.x, y, 2, npc.x, y, 38 * pulse);
+      g.addColorStop(0, 'rgba(' + rgb + ',0.55)');
+      g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(npc.x, y, 38 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.translate(npc.x, y);
+      ctx.scale(pulse, pulse);
+      ctx.font = 'bold 48px ' + A.NUMFONT;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.lineWidth = 6;
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 8;
       ctx.strokeStyle = '#4a2e1f';
-      ctx.strokeText(marker, npc.x, y);
-      ctx.fillStyle = marker === '?' ? '#7dff7a' : '#ffd84a';
-      ctx.fillText(marker, npc.x, y);
+      ctx.strokeText(marker, 0, 0);
+      ctx.fillStyle = done ? '#7dff7a' : '#ffd84a';
+      ctx.fillText(marker, 0, 0);
+      ctx.restore();
     }
   };
 

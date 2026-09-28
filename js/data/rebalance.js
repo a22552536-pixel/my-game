@@ -305,5 +305,19 @@
   }
   // Boss 委託的經驗維持改版前（659）：progression.js 依整章委託比例分配，新增 q80 會讓它變少
   if (D.quests.q77) Object.assign(D.quests.q77, { chapter: 5, reward: Object.assign({}, D.quests.q77.reward, { exp: 659 }) });
+  // ── 委託的需求等級壓低（使用者回饋：第一章打到 9～10 等，還不知道有委託沒接）──
+  //   每章的一般委託都在該章前段就能接（章起點 +0～2 級），野外魔王委託稍晚（+3～6）；只會「降低」，不會提高。
+  //   Boss 委託、終章灰鬃／雲鬃的主線不動；終章營地的封印委託本來就卡在五轉（q75）之後，只把等級拉齊到 44～45。
+  const EARLY = {
+    q2: 2, q9: 2, q20: 2, q22: 2, q21: 3, q23: 3, q25: 4, q24: 6,
+    q30: 9, q31: 9, q32: 10, q33: 10, q34: 11, q36: 13,
+    q50: 19, q51: 19, q52: 19, q53: 20, q54: 20, q55: 21, q57: 23,
+    q60: 29, q61: 29, q62: 29, q63: 30, q65: 30, q66: 31, q64: 33,
+    q70: 44, q71: 44, q72: 44, q73: 45, q76: 45,
+  };
+  for (const qid in EARLY) {
+    const q = D.quests[qid];
+    if (q && q.req && q.req.lv) q.req.lv = Math.min(q.req.lv, EARLY[qid]);
+  }
   B.apexSP = 2; // 五轉送 2 點：冥道殘月破、地爆天星各 1 點，一進五轉就能全部學滿（js/data/skillcap.js）
 })();
