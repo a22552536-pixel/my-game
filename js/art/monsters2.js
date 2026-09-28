@@ -2555,49 +2555,41 @@
         ctx.stroke();
       });
     };
-    // 火山灰柱：大團翻滾的灰雲，底部被熔岩照紅
+    // 火山灰柱：柔邊、沒有描邊的翻滾灰雲；越往上越大越淡，底部被熔岩照紅
+    const rgbaC = (hex, a) => 'rgba(' + U.hexToRgb(A.c(hex)).join(',') + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
+    const softBlob = (x, y, r, hex, a) => {
+      if (!(r > 0) || !(a > 0.01)) return;
+      const g = ctx.createRadialGradient(x - r * 0.2, y - r * 0.25, r * 0.1, x, y, r);
+      g.addColorStop(0, rgbaC(hex, a));
+      g.addColorStop(0.6, rgbaC(hex, a * 0.75));
+      g.addColorStop(1, rgbaC(hex, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU);
+      ctx.fill();
+    };
     const plume = (vx, vy) => {
-      const n = erupt ? 8 : 6;
+      const n = erupt ? 11 : 7;
       const rise = gallery ? 0.24 : 1;
+      const dark = hot || erupt;
       for (let i = n - 1; i >= 0; i--) {
-        const q = (t * (erupt ? 0.4 : 0.2) + i / n) % 1;
-        const x = vx - q * (erupt ? 50 : 110) * (2 - rise) + Math.sin(t * 1.3 + i * 1.9) * 8;
-        const y = vy - 18 - q * (erupt ? 170 : 130) * rise;
-        const r = 16 + q * (erupt ? 40 : 32) * (gallery ? 0.7 : 1);
-        ctx.globalAlpha = GA * Math.min(1, (1 - q) * 1.8) * (dead ? 0.4 : 1);
-        const col = hot || erupt ? '#4a3e46' : '#6e6468';
-        const sh = hot || erupt ? '#2e2630' : '#4a4248';
-        const puff = (c) => {
-          c.moveTo(x + r, y);
-          c.arc(x, y, r, 0, TAU);
-          c.moveTo(x + r * 1.5, y + r * 0.35);
-          c.arc(x + r * 0.8, y + r * 0.35, r * 0.7, 0, TAU);
-          c.moveTo(x - r * 0.1, y + r * 0.45);
-          c.arc(x - r * 0.8, y + r * 0.45, r * 0.7, 0, TAU);
-          c.moveTo(x + r * 0.2, y - r * 0.6);
-          c.arc(x - r * 0.3, y - r * 0.6, r * 0.5, 0, TAU);
-        };
-        // 先描粗邊再填色：只留外輪廓
-        ctx.beginPath();
-        puff(ctx);
-        ctx.strokeStyle = A.outline();
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        ctx.fillStyle = A.c(col);
-        ctx.fill();
-        ctx.save();
-        ctx.clip();
-        ctx.fillStyle = A.c(sh);
-        ctx.beginPath();
-        ctx.arc(x + r * 0.35, y + r * 0.95, r * 1.2, 0, TAU);
-        ctx.fill();
-        ctx.fillStyle = A.c(hot || erupt ? '#6a5a62' : '#9a9094');
-        ctx.beginPath();
-        ctx.arc(x - r * 0.4, y - r * 0.5, r * 0.45, 0, TAU);
-        ctx.fill();
-        // 底部的熔岩反光
-        if (!dead) glowC(ctx, x, y + r * 1.1, r * 1.3, '#ff7a2a', (0.55 + (hot ? 0.3 : 0)) * (1 - q) * heat);
-        ctx.restore();
+        const q = (t * (erupt ? 0.42 : 0.2) + i / n) % 1;
+        const drift = q * (erupt ? 60 : 110) * (2 - rise);
+        const x = vx - drift + Math.sin(t * 1.1 + i * 1.9) * (6 + q * 14);
+        const y = vy - 20 - q * (erupt ? 210 : 140) * rise;
+        const r = (18 + q * (erupt ? 58 : 40)) * (gallery ? 0.7 : 1);
+        const fade = Math.min(1, (1 - q) * 1.6) * Math.min(1, q * 6 + 0.2) * (dead ? 0.4 : 1);
+        ctx.globalAlpha = GA;
+        // 一團灰雲由三四個柔邊的團塊組成：暗的身體、偏亮的頂、被熔岩照亮的底
+        softBlob(x, y, r, dark ? '#3a3036' : '#5e5458', 0.85 * fade);
+        softBlob(x + r * 0.55, y + r * 0.25, r * 0.7, dark ? '#2c2428' : '#4e4448', 0.7 * fade);
+        softBlob(x - r * 0.6, y + r * 0.3, r * 0.65, dark ? '#342a30' : '#564c50', 0.7 * fade);
+        softBlob(x - r * 0.2, y - r * 0.45, r * 0.55, dark ? '#5a4c52' : '#80767a', 0.45 * fade);
+        if (!dead && heat > 0) {
+          ctx.globalCompositeOperation = 'lighter';
+          softBlob(x + r * 0.1, y + r * 0.55, r * 0.8, '#ff6a1e', (0.32 + (hot ? 0.18 : 0)) * (1 - q) * heat * fade);
+          ctx.globalCompositeOperation = 'source-over';
+        }
       }
       ctx.globalAlpha = GA;
     };
@@ -2607,42 +2599,83 @@
       A.ellipse(ctx, vx, vy, 32 * big, 8 * big, lavaC, null, { lw: 3, hl: false });
       if (!dead) A.ellipse(ctx, vx - 3, vy - 1, 17 * big, 3.5 * big, lavaCore, null, { noStroke: true, hl: false });
       if (erupt && !ball) {
-        for (let i = 0; i < 7; i++) {
-          const p = (t * 2 + i / 7) % 1;
-          const a = -PI / 2 + (i - 3) * 0.3;
-          const x = vx + Math.cos(a) * p * 120;
-          const y = vy - 10 + Math.sin(a) * p * 160 + p * p * 100;
-          glowC(ctx, x, y, 14, '#ff8a2a', 0.5 * (1 - p));
-          A.shape(ctx, (c) => { c.moveTo(x - 7, y); c.lineTo(x - 2, y - 7); c.lineTo(x + 6, y - 4); c.lineTo(x + 5, y + 5); c.lineTo(x - 4, y + 6); c.closePath(); }, '#2e2226', null, { lw: 2 });
-          A.ellipse(ctx, x, y, 3, 3, '#ffb43a', null, { noStroke: true, hl: false });
-        }
-        const fh = 116 + Math.sin(t * 20) * 8;
-        const wv = Math.sin(t * 14) * 4;
-        [-1, 1].forEach((d) => {
-          for (let i = 0; i < 5; i++) {
-            const u = (t * 1.6 + i / 5 + (d > 0 ? 0.5 : 0)) % 1;
-            const x = vx + d * (8 + u * 70);
-            const y = vy - fh * 0.6 - Math.sin(u * PI) * 44 + u * u * 44;
-            const rr = 6.5 - u * 3;
-            A.ellipse(ctx, x, y, rr, rr * 1.1, '#ff9a2a', '#e8621e', { lw: 2, hl: false });
+        const fh = 150 + Math.sin(t * 17) * 10;
+        ctx.globalCompositeOperation = 'lighter';
+        glowC(ctx, vx, vy - fh * 0.45, fh * 0.95, '#ff7a28', 0.4);
+        // 噴泉：三層由下往上變細、變暗、邊緣抖動的熔岩柱（紅 → 橘 → 白熱芯），沒有描邊
+        const jet = (w0, hex0, hex1, a, h) => {
+          const g = ctx.createLinearGradient(0, vy, 0, vy - h);
+          g.addColorStop(0, rgbaC(hex0, a));
+          g.addColorStop(0.55, rgbaC(hex1, a * 0.85));
+          g.addColorStop(1, rgbaC(hex1, 0));
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          const N = 10;
+          for (let k = 0; k <= N; k++) {
+            const u = k / N;
+            const w = w0 * (1 - u * 0.7) + Math.sin(t * 23 + k * 1.7) * w0 * 0.12;
+            const x = vx + Math.sin(t * 9 + u * 5) * 5 * u - w;
+            k ? ctx.lineTo(x, vy - u * h) : ctx.moveTo(x, vy);
           }
-        });
-        glowC(ctx, vx, vy - fh * 0.5, fh * 0.9, '#ffb040', 0.5);
-        A.shape(ctx, (c) => {
-          c.moveTo(vx - 20 * big, vy);
-          c.bezierCurveTo(vx - 10, vy - fh * 0.4, vx - 26 + wv, vy - fh * 0.75, vx - 12, vy - fh * 0.95);
-          c.quadraticCurveTo(vx - 6, vy - fh * 1.08, vx + 2, vy - fh);
-          c.quadraticCurveTo(vx + 10, vy - fh * 1.1, vx + 16, vy - fh * 0.9);
-          c.bezierCurveTo(vx + 28 - wv, vy - fh * 0.7, vx + 10, vy - fh * 0.4, vx + 20 * big, vy);
-          c.closePath();
-        }, '#ff8a2a', '#e8521e', { lw: 3, cel: [5, 0] });
-        A.shape(ctx, (c) => {
-          c.moveTo(vx - 7, vy - 2);
-          c.bezierCurveTo(vx - 4, vy - fh * 0.35, vx - 12 + wv * 0.5, vy - fh * 0.65, vx - 2, vy - fh * 0.88);
-          c.bezierCurveTo(vx + 8, vy - fh * 0.65, vx + 4, vy - fh * 0.35, vx + 7, vy - 2);
-          c.closePath();
-        }, '#ffe07a', null, { noStroke: true });
-        A.ellipse(ctx, vx - 1, vy - fh * 0.6, 3.5, fh * 0.2, '#fffbe0', null, { noStroke: true, hl: false });
+          for (let k = N; k >= 0; k--) {
+            const u = k / N;
+            const w = w0 * (1 - u * 0.7) + Math.sin(t * 19 + k * 2.3) * w0 * 0.12;
+            ctx.lineTo(vx + Math.sin(t * 9 + u * 5) * 5 * u + w, vy - u * h);
+          }
+          ctx.closePath();
+          ctx.fill();
+        };
+        jet(22 * big, '#ff5a14', '#b8260e', 0.75, fh);
+        jet(14 * big, '#ffa032', '#ff6a1e', 0.8, fh * 0.85);
+        jet(6 * big, '#fff6c8', '#ffc85a', 0.95, fh * 0.62);
+        // 熔岩飛沫：拉長的白熱小滴，落下時冷卻變紅變暗
+        for (let i = 0; i < 16; i++) {
+          const p = (t * 1.5 + i / 16) % 1;
+          const side = ((i * 37) % 11) / 5.5 - 1;
+          const vx0 = side * (60 + (i % 3) * 40);
+          const x = vx + vx0 * p;
+          const y = vy - 20 - (fh * 1.05) * p + 260 * p * p;
+          const vy0 = -(fh * 1.05) + 520 * p;
+          const len = Math.min(18, 6 + Math.hypot(vx0, vy0) * 0.025);
+          const ang = Math.atan2(vy0, vx0);
+          const cool = Math.min(1, p * 1.4);
+          ctx.strokeStyle = cool < 0.5 ? rgbaC('#ffe7a0', 1 - cool) : rgbaC('#ff5a1a', (1 - cool) * 1.6);
+          ctx.lineWidth = 3 - cool * 1.5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - Math.cos(ang) * len, y - Math.sin(ang) * len);
+          ctx.stroke();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+        // 火山彈：焦黑的岩塊拖著發光的尾巴
+        for (let i = 0; i < 6; i++) {
+          const p = (t * 1.1 + i / 6) % 1;
+          const a = -PI / 2 + (i - 2.5) * 0.34;
+          const x = vx + Math.cos(a) * p * 150;
+          const y = vy - 10 + Math.sin(a) * p * 190 + p * p * 130;
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = rgbaC('#ff7a28', 0.55 * (1 - p));
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - Math.cos(a) * 22, y - Math.sin(a) * 22 + p * 12);
+          ctx.stroke();
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = rgbaC('#2a2024', 1);
+          ctx.beginPath();
+          ctx.moveTo(x - 6, y);
+          ctx.lineTo(x - 2, y - 6);
+          ctx.lineTo(x + 5, y - 3);
+          ctx.lineTo(x + 4, y + 4);
+          ctx.lineTo(x - 3, y + 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = rgbaC('#ff9a3a', 0.9 * (1 - p * 0.7));
+          ctx.beginPath();
+          ctx.arc(x + 0.5, y + 0.5, 1.8, 0, TAU);
+          ctx.fill();
+        }
       }
     };
 
