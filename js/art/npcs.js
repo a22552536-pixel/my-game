@@ -1234,6 +1234,44 @@
   };
 
   A.drawChest = function (ctx, ch, t) {
+    if (ch.style && A.propChest) {
+      // 地圖上擺的寶箱：沒開時淡淡閃光提示可以開；開了之後蓋子往後掀、看得到裡面
+      ctx.save();
+      ctx.translate(ch.x, ch.y);
+      ctx.scale(1.1, 1.1);
+      if (!ch.opened) {
+        const g = 0.16 + Math.sin(t * 3) * 0.07;
+        const gr = ctx.createRadialGradient(0, -18, 2, 0, -18, 36);
+        gr.addColorStop(0, 'rgba(255,230,120,' + g.toFixed(3) + ')');
+        gr.addColorStop(1, 'rgba(255,230,120,0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(0, -18, 36, 0, Math.PI * 2);
+        ctx.fill();
+        A.propChest(ctx, t, ch);
+      } else {
+        // 蓋子：以後緣為軸往後翻
+        ctx.save();
+        ctx.translate(20, -22);
+        ctx.rotate(0.95);
+        ctx.translate(-20, 22);
+        ctx.beginPath();
+        ctx.rect(-40, -60, 80, 38);
+        ctx.clip();
+        A.propChest(ctx, t, ch);
+        ctx.restore();
+        // 箱身＋黑黑的箱內
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(-40, -22, 80, 40);
+        ctx.clip();
+        A.propChest(ctx, t, ch);
+        ctx.restore();
+        A.shape(ctx, (c) => { c.moveTo(-19, -22); c.lineTo(19, -22); c.lineTo(16, -18); c.lineTo(-16, -18); c.closePath(); }, '#2a1a10', null, { lw: 1.4, hl: false });
+      }
+      ctx.restore();
+      return;
+    }
     ctx.save();
     ctx.translate(ch.x, ch.y);
     A.groundShadow(ctx, 0, 0, 22);

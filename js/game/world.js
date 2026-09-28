@@ -53,7 +53,11 @@
       G.music.forMap(map);
 
       this.npcs = (map.npcs || []).filter((n) => (!n.flag || this.flags[n.flag]) && (!n.noFlag || !this.flags[n.noFlag])).map((n) => ({ id: n.id, def: G.data.npcs[n.id], x: n.x, y: SY(map, n.p, n.x) }));
-      this.chests = (map.chests || []).map((c) => ({ id: c.id, x: c.x, y: SY(map, c.p, c.x), opened: !!this.openedChests[c.id] }));
+      // 寶箱：地圖上擺的那幾個（js/art/background.js placeChests）都能打開；舊的「隱藏寶箱」拿掉了
+      this.chests = (map._chests || []).map((c, i) => {
+        const id = map.id + ':chest' + i;
+        return { id, x: c.x, y: c.y, style: c.style, opened: !!this.openedChests[id] };
+      });
       this.springs = (map.springs || []).map((s) => ({ x: s.x, p: s.p, y: SY(map, s.p, s.x), power: s.power, squash: 0 }));
       this.signs = (map.signs || []).map((s) => ({ x: s.x, y: SY(map, s.p, s.x), text: s.text }));
       this.critters = [];
@@ -222,7 +226,7 @@
           G.loot.dropFromChest(c);
           G.audio.play('chest');
           G.fx.burst(c.x, c.y - 20, ['#ffe066', '#fff'], 20, 300);
-          G.hud.toast('發現隱藏寶箱！', '#ffe066');
+          G.hud.toast('打開寶箱！', '#ffe066');
           G.save.write();
           return true;
         }

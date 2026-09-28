@@ -147,11 +147,12 @@
       this.spawn('quest', b.x + 50, b.y - 120, { qitem: { hermitCrab: 'lampshard', lavaTortoise: 'volcanocore', frostSpirit: 'frostbell', timeItself: 'timeshard' }[b.id] || 'queencap' });
     },
 
+    // 寶箱：金葉和藥水，不掉裝備
     dropFromChest(ch) {
       const r = (G.world.map && G.world.map.region) || 1;
-      this.spawn('equip', ch.x, ch.y - 30, { item: this.randomEquip(r * 10 - 2, 'chest') });
-      this.spawn('gold', ch.x, ch.y - 30, { amount: U.randi(60, 120) * r * r });
+      this.spawn('gold', ch.x - 12, ch.y - 30, { amount: U.randi(60, 120) * r * r });
       this.spawn('potion', ch.x, ch.y - 30, { potion: 'hp', count: 3 });
+      this.spawn('potion', ch.x + 12, ch.y - 30, { potion: 'mp', count: 2 });
     },
 
     rarityOf(dr) {

@@ -8816,7 +8816,7 @@
 
   // ── 裝飾用寶箱：取代原本的地面／平台擺設（每張狩獵、探索地圖 1～3 個；營地、Boss 房沒有） ──
   // 位置挑「看起來會藏東西」的地方：最高層平台的尾端（獎勵爬上去）、中層平台的尾端、地面靠邊的角落。
-  // 只是佈景，不能開；真正的寶箱（map.chests）仍由 world 畫，這裡會避開它們。
+  // 這些寶箱可以打開（world 用 map._chests 建立、js/art/npcs.js drawChest 畫；打開只掉金葉和藥水，不掉裝備）。
   function placeChests(map) {
     if ((map.type !== 'hunt' && map.type !== 'explore') || map.camp || map.boss) return;
     const P = map.platforms;
@@ -8829,8 +8829,6 @@
       // 起伏的地面：寶箱只放在平緩的地方
       if (Math.abs(G.physics.surfSlope(map, i, x)) > 0.1 || Math.abs(G.physics.surfSlope(map, i, x - 30)) > 0.2 || Math.abs(G.physics.surfSlope(map, i, x + 30)) > 0.2) return false;
       if (near(map.portals, i, x, 160) || near(map.npcs, i, x, 150) || near(map.signs, i, x, 120) || near(map.springs, i, x, 100)) return false;
-      // 真寶箱：不管在哪一層，水平 220 以內都不放（免得上下疊在一起、讓人以為能開）
-      if ((map.chests || []).some((c) => Math.abs(c.x - x) < 220)) return false;
       // 繩子的上端（掛在這個平台下）或下端（落在這個平台上）附近不放
       return !ropes.some((r) => Math.abs(r[0] - x) < 52 && (Math.abs(r[1] - y) < 12 || Math.abs(r[2] - y) < 12));
     };
@@ -8858,7 +8856,7 @@
       const [i, x] = inOrder ? ok[0] : ok[Math.floor(rnd() * ok.length)];
       chosen.push({ kind: 'chest', x, y: G.physics.surfaceY(map, i, x), s: 1.1, flip: 1, style: map.region || 1 });
     }
-    for (const c of chosen) map._props.push(c);
+    map._chests = chosen;
   }
 
   // 各章的寶箱配色（木頭／蓋子／鐵箍／鎖）
@@ -8879,6 +8877,7 @@
   const chestBody = (c) => A.roundRect(c, -20, -22, 40, 22, 4);
 
   Object.assign(PROP, {
+    // 可以打開的寶箱也用這一個畫（A.propChest）
     chest(ctx, t, p) {
       // 形狀沿用 world 的寶箱（npcs.js 的 drawChest）：箱身 40×22、拱形蓋、正面的鎖；不發光，一看就知道是佈景
       const st = p.style || 1;
@@ -9532,6 +9531,8 @@
       ctx.stroke();
     });
   })();
+
+  A.propChest = (ctx, t, p) => PROP.chest(ctx, t, p);
 
   // ── 接上：prepareMap 多算一份地形細節、放裝飾寶箱；平台繪製時記住目前的地圖 ──
   (function hookTerrain() {
