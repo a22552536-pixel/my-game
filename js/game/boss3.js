@@ -456,7 +456,8 @@
       G.fx.ring(x, my, time ? 'rgba(200,176,255,0.9)' : 'rgba(170,225,255,0.9)', 200, 0.5, 7);
       G.fx.burst(x, m.y - 10, time ? ['#c8b0ff', '#fff3a8', '#1a0a2a', '#ffffff'] : ['#ffffff', '#bfe8ff', '#6a2a9a'], 30, 380, { angle: -Math.PI / 2, spread: 1.2, life: 0.8 });
       G.fx.text(x, m.y - m.h * m.scale - 40, '召喚：' + d.name, time ? '#e8dcff' : '#dff4ff', 22, 1.6);
-      if ((b.sumN || 0) <= 1) G.hud.toast(time ? '時間不停地召來野外魔王的殘影！每隻只留 ' + SUM_TIME.life + ' 秒，打倒沒有獎勵' : b.def.name + '召來了野外魔王「' + d.name + '」！打倒沒有獎勵；' + b.def.name + '倒下時會一起消失', time ? '#e8dcff' : '#bfe8ff');
+      // 「時間」召殘影不跳說明（使用者：這種提醒不要）；霜靈照舊提示一次
+      if ((b.sumN || 0) <= 1 && !time) G.hud.toast(b.def.name + '召來了野外魔王「' + d.name + '」！打倒沒有獎勵；' + b.def.name + '倒下時會一起消失', '#bfe8ff');
       return m;
     },
     // 每幀（由 Boss 的 update 呼叫，Boss 死後也呼叫）
