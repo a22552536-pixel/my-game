@@ -289,7 +289,7 @@
   const FB_IDS = ['fb_shroom', 'fb_kraken', 'fb_balrog', 'fb_zakum', 'fb_voiddragon'];
   const SUM_RISE = 1.2; // 召喚陣 → 魔王升起
   const SUM_CAST = 1.4; // Boss 施法姿勢的長度
-  const SUM_HP = { frostSpirit: 0.4, timeItself: 0.3 }; // 該章野外魔王正常最大血量的幾成
+  const SUM_HP = { frostSpirit: 0.4, timeItself: 0.6 }; // 時間的殘影：0.3 → 0.6（使用者：殘影血量要提升） // 該章野外魔王正常最大血量的幾成
   const SUM_FROST_AT = 0.65; // 霜靈：血量 ≤ 65% 時（第一階段中段）召喚一次
   // 時間：從開打就每 5 秒召喚一隻「時間殘影」野外魔王（不限總數，不擺施法姿勢、Boss 照常出招）；
   //   每隻只活 life 秒（或被打倒）就散成星沙，所以同時大約 3～4 隻。五種輪流（不會連續同一種；千手冰像同時只會有一隻，放在場地邊緣）。
@@ -1438,6 +1438,23 @@
         break;
 
       // ── 時停＋星沙雨 ──
+      // ── 時間暫停：預警（腳下的錶盤收緊）→ 玩家整個停住 1.2 秒（在空中也停在空中），解凍時腳邊落下星沙 ──
+      case 'freezePrep':
+        this.vx = 0;
+        if (P.alive() && Math.random() < 0.3) G.fx.ring(P.x, P.y - 30, 'rgba(232,220,255,0.9)', 110 * (0.3 + this.stateT), 0.2, 3);
+        if (this.stateT <= 0) {
+          if (P.alive() && !P.m5stop && !(P.m5stopImm > 0)) {
+            P.m5stop = { t: 1.2, x: P.x, y: P.y, el: 0 };
+            G.audio.play('bossWarn');
+            G.fx.ring(P.x, P.y - 30, '#fff3a8', 90, 0.4, 5);
+            // 解凍後才落地的星沙：停住的時候看得到影子，醒來就要走開
+            const pp = this.playerPlat();
+            const ty = pp > 0 ? map.platforms[pp][2] : this.groundY();
+            for (const dx of [0, -110, 110]) this.addHz({ type: 'rock', style: 'star', x: U.clamp(P.x + dx, 50, map.w - 50), y: ty, r: 44, delay: 1.9, mult: 0.85, src: 'starSand', seed: Math.random() * 6, drift: 0 });
+          }
+          this.setState('recover', 0.8 * this.cd());
+        }
+        break;
       case 'stopPrep':
         this.vx = 0;
         if (this.stateT <= 0) {
@@ -1446,14 +1463,16 @@
           this.rainN = 0;
           G.fx.screenFlash('#c8b0ff', 0.35);
           G.audio.play('thunder');
-          G.hud.toast('時間停止了！你變得好慢——星沙落得也很慢，看影子慢慢走開', '#e8dcff');
+          G.hud.toast('時間放緩了！你的動作變得好慢——看星沙的影子，慢慢走開', '#e8dcff');
         }
         break;
       case 'stop':
         this.vx = 0;
         if (P.alive()) {
           P.slowT = Math.max(P.slowT || 0, 0.15);
-          if (!P.action && P.climbing < 0 && Math.abs(P.vx) > 85) P.vx = U.sign(P.vx) * 85;
+          // 時間放緩：走路明顯變慢、跳起來也慢慢飄
+          if (!P.action && P.climbing < 0 && Math.abs(P.vx) > 60) P.vx = U.sign(P.vx) * 60;
+          if (!P.onGround && P.climbing < 0) P.vy *= 0.94;
         }
         this.rainT -= dt;
         if (this.rainT <= 0 && this.stateT > 1.2) {
@@ -1537,12 +1556,12 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { sweep: 18, stab: 18, stop: 16, rewind: 30 }
-        : { sweep: 8, stab: 10, stop: 45, rewind: 80, clockwork: 12 };
+        ? { sweep: 16, stab: 16, stop: 14, rewind: 28, freeze: 14 }
+        : { sweep: 8, stab: 8, stop: 30, rewind: 60, freeze: 35, clockwork: 12 };
       // 時間倒退（拉回過去的位置）、時間暫停是「時間」的招牌：
       // 第一階段適量（倒退隔 5 秒、暫停隔 10 秒），第二階段兩招輪流大量使用（倒退隔 3 秒、暫停隔 6 秒）
       const p2 = this.phase !== 1;
-      pick = this.pick(table, { clockwork: 18, stop: p2 ? 6 : 10, rewind: p2 ? 3 : 5, echo: 7 });
+      pick = this.pick(table, { clockwork: 18, stop: p2 ? 6 : 10, rewind: p2 ? 3 : 5, freeze: p2 ? 7 : 12, echo: 7 });
     } else this.pickT[pick] = this.fightT;
     // 召喚野外魔王：不限次數、不限時間；同時存在最多 4 隻，每 15 秒一次
     if (pick !== 'clockwork' && this.sumReady()) {
@@ -1574,6 +1593,10 @@
       if (this.phase === 1) this.ally.offerBlock(['starSand'], 1.1 * f + 4, '時間停了？我幫你擋星沙！');
     } else if (pick === 'rewind') {
       this.startRewind();
+    } else if (pick === 'freeze') {
+      this.say('停住。', '#e8dcff');
+      this.setState('freezePrep', 0.9 * f);
+      this.warn();
     } else if (pick === 'echo') {
       this.say('還記得他們嗎？', '#e8dcff');
       this.setState('echo', 0.8);

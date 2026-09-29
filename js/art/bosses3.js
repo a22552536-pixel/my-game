@@ -2281,7 +2281,7 @@
       const raise = left > 0.25 ? Math.min(1, (T - left) / Math.max(0.2, T - 0.25)) : 0;
       A4[0] = left > 0.25 ? lerp(idleA[0], -PI * 0.62, raise) : tgt;
       eyeK = 0.8;
-    } else if (st === 'stopPrep' || st === 'stop') {
+    } else if (st === 'stopPrep' || st === 'stop' || st === 'freezePrep') {
       const kk = st === 'stop' ? 1 : k;
       for (let i = 0; i < 4; i++) A4[i] = lerp(idleA[i], -PI / 2 + (i - 1.5) * 0.06, kk);
       glowK = kk;
@@ -2318,7 +2318,7 @@
       eyeK = Math.max(eyeK, ritK);
     }
     // 眼睛只在預警與出招時睜開（預警一開始就很快睜大），平常閉著
-    const ATK_ST = ['sweepPrep', 'sweep', 'stab', 'stopPrep', 'stop', 'rewindPrep', 'rewind', 'clockworkPrep', 'clockwork', 'echo', 'transform'];
+    const ATK_ST = ['sweepPrep', 'sweep', 'stab', 'stopPrep', 'stop', 'freezePrep', 'rewindPrep', 'rewind', 'clockworkPrep', 'clockwork', 'echo', 'transform'];
     const openK = dead || portrait || !ATK_ST.includes(st) ? 0 : /Prep$/.test(st) ? clamp(k * 5, 0.25, 1) : 1;
 
     ctx.save();
