@@ -45,7 +45,8 @@
   const warn = (x, y, r, life) => zone({ kind: 'fb_warn', x, y, r, life });
   const warnLine = (x1, y1, x2, y2, w, life) => zone({ kind: 'fb_warnline', x: (x1 + x2) / 2, y: Math.max(y1, y2), x1, y1, x2, y2, w, r: Math.abs(x2 - x1) / 2 + w, life });
   // 野外魔王的台詞放在血條下方的專用欄位（js/ui/hud.js bossLine）；章節 Boss 召喚出來的分身才畫在頭上
-  const say = (m, text, color) => (m.illusion ? G.fx.text(m.x, topY(m) - 26, text, color || '#ffb0d8', 20, 1.1) : G.hud.bossLine(text, color || '#ffb0d8'));
+  // 被「時間」召喚出來的殘影（m.V.name＝殘影）不說話（使用者：不要「出來吧，孩子們」這類台詞）
+  const say = (m, text, color) => (m.V && m.V.name === '殘響' ? null : m.illusion ? G.fx.text(m.x, topY(m) - 26, text, color || '#ffb0d8', 20, 1.1) : G.hud.bossLine(text, color || '#ffb0d8'));
   // 腳下那一層：記住是哪一個平台（起伏的地形：gAt 換成 x 那裡的表面高度）
   let refPlat = 0;
   const groundUnder = (P, m) => {

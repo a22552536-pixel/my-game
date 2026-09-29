@@ -447,7 +447,7 @@
         // 時間殘影：藍金色調、半透明一點；最後 3 秒閃爍（Sum.tick），時間到就散掉
         m.sumLife = SUM_TIME.life;
         m.sumLife0 = SUM_TIME.life;
-        m.V = { name: '殘影', color: '#e8dcff', tint: '#8f9cff', tintAmt: 0.3, alpha: 0.9 };
+        m.V = { name: '殘響', color: '#e8dcff', tint: '#8f9cff', tintAmt: 0.3, alpha: 0.9 };
       }
       W.monsters.push(m);
       const my = m.y - m.h * m.scale * 0.5;
@@ -1619,7 +1619,7 @@
     if (pick !== 'clockwork' && this.sumReady()) {
       const first = !this.sumSaid || this.sumSaid !== this.phase;
       this.sumSaid = this.phase;
-      if (Sum.cast(this, 'time', 'rewindPrep', first ? '過去，醒來吧。' : null, '#e8dcff')) {
+      if (Sum.cast(this, 'time', 'rewindPrep', null, '#e8dcff')) {
         this.ghost = null;
         if (first && this.ally) this.ally.shout(this.phase === 2 ? '又來？我幫你咬牠！' : '那是……野外的魔王？', 1.8);
         return;
@@ -1658,7 +1658,6 @@
       this.setState('freezePrep', 0.9 * f);
       this.warn();
     } else if (pick === 'echo') {
-      this.say('還記得他們嗎？', '#e8dcff');
       this.setState('echo', 0.8);
     } else if (pick === 'clockwork') {
       this.say('十二時，一起敲響吧。', '#ffd0f0');
@@ -1702,7 +1701,6 @@
       this.echoes.push({ id, x: best.x, dir: U.sign(P.x - best.x) || 1, t: -i * ECHO_GAP, did: false, life: 3.0 + (id === 'hermitCrab' ? 0.8 : 0), key: 'echo:' + this.echoSeq++ });
     });
     this.echoN = (this.echoN || 0) + 1;
-    if (this.echoN === 1) this.say('還記得他們嗎？', '#e8dcff');
     G.audio.play('quest');
   };
 
