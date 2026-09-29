@@ -1466,7 +1466,6 @@
           this.rainN = 0;
           G.fx.screenFlash('#c8b0ff', 0.35);
           G.audio.play('thunder');
-          G.hud.toast('時間放緩了！你的動作變得好慢——看星沙的影子，慢慢走開', '#e8dcff');
         }
         break;
       case 'stop':
@@ -1513,7 +1512,6 @@
             G.fx.ring(P.x, P.y - 30, '#e8dcff', 90, 0.4, 5);
             G.fx.burst(P.x, P.y - 30, ['#c8b0ff', '#ffffff', '#fff3a8'], 16, 260);
             G.audio.play('portal');
-            G.fx.text(P.x, P.y - 110, '倒轉！快離開紅圈！', '#e8dcff', 20, 1.2);
           }
           this.ghost = null;
           this.setState('recover', 1.0 * this.cd());
@@ -1560,12 +1558,12 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { sweep: 16, stab: 16, stop: 14, rewind: 28, freeze: 14 }
-        : { sweep: 8, stab: 8, stop: 30, rewind: 60, freeze: 35, clockwork: 12 };
+        ? { sweep: 8, stab: 8, stop: 24, rewind: 40, freeze: 24 }
+        : { sweep: 4, stab: 4, stop: 35, rewind: 70, freeze: 45, clockwork: 10 };
       // 時間倒退（拉回過去的位置）、時間暫停是「時間」的招牌：
-      // 第一階段適量（倒退隔 5 秒、暫停隔 10 秒），第二階段兩招輪流大量使用（倒退隔 3 秒、暫停隔 6 秒）
+      // 三種時間技佔大部分出招：第一階段（倒退隔 4 秒、放緩 7、暫停 8），第二階段幾乎只放時間技（倒退 2.5、放緩 5、暫停 5）
       const p2 = this.phase !== 1;
-      pick = this.pick(table, { clockwork: 18, stop: p2 ? 6 : 10, rewind: p2 ? 3 : 5, freeze: p2 ? 7 : 12, echo: 7 });
+      pick = this.pick(table, { clockwork: 18, stop: p2 ? 5 : 7, rewind: p2 ? 2.5 : 4, freeze: p2 ? 5 : 8, echo: 7 });
     } else this.pickT[pick] = this.fightT;
     // 召喚野外魔王：不限次數、不限時間；同時存在最多 4 隻，每 15 秒一次
     if (pick !== 'clockwork' && this.sumReady()) {
@@ -1606,7 +1604,6 @@
       this.setState('echo', 0.8);
     } else if (pick === 'clockwork') {
       this.say('十二時，一起敲響吧。', '#ffd0f0');
-      G.hud.toast('十二時！地面分成十二格輪流敲響——站到剛敲過的格子，或爬上平台！', '#ffd0f0');
       this.setState('clockworkPrep', 1.0);
       this.warn(true);
       this.ally.offerBlock(['hour'], 1.0 + 4, '……這次換我保護你。');
@@ -1689,7 +1686,6 @@
     const T = 1.9;
     this.addHz({ type: 'mark', style: 'star', x, y: gy, r: 85, delay: T + 1.15, mult: 1.15, src: 'rewind', hgt: 150, sound: 'thunder' });
     this.say('倒轉。', '#e8dcff');
-    G.hud.toast('倒轉！你會被拉回三秒前的位置（殘影那裡）——被拉回去之後馬上離開紅圈！', '#e8dcff');
     this.setState('rewindPrep', T);
     this.warn();
   };
