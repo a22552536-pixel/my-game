@@ -1443,8 +1443,10 @@
         this.vx = 0;
         if (P.alive() && Math.random() < 0.3) G.fx.ring(P.x, P.y - 30, 'rgba(232,220,255,0.9)', 110 * (0.3 + this.stateT), 0.2, 3);
         if (this.stateT <= 0) {
-          if (P.alive() && !P.m5stop && !(P.m5stopImm > 0)) {
+          // 必中：不看免疫（使用者：時間技都是必中技）
+          if (P.alive()) {
             P.m5stop = { t: 1.2, x: P.x, y: P.y, el: 0 };
+            if (G.art.timeWarp) G.art.timeWarp.show('freeze', 1.25);
             G.audio.play('bossWarn');
             G.fx.ring(P.x, P.y - 30, '#fff3a8', 90, 0.4, 5);
             // 解凍後才落地的星沙：停住的時候看得到影子，醒來就要走開
@@ -1459,6 +1461,7 @@
         this.vx = 0;
         if (this.stateT <= 0) {
           this.setState('stop', this.phase === 2 ? 3.8 : 3.3);
+          if (G.art.timeWarp && P.alive()) G.art.timeWarp.show('slow', this.phase === 2 ? 3.8 : 3.3);
           this.rainT = 0.1;
           this.rainN = 0;
           G.fx.screenFlash('#c8b0ff', 0.35);
@@ -1501,6 +1504,7 @@
             G.fx.burst(P.x, P.y - 30, ['#c8b0ff', '#ffffff', '#fff3a8'], 16, 260);
             P.x = g.x;
             P.y = g.y - 2;
+            if (G.art.timeWarp) G.art.timeWarp.show('rewind', 1.3);
             P.vx = 0;
             P.vy = 0;
             P.climbing = -1;

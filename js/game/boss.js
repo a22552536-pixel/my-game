@@ -126,8 +126,7 @@
       if (!this.fury && this.fightT > this.furyAt) {
         this.fury = true;
         this.atk = Math.round(this.baseAtk * 1.25);
-        G.hud.toast(this.def.name + '越打越兇了！（攻擊變重、節奏變快）', '#ff9a6a');
-        G.fx.screenFlash('#ff8a5a', 0.25);
+        // 不跳文字、不閃全畫面（使用者：不要「攻擊變重」之類的話），只是悄悄變兇
       }
       let frozen = G.skillExec.status(this, dt);
       if (this.stunT > 0) {
