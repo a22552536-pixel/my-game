@@ -332,9 +332,9 @@
   }
   const mExp0 = B.monsterExp;
   if (typeof mExp0 === 'function') B.monsterExp = function (lv) { return Math.max(1, Math.round(mExp0.apply(this, arguments) * 1.8)); };
-  // 最終 Boss「時間」（使用者：血量太低）：血量 ×5、傷害 ×1.15
+  // 最終 Boss「時間」（使用者：血量太低）：血量 ×2.5、傷害 ×1.15（×5 會讓一場 Boss 戰吃掉太多破關時間）
   if (D.monsters.timeItself) {
-    D.monsters.timeItself.hp = Math.round(D.monsters.timeItself.hp * 5);
+    D.monsters.timeItself.hp = Math.round(D.monsters.timeItself.hp * 2.5);
     D.monsters.timeItself.atk = Math.round(D.monsters.timeItself.atk * 1.15);
   }
   B.apexSP = 2; // 五轉送 2 點：冥道殘月破、地爆天星各 1 點，一進五轉就能全部學滿（js/data/skillcap.js）

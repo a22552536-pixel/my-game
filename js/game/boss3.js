@@ -1537,10 +1537,12 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { sweep: 10, stab: 10, stop: 45, rewind: 80 }
+        ? { sweep: 18, stab: 18, stop: 16, rewind: 30 }
         : { sweep: 8, stab: 10, stop: 45, rewind: 80, clockwork: 12 };
-      // 時間倒退（拉回過去的位置）、時間暫停是「時間」的招牌：兩招輪流、很常用（倒退隔 3 秒、暫停隔 6 秒）
-      pick = this.pick(table, { clockwork: 18, stop: 6, rewind: 3, echo: 7 });
+      // 時間倒退（拉回過去的位置）、時間暫停是「時間」的招牌：
+      // 第一階段適量（倒退隔 5 秒、暫停隔 10 秒），第二階段兩招輪流大量使用（倒退隔 3 秒、暫停隔 6 秒）
+      const p2 = this.phase !== 1;
+      pick = this.pick(table, { clockwork: 18, stop: p2 ? 6 : 10, rewind: p2 ? 3 : 5, echo: 7 });
     } else this.pickT[pick] = this.fightT;
     // 召喚野外魔王：不限次數、不限時間；同時存在最多 4 隻，每 15 秒一次
     if (pick !== 'clockwork' && this.sumReady()) {
