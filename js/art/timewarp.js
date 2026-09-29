@@ -150,7 +150,111 @@
     }
   }
 
-  A.timeWarp = { show };
+  // ── 天上的虛空裂縫：一道直立、邊緣鋸齒的黑紫色裂口，裡面是星空，邊緣發紫光，周圍的光點往裡面吸 ──
+  const RF = [];
+  function rift(x, y, dur) {
+    const edge = [];
+    const n = 14;
+    for (let i = 0; i <= n; i++) edge.push((Math.random() - 0.5) * 0.5);
+    const stars = [];
+    for (let i = 0; i < 18; i++) stars.push([(Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 1.8, Math.random()]);
+    RF.push({ x, y, t: 0, life: dur, edge, stars, motes: [] });
+  }
+  function riftStep(dt) {
+    for (let i = RF.length - 1; i >= 0; i--) {
+      const r = RF[i];
+      r.t += dt;
+      if (!lite() && Math.random() < 0.6) {
+        const a = Math.random() * TAU;
+        const d = 120 + Math.random() * 80;
+        r.motes.push({ x: r.x + Math.cos(a) * d, y: r.y + Math.sin(a) * d, t: 0 });
+      }
+      for (let j = r.motes.length - 1; j >= 0; j--) {
+        const m = r.motes[j];
+        m.t += dt;
+        m.x += (r.x - m.x) * Math.min(1, dt * 3.5);
+        m.y += (r.y - m.y) * Math.min(1, dt * 3.5);
+        if (m.t > 0.8) r.motes.splice(j, 1);
+      }
+      if (r.t > r.life + 0.4) RF.splice(i, 1);
+    }
+  }
+  function riftDraw(ctx) {
+    const t = G.time || 0;
+    for (const r of RF) {
+      const open = Math.min(1, r.t / 0.5) * (r.t > r.life ? Math.max(0, 1 - (r.t - r.life) / 0.4) : 1);
+      if (open <= 0) continue;
+      const H = 210;
+      const W = 70 * open;
+      const n = r.edge.length - 1;
+      const path = () => {
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) {
+          const k = i / n;
+          const y = r.y - H / 2 + k * H;
+          const w = W * Math.sin(k * Math.PI) * (1 + r.edge[i] * 0.6);
+          i ? ctx.lineTo(r.x - w / 2, y) : ctx.moveTo(r.x - w / 2, y);
+        }
+        for (let i = n; i >= 0; i--) {
+          const k = i / n;
+          const y = r.y - H / 2 + k * H;
+          const w = W * Math.sin(k * Math.PI) * (1 - r.edge[i] * 0.6);
+          ctx.lineTo(r.x + w / 2, y);
+        }
+        ctx.closePath();
+      };
+      ctx.save();
+      const g = ctx.createRadialGradient(r.x, r.y, 10, r.x, r.y, 200);
+      g.addColorStop(0, 'rgba(150,90,255,' + (0.35 * open).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(150,90,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, 200, 0, TAU);
+      ctx.fill();
+      path();
+      ctx.fillStyle = '#0a0418';
+      ctx.fill();
+      ctx.save();
+      path();
+      ctx.clip();
+      for (const s of r.stars) {
+        const tw = 0.5 + 0.5 * Math.sin(t * 4 + s[2] * 10);
+        ctx.fillStyle = 'rgba(220,210,255,' + (0.4 + 0.6 * tw).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(r.x + s[0] * W, r.y + s[1] * H * 0.5, 1 + s[2] * 1.6, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+      path();
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(40,10,80,0.9)';
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(200,150,255,' + (0.7 + 0.3 * Math.sin(t * 9)).toFixed(3) + ')';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(210,180,255,0.85)';
+      for (const m of r.motes) {
+        ctx.globalAlpha = Math.max(0, 1 - m.t / 0.8);
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 2.2, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  A.timeWarp = { show, rift };
+  if (A.skillFx) {
+    A.skillFx.add({
+      live: () => RF.length > 0,
+      step: riftStep,
+      back: riftDraw,
+      clear() {
+        RF.length = 0;
+      },
+    });
+  }
   if (A.skillFx) {
     A.skillFx.add({
       live: () => L.length > 0,

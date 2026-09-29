@@ -47,7 +47,8 @@
     });
     b.recall = !!G.world.flags[id + 'Defeated'];
     if (b.recall) {
-      b.maxHp = b.hp = Math.round(d.hp * 1.6);
+      // 再挑戰：血量 ×1.6（「時間」固定 200 萬，不加）
+      if (id !== 'timeItself') b.maxHp = b.hp = Math.round(d.hp * 1.6);
       b.atk = Math.round(d.atk * 1.3);
       b.exp = Math.round(d.exp * 0.5);
     }

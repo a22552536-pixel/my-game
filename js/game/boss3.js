@@ -1297,7 +1297,7 @@
     // 記下玩家過去 3.5 秒的位置（倒轉用）
     if (P.alive()) {
       this.hist.push({ t: this.fightT, x: P.x, y: P.y });
-      while (this.hist.length && this.hist[0].t < this.fightT - 3.6) this.hist.shift();
+      while (this.hist.length && this.hist[0].t < this.fightT - 6.6) this.hist.shift();
     }
     this.updateEchoes(dt);
     this.ally.update(dt);
@@ -1377,6 +1377,18 @@
       this.touch(0.4);
       return false;
     }
+    // 時間暫停／虛空裂縫：Boss 這邊每一格把玩家釘在該在的位置（不靠玩家自己的更新）
+    if (this.pinT > 0 && this.pin && P.alive()) {
+      this.pinT -= dt;
+      P.x = this.pin.x;
+      P.y = this.pin.y;
+      P.vx = 0;
+      P.vy = 0;
+      P.onGround = false;
+      P.climbing = -1;
+      P.action = null;
+      if (this.pinT <= 0) this.pin = null;
+    }
 
     switch (this.state) {
       case 'intro':
@@ -1438,6 +1450,40 @@
         break;
 
       // ── 時停＋星沙雨 ──
+      // ── 天上的虛空裂縫（借虛空鯨的招式）：頭上撕開一道裂縫 → 把玩家吸上天、懸在裂縫下 1.6 秒 → 放開、掉下來 ──
+      case 'riftPrep':
+        this.vx = 0;
+        if (this.stateT <= 0) {
+          this.setState('rift', 1.6);
+          this.riftT = 0;
+          G.audio.play('portal');
+        }
+        break;
+      case 'rift': {
+        this.vx = 0;
+        this.riftT = (this.riftT || 0) + dt;
+        const R = this.sky;
+        if (R && P.alive()) {
+          const cur = this.pin || { x: P.x, y: P.y };
+          const k = 1 - Math.exp(-dt * 5);
+          this.pin = { x: cur.x + (R.x - cur.x) * k, y: cur.y + (R.y + 90 - cur.y) * k };
+          this.pinT = 0.1;
+          P.m5stop = { t: 0.15, x: this.pin.x, y: this.pin.y, el: 0 };
+        }
+        if (this.stateT <= 0) {
+          this.pin = null;
+          this.pinT = 0;
+          if (P.m5stop) {
+            P.m5stop = null;
+            P.m5stopImm = 0;
+            P.vy = 0;
+            P.onGround = false;
+          }
+          this.sky = null;
+          this.setState('recover', 0.7 * this.cd());
+        }
+        break;
+      }
       // ── 時間暫停：預警（腳下的錶盤收緊）→ 玩家整個停住 1.2 秒（在空中也停在空中），解凍時腳邊落下星沙 ──
       case 'freezePrep':
         this.vx = 0;
@@ -1446,6 +1492,8 @@
           // 必中：不看免疫（使用者：時間技都是必中技）
           if (P.alive()) {
             P.m5stop = { t: 1.2, x: P.x, y: P.y, el: 0 };
+            this.pin = { x: P.x, y: P.y };
+            this.pinT = 1.2;
             if (G.art.timeWarp) G.art.timeWarp.show('freeze', 1.25);
             G.audio.play('bossWarn');
             G.fx.ring(P.x, P.y - 30, '#fff3a8', 90, 0.4, 5);
@@ -1460,8 +1508,9 @@
       case 'stopPrep':
         this.vx = 0;
         if (this.stateT <= 0) {
-          this.setState('stop', this.phase === 2 ? 3.8 : 3.3);
-          if (G.art.timeWarp && P.alive()) G.art.timeWarp.show('slow', this.phase === 2 ? 3.8 : 3.3);
+          // 時間放緩：持續更久（使用者要求）
+          this.setState('stop', this.phase === 2 ? 6.5 : 5.5);
+          if (G.art.timeWarp && P.alive()) G.art.timeWarp.show('slow', this.phase === 2 ? 6.5 : 5.5);
           this.rainT = 0.1;
           this.rainN = 0;
           G.fx.screenFlash('#c8b0ff', 0.35);
@@ -1558,12 +1607,12 @@
     this.forceNext = null;
     if (!pick) {
       const table = this.phase === 1
-        ? { sweep: 8, stab: 8, stop: 24, rewind: 40, freeze: 24 }
-        : { sweep: 4, stab: 4, stop: 35, rewind: 70, freeze: 45, clockwork: 10 };
+        ? { sweep: 8, stab: 8, stop: 24, rewind: 40, freeze: 24, skyrift: 14 }
+        : { sweep: 4, stab: 4, stop: 35, rewind: 70, freeze: 45, skyrift: 22, clockwork: 10 };
       // 時間倒退（拉回過去的位置）、時間暫停是「時間」的招牌：
       // 三種時間技佔大部分出招：第一階段（倒退隔 4 秒、放緩 7、暫停 8），第二階段幾乎只放時間技（倒退 2.5、放緩 5、暫停 5）
       const p2 = this.phase !== 1;
-      pick = this.pick(table, { clockwork: 18, stop: p2 ? 5 : 7, rewind: p2 ? 2.5 : 4, freeze: p2 ? 5 : 8, echo: 7 });
+      pick = this.pick(table, { clockwork: 18, stop: p2 ? 5 : 7, rewind: p2 ? 2.5 : 4, freeze: p2 ? 5 : 8, skyrift: p2 ? 6 : 9, echo: 7 });
     } else this.pickT[pick] = this.fightT;
     // 召喚野外魔王：不限次數、不限時間；同時存在最多 4 隻，每 15 秒一次
     if (pick !== 'clockwork' && this.sumReady()) {
@@ -1595,6 +1644,14 @@
       if (this.phase === 1) this.ally.offerBlock(['starSand'], 1.1 * f + 4, '時間停了？我幫你擋星沙！');
     } else if (pick === 'rewind') {
       this.startRewind();
+    } else if (pick === 'skyrift') {
+      // 頭上撕開虛空裂縫（0.9 秒後開始吸）
+      const map = G.world.map;
+      this.sky = { x: U.clamp(P.x + U.rand(-60, 60), 80, map.w - 80), y: Math.max(110, P.y - 330) };
+      if (G.art.timeWarp) G.art.timeWarp.rift(this.sky.x, this.sky.y, 0.9 + 1.6 + 0.3);
+      this.say('裂開吧。', '#e8dcff');
+      this.setState('riftPrep', 0.9);
+      this.warn();
     } else if (pick === 'freeze') {
       this.say('停住。', '#e8dcff');
       this.setState('freezePrep', 0.9 * f);
@@ -1675,7 +1732,7 @@
     const P = G.player;
     const map = G.world.map;
     // 三秒前的位置
-    const want = this.fightT - 3;
+    const want = this.fightT - 6; // 拉回 6 秒前（使用者：位移要更遠）
     let g = this.hist[0];
     for (const h of this.hist) if (Math.abs(h.t - want) < Math.abs(g.t - want)) g = h;
     if (!g) g = { x: P.x, y: P.y };
